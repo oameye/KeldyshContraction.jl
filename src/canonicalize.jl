@@ -24,14 +24,15 @@ function advanced_to_retarded(
     return x′, prefactor
 end
 
-function sort_contraction(p::Contraction)::Float64
+function sort_by_position_and_type(p::Contraction)::Float64
     if is_out(p)
         return -Inf
     elseif is_in(p)
         return Inf
     else
         i, j = integer_positions(p)
-        return float(pairing(i, j))
+        type = Int(propagator_type(p...))
+        return float(pairing(i, j)*3 + type)
     end
 end
 
