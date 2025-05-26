@@ -31,9 +31,31 @@ end
 end
 
 @testset "sort" begin
+    using KeldyshContraction: Bulk, In, Out, sort_by_position_and_type
     p1 = (ϕᴾ, ϕᶜ'(In()))
     p2 = (ϕᴾ, ϕᶜ')
-    @test isequal(sort!([p1, p2]; by=KeldyshContraction.sort_contraction), [p2, p1])
+    @test isequal(sort!([p1, p2]; by=sort_by_position_and_type), [p2, p1])
+
+    b1 = Bulk(1)
+    b2 = Bulk(2)
+    test1 = [
+        (ϕᶜ(Out()), ϕᴾ'(In())),
+        (ϕᶜ(b1), ϕᴾ'(b2)),
+        (ϕᶜ(b1), ϕᶜ'(b2)),
+        (ϕᶜ(b2), ϕᶜ'(b1)),
+        (ϕᶜ(b2), ϕᶜ'(In())),
+    ]
+    test2 = [
+        (ϕᶜ(Out()), ϕᴾ'(In())),
+        (ϕᶜ(b1), ϕᶜ'(b2)),
+        (ϕᶜ(b1), ϕᴾ'(b2)),
+        (ϕᶜ(b2), ϕᶜ'(b1)),
+        (ϕᶜ(b2), ϕᶜ'(In())),
+    ]
+    perm1 = sortperm(test1; by=sort_by_position_and_type)
+    perm2 = sortperm(test2; by=sort_by_position_and_type)
+    @test isequal(test1[perm1], test2[perm2])
+    @test isequal(test2, test2[perm2])
 end
 
 @testset "adjoint" begin
