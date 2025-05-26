@@ -81,7 +81,12 @@ function _wick_contraction(
     destroys, creates, n_destroy = prepare_args(args_nc)
 
     number_of_combinations = factorial(n_destroy)
-    to_skip = factorial(n_destroy - 1) # due in-out contraction constraint
+    ps = map(position, args_nc)
+    if In() ∉ ps || Out() ∉ ps
+        to_skip = 0
+    else
+        to_skip = factorial(n_destroy - 1) # due in-out contraction constraint
+    end
 
     wick_contractions = Vector{Contraction}[]
     iter = 1:n_destroy

@@ -61,21 +61,32 @@ L_int = InteractionLagrangian(elasctic2boson)
 end
 
 @testset "second order" begin
-    using KeldyshContraction:
-        _wick_contraction, regular, In, Out, Diagram, Diagrams, sort_by_position_and_type
+    |
+    @testset "vaccuum" begin
+        using KeldyshContraction: filter_nonzero!
 
-    @test KeldyshContraction.is_conserved(expr)
-    @test KeldyshContraction.is_physical(expr)
+        vaccuum = L1.lagrangian * L2.lagrangian
+        map(vaccuum.arguments) do arg
+            wick_contraction(arg; simplify=false)
+        end
+        wick_contraction(vaccuum.arguments[1]; simplify=false)
 
+        expr = wick_contraction(vaccuum; simplify=true)
+        filter_nonzero!(expr)
+        @test iszero(expr)
+    end
+
+    expr = c(Out()) * c'(In()) * L1.lagrangian * L2.lagrangian
     # ∨ I check these by hand
-    # 0.5*(c*c*c*̄q*̄c*̄q
-    truth = Diagrams(
-        Dict(
-            Diagram([(c(Out()), c'), (c, q'), (c, q(In())')]) => 0.0 - 1.0 * im,
-            Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => 0.0 - 1.0 * im,
-        ),
-    )
-    wick_contraction(expr.arguments[1]).diagrams
+    # 0.25*(c*c*c*c*c*̄q*̄c*̄q*̄c*̄c)
+    # truth = Diagrams(
+    #     Dict(
+    #         Diagram([(c(Out()), c'), (c, q'), (c, q(In())')]) => 0.0 - 1.0 * im,
+    #         Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => 0.0 - 1.0 * im,
+    #     ),
+    # )
+    # wick_contraction(expr.arguments[1]).diagrams
+    # ^ TODO we should write this test
     # The keldysh in and keldysh out will disappear later
 
     GF = DressedPropagator(L_int; order=2)

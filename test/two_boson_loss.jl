@@ -14,8 +14,12 @@ L_int =
 L = InteractionLagrangian(L_int)
 L1 = L(1)
 L2 = L(2)
-expr = c(Out()) * c'(In()) * L1.lagrangian * L2.lagrangian
-wick_contraction(expr.arguments[1]).diagrams
+expr_r = c(Out()) * q'(In()) * L1.lagrangian * L2.lagrangian
+map(expr_r.arguments) do arg
+    wick_contraction(arg)
+end
+
+wick_contraction(expr_r.arguments[2])
 
 @testset "vacuum bubble" begin
     @test !iszero(wick_contraction(L_int; regularise=false))
@@ -204,6 +208,28 @@ end
 @testset "second order" begin
     L = InteractionLagrangian(L_int)
     GF = DressedPropagator(L; order=2)
+
+    @testset " vaccuum" begin
+        using KeldyshContraction: filter_nonzero!
+        L = InteractionLagrangian(L_int)
+        L1 = L(1)
+        L2 = L(2)
+        vaccuum = L1.lagrangian * L2.lagrangian
+        expr = wick_contraction(vaccuum; simplify=true)
+        filter_nonzero!(expr)
+        @test iszero(expr)
+    end
+
+    expr_r = c(Out()) * q'(In()) * L1.lagrangian * L2.lagrangian
+    map(expr_r.arguments) do arg
+        wick_contraction(arg)
+    end
+
+    # -0.25*(c*c⁻*c⁻*c⁻*c⁻*̄q*̄c*̄q*̄c*̄q)
+    @test iszero(wick_contraction(expr_r.arguments[1]))
+
+    # -0.25*(c*c⁻*c⁻*q⁻*q⁻*̄q*̄c*̄q*̄c*̄q)
+    @test iszero(wick_contraction(expr_r.arguments[2]))
 
     Σ = SelfEnergy(GF; order=2)
 
