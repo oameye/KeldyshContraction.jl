@@ -84,7 +84,12 @@ function regularisations(p::Contraction)
 end
 contours(p::Edge) = contour.(fields(p))
 
-Base.adjoint(c::Contraction) = adjoint.((c[2], c[1]))
+"""
+Gᴷ(x₁, x₂)† = -1*Gᴷ(x₁, x₂)
+Gᴬ(x₁, x₂)† = Gᴿ(x₁, x₂)
+Gᴿ(x₁, x₂)† = Gᴬ(x₁, x₂)
+"""
+Base.adjoint(c::Contraction) = adjoint.((c[2](position(c[1])), c[1](position(c[2]))))
 Base.adjoint(c::Edge) = Edge(adjoint(fields(c)))
 
 #########################

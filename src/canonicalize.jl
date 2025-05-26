@@ -32,9 +32,10 @@ function sort_by_position_and_type(p::Contraction)::Float64
     else
         i, j = integer_positions(p)
         type = Int(propagator_type(p...))
-        return float(pairing(i, j)*3 + type)
+        return float(pairing(i, j) * 3 + type)
     end
 end
+sort_by_position_and_type(p::Edge)::Float64 = sort_by_position_and_type(fields(p))
 
 function canonicalize(vs::Vector{Contraction})
     # TODO: assumes lower then third order
@@ -53,6 +54,24 @@ function canonicalize(vs::Vector{Contraction})
     end
     return vs
 end
+# function swap_coordinates(cc::Vector{Contraction}, i::AbstractPosition, j::AbstractPosition)
+#     vs = map(cc) do c
+#         ps = positions(c)
+#         if i in ps || j in ps
+#             c′ = map(c) do ψ
+#                 if position(ψ) == i
+#                     ψ(j)
+#                 elseif position(ψ) == j
+#                     ψ(i)
+#                 end
+#             end
+#         else
+#             c′ = c
+#         end
+#         c′
+#     end
+#     return vs
+# end
 function is_canonical(vs::Vector{Contraction})
     # TODO: assumes lower then third order
     idx_out = findfirst(c -> Out() ∈ position.(c), vs)

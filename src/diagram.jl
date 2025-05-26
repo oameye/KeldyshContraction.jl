@@ -13,7 +13,7 @@ end
 function Diagram(contractions::Vector{<:Edge})
     @assert length(contractions) > 0 "Contraction vector must not be empty"
     E = length(contractions)
-    # sort!(contractions; by=sort_by_position_and_type)
+    sort!(contractions; by=sort_by_position_and_type)
     # TODO: sort to be sure?
     edges = StaticArrays.sacollect(
         SVector{length(contractions),Edge}, c for c in contractions
@@ -22,6 +22,7 @@ function Diagram(contractions::Vector{<:Edge})
 end
 Base.isequal(d1::Diagram, d2::Diagram) = isequal(d1.contractions, d2.contractions)
 Base.hash(d::Diagram, h::UInt) = hash(d.contractions, h)
+contractions(d::Diagram) = d.contractions
 
 ################
 #   Diagrams
@@ -103,7 +104,9 @@ function adjoint_diagram(
     d, prefactor = pair
     minus_signs = count(is_keldysh, d.contractions)
     prefactor′ = prefactor * (-1)^minus_signs
-    edges = StaticArrays.sacollect(T, Base.adjoint(edge) for edge in d.contractions)
+    adjoint_edges = Edge[adjoint(e) for e in d.contractions]
+    sorted_adjoint_edges = sort(collect(adjoint_edges); by=sort_by_position_and_type)
+    edges = StaticArrays.sacollect(T, e for e in sorted_adjoint_edges)
     return Diagram{E,T}(edges) => _simplify(adjoint(prefactor′))
 end
 
