@@ -61,7 +61,8 @@ L_int = InteractionLagrangian(elasctic2boson)
 end
 
 @testset "second order" begin
-    using KeldyshContraction: _wick_contraction, regular, In, Out, Diagram, Diagrams, sort_by_position_and_type
+    using KeldyshContraction:
+        _wick_contraction, regular, In, Out, Diagram, Diagrams, sort_by_position_and_type
 
     @test KeldyshContraction.is_conserved(expr)
     @test KeldyshContraction.is_physical(expr)

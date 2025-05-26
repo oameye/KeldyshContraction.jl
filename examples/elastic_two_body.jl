@@ -36,7 +36,7 @@ wick_contraction(elasctic2boson; simplify=false)
 
 # However, to show that these diagrams cancel out, we need to apply to condition $G^R = - G^A$.
 # Inside the package we do this by
-wick_contraction(elasctic2boson, simplify=true)
+wick_contraction(elasctic2boson; simplify=true)
 
 # Similarly, we can compute the next orders.
 

@@ -1,5 +1,5 @@
 using KeldyshContraction, Test
-using KeldyshContraction: In, Out, Classical, Quantum, Plus, Minus, Diagram, Diagrams,Edge
+using KeldyshContraction: In, Out, Classical, Quantum, Plus, Minus, Diagram, Diagrams, Edge
 using KeldyshContraction: is_physical, is_conserved, construct_self_energy!
 
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
@@ -10,6 +10,12 @@ L_int =
         0.5 * c(Plus) * q(Plus) * (c' * c' + q' * q') +
         c' * q' * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
     )
+
+L = InteractionLagrangian(L_int)
+L1 = L(1)
+L2 = L(2)
+expr = c(Out()) * c'(In()) * L1.lagrangian * L2.lagrangian
+wick_contraction(expr.arguments[1]).diagrams
 
 @testset "vacuum bubble" begin
     @test !iszero(wick_contraction(L_int; regularise=false))
@@ -200,6 +206,12 @@ end
     GF = DressedPropagator(L; order=2)
 
     Σ = SelfEnergy(GF; order=2)
+
+    adjoint(Σ.keldysh).diagrams
+    (-1 * Σ.keldysh).diagrams
+
+    adjoint(Σ.advanced).diagrams
+    Σ.retarded.diagrams
 
     @test_broken isequal(adjoint(Σ.advanced), Σ.retarded)
     @test_broken isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)
