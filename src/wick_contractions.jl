@@ -32,15 +32,14 @@ function wick_contraction(a::QAdd; kwargs...)::Diagrams
     end
     return diagrams
 end
-function wick_contraction(a::QMul; regularise=true, simplify=false)::Diagrams
+function wick_contraction(a::QMul; kwargs...)::Diagrams
     @assert is_conserved(a)
     @assert is_physical(a)
 
     E = number_of_propagators(a)
     diagrams = Diagrams(E)
 
-    contractions = _wick_contraction(a.args_nc; regularise)
-    make_diagram!(diagrams, contractions, a.arg_c, simplify)
+    wick_contraction!(diagrams, a; kwargs...)
     return diagrams
 end
 function wick_contraction!(diagrams::Diagrams, a::QMul; regularise=true, simplify=false)

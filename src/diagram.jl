@@ -4,7 +4,7 @@ end
 function Diagram(contractions::Vector{<:Contraction})
     @assert length(contractions) > 0 "Contraction vector must not be empty"
     E = length(contractions)
-    sort!(contractions; by=sort_contraction)
+    sort!(contractions; by=sort_by_position_and_type)
     edges = StaticArrays.sacollect(
         SVector{length(contractions),Edge}, Edge(c) for c in contractions
     )
@@ -13,7 +13,7 @@ end
 function Diagram(contractions::Vector{<:Edge})
     @assert length(contractions) > 0 "Contraction vector must not be empty"
     E = length(contractions)
-    # sort!(contractions; by=sort_contraction)
+    sort!(contractions; by=sort_by_position_and_type)
     # TODO: sort to be sure?
     edges = StaticArrays.sacollect(
         SVector{length(contractions),Edge}, c for c in contractions
