@@ -61,7 +61,10 @@ L_int = InteractionLagrangian(elasctic2boson)
 end
 
 @testset "second order" begin
-    |
+
+    L1 = L_int(1)
+    L2 = L_int(2)
+
     @testset "vaccuum" begin
         using KeldyshContraction: filter_nonzero!
 
@@ -81,8 +84,8 @@ end
     # 0.25*(c*c*c*c*c*̄q*̄c*̄q*̄c*̄c)
     # truth = Diagrams(
     #     Dict(
-    #         Diagram([(c(Out()), c'), (c, q'), (c, q(In())')]) => 0.0 - 1.0 * im,
-    #         Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => 0.0 - 1.0 * im,
+    #         Diagram([(c(Out()), c'), (c, q'), (c, q'), (c, q'), (c, q(In())')]) => 0.0 - 2.0 * im,
+    #         Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => 0.0 - 2.0 * im,
     #     ),
     # )
     # wick_contraction(expr.arguments[1]).diagrams
