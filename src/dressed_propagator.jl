@@ -40,7 +40,7 @@ G^A\\left(x_1, x_2\\right) & 0
 ```
 """
 function matrix(G::DressedPropagator{E}) where {E}
-    Diagrams[G.retarded G.keldysh; G.advanced Diagrams(E)]
+    Diagrams[G.retarded G.keldysh; G.advanced Diagrams{E}()]
 end
 
 """

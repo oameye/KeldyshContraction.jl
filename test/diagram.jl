@@ -3,6 +3,12 @@ using KeldyshContraction: Bulk, In, Out, Edge
 
 @qfields ϕᶜ::Destroy(Classical) ϕᴾ::Destroy(Quantum)
 
+@testset "construction" begin
+    using KeldyshContraction: Diagram, Diagrams, Contraction
+    @inferred Diagrams{2}()
+    # @code_warntype Diagrams{2}()
+end
+
 @testset "is_connected" begin
     @qfields c::Destroy(Classical) q::Destroy(Quantum)
 
@@ -118,7 +124,7 @@ end
     d3 = Diagram(contractions3) # should be considered equal to d1 (after sorting)
     d4 = Diagram(contractions4) # unique
 
-    diagrams = Diagrams(3)
+    diagrams = Diagrams{3}()
     push!(diagrams, d1, 1.0)
     push!(diagrams, d2, 1.0)
     push!(diagrams, d3, 1.0)

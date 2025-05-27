@@ -213,7 +213,7 @@ end
     @test !is_conserved(KeldyshContraction.QSym[ϕ])
 
     @inferred is_conserved(ϕ * ψ)
-    @code_warntype is_conserved(ϕ * ψ)
+    # @code_warntype is_conserved(ϕ * ψ)
 end
 
 @testset "is_physical" begin
