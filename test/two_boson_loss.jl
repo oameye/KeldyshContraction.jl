@@ -220,6 +220,9 @@ end
         @test iszero(expr)
     end
 
+    L1 = L(1)
+    L2 = L(2)
+
     expr_r = c(Out()) * q'(In()) * L1.lagrangian * L2.lagrangian
     map(expr_r.arguments) do arg
         wick_contraction(arg)
