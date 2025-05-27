@@ -61,20 +61,19 @@ L_int = InteractionLagrangian(elasctic2boson)
 end
 
 @testset "second order" begin
-
     L1 = L_int(1)
     L2 = L_int(2)
 
-    @testset "vaccuum" begin
+    @testset "vacuum" begin
         using KeldyshContraction: filter_nonzero!
 
-        vaccuum = L1.lagrangian * L2.lagrangian
-        map(vaccuum.arguments) do arg
+        vacuum = L1.lagrangian * L2.lagrangian
+        map(vacuum.arguments) do arg
             wick_contraction(arg; simplify=false)
         end
-        wick_contraction(vaccuum.arguments[1]; simplify=false)
+        wick_contraction(vacuum.arguments[1]; simplify=false)
 
-        expr = wick_contraction(vaccuum; simplify=true)
+        expr = wick_contraction(vacuum; simplify=true)
         filter_nonzero!(expr)
         @test iszero(expr)
     end

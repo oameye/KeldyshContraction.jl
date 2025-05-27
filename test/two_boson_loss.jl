@@ -209,13 +209,13 @@ end
     L = InteractionLagrangian(L_int)
     GF = DressedPropagator(L; order=2)
 
-    @testset " vaccuum" begin
+    @testset " vacuum" begin
         using KeldyshContraction: filter_nonzero!
         L = InteractionLagrangian(L_int)
         L1 = L(1)
         L2 = L(2)
-        vaccuum = L1.lagrangian * L2.lagrangian
-        expr = wick_contraction(vaccuum; simplify=true)
+        vacuum = L1.lagrangian * L2.lagrangian
+        expr = wick_contraction(vacuum; simplify=true)
         filter_nonzero!(expr)
         @test iszero(expr)
     end
