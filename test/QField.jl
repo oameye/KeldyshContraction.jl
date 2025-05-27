@@ -141,7 +141,7 @@ end
 end
 
 @testset "position" begin
-    using KeldyshContraction: position
+    using KeldyshContraction: position, isbulk
     @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
     # Test the position function
     @test KC.position(ϕ).index == 1
@@ -155,6 +155,9 @@ end
     to_sort = [ϕ(Bulk(3)), ϕ(Bulk(1)), ϕ, ψ(In()), ψ(Out())]
     sorted = [ψ(Out()), ϕ, ϕ(Bulk(1)), ϕ(Bulk(3)), ψ(In())]
     @test isequal(sort(to_sort; by=KC.position), sorted)
+
+    @inferred isbulk(ϕ)
+    @inferred isbulk(ϕ * ψ)
 end
 
 @testset "more math" begin
@@ -208,6 +211,17 @@ end
 
     @test !is_conserved(KeldyshContraction.QSym[])
     @test !is_conserved(KeldyshContraction.QSym[ϕ])
+
+    @inferred is_conserved(ϕ * ψ)
+    @code_warntype is_conserved(ϕ * ψ)
+end
+
+@testset "is_physical" begin
+    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
+    using KeldyshContraction: is_physical
+
+    @inferred is_physical([ϕ, ψ])
+    @inferred is_physical(ϕ * ψ)
 end
 
 @testset "QMul" begin
