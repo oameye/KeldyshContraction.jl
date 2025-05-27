@@ -111,4 +111,6 @@ in the Retarded-Advanced-Keldysh basis.
 \\right)
 ```
 """
-matrix(Σ::SelfEnergy{E}) where {E} = Diagrams[Diagrams{E}() Σ.advanced; Σ.retarded Σ.keldysh]
+function matrix(Σ::SelfEnergy{E}) where {E}
+    Diagrams[Diagrams{E}() Σ.advanced; Σ.retarded Σ.keldysh]
+end
