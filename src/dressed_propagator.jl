@@ -52,14 +52,14 @@ All the same coordinate advanced propagators are converted to retarded propagato
 function DressedPropagator(L::InteractionLagrangian; order=1, simplify=true)
     ϕ = L.qfield
     ψ = L.cfield
-    if order == 1
+    if order == 1 #-i*i
         keldysh = wick_contraction(ψ(Out()) * ψ'(In()) * L.lagrangian; simplify)
         retarded = wick_contraction(ψ(Out()) * ϕ'(In()) * L.lagrangian; simplify)
         advanced = wick_contraction(ϕ(Out()) * ψ'(In()) * L.lagrangian; simplify)
     elseif order == 2
         L1 = L
         L2 = L(2)
-        prefactor = make_real(im^2) / 2
+        prefactor = - 1*make_real(im^3) / 2 #-i*i^2
         keldysh = multiply!(
             wick_contraction(ψ(Out()) * ψ'(In()) * L1.lagrangian * L2.lagrangian; simplify),
             prefactor,

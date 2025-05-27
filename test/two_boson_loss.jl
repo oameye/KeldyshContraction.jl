@@ -1,15 +1,25 @@
 using KeldyshContraction, Test
-using KeldyshContraction: In, Out, Classical, Quantum, Plus, Minus
+using KeldyshContraction: In, Out, Classical, Quantum, Plus, Minus, Diagram, Diagrams, Edge
 using KeldyshContraction: is_physical, is_conserved, construct_self_energy!
 
-@qfields ϕᶜ::Destroy(Classical) ϕᴾ::Destroy(Quantum)
+@qfields c::Destroy(Classical) q::Destroy(Quantum)
 
 L_int =
     im * (
-        0.5 * ϕᶜ' * ϕᴾ' * (ϕᶜ(Minus) * ϕᶜ(Minus) + ϕᴾ(Minus) * ϕᴾ(Minus)) -
-        0.5 * ϕᶜ(Plus) * ϕᴾ(Plus) * (ϕᶜ' * ϕᶜ' + ϕᴾ' * ϕᴾ') +
-        ϕᶜ' * ϕᴾ' * (ϕᶜ(Plus) * ϕᴾ(Plus) + ϕᶜ(Minus) * ϕᴾ(Minus))
+        0.5 * c' * q' * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
+        0.5 * c(Plus) * q(Plus) * (c' * c' + q' * q') +
+        c' * q' * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
     )
+
+L = InteractionLagrangian(L_int)
+L1 = L(1)
+L2 = L(2)
+expr_r = c(Out()) * q'(In()) * L1.lagrangian * L2.lagrangian
+map(expr_r.arguments) do arg
+    wick_contraction(arg)
+end
+
+wick_contraction(expr_r.arguments[2])
 
 @testset "vacuum bubble" begin
     @test !iszero(wick_contraction(L_int; regularise=false))
@@ -19,7 +29,7 @@ end
 @testset "wick contractions first order" begin
     @testset "keldysh Green's function" begin
         using KeldyshContraction: _wick_contraction, regular, In, Out, Diagram
-        expr = ϕᶜ(Out()) * ϕᶜ'(In()) * L_int
+        expr = c(Out()) * c'(In()) * L_int
 
         @test is_conserved(expr)
         @test is_physical(expr)
@@ -33,44 +43,44 @@ end
         @test length(unique(Diagram.(regularized_wick))) == 1
 
         @test isequal(
-            Diagram([Edge(ϕᶜ(Out()), ϕᴾ'), Edge(ϕᶜ, ϕᶜ'), Edge(ϕᶜ, ϕᶜ(In())')]),
+            Diagram([Edge(c(Out()), q'), Edge(c, c'), Edge(c, c(In())')]),
             first(keys(wick_contraction(expr.arguments[1]).diagrams)),
         )
         # ∨ I check these by hand
-        # i (ϕᶜ*ϕᶜ⁻*ϕᶜ⁻*̄ϕᶜ*̄ϕᴾ*̄ϕᶜ)/2
+        # i (c*c⁻*c⁻*̄c*̄q*̄c)/2
 
         truth = Diagrams(
-            Dict(Diagram([(ϕᶜ(Out()), ϕᴾ'), (ϕᶜ, ϕᶜ'), (ϕᶜ, ϕᶜ'(In()))]) => complex(1.0))
+            Dict(Diagram([(c(Out()), q'), (c, c'), (c, c'(In()))]) => complex(1.0))
         )
         @test isequal(wick_contraction(expr.arguments[1]), truth)
 
-        # i (ϕᶜ*ϕᴾ⁻*ϕᴾ⁻*̄ϕᶜ*̄ϕᴾ*̄ϕᶜ)/2
+        # i (c*q⁻*q⁻*̄c*̄q*̄c)/2
         truth = Diagrams(
-            Dict(Diagram([(ϕᶜ(Out()), ϕᴾ'), (ϕᴾ, ϕᶜ'), (ϕᴾ, ϕᶜ'(In()))]) => complex(1.0))
+            Dict(Diagram([(c(Out()), q'), (q, c'), (q, c'(In()))]) => complex(1.0))
         )
         @test isequal(wick_contraction(expr.arguments[2]), truth)
 
-        # - i( ϕᶜ*ϕᶜ⁺*ϕᴾ⁺*̄ϕᶜ*̄ϕᶜ*̄ϕᶜ) /2
+        # - i( c*c⁺*q⁺*̄c*̄c*̄c) /2
         @test repr(wick_contraction(expr.arguments[3])) ==
             "-1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
-        # - i(ϕᶜ*ϕᶜ⁺*ϕᴾ⁺*̄ϕᴾ*̄ϕᴾ*̄ϕ)/2
+        # - i(c*c⁺*q⁺*̄q*̄q*̄ϕ)/2
         @test repr(wick_contraction(expr.arguments[4])) ==
             "-1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,x₂)"
-        # ϕᶜ*ϕᶜ⁺*ϕᴾ⁺*̄ϕᶜ*̄ϕᴾ*̄ϕᶜ
+        # c*c⁺*q⁺*̄c*̄q*̄c
         truth = Diagrams(
             Dict(
-                Diagram([(ϕᶜ(Out()), ϕᶜ'), (ϕᶜ, ϕᴾ'), (ϕᴾ, ϕᶜ'(In()))]) => complex(1.0),
-                Diagram([(ϕᶜ(Out()), ϕᴾ'), (ϕᶜ, ϕᶜ'), (ϕᴾ, ϕᶜ'(In()))]) => complex(1.0),
+                Diagram([(c(Out()), c'), (c, q'), (q, c'(In()))]) => complex(1.0),
+                Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))]) => complex(1.0),
             ),
         )
         @test isequal(wick_contraction(expr.arguments[5]), truth)
 
-        # ϕᶜ*ϕᶜ⁻*ϕᴾ⁻*̄ϕᶜ*̄ϕᴾ*̄ϕᶜ
+        # c*c⁻*q⁻*̄c*̄q*̄c
         truth = Diagrams(
             Dict(
-                Diagram([(ϕᶜ(Out()), ϕᴾ'), (ϕᴾ, ϕᶜ'), (ϕᶜ, ϕᶜ'(In()))]) => complex(1.0),
-                Diagram([(ϕᶜ(Out()), ϕᴾ'), (ϕᶜ, ϕᶜ'), (ϕᴾ, ϕᶜ'(In()))]) => complex(1.0),
+                Diagram([(c(Out()), q'), (q, c'), (c, c'(In()))]) => complex(1.0),
+                Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))]) => complex(1.0),
             ),
         )
         @test isequal(wick_contraction(expr.arguments[6]), truth)
@@ -91,7 +101,7 @@ end
     end
 
     @testset "quantum-quantum Green's function" begin
-        expr = ϕᴾ(Out()) * ϕᴾ'(In()) * L_int
+        expr = q(Out()) * q'(In()) * L_int
 
         @test is_conserved(expr)
         @test is_physical(expr)
@@ -107,14 +117,14 @@ end
 
         truth_retarded = Diagrams(
             Dict(
-                Diagram([(ϕᶜ(Out()), ϕᴾ'), (ϕᴾ, ϕᶜ'), (ϕᶜ, ϕᴾ'(In()))]) => complex(1.0),
-                Diagram([(ϕᶜ(Out()), ϕᴾ'), (ϕᶜ, ϕᶜ'), (ϕᶜ, ϕᴾ'(In()))]) => complex(1.0),
+                Diagram([(c(Out()), q'), (q, c'), (c, q'(In()))]) => complex(1.0),
+                Diagram([(c(Out()), q'), (c, c'), (c, q'(In()))]) => complex(1.0),
             ),
         )
         truth_advanced = Diagrams(
             Dict(
-                Diagram([(ϕᴾ(Out()), ϕᶜ'), (ϕᶜ, ϕᴾ'), (ϕᴾ, ϕᶜ'(In()))]) => complex(1.0),
-                Diagram([(ϕᴾ(Out()), ϕᶜ'), (ϕᶜ, ϕᶜ'), (ϕᴾ, ϕᶜ'(In()))]) => complex(-1.0),
+                Diagram([(q(Out()), c'), (c, q'), (q, c'(In()))]) => complex(1.0),
+                Diagram([(q(Out()), c'), (c, c'), (q, c'(In()))]) => complex(-1.0),
             ),
         )
         @test isequal(GF.retarded, truth_retarded)
@@ -142,9 +152,9 @@ end
             GF = DressedPropagator(L; simplify=false)
             Σ = SelfEnergy(GF)
 
-            kp = Diagram([(ϕᶜ, ϕᶜ')])
-            rp = Diagram([(ϕᶜ, ϕᴾ')])
-            ap = Diagram([(ϕᴾ, ϕᶜ')])
+            kp = Diagram([(c, c')])
+            rp = Diagram([(c, q')])
+            ap = Diagram([(q, c')])
             advanced_truth = Diagrams(Dict(kp => complex(-1.0), rp => complex(1.0)))
             retarded_truth = Diagrams(Dict(kp => complex(1.0), ap => complex(1.0)))
             keldysh_truth = Diagrams(
@@ -183,7 +193,7 @@ end
         GF = DressedPropagator(L; simplify=false)
         Σ = SelfEnergy(GF)
 
-        expr_K = ϕᶜ(Out()) * ϕᶜ'(In()) * L_int
+        expr_K = c(Out()) * c'(In()) * L_int
         G_K1 = wick_contraction(expr_K)
 
         self_energy = OrderedCollections.LittleDict{PropagatorType,Diagrams}((
@@ -193,4 +203,42 @@ end
         @test isequal(self_energy[Advanced], Σ.advanced)
         @test isequal(self_energy[Retarded], Σ.retarded)
     end
+end
+
+@testset "second order" begin
+    L = InteractionLagrangian(L_int)
+    GF = DressedPropagator(L; order=2)
+
+    @testset " vacuum" begin
+        using KeldyshContraction: filter_nonzero!
+        L = InteractionLagrangian(L_int)
+        L1 = L(1)
+        L2 = L(2)
+        vacuum = L1.lagrangian * L2.lagrangian
+        expr = wick_contraction(vacuum; simplify=true)
+        filter_nonzero!(expr)
+        @test iszero(expr)
+    end
+
+    expr_r = c(Out()) * q'(In()) * L1.lagrangian * L2.lagrangian
+    map(expr_r.arguments) do arg
+        wick_contraction(arg)
+    end
+
+    # -0.25*(c*c⁻*c⁻*c⁻*c⁻*̄q*̄c*̄q*̄c*̄q)
+    @test iszero(wick_contraction(expr_r.arguments[1]))
+
+    # -0.25*(c*c⁻*c⁻*q⁻*q⁻*̄q*̄c*̄q*̄c*̄q)
+    @test iszero(wick_contraction(expr_r.arguments[2]))
+
+    Σ = SelfEnergy(GF; order=2)
+
+    adjoint(Σ.keldysh).diagrams
+    (-1 * Σ.keldysh).diagrams
+
+    adjoint(Σ.advanced).diagrams
+    Σ.retarded.diagrams
+
+    @test_broken isequal(adjoint(Σ.advanced), Σ.retarded)
+    @test_broken isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)
 end

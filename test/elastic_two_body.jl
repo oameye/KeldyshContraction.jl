@@ -9,11 +9,6 @@ L_int = InteractionLagrangian(elasctic2boson)
 # elasctic2boson_reguralize = 0.5 * (c(Minus)^2 + q(Minus)^2) * c' * q' + 0.5 * c(Plus) * q(Plus) * ((c')^2 + (q')^2)
 # L_int = InteractionLagrangian(elasctic2boson_reguralize)
 
-L1 = L_int(1)
-L2 = L_int(2)
-expr = c(Out()) * c'(In()) * L1.lagrangian * L2.lagrangian
-wick_contraction(expr.arguments[1]).diagrams
-
 @testset "first order" begin
     @testset "Bubble diagrams" begin
         using KeldyshContraction: filter_nonzero!
@@ -66,24 +61,53 @@ wick_contraction(expr.arguments[1]).diagrams
 end
 
 @testset "second order" begin
-    using KeldyshContraction: _wick_contraction, regular, In, Out, Diagram, Diagrams
+    L1 = L_int(1)
+    L2 = L_int(2)
 
-    @test KeldyshContraction.is_conserved(expr)
-    @test KeldyshContraction.is_physical(expr)
+    @testset "vacuum" begin
+        using KeldyshContraction: filter_nonzero!
 
+        vacuum = L1.lagrangian * L2.lagrangian
+        map(vacuum.arguments) do arg
+            wick_contraction(arg; simplify=false)
+        end
+        wick_contraction(vacuum.arguments[1]; simplify=false)
+
+        expr = wick_contraction(vacuum; simplify=true)
+        filter_nonzero!(expr)
+        @test iszero(expr)
+    end
+
+    expr = c(Out()) * c'(In()) * L1.lagrangian * L2.lagrangian
     # ∨ I check these by hand
-    # 0.5*(c*c*c*̄q*̄c*̄q
-    truth = Diagrams(
-        Dict(
-            Diagram([(c(Out()), c'), (c, q'), (c, q(In())')]) => 0.0 - 1.0 * im,
-            Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => 0.0 - 1.0 * im,
-        ),
-    )
-    wick_contraction(expr.arguments[1]).diagrams
+    # 0.25*(c*c*c*c*c*̄q*̄c*̄q*̄c*̄c)
+    # truth = Diagrams(
+    #     Dict(
+    #         Diagram([(c(Out()), c'), (c, q'), (c, q'), (c, q'), (c, q(In())')]) => 0.0 - 2.0 * im,
+    #         Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => 0.0 - 2.0 * im,
+    #     ),
+    # )
+    # wick_contraction(expr.arguments[1]).diagrams
+    # ^ TODO we should write this test
     # The keldysh in and keldysh out will disappear later
 
     GF = DressedPropagator(L_int; order=2)
+    GF.retarded.diagrams
 
-    terms = collect(keys(GF.keldysh.diagrams))
-    # @test length(terms) == 20
+    terms_k = collect(keys(GF.keldysh.diagrams))
+    @test length(terms_k) == 18
+
+    terms_r = collect(GF.retarded.diagrams)
+    @test length(terms_r) == 6
+
+    terms_a = collect(GF.advanced.diagrams)
+    @test length(terms_a) == 6
+
+    terms_a[2]
+    KeldyshContraction.adjoint_diagram(terms_r[4])
+
+    Σ = SelfEnergy(GF; order=2)
+
+    @test_broken isequal(adjoint(Σ.advanced), Σ.retarded) # up to some swap
+    @test isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)
 end

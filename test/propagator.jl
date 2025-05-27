@@ -61,7 +61,7 @@ end
 @testset "adjoint" begin
     p1 = Edge(ϕᴾ, ϕᶜ'(In()))
     p2 = Edge(ϕᶜ, ϕᴾ'(In()))
-    @test_broken isequal(p1', p2) # (G^R)† = G^A
+    @test isequal(p1', p2) # (G^R)† = G^A
 
     p = Edge(ϕᶜ, ϕᶜ'(In()))
     @test_broken isequal(p', -1 * p) # (G^K)† = -G^K
