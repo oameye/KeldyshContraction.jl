@@ -7,7 +7,8 @@ function Diagram(contractions::Vector{<:Contraction})
     sort!(contractions; by=sort_by_position_and_type)
     edges = StaticArrays.sacollect(
         SVector{length(contractions),Edge}, Edge(c) for c in contractions
-    )
+    ) # TODO this is type unstable move to FixedSizeArrays.jl when released
+    # https://github.com/JuliaArrays/FixedSizeArrays.jl/issues/115
     return Diagram{E,typeof(edges)}(edges)
 end
 function Diagram(contractions::Vector{<:Edge})

@@ -7,6 +7,10 @@ using KeldyshContraction: Bulk, In, Out, Edge
     using KeldyshContraction: Diagram, Diagrams, Contraction
     @inferred Diagrams{2}()
     # @code_warntype Diagrams{2}()
+
+    @qfields c::Destroy(Classical) q::Destroy(Quantum)
+    vs = KeldyshContraction.Contraction[(c(Out()), q'), (c, q'), (c, q(In())')]
+    # @inferred Diagram(vs) #TODO
 end
 
 @testset "is_connected" begin
