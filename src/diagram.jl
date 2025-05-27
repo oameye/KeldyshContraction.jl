@@ -7,7 +7,8 @@ function Diagram(contractions::Vector{<:Contraction})
     sort!(contractions; by=sort_by_position_and_type)
     edges = StaticArrays.sacollect(
         SVector{length(contractions),Edge}, Edge(c) for c in contractions
-    )
+    ) # TODO this is type unstable move to FixedSizeArrays.jl when released
+    # https://github.com/JuliaArrays/FixedSizeArrays.jl/issues/115
     return Diagram{E,typeof(edges)}(edges)
 end
 function Diagram(contractions::Vector{<:Edge})
@@ -31,8 +32,9 @@ contractions(d::Diagram) = d.contractions
 struct Diagrams{E,T}
     diagrams::Dict{Diagram{E,T},ComplexF64}
 end # TODO try SwissDict or RobinDict from DataStructures.jl.
-function Diagrams(E::Int)
-    return Diagrams{E,SVector{E,Edge}}(Dict{Diagram{E,SVector{E,Edge}},ComplexF64}())
+function Diagrams{E}() where {E}
+    dict = Dict{Diagram{E,SVector{E,Edge}},ComplexF64}()
+    return Diagrams(dict)
 end
 function Diagrams(diagrams::Vector{Diagram{E,T}}, prefactor::ComplexF64) where {E,T}
     dict = Dict{Diagram{E,T},ComplexF64}(d => prefactor for d in diagrams)

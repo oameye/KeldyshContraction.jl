@@ -80,7 +80,7 @@ struct SelfEnergy{E,T}
 end
 function SelfEnergy(G::DressedPropagator{E}; order=1) where {E}
     self_energy = OrderedCollections.LittleDict{PropagatorType,Diagrams}((
-        Advanced => Diagrams(E-2), Retarded => Diagrams(E-2), Keldysh => Diagrams(E-2)
+        Advanced => Diagrams{E-2}(), Retarded => Diagrams{E-2}(), Keldysh => Diagrams{E-2}()
     ))
     construct_self_energy!(self_energy, G.keldysh; order)
     # ^ keldysh GF should contain everything
@@ -111,4 +111,6 @@ in the Retarded-Advanced-Keldysh basis.
 \\right)
 ```
 """
-matrix(Σ::SelfEnergy{E}) where {E} = Diagrams[Diagrams(E) Σ.advanced; Σ.retarded Σ.keldysh]
+function matrix(Σ::SelfEnergy{E}) where {E}
+    Diagrams[Diagrams{E}() Σ.advanced; Σ.retarded Σ.keldysh]
+end
