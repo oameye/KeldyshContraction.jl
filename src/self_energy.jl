@@ -34,7 +34,7 @@ function construct_self_energy!(
         mult = topology(diagram)
         if !isempty(mult) && first(mult) < order
             continue
-        end # Not
+        end
 
         positions = position.(_contractions)
         types_p = propagator_type.(_contractions)

@@ -41,7 +41,7 @@ function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; 
     for coefficients in Combinatorics.multiexponents(l, order)
         idxs = expand_coefficients(coefficients) # will be of length order
         mult = Combinatorics.multinomial(coefficients...)
-        qmul = prod(mult * L(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
+        qmul = mult * prod(L(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
         wick_contraction!(diagrams, prefactor * in_out * qmul; kwargs...)
     end
     return diagrams

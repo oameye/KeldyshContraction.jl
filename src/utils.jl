@@ -21,12 +21,13 @@ _simplify(x::Complex) =
     end
 
 function expand_coefficients(v::Vector{Int})
+    v′ = deepcopy(v)
     o = Vector{Int}()
-    while sum(v) > 0
-        for idx in eachindex(v)
-            if v[idx] > 0
+    while sum(v′) > 0
+        for idx in eachindex(v′)
+            if v′[idx] > 0
                 push!(o, idx)
-                v[idx] -= 1
+                v′[idx] -= 1
                 break
             end
         end
