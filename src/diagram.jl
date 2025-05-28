@@ -61,6 +61,7 @@ Base.isequal(d1::Diagrams, d2::Diagrams) = isequal(d1.diagrams, d2.diagrams)
 Base.iszero(d::Diagrams) = isempty(d.diagrams)
 
 number_of_propagators(a::QMul) = length(a) ÷ 2
+number_of_propagators(L::InteractionLagrangian) = length(first(L.lagrangian.arguments)) ÷ 2
 
 # Add a single diagram, summing prefactors if it already exists
 function Base.push!(collection::Diagrams, diagram::Diagram, prefactor::Number)

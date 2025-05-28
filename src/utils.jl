@@ -19,3 +19,17 @@ _simplify(x::Complex) =
     else
         x
     end
+
+function expand_coefficients(v::Vector{Int})
+    o = Vector{Int}()
+    while sum(v) > 0
+        for idx in eachindex(v)
+            if v[idx] > 0
+                push!(o, idx)
+                v[idx] -= 1
+                break
+            end
+        end
+    end
+    return o
+end # TODO: need better name
