@@ -40,7 +40,7 @@ G^A\\left(x_1, x_2\\right) & 0
 ```
 """
 function matrix(G::DressedPropagator{E}) where {E}
-    Diagrams[G.retarded G.keldysh; G.advanced Diagrams(E)]
+    Diagrams[G.retarded G.keldysh; G.advanced Diagrams{E}()]
 end
 
 """
@@ -59,7 +59,7 @@ function DressedPropagator(L::InteractionLagrangian; order=1, simplify=true)
     elseif order == 2
         L1 = L
         L2 = L(2)
-        prefactor = - 1*make_real(im^3) / 2 #-i*i^2
+        prefactor = - 1*im^3 / 2 #-i*i^2
         keldysh = multiply!(
             wick_contraction(ψ(Out()) * ψ'(In()) * L1.lagrangian * L2.lagrangian; simplify),
             prefactor,

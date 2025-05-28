@@ -25,7 +25,7 @@ The function returns a new expression of propagators of type `SymbolicUtils.Symb
 function wick_contraction(a::QAdd; kwargs...)::Diagrams
     args = SymbolicUtils.arguments(a)
     E = number_of_propagators(first(args))
-    diagrams = Diagrams(E)
+    diagrams = Diagrams{E}()
     # foreach(args) do arg
     for arg in args
         wick_contraction!(diagrams, arg; kwargs...)
@@ -37,7 +37,7 @@ function wick_contraction(a::QMul; kwargs...)::Diagrams
     @assert is_physical(a)
 
     E = number_of_propagators(a)
-    diagrams = Diagrams(E)
+    diagrams = Diagrams{E}()
 
     wick_contraction!(diagrams, a; kwargs...)
     return diagrams

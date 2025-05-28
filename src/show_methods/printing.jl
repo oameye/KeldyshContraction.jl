@@ -1,4 +1,4 @@
-Base.show(io::IO, x::QSym) = write(io, name(x))
+# Base.show(io::IO, x::QSym) = write(io, name(x))
 function Base.show(io::IO, x::Create)
     reg = Int(regularisation(x))
     if iszero(reg)
@@ -8,7 +8,8 @@ function Base.show(io::IO, x::Create)
     else
         s = string("̄", name(x), "⁻")
     end
-    return write(io, s)
+    write(io, s)
+    return nothing
 end
 function Base.show(io::IO, x::Destroy)
     reg = Int(regularisation(x))
@@ -19,19 +20,21 @@ function Base.show(io::IO, x::Destroy)
     else
         s = string(name(x), "⁻")
     end
-    return write(io, s)
+    write(io, s)
+    return nothing
 end
 
-show_brackets = Ref(true)
+const show_brackets = Ref(true)
 function Base.show(io::IO, x::QTerm)
-    show_brackets[] && write(io, "(")
+    show_brackets[]::Bool && write(io, "(")
     show(io, arguments(x)[1])
     f = SymbolicUtils.operation(x)
     for i in 2:length(arguments(x))
         show(io, f)
         show(io, arguments(x)[i])
     end
-    return show_brackets[] && write(io, ")")
+    show_brackets[]::Bool && write(io, ")")
+    return nothing
 end
 
 function Base.show(io::IO, x::QMul)
@@ -39,13 +42,14 @@ function Base.show(io::IO, x::QMul)
         print_number(io, x.arg_c)
         show(io, *)
     end
-    show_brackets[] && write(io, "(")
+    show_brackets[]::Bool && write(io, "(")
     show(io, x.args_nc[1])
     for i in 2:length(x.args_nc)
         show(io, *)
         show(io, x.args_nc[i])
     end
-    return show_brackets[] && write(io, ")")
+    show_brackets[]::Bool && write(io, ")")
+    return nothing
 end
 
 function Base.show(io::IO, L::InteractionLagrangian)
@@ -54,7 +58,8 @@ function Base.show(io::IO, L::InteractionLagrangian)
     write(io, " and ")
     show(io, L.qfield)
     write(io, ":\n")
-    return show(io, L.lagrangian)
+    show(io, L.lagrangian)
+    return nothing
 end
 
 const T_LATEX = Union{<:QField,Diagrams,Diagram,Edge}
@@ -65,7 +70,8 @@ function Base.show(io::IO, ::MIME"text/latex", L::InteractionLagrangian)
     # write(io, " and ")
     # write(io, latexify(L.qfield))
     # println(io, ": \\newline")
-    return write(io, latexify(L.lagrangian))
+    write(io, latexify(L.lagrangian))
+    return nothing
 end
 # function Base.show(io::IO, ::MIME"text/latex", L::DressedPropagator)
 #     return write(io,latexify([L.retarded,L.advanced, L.keldysh]))
@@ -88,7 +94,8 @@ function Base.show(io::IO, x::Edge)
         reg_string[r1],
         ")",
     )
-    return write(io, s)
+    write(io, s)
+    return nothing
 end
 function Base.show(io::IO, d::Diagram)
     contractions = d.contractions
@@ -101,6 +108,7 @@ function Base.show(io::IO, d::Diagram)
             show(io, *)
         end
     end
+    return nothing
 end
 function Base.show(io::IO, ds::Diagrams)
     diagrams = collect(keys(ds.diagrams))
@@ -119,6 +127,7 @@ function Base.show(io::IO, ds::Diagrams)
             write(io, " + ")
         end
     end
+    return nothing
 end
 
 function print_number(io, x::Number)
@@ -128,6 +137,7 @@ function print_number(io, x::Number)
         show(io, x)
         x isa Complex ? write(io, ")") : write(io, "")
     end
+    return nothing
 end
 
 const underscore_dict = Dict(
@@ -151,5 +161,6 @@ function Base.show(io::IO, mime::MIME"text/plain", Σ::Union{SelfEnergy,DressedP
     write(io, "\nretarded: ")
     show(io, Σ.retarded)
     write(io, "\nadvanced: ")
-    return show(io, Σ.advanced)
+    show(io, Σ.advanced)
+    return nothing
 end

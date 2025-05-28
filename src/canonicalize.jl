@@ -78,6 +78,6 @@ function is_canonical(vs::Vector{Contraction})
     if isnothing(idx_out)
         return true
     else
-        return Bulk() ∈ position.(vs[idx_out])
+        return Bulk() ∈ position.(vs[idx_out]) ? true : false
     end
 end

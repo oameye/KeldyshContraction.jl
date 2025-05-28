@@ -197,7 +197,7 @@ end
         G_K1 = wick_contraction(expr_K)
 
         self_energy = OrderedCollections.LittleDict{PropagatorType,Diagrams}((
-            Advanced => Diagrams(1), Retarded => Diagrams(1), Keldysh => Diagrams(1)
+            Advanced => Diagrams{1}(), Retarded => Diagrams{1}(), Keldysh => Diagrams{1}()
         ))
         construct_self_energy!(self_energy, G_K1)
         @test isequal(self_energy[Advanced], Σ.advanced)

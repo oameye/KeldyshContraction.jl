@@ -32,6 +32,8 @@ using KeldyshContraction: Classical, Quantum, Plus, Minus, In, Out, Edge, Bulk
         @test sprint(show, i) == o
         @test repr(i) == o
     end
+    s = IOBuffer(sizehint=0)
+    @inferred show(s, ϕ*ϕ')
 
     output_latex = [
         "\$\\phi\$",

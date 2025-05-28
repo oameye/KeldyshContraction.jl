@@ -68,7 +68,18 @@ Base.iszero(q::QMul) = iszero(q.arg_c)
 
 Checks if a term is in the bulk. A term is bulk if it has no `In` or `Out` position fields ([`AbstractPosition`](@ref)).
 """
-isbulk(q::QMul) = all(isbulk(f) for f in q.args_nc)
+function isbulk(q::QMul) # TODO to make type stable QMul should contain size information
+    args = q.args_nc
+    bool = false
+    for f in args
+        if isbulk(f)
+            bool = true
+        else
+            return false
+        end
+    end
+    return bool
+end
 allfields(q::QMul) = q.args_nc
 
 ########################
