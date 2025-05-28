@@ -22,7 +22,7 @@ function Diagram(contractions::Vector{<:Edge})
         SVector{length(contractions),Edge}, c for c in contractions
     )
     return Diagram(edges)
-end # TODO: make above two functions less redudent
+end # TODO: make above two functions less redundant
 function Diagram(edges::SVector{E,Edge}) where {E}
     Diagram{E,SVector{E,Edge}}(edges, bulk_multiplicity(edges))
 end
