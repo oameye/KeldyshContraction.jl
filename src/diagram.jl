@@ -58,6 +58,7 @@ function Diagrams(contractions::Vector{Vector{Contraction}}, prefactor::ComplexF
     return Diagrams{E,T}(dict)
 end
 Base.isequal(d1::Diagrams, d2::Diagrams) = isequal(d1.diagrams, d2.diagrams)
+Base.hash(d::Diagrams, h::UInt) = hash(d.diagrams, h)
 Base.iszero(d::Diagrams) = isempty(d.diagrams)
 
 number_of_propagators(a::QMul) = length(a) ÷ 2

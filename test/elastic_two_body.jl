@@ -84,6 +84,12 @@ end
     end
 
     expr = c(Out()) * c'(In()) * L1.lagrangian * L2.lagrangian
+
+    @test isequal(wick_contraction(expr.arguments[2]), wick_contraction(expr.arguments[5]))
+    all_diagrams = map(wick_contraction, expr.arguments)
+    @test isequal(all_diagrams[2],all_diagrams[5])
+    @test length(unique(all_diagrams)) == 8
+
     # ∨ I check these by hand
     # 0.25*(c*c*c*c*c*̄q*̄c*̄q*̄c*̄c)
     # truth = Diagrams(
