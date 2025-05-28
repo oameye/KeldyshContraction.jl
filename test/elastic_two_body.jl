@@ -79,6 +79,32 @@ end
     end
 
     expr = c(Out()) * c'(In()) * L1.lagrangian * L2.lagrangian
+
+    import KeldyshContraction as KC
+    using Combinatorics
+    order = 2
+    in_out = c(Out()) * c'(In())
+    l = length(L_int.lagrangian)
+
+    E = KC.number_of_propagators(L_int)*order + 1 # +1 for in_out
+    dict = Dict()
+    prefactor = -1 * im * im^order / factorial(order)
+
+    for coefficients in Combinatorics.multiexponents(l, order)
+        idxs = KC.expand_coefficients(coefficients) # will be of length order
+        mult = Combinatorics.multinomial(coefficients...)
+        qmul = mult * prod(L_int(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
+
+        term = prefactor * in_out * qmul
+        diagrams = wick_contraction(term; simplify=true)
+        dict[term] = diagrams
+    end
+    dict
+
+    for coefficients in Combinatorics.multiexponents(l, order)
+        mult = Combinatorics.multinomial(coefficients...)
+        @show (coefficients, mult)
+    end
     # ∨ I check these by hand
     # 0.25*(c*c*c*c*c*̄q*̄c*̄q*̄c*̄c)
     # truth = Diagrams(

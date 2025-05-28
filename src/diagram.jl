@@ -53,7 +53,7 @@ function Diagrams(contractions::Vector{Vector{Contraction}}, prefactor::ComplexF
     T = SVector{E,Edge}
     imag_factor = im^E # Contraction becomes propagator
     dict = Dict{Diagram{E,T},ComplexF64}(
-        Diagram(c) => imag_factor * prefactor for c in contractions
+        Diagram(c) => _simplify(imag_factor * prefactor) for c in contractions
     )
     return Diagrams{E,T}(dict)
 end
@@ -61,6 +61,7 @@ Base.isequal(d1::Diagrams, d2::Diagrams) = isequal(d1.diagrams, d2.diagrams)
 Base.iszero(d::Diagrams) = isempty(d.diagrams)
 
 number_of_propagators(a::QMul) = length(a) ÷ 2
+number_of_propagators(L::InteractionLagrangian) = length(first(L.lagrangian.arguments)) ÷ 2
 
 # Add a single diagram, summing prefactors if it already exists
 function Base.push!(collection::Diagrams, diagram::Diagram, prefactor::Number)
@@ -167,4 +168,11 @@ function topologies(ds::Diagrams)
         t => terms[idxs]
     end
     Dict(pairs)
+end
+
+function _simplify!(g::Diagrams)
+    for k in keys(g.diagrams)
+        g.diagrams[k] = _simplify(g.diagrams[k])
+    end
+    return nothing
 end

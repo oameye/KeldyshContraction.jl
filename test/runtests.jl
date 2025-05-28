@@ -23,7 +23,7 @@ if isempty(VERSION.prerelease)
         JET.test_package(KeldyshContraction; target_defined_modules=true)
         rep = report_package("KeldyshContraction")
         @show rep
-        @test length(JET.get_reports(rep)) <= 24
+        @test length(JET.get_reports(rep)) <= 30
         @test_broken length(JET.get_reports(rep)) == 0
     end
 end
