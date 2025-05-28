@@ -5,6 +5,11 @@ using KeldyshContraction: In, Out
 elasctic2boson = 0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2)
 L_int = InteractionLagrangian(elasctic2boson)
 
+L1 = L_int(1)
+L2 = L_int(2)
+expr = c(Out()) * c'(In()) * L1.lagrangian * L2.lagrangian
+expr + expr
+
 # using KeldyshContraction: Minus, Plus
 # elasctic2boson_reguralize = 0.5 * (c(Minus)^2 + q(Minus)^2) * c' * q' + 0.5 * c(Plus) * q(Plus) * ((c')^2 + (q')^2)
 # L_int = InteractionLagrangian(elasctic2boson_reguralize)
@@ -79,6 +84,12 @@ end
     end
 
     expr = c(Out()) * c'(In()) * L1.lagrangian * L2.lagrangian
+
+    @test isequal(wick_contraction(expr.arguments[2]), wick_contraction(expr.arguments[5]))
+    all_diagrams = map(wick_contraction, expr.arguments)
+    @test isequal(all_diagrams[2],all_diagrams[5])
+    @test length(unique(all_diagrams)) == 8
+
     # ∨ I check these by hand
     # 0.25*(c*c*c*c*c*̄q*̄c*̄q*̄c*̄c)
     # truth = Diagrams(
@@ -87,9 +98,15 @@ end
     #         Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => 0.0 - 2.0 * im,
     #     ),
     # )
-    # wick_contraction(expr.arguments[1]).diagrams
+    wick_contraction(expr.arguments[1]).diagrams
     # ^ TODO we should write this test
     # The keldysh in and keldysh out will disappear later
+
+    wick_contraction(expr.arguments[2]).diagrams
+
+    wick_contraction(expr.arguments[3]).diagrams
+
+    wick_contraction(expr.arguments[4]).diagrams
 
     GF = DressedPropagator(L_int; order=2)
     GF.retarded.diagrams
