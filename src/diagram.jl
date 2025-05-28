@@ -151,3 +151,20 @@ function edge_to_index(i::Int, j::Int, n::Int)
     # This maps edge (i,j) to a unique integer in range 1:max_edges(n)
     return (i - 1) * (n - i ÷ 2) + (j - i)
 end
+
+function topologies(ds::Diagrams)
+    terms = collect(keys(ds.diagrams))
+    _bulk_multiplicity = map(terms) do diagram
+        vs = map(diagram.contractions) do c
+            ff = fields(c)
+            integer_positions((ff[1], ff[2]))
+        end
+        bulk_multiplicity(vs)
+    end
+    _topologies = unique(_bulk_multiplicity)
+    pairs = map(_topologies) do t
+        idxs = findall(i -> i == t, _bulk_multiplicity)
+        t => terms[idxs]
+    end
+    Dict(pairs)
+end
