@@ -29,24 +29,22 @@ function construct_self_energy!(
     end
 
     for (diagram, prefactor) in diagrams
-        contractions = diagram.contractions
+        _contractions = contractions(diagram)
 
-        mult = bulk_multiplicity(contractions)
+        mult = topology(diagram)
         if !isempty(mult) && first(mult) < order
             continue
-        end
+        end # Not
 
-        positions = position.(contractions)
-        types_p = propagator_type.(contractions)
+        positions = position.(_contractions)
+        types_p = propagator_type.(_contractions)
         dict = OrderedCollections.freeze(
             OrderedCollections.OrderedDict(zip(positions, types_p))
-        )
+        ) # TODO Replace with SmallCollections
 
         # Find all bulk propagators (edges where both fields are bulk)
-        bulk_idxs = findall(isbulk, contractions)
-        bulk_propagators = contractions[bulk_idxs]
-        # to_add = prefactor * prod(bulk_propagators)
-        # self_energy[self_energy_type(dict)] += to_add
+        bulk_idxs = findall(isbulk, _contractions)
+        bulk_propagators = _contractions[bulk_idxs]
         push!(self_energy[self_energy_type(dict)], Diagram(bulk_propagators), prefactor)
     end
     return self_energy

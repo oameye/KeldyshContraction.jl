@@ -91,7 +91,7 @@ GF = DressedPropagator(L_int; order=2)
 import KeldyshContraction as KC
 terms = collect(keys(GF.keldysh.diagrams))
 bulk_multiplicity = map(terms) do diagram
-    vs = map(diagram.contractions) do c
+    vs = map(contractions(diagram)) do c
         ff = KC.fields(c)
         KC.integer_positions((ff[1], ff[2]))
     end

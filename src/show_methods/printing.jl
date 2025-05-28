@@ -98,13 +98,13 @@ function Base.show(io::IO, x::Edge)
     return nothing
 end
 function Base.show(io::IO, d::Diagram)
-    contractions = d.contractions
-    l = length(contractions)
-    for idx in eachindex(contractions)
+    _contractions = contractions(d)
+    l = length(_contractions)
+    for idx in eachindex(_contractions)
         if idx == l
-            show(io, contractions[idx])
+            show(io, _contractions[idx])
         else
-            show(io, contractions[idx])
+            show(io, _contractions[idx])
             show(io, *)
         end
     end
