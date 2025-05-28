@@ -88,23 +88,11 @@ GF = DressedPropagator(L_int; order=2)
 # Instead, we need to separate the reducible and irreducible diagrams. We can separate them
 # by looking at the multiplicity of the edges in the diagrams.
 
-import KeldyshContraction as KC
-terms = collect(keys(GF.keldysh.diagrams))
-bulk_multiplicity = map(terms) do diagram
-    vs = map(diagram.contractions) do c
-        ff = KC.fields(c)
-        KC.integer_positions((ff[1], ff[2]))
-    end
-    KC.bulk_multiplicity(vs)
-end
+topology_dict = topologies(GF.keldysh)
 
 # This gives us three distinct topologies, which we can identify by the multiplicity of the edges.
 
-topology1 = findall(i -> i == [1], bulk_multiplicity)
-topology2 = findall(i -> i == [2], bulk_multiplicity)
-topology3 = findall(i -> i == [3], bulk_multiplicity)
-
-terms[topology3]
+topology_dict[[2]]
 
 # The topology involving only one edge is the reducible diagram, which will not contribute to the self-energy in second order. Indeed, internally we only consider the irreducible diagrams.
 

@@ -1,6 +1,8 @@
 struct Diagram{E,T}
     contractions::T
+    topology::Vector{Int64} # TODO: make immutable
 end
+
 function Diagram(contractions::Vector{<:Contraction})
     @assert length(contractions) > 0 "Contraction vector must not be empty"
     E = length(contractions)
@@ -9,7 +11,7 @@ function Diagram(contractions::Vector{<:Contraction})
         SVector{length(contractions),Edge}, Edge(c) for c in contractions
     ) # TODO this is type unstable move to FixedSizeArrays.jl when released
     # https://github.com/JuliaArrays/FixedSizeArrays.jl/issues/115
-    return Diagram{E,typeof(edges)}(edges)
+    return Diagram(edges)
 end
 function Diagram(contractions::Vector{<:Edge})
     @assert length(contractions) > 0 "Contraction vector must not be empty"
@@ -19,11 +21,15 @@ function Diagram(contractions::Vector{<:Edge})
     edges = StaticArrays.sacollect(
         SVector{length(contractions),Edge}, c for c in contractions
     )
-    return Diagram{E,typeof(edges)}(edges)
+    return Diagram(edges)
+end # TODO: make above two functions less redundant
+function Diagram(edges::SVector{E,Edge}) where {E}
+    Diagram{E,SVector{E,Edge}}(edges, bulk_multiplicity(edges))
 end
-Base.isequal(d1::Diagram, d2::Diagram) = isequal(d1.contractions, d2.contractions)
-Base.hash(d::Diagram, h::UInt) = hash(d.contractions, h)
+Base.isequal(d1::Diagram, d2::Diagram) = isequal(contractions(d1), contractions(d2))
+Base.hash(d::Diagram, h::UInt) = hash(contractions(d), h)
 contractions(d::Diagram) = d.contractions
+topology(d::Diagram) = d.topology
 
 ################
 #   Diagrams
@@ -104,15 +110,16 @@ function adjoint_diagram(
     # G^R = G^A
     # G^K = -G^K
     d, prefactor = pair
-    minus_signs = count(is_keldysh, d.contractions)
+    _contractions = contractions(d)
+    minus_signs = count(is_keldysh, _contractions)
     prefactor′ = prefactor * (-1)^minus_signs
-    adjoint_edges = Edge[adjoint(e) for e in d.contractions]
+    adjoint_edges = Edge[adjoint(e) for e in _contractions]
     sorted_adjoint_edges = sort(collect(adjoint_edges); by=sort_by_position_and_type)
     edges = StaticArrays.sacollect(T, e for e in sorted_adjoint_edges)
-    return Diagram{E,T}(edges) => _simplify(adjoint(prefactor′))
+    return Diagram(edges) => _simplify(adjoint(prefactor′))
 end
 
-function bulk_multiplicity(edges::SVector{N,Tuple{Int,Int}}) where {N}
+function bulk_multiplicity(edges::AbstractArray{Tuple{Int,Int}})
     ff = edge -> !(1 ∈ edge) && !(2 ∈ edge) && !isequal(edge[1], edge[2])
     edges = filter(ff, edges)
     map!(edge -> edge .- 2, edges, edges)
@@ -125,11 +132,10 @@ function bulk_multiplicity(edges::SVector{N,Tuple{Int,Int}}) where {N}
         mult[idx] += 1
     end
     return mult
-end
-function bulk_multiplicity(vs::SVector{N,KeldyshContraction.Edge}) where {N}
+end # TODO: do we need to sort?
+function bulk_multiplicity(vs::AbstractArray{Edge})
     return bulk_multiplicity(map(integer_positions, vs))
 end
-# bulk_multiplicity(vs::Vector) = bulk_multiplicity(integer_positions(vs))
 
 max_edges(n::Int)::Int = n * (n - 1) ÷ 2
 
@@ -144,4 +150,21 @@ function edge_to_index(i::Int, j::Int, n::Int)
     # Calculate unique index
     # This maps edge (i,j) to a unique integer in range 1:max_edges(n)
     return (i - 1) * (n - i ÷ 2) + (j - i)
+end
+
+function topologies(ds::Diagrams)
+    terms = collect(keys(ds.diagrams))
+    _bulk_multiplicity = map(terms) do diagram
+        vs = map(diagram.contractions) do c
+            ff = fields(c)
+            integer_positions((ff[1], ff[2]))
+        end
+        bulk_multiplicity(vs)
+    end
+    _topologies = unique(_bulk_multiplicity)
+    pairs = map(_topologies) do t
+        idxs = findall(i -> i == t, _bulk_multiplicity)
+        t => terms[idxs]
+    end
+    Dict(pairs)
 end

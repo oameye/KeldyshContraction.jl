@@ -51,6 +51,7 @@ export @qfields,
     SelfEnergy,
     InteractionLagrangian,
     @syms,
-    arguments
+    arguments,
+    topologies
 
 end
