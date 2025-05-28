@@ -53,7 +53,7 @@ function Diagrams(contractions::Vector{Vector{Contraction}}, prefactor::ComplexF
     T = SVector{E,Edge}
     imag_factor = im^E # Contraction becomes propagator
     dict = Dict{Diagram{E,T},ComplexF64}(
-        Diagram(c) => imag_factor * prefactor for c in contractions
+        Diagram(c) => _simplify(imag_factor * prefactor) for c in contractions
     )
     return Diagrams{E,T}(dict)
 end
@@ -168,4 +168,11 @@ function topologies(ds::Diagrams)
         t => terms[idxs]
     end
     Dict(pairs)
+end
+
+function _simplify!(g::Diagrams)
+    for k in keys(g.diagrams)
+        g.diagrams[k] = _simplify(g.diagrams[k])
+    end
+    return nothing
 end

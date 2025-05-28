@@ -11,16 +11,6 @@ L_int =
         c' * q' * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
     )
 
-L = InteractionLagrangian(L_int)
-L1 = L(1)
-L2 = L(2)
-expr_r = c(Out()) * q'(In()) * L1.lagrangian * L2.lagrangian
-map(expr_r.arguments) do arg
-    wick_contraction(arg)
-end
-
-wick_contraction(expr_r.arguments[2])
-
 @testset "vacuum bubble" begin
     @test !iszero(wick_contraction(L_int; regularise=false))
     @test iszero(wick_contraction(L_int; regularise=true))
@@ -220,6 +210,8 @@ end
         @test iszero(expr)
     end
 
+    L1 = L(1)
+    L2 = L(2)
     expr_r = c(Out()) * q'(In()) * L1.lagrangian * L2.lagrangian
     map(expr_r.arguments) do arg
         wick_contraction(arg)

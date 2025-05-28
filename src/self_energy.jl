@@ -92,7 +92,9 @@ function SelfEnergy(G::DressedPropagator{E}; order=1) where {E}
     # G_A(1) = G₀_A Σ_A G₀_A
     # G_K(1) = G₀_K(x1) Σ_A(y) G₀_A(x2) + G_A(x2) Σ_A(y) G_R(x1) + G_R(x1) Σ_R(y) G_K(x2)
     # G₀_K Σ_K G₀_K = 0
-
+    _simplify!(self_energy[Keldysh])
+    _simplify!(self_energy[Retarded])
+    _simplify!(self_energy[Advanced])
     return SelfEnergy(self_energy[Keldysh], self_energy[Retarded], self_energy[Advanced])
 end
 
