@@ -170,7 +170,7 @@ function topologies(ds::Diagrams)
     Dict(pairs)
 end
 
-function _simplify!(g::Diagrams)
+function _simplify_prefactors!(g::Diagrams)
     for k in keys(g.diagrams)
         g.diagrams[k] = _simplify(g.diagrams[k])
     end
