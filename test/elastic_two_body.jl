@@ -2,7 +2,7 @@ using KeldyshContraction, Test
 using KeldyshContraction: In, Out
 
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
-elasctic2boson = 0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2)
+elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
 L_int = InteractionLagrangian(elasctic2boson)
 
 # using KeldyshContraction: Minus, Plus
@@ -29,11 +29,13 @@ L_int = InteractionLagrangian(elasctic2boson)
         # 0.5*(c*c*c*̄q*̄c*̄q
         truth = Diagrams(
             Dict(
-                Diagram([(c(Out()), c'), (c, q'), (c, q(In())')]) => 0.0 - 1.0 * im,
-                Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => 0.0 - 1.0 * im,
+                Diagram([(c(Out()), c'), (c, q'), (c, q(In())')]) => -0.0 + 1.0 * im,
+                Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => -0.0 + 1.0 * im,
             ),
         )
-        @test isequal(wick_contraction(expr.arguments[1]), truth)
+        result = wick_contraction(expr.arguments[1])
+        KeldyshContraction._simplify!(result)
+        @test isequal(result, truth)
         # The keldysh in and keldysh out will disappear later
     end
 
@@ -100,6 +102,9 @@ end
         dict[term] = diagrams
     end
     dict
+    i=5
+    @show collect(dict)[i][1]
+    collect(dict)[i][2].diagrams
 
     for coefficients in Combinatorics.multiexponents(l, order)
         mult = Combinatorics.multinomial(coefficients...)

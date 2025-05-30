@@ -19,12 +19,13 @@ using KeldyshContraction
 # and define the interaction Lagrangian:
 
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
-elasctic2boson = 0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2)
+elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
 L_int = InteractionLagrangian(elasctic2boson)
 
+# TODO: misus sign comes from ∂_t-H
 # A good check if the interaction Lagrangian is a valid physical process, is to check if the
 # normalization identity $Z=1$ holds. We can do this perturbatively in $g$ by expanding
-# $exp(i S_\mathrm{int})$  and showing the average of the linear part of the system is zero
+# $\exp(i S_\mathrm{int})$  and showing the average of the linear part of the system is zero
 # ```math
 # \langle S_\mathrm{int}\rangle =  \langle S_\mathrm{int}^2\rangle  =\ldots = 0
 # ```
@@ -51,7 +52,7 @@ wick_contraction(elasctic2boson; simplify=true)
 # \end{aligned}
 # ```
 
-# So we can compute the first order Green's function correction G_{(1)} by computing
+# So we can compute the first order Green's function correction $G_{(1)}$ by computing
 # the Wick contraction of the interaction Lagrangian
 
 GF = DressedPropagator(L_int)
@@ -61,7 +62,7 @@ GF = DressedPropagator(L_int)
 # ## Self-Energy
 
 # Often we are interested in the self-energy of the system, which is defined as
-# the set of irreduciable diagrams. Inside the package we can compute these to an order $g$ by
+# the set of irreducible diagrams. Inside the package we can compute these to an order $g$ by
 
 Σ = SelfEnergy(GF)
 

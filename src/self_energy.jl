@@ -7,7 +7,7 @@ const PositionPropagatorType = OrderedCollections.LittleDict{
 
 "compute the self-energy type from positions save in `dict`."
 function self_energy_type(dict::OrderedCollections.LittleDict)
-    # G1K =  GA[y1,x2] GK[x1,y1] ΣA[y1,y1]+GA[y1,x2] GR[x1,y1] Σ+GK[y1,x2] GR[x1,y1]ΣR[y1,y1]
+    # G1K = GK[x1,y1] ΣA[y1,y1] GA[y1,x2] +GR[x1,y1] ΣK GA[y1,x2] + GR[x1,y1]ΣR[y1,y1] GK[y1,x2]
     if is_keldysh(dict[Out()]) && is_advanced(dict[In()])
         return Advanced
     elseif is_retarded(dict[Out()]) && is_keldysh(dict[In()])
