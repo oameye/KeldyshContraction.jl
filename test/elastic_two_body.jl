@@ -34,7 +34,7 @@ L_int = InteractionLagrangian(elasctic2boson)
             ),
         )
         result = wick_contraction(expr.arguments[1])
-        KeldyshContraction._simplify!(result)
+        KeldyshContraction._simplify_prefactors!(result)
         @test isequal(result, truth)
         # The keldysh in and keldysh out will disappear later
     end
