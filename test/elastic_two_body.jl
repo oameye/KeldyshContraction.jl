@@ -29,11 +29,13 @@ L_int = InteractionLagrangian(elasctic2boson)
         # 0.5*(c*c*c*̄q*̄c*̄q
         truth = Diagrams(
             Dict(
-                Diagram([(c(Out()), c'), (c, q'), (c, q(In())')]) => 0.0 - 1.0 * im,
-                Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => 0.0 - 1.0 * im,
+                Diagram([(c(Out()), c'), (c, q'), (c, q(In())')]) => -0.0 + 1.0 * im,
+                Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => -0.0 + 1.0 * im,
             ),
         )
-        @test isequal(wick_contraction(expr.arguments[1]), truth)
+        result = wick_contraction(expr.arguments[1])
+        KeldyshContraction._simplify!(result)
+        @test isequal(result, truth)
         # The keldysh in and keldysh out will disappear later
     end
 
