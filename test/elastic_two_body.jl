@@ -2,7 +2,7 @@ using KeldyshContraction, Test
 using KeldyshContraction: In, Out
 
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
-elasctic2boson = 0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2)
+elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
 L_int = InteractionLagrangian(elasctic2boson)
 
 L1 = L_int(1)
@@ -34,11 +34,13 @@ expr + expr
         # 0.5*(c*c*c*̄q*̄c*̄q
         truth = Diagrams(
             Dict(
-                Diagram([(c(Out()), c'), (c, q'), (c, q(In())')]) => 0.0 - 1.0 * im,
-                Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => 0.0 - 1.0 * im,
+                Diagram([(c(Out()), c'), (c, q'), (c, q(In())')]) => -0.0 + 1.0 * im,
+                Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => -0.0 + 1.0 * im,
             ),
         )
-        @test isequal(wick_contraction(expr.arguments[1]), truth)
+        result = wick_contraction(expr.arguments[1])
+        KeldyshContraction._simplify_prefactors!(result)
+        @test isequal(result, truth)
         # The keldysh in and keldysh out will disappear later
     end
 
@@ -85,11 +87,34 @@ end
 
     expr = c(Out()) * c'(In()) * L1.lagrangian * L2.lagrangian
 
-    @test isequal(wick_contraction(expr.arguments[2]), wick_contraction(expr.arguments[5]))
-    all_diagrams = map(wick_contraction, expr.arguments)
-    @test isequal(all_diagrams[2],all_diagrams[5])
-    @test length(unique(all_diagrams)) == 8
+    import KeldyshContraction as KC
+    using Combinatorics
+    order = 2
+    in_out = c(Out()) * c'(In())
+    l = length(L_int.lagrangian)
 
+    E = KC.number_of_propagators(L_int)*order + 1 # +1 for in_out
+    dict = Dict()
+    prefactor = -1 * im * im^order / factorial(order)
+
+    for coefficients in Combinatorics.multiexponents(l, order)
+        idxs = KC.expand_coefficients(coefficients) # will be of length order
+        mult = Combinatorics.multinomial(coefficients...)
+        qmul = mult * prod(L_int(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
+
+        term = prefactor * in_out * qmul
+        diagrams = wick_contraction(term; simplify=true)
+        dict[term] = diagrams
+    end
+    dict
+    i=5
+    @show collect(dict)[i][1]
+    collect(dict)[i][2].diagrams
+
+    for coefficients in Combinatorics.multiexponents(l, order)
+        mult = Combinatorics.multinomial(coefficients...)
+        @show (coefficients, mult)
+    end
     # ∨ I check these by hand
     # 0.25*(c*c*c*c*c*̄q*̄c*̄q*̄c*̄c)
     # truth = Diagrams(

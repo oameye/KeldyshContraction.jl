@@ -7,7 +7,7 @@ const PositionPropagatorType = OrderedCollections.LittleDict{
 
 "compute the self-energy type from positions save in `dict`."
 function self_energy_type(dict::OrderedCollections.LittleDict)
-    # G1K =  GA[y1,x2] GK[x1,y1] ΣA[y1,y1]+GA[y1,x2] GR[x1,y1] Σ+GK[y1,x2] GR[x1,y1]ΣR[y1,y1]
+    # G1K = GK[x1,y1] ΣA[y1,y1] GA[y1,x2] +GR[x1,y1] ΣK GA[y1,x2] + GR[x1,y1]ΣR[y1,y1] GK[y1,x2]
     if is_keldysh(dict[Out()]) && is_advanced(dict[In()])
         return Advanced
     elseif is_retarded(dict[Out()]) && is_keldysh(dict[In()])
@@ -34,7 +34,7 @@ function construct_self_energy!(
         mult = topology(diagram)
         if !isempty(mult) && first(mult) < order
             continue
-        end # Not
+        end
 
         positions = position.(_contractions)
         types_p = propagator_type.(_contractions)
@@ -92,7 +92,9 @@ function SelfEnergy(G::DressedPropagator{E}; order=1) where {E}
     # G_A(1) = G₀_A Σ_A G₀_A
     # G_K(1) = G₀_K(x1) Σ_A(y) G₀_A(x2) + G_A(x2) Σ_A(y) G_R(x1) + G_R(x1) Σ_R(y) G_K(x2)
     # G₀_K Σ_K G₀_K = 0
-
+    _simplify_prefactors!(self_energy[Keldysh])
+    _simplify_prefactors!(self_energy[Retarded])
+    _simplify_prefactors!(self_energy[Advanced])
     return SelfEnergy(self_energy[Keldysh], self_energy[Retarded], self_energy[Advanced])
 end
 
