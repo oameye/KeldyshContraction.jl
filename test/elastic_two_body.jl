@@ -1,13 +1,12 @@
 using KeldyshContraction, Test
 using KeldyshContraction: In, Out
+using OrderedCollections
+using Random
+Random.seed!(1234) # for reproducibility
 
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
 elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
 L_int = InteractionLagrangian(elasctic2boson)
-
-# using KeldyshContraction: Minus, Plus
-# elasctic2boson_reguralize = 0.5 * (c(Minus)^2 + q(Minus)^2) * c' * q' + 0.5 * c(Plus) * q(Plus) * ((c')^2 + (q')^2)
-# L_int = InteractionLagrangian(elasctic2boson_reguralize)
 
 @testset "first order" begin
     @testset "Bubble diagrams" begin
@@ -63,10 +62,10 @@ L_int = InteractionLagrangian(elasctic2boson)
 end
 
 @testset "second order" begin
-    L1 = L_int(1)
-    L2 = L_int(2)
-
     @testset "vacuum" begin
+        L1 = L_int(1)
+        L2 = L_int(2)
+
         using KeldyshContraction: filter_nonzero!
 
         vacuum = L1.lagrangian * L2.lagrangian
@@ -80,62 +79,200 @@ end
         @test iszero(expr)
     end
 
-    expr = c(Out()) * c'(In()) * L1.lagrangian * L2.lagrangian
+    @testset "individual terms" begin
+        using KeldyshContraction: Diagram, Diagrams, Bulk, Edge
+        import KeldyshContraction as KC
+        using Combinatorics
+        order = 2
+        in_out = c(Out()) * c'(In())
+        l = length(L_int.lagrangian)
 
-    import KeldyshContraction as KC
-    using Combinatorics
-    order = 2
-    in_out = c(Out()) * c'(In())
-    l = length(L_int.lagrangian)
+        E = KC.number_of_propagators(L_int) * order + 1 # +1 for in_out
+        dict = OrderedDict()
+        keys = []
+        prefactor = -1 * im * im^order / factorial(order)
 
-    E = KC.number_of_propagators(L_int)*order + 1 # +1 for in_out
-    dict = Dict()
-    prefactor = -1 * im * im^order / factorial(order)
+        for coefficients in Combinatorics.multiexponents(l, order)
+            idxs = KC.expand_coefficients(coefficients) # will be of length order
+            mult = Combinatorics.multinomial(coefficients...)
+            qmul = mult * prod(L_int(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
 
-    for coefficients in Combinatorics.multiexponents(l, order)
-        idxs = KC.expand_coefficients(coefficients) # will be of length order
-        mult = Combinatorics.multinomial(coefficients...)
-        qmul = mult * prod(L_int(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
+            term = prefactor * in_out * qmul
+            diagrams = wick_contraction(term; simplify=true)
+            KC._simplify_prefactors!(diagrams)
+            dict[term] = diagrams
+            push!(keys, term)
+        end
+        dict
 
-        term = prefactor * in_out * qmul
-        diagrams = wick_contraction(term; simplify=true)
-        dict[term] = diagrams
+        @test length(dict) == 10
+        for idx in [5, 7, 10]
+            @test isempty(dict[keys[idx]].diagrams)
+        end
+
+        truth1 = Diagrams(
+            Dict(
+                # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴷ(y₂,x₂)
+                Diagram([
+                    (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
+                    (c(Bulk(1)), c'(Bulk(1))),   # Gᴷ(y₁,y₁)
+                    (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
+                    (c(Bulk(2)), c'(Bulk(2))),   # Gᴷ(y₂,y₂)
+                    (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
+                ]) => -1.0 + 0im,
+                # -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂)
+                Diagram([
+                    (c(Out()), c'(Bulk(1))),     # Gᴷ(x₁,y₁)
+                    (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
+                    (c(Bulk(2)), q'(Bulk(1))),   # Gᴿ(y₂,y₁)
+                    (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
+                    (c(Bulk(1)), c'(In())),      # Gᴷ(y₁,x₂)
+                ]) => -1.0 + 0im,
+                # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,x₂)
+                Diagram([
+                    (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
+                    (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
+                    (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
+                    (c(Bulk(2)), c'(Bulk(1))),   # Gᴷ(y₂,y₁)
+                    (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
+                ]) => -1.0 + 0im,
+                # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂)
+                Diagram([
+                    (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
+                    (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
+                    (c(Bulk(2)), c'(Bulk(1))),   # Gᴷ(y₂,y₁)
+                    (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
+                    (c(Bulk(1)), c'(In())),      # Gᴷ(y₁,x₂)
+                ]) => -1.0 + 0im,
+                # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂)
+                Diagram([
+                    (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
+                    (c(Bulk(1)), c'(Bulk(1))),   # Gᴷ(y₁,y₁)
+                    (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
+                    (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
+                    (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
+                ]) => -1.0 + 0im,
+                # -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂)
+                Diagram([
+                    (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
+                    (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
+                    (c(Bulk(2)), c'(Bulk(1))),   # Gᴷ(y₂,y₁)
+                    (c(Bulk(2)), c'(Bulk(2))),   # Gᴷ(y₂,y₂)
+                    (c(Bulk(1)), c'(In())),      # Gᴷ(y₁,x₂)
+                ]) => -1.0 + 0im,
+                # -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂)
+                Diagram([
+                    (c(Out()), c'(Bulk(1))),     # Gᴷ(x₁,y₁)
+                    (c(Bulk(1)), q'(Bulk(1))),   # Gᴿ(y₁,y₁)
+                    (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
+                    (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
+                    (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
+                ]) => -1.0 + 0im,
+                # -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴷ(y₂,x₂)
+                Diagram([
+                    (c(Out()), c'(Bulk(1))),     # Gᴷ(x₁,y₁)
+                    (c(Bulk(1)), q'(Bulk(1))),   # Gᴿ(y₁,y₁)
+                    (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
+                    (c(Bulk(2)), c'(Bulk(2))),   # Gᴷ(y₂,y₂)
+                    (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
+                ]) => -1.0 + 0im,
+            ),
+        )
+        @test isequal(dict[keys[1]], truth1)
+
+        truth2 = Diagrams(
+            Dict(
+                # Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂)
+                Diagram([
+                    (c(Out()), q'(Bulk(1))),
+                    (c(Bulk(1)), q'(Bulk(1))),
+                    (q(Bulk(1)), c'(Bulk(2))),
+                    (c(Bulk(2)), q'(Bulk(2))),
+                    (c(Bulk(2)), c'(In())),
+                ]) => 1.0 + 0im,
+                # -1.0*Gᴿ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂)
+                Diagram([
+                    (c(Out()), q'(Bulk(1))),
+                    (q(Bulk(1)), c'(Bulk(2))),
+                    (c(Bulk(2)), c'(Bulk(1))),
+                    (c(Bulk(2)), q'(Bulk(2))),
+                    (q(Bulk(1)), c'(In())),
+                ]) => -1.0 + 0im,
+                # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴬ(y₂,x₂)
+                Diagram([
+                    (c(Out()), q'(Bulk(1))),
+                    (c(Bulk(1)), c'(Bulk(2))),
+                    (c(Bulk(1)), q'(Bulk(2))),
+                    (q(Bulk(2)), c'(Bulk(1))),
+                    (q(Bulk(2)), c'(In())),
+                ]) => -1.0 + 0im,
+                # Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂)
+                Diagram([
+                    (c(Out()), q'(Bulk(1))),
+                    (c(Bulk(1)), c'(Bulk(1))),
+                    (c(Bulk(1)), q'(Bulk(2))),
+                    (c(Bulk(2)), q'(Bulk(2))),
+                    (q(Bulk(2)), c'(In())),
+                ]) => 1.0 + 0im,
+                # -1.0*Gᴷ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂)
+                Diagram([
+                    (c(Out()), c'(Bulk(1))),
+                    (q(Bulk(1)), c'(Bulk(2))),
+                    (c(Bulk(2)), q'(Bulk(1))),
+                    (c(Bulk(2)), q'(Bulk(2))),
+                    (q(Bulk(1)), c'(In())),
+                ]) => -1.0 + 0im,
+                # Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂)
+                Diagram([
+                    (c(Out()), q'(Bulk(1))),
+                    (c(Bulk(1)), q'(Bulk(2))),
+                    (q(Bulk(2)), c'(Bulk(1))),
+                    (c(Bulk(2)), q'(Bulk(2))),
+                    (c(Bulk(1)), c'(In())),
+                ]) => 1.0 + 0im,
+                # Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂)
+                Diagram([
+                    (c(Out()), c'(Bulk(1))),
+                    (c(Bulk(1)), q'(Bulk(1))),
+                    (c(Bulk(1)), q'(Bulk(2))),
+                    (c(Bulk(2)), q'(Bulk(2))),
+                    (q(Bulk(2)), c'(In())),
+                ]) => 1.0 + 0im,
+            ),
+        )
+        @test isequal(dict[keys[2]], truth2)
+
+        # @test repr(dict[keys[3]]) ==
+        #     "-1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂) + -0.5*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) + 2.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴷ(y₂,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) + -0.5*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂) + -0.5*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂)"
+
+        # @test repr(dict[keys[4]]) ==
+        #     "-1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + -0.5*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂) + -0.5*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,x₂)"
+
+        # @test repr(dict[keys[6]]) ==
+        #     "-0.5*Gᴷ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) + Gᴿ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂) + Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂) + -0.5*Gᴿ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂) + Gᴷ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂)"
+
+        # @test repr(dict[keys[8]]) ==
+        #     "-1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂) + Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂) + Gᴷ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂) + Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂)"
+
+        # @test repr(dict[keys[9]]) ==
+        #     "Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂)"
     end
-    dict
-    i=5
-    @show collect(dict)[i][1]
-    collect(dict)[i][2].diagrams
-
-    for coefficients in Combinatorics.multiexponents(l, order)
-        mult = Combinatorics.multinomial(coefficients...)
-        @show (coefficients, mult)
-    end
-    # ∨ I check these by hand
-    # 0.25*(c*c*c*c*c*̄q*̄c*̄q*̄c*̄c)
-    # truth = Diagrams(
-    #     Dict(
-    #         Diagram([(c(Out()), c'), (c, q'), (c, q'), (c, q'), (c, q(In())')]) => 0.0 - 2.0 * im,
-    #         Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => 0.0 - 2.0 * im,
-    #     ),
-    # )
-    # wick_contraction(expr.arguments[1]).diagrams
-    # ^ TODO we should write this test
-    # The keldysh in and keldysh out will disappear later
 
     GF = DressedPropagator(L_int; order=2)
-    GF.retarded.diagrams
 
-    terms_k = collect(keys(GF.keldysh.diagrams))
-    @test length(terms_k) == 18
+    @testset "collective terms" begin
+        GF = DressedPropagator(L_int; order=2)
+        GF.retarded.diagrams
 
-    terms_r = collect(GF.retarded.diagrams)
-    @test length(terms_r) == 6
+        terms_k = collect(keys(GF.keldysh.diagrams))
+        @test length(terms_k) == 18
 
-    terms_a = collect(GF.advanced.diagrams)
-    @test length(terms_a) == 6
+        terms_r = collect(GF.retarded.diagrams)
+        @test length(terms_r) == 6
 
-    terms_a[2]
-    KeldyshContraction.adjoint_diagram(terms_r[4])
+        terms_a = collect(GF.advanced.diagrams)
+        @test length(terms_a) == 6
+    end
 
     Σ = SelfEnergy(GF; order=2)
 

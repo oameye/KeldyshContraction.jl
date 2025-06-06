@@ -38,7 +38,7 @@ function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; 
     E = number_of_propagators(L)*order + 1 # +1 for in_out
     diagrams = Diagrams{E}()
     prefactor = -1 * im * im^order / factorial(order)
-    for coefficients in Combinatorics.multiexponents(l, order)
+    for coefficients in Combinatorics.multiexponents(l, order) # TODO: remove complex conjugate to go from 10 to only 6 terms
         idxs = expand_coefficients(coefficients) # will be of length order
         mult = Combinatorics.multinomial(coefficients...)
         qmul = mult * prod(L(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
