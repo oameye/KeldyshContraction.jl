@@ -176,10 +176,9 @@ end
                     (c(Bulk(2)), c'(Bulk(2))),   # Gᴷ(y₂,y₂)
                     (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
                 ]) => -1.0 + 0im,
-            )
+            ),
         )
         @test isequal(dict[keys[1]], truth1)
-
 
         truth2 = Diagrams(
             Dict(
@@ -239,7 +238,7 @@ end
                     (c(Bulk(2)), q'(Bulk(2))),
                     (q(Bulk(2)), c'(In())),
                 ]) => 1.0 + 0im,
-            )
+            ),
         )
         @test isequal(dict[keys[2]], truth2)
 
