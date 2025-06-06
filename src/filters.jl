@@ -42,13 +42,13 @@ function has_zero_loop(vs::Vector{Contraction})
         T1 = propagator_type(vs[loop[1]]...)
         T2 = propagator_type(vs[loop[2]]...)
         if all(is_retarded, (T1, T2)) && is_reversed(ps[loop[1]], ps[loop[2]])
-            @info "Has zero loop"
+            # @info "Has zero loop"
             return true
         elseif all(is_advanced, (T1, T2)) && is_reversed(ps[loop[1]], ps[loop[2]])
-            @info "Has zero loop"
+            # @info "Has zero loop"
             return true
         elseif isequal(ps[loop[1]], ps[loop[2]]) && retarded_and_advanced_pair(T1, T2)
-            @info "Has zero loop"
+            # @info "Has zero loop"
             return true
         end
     end
@@ -123,12 +123,12 @@ function is_connected(edges::Vector{Tuple{Int,Int}})
 
     is_single_component = length(components) == 1
 
-    if !is_single_component
-        @info "Contraction is not connected. Found $(length(components)) components:"
-        for (i, comp) in enumerate(components)
-            @info "Component $i: $comp"
-        end
-    end
+    # if !is_single_component
+    #     # @info "Contraction is not connected. Found $(length(components)) components:"
+    #     for (i, comp) in enumerate(components)
+    #         # @info "Component $i: $comp"
+    #     end
+    # end
 
     return is_single_component
 end
