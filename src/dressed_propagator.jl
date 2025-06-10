@@ -52,22 +52,17 @@ All the same coordinate advanced propagators are converted to retarded propagato
 function DressedPropagator(L::InteractionLagrangian; order=1, kwargs...)
     ϕ = L.qfield
     ψ = L.cfield
-    if order == 1 #-i*i
-        keldysh = wick_contraction(ψ(Out()) * ψ'(In()), L, order; kwargs...)
-        retarded = wick_contraction(ψ(Out()) * ϕ'(In()), L, order; kwargs...)
-        advanced = wick_contraction(ϕ(Out()) * ψ'(In()), L, order; kwargs...)
-    elseif order == 2 #-i*i^2
-        keldysh = wick_contraction(ψ(Out()) * ψ'(In()), L, order; kwargs...)
-        retarded = wick_contraction(ψ(Out()) * ϕ'(In()), L, order; kwargs...)
-        advanced = wick_contraction(ϕ(Out()) * ψ'(In()), L, order; kwargs...)
-    else
-        error("higher order then two not implemented")
+
+    # Compute Wick contractions for each component
+    keldysh = wick_contraction(ψ(Out()) * ψ'(In()), L, order; kwargs...)
+    retarded = wick_contraction(ψ(Out()) * ϕ'(In()), L, order; kwargs...)
+    advanced = wick_contraction(ϕ(Out()) * ψ'(In()), L, order; kwargs...)
+
+    # Apply filtering and simplification to all components
+    for component in (keldysh, retarded, advanced)
+        filter_nonzero!(component)
+        _simplify_prefactors!(component)
     end
-    filter_nonzero!(keldysh)
-    filter_nonzero!(retarded)
-    filter_nonzero!(advanced)
-    _simplify_prefactors!(keldysh)
-    _simplify_prefactors!(retarded)
-    _simplify_prefactors!(advanced)
+
     return DressedPropagator(keldysh, retarded, advanced)
 end
