@@ -12,14 +12,14 @@ using KeldyshContraction
 
 The interaction action of elastic two body scattering, is defined as
 ```math
-S_\mathrm{int} = -\frac{g}{2} \int d^d x \, [(\bar{\phi}^+\phi^+)^2 - (\bar{\phi}^-\phi^-)^2 ]
+S_\mathrm{int} = -\frac{g}{2} \int d^d x \, [(\bar{\phi}_+\phi_+)^2 - (\bar{\phi}_-\phi_-)^2 ]
 ```
 Above interaction can typically represent s-wave scattering of bosons.
 
 In the RAK basis, this gives
 ```math
-S_\mathrm{int} = -\frac{g}{2} \int d^d x \, [(\bar{\phi}^c\bar{\phi}^q\phi^c\phi^c)
-+(\bar{\phi}^c\bar{\phi}^q\phi^q\phi^q) + c.c.]
+S_\mathrm{int} = -\frac{g}{2} \int d^d x \, [(\bar{\phi}_c\bar{\phi}_q\phi_c\phi_c)
++(\bar{\phi}_c\bar{\phi}_q\phi_q\phi_q) + c.c.]
 ```
 
 Let us represent this quantum and classical field inside the `KeldyshContraction` package
@@ -31,9 +31,10 @@ elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2)
 L_int = InteractionLagrangian(elasctic2boson)
 ````
 
+(TODO: misus sign comes from ∂_t-H)
 A good check if the interaction Lagrangian is a valid physical process, is to check if the
 normalization identity $Z=1$ holds. We can do this perturbatively in $g$ by expanding
-$exp(i S_\mathrm{int})$  and showing the average of the linear part of the system is zero
+$\exp(i S_\mathrm{int})$  and showing the average of the linear part of the system is zero
 ```math
 \langle S_\mathrm{int}\rangle =  \langle S_\mathrm{int}^2\rangle  =\ldots = 0
 ```
@@ -43,14 +44,14 @@ of the two-point correlators of the linear part of the system.
 In the package we can do this as follows:
 
 ````@example elastic_two_body
-wick_contraction(elasctic2boson, simplify=true)
+wick_contraction(elasctic2boson; simplify=false)
 ````
 
 However, to show that these diagrams cancel out, we need to apply to condition $G^R = - G^A$.
 Inside the package we do this by
 
 ````@example elastic_two_body
-wick_contraction(elasctic2boson)
+wick_contraction(elasctic2boson; simplify=true)
 ````
 
 Similarly, we can compute the next orders.
@@ -66,7 +67,7 @@ To compute the two point Green's functions of the interacting system, we can app
 \end{aligned}
 ```
 
-So we can compute the first order Green's function correction G_{(1)} by computing
+So we can compute the first order Green's function correction $G_{(1)}$ by computing
 the Wick contraction of the interaction Lagrangian
 
 ````@example elastic_two_body
@@ -78,7 +79,7 @@ Here, the simplification of the advanced to retarded propagator is done internal
 ## Self-Energy
 
 Often we are interested in the self-energy of the system, which is defined as
-the set of irreduciable diagrams. Inside the package we can compute these to an order $g$ by
+the set of irreducible diagrams. Inside the package we can compute these to an order $g$ by
 
 ````@example elastic_two_body
 Σ = SelfEnergy(GF)
@@ -110,25 +111,13 @@ Instead, we need to separate the reducible and irreducible diagrams. We can sepa
 by looking at the multiplicity of the edges in the diagrams.
 
 ````@example elastic_two_body
-import KeldyshContraction as KC
-terms = collect(keys(GF.keldysh.diagrams))
-bulk_multiplicity = map(terms) do diagram
-    vs = map(diagram.contractions) do c
-        ff = KC.fields(c)
-        KC.integer_positions((ff[1], ff[2]))
-    end
-    KC.bulk_multiplicity(vs)
-end
+topology_dict = topologies(GF.keldysh)
 ````
 
 This gives us three distinct topologies, which we can identify by the multiplicity of the edges.
 
 ````@example elastic_two_body
-topology1 = findall(i -> i == [1], bulk_multiplicity)
-topology2 = findall(i -> i == [2], bulk_multiplicity)
-topology3 = findall(i -> i == [3], bulk_multiplicity)
-
-terms[topology1]
+topology_dict[[2]]
 ````
 
 The topology involving only one edge is the reducible diagram, which will not contribute to the self-energy in second order. Indeed, internally we only consider the irreducible diagrams.

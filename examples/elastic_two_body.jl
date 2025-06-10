@@ -22,7 +22,7 @@ using KeldyshContraction
 elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
 L_int = InteractionLagrangian(elasctic2boson)
 
-# TODO: misus sign comes from ∂_t-H
+# (TODO: misus sign comes from ∂_t-H)
 # A good check if the interaction Lagrangian is a valid physical process, is to check if the
 # normalization identity $Z=1$ holds. We can do this perturbatively in $g$ by expanding
 # $\exp(i S_\mathrm{int})$  and showing the average of the linear part of the system is zero
