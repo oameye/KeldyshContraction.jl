@@ -27,10 +27,6 @@ end
     end
 end
 
-@testset "contraction" begin
-    @test_throws "not implemented" DressedPropagator(L; order=3)
-end
-
 @testset "zero loop filter" begin
     using KeldyshContraction: has_zero_loop, Contraction
     # Gᴿ(1,2) Gᴿ(2,1) = 0
