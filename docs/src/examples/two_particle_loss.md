@@ -30,7 +30,7 @@ $\exp(i S_\mathrm{int})$  and showing the average of the linear part of the syst
 ```
 In computing the average, one performs Wick contractions to describe the average in terms
 of the two-point correlators of the linear part of the system. However, in this case we
-don't find that the vaccuum expectation value of the interaction Lagrangian is zero:
+don't find that the vacuum expectation value of the interaction Lagrangian is zero:
 
 ````@example two_particle_loss
 @qfields c::Destroy(Classical) q::Destroy(Quantum)

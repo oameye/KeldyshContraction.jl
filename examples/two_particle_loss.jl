@@ -23,7 +23,7 @@ using KeldyshContraction: Plus, Minus
 # ```
 # In computing the average, one performs Wick contractions to describe the average in terms
 # of the two-point correlators of the linear part of the system. However, in this case we
-# don't find that the vaccuum expectation value of the interaction Lagrangian is zero:
+# don't find that the vacuum expectation value of the interaction Lagrangian is zero:
 
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
 
