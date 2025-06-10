@@ -54,7 +54,7 @@ end
 end
 
 @testset "tadpole reguralisation" begin
-    include("reguralise.jl")
+    include("regularise.jl")
 end
 
 @testset "diagram" begin
