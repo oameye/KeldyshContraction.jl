@@ -5,14 +5,14 @@ using KeldyshContraction
 
 # The interaction action of elastic two body scattering, is defined as
 # ```math
-# S_\mathrm{int} = -\frac{g}{2} \int d^d x \, [(\bar{\phi}^+\phi^+)^2 - (\bar{\phi}^-\phi^-)^2 ]
+# S_\mathrm{int} = -\frac{g}{2} \int d^d x \, [(\bar{\phi}_+\phi_+)^2 - (\bar{\phi}_-\phi_-)^2 ]
 # ```
 # Above interaction can typically represent s-wave scattering of bosons.
 
 # In the RAK basis, this gives
 # ```math
-# S_\mathrm{int} = -\frac{g}{2} \int d^d x \, [(\bar{\phi}^c\bar{\phi}^q\phi^c\phi^c)
-# +(\bar{\phi}^c\bar{\phi}^q\phi^q\phi^q) + c.c.]
+# S_\mathrm{int} = -\frac{g}{2} \int d^d x \, [(\bar{\phi}_c\bar{\phi}_q\phi_c\phi_c)
+# +(\bar{\phi}_c\bar{\phi}_q\phi_q\phi_q) + c.c.]
 # ```
 
 # Let us represent this quantum and classical field inside the `KeldyshContraction` package
