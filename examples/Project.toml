@@ -6,6 +6,7 @@ KeldyshContraction = "da6be1f2-7f61-475e-9253-2fea1ca4beca"
 Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
 SymbolicUtils = "d1185830-fcd6-423d-90d6-eec64667417b"
+Typstry = "f0ed7684-a786-439e-b1e3-3b82803b501e"
 
 [compat]
 FeynmanDiagram = "1.0.2"
