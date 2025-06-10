@@ -28,7 +28,7 @@ using KeldyshContraction: Plus, Minus
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
 
 loss2boson_unregular =
-    im*(
+    im * (
         0.5 * c' * q' * (c^2 + q^2) - 0.5 * c * q * ((c')^2 + (q')^2) +
         c' * q' * (c * q + c * q)
     )
@@ -51,7 +51,7 @@ wick_contraction(loss2boson_unregular; simplify=true)
 # Applying this regularization to the interaction Lagrangian, we get:
 
 loss2boson =
-    im*(
+    im * (
         0.5 * c' * q' * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
         0.5 * c(Plus) * q(Plus) * (c' * c' + q' * q') +
         c' * q' * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
