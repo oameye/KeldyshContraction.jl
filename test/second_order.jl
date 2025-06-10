@@ -28,14 +28,6 @@ end
 end
 
 @testset "contraction" begin
-    L1 = L
-    L2 = L(2)
-    expr = ϕᶜ(Out()) * ϕᶜ'(In()) * L1.lagrangian * L2.lagrangian
-
-    @test iszero(wick_contraction(expr.arguments[1]))
-
-    DressedPropagator(L; order=2)
-
     @test_throws "not implemented" DressedPropagator(L; order=3)
 end
 

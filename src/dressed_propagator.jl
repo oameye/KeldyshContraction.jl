@@ -49,17 +49,17 @@ end
 
 All the same coordinate advanced propagators are converted to retarded propagators.
 """
-function DressedPropagator(L::InteractionLagrangian; order=1, simplify=true)
+function DressedPropagator(L::InteractionLagrangian; order=1, kwargs...)
     ϕ = L.qfield
     ψ = L.cfield
     if order == 1 #-i*i
-        keldysh = wick_contraction(ψ(Out()) * ψ'(In()), L, order; simplify)
-        retarded = wick_contraction(ψ(Out()) * ϕ'(In()), L, order; simplify)
-        advanced = wick_contraction(ϕ(Out()) * ψ'(In()), L, order; simplify)
+        keldysh = wick_contraction(ψ(Out()) * ψ'(In()), L, order; kwargs...)
+        retarded = wick_contraction(ψ(Out()) * ϕ'(In()), L, order; kwargs...)
+        advanced = wick_contraction(ϕ(Out()) * ψ'(In()), L, order; kwargs...)
     elseif order == 2 #-i*i^2
-        keldysh = wick_contraction(ψ(Out()) * ψ'(In()), L, order; simplify)
-        retarded = wick_contraction(ψ(Out()) * ϕ'(In()), L, order; simplify)
-        advanced = wick_contraction(ϕ(Out()) * ψ'(In()), L, order; simplify)
+        keldysh = wick_contraction(ψ(Out()) * ψ'(In()), L, order; kwargs...)
+        retarded = wick_contraction(ψ(Out()) * ϕ'(In()), L, order; kwargs...)
+        advanced = wick_contraction(ϕ(Out()) * ψ'(In()), L, order; kwargs...)
     else
         error("higher order then two not implemented")
     end

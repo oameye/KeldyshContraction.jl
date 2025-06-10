@@ -56,7 +56,7 @@ function wick_contraction(a::QMul; kwargs...)::Diagrams
     wick_contraction!(diagrams, a; kwargs...)
     return diagrams
 end
-function wick_contraction!(diagrams::Diagrams, a::QMul; regularise=true, simplify=false)
+function wick_contraction!(diagrams::Diagrams, a::QMul; regularise=true, simplify=true)
     @assert is_conserved(a)
     @assert is_physical(a)
 

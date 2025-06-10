@@ -24,3 +24,5 @@ docs/site/
 Manifest.toml
 .vscode/settings.json
 benchmarks_output.json
+
+*.ipynb

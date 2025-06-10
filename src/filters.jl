@@ -85,11 +85,15 @@ end
 
 Checks if the propagator `p` is regular.
 A regular propagator is one that is:
-- not in the bulk
+- not at equal time points (tadpole)
 - or `p` is not of [`PropagatorType`](@ref) `Retarded` while also having a negative [`Regularisation`](@ref)
 - or `p` is not of [`PropagatorType`](@ref) `Advanced` while also having a positive [`Regularisation`](@ref)
 """
 function regular(qs::Contraction)
+    positions = position.(qs)
+    if !isequal(positions[1], positions[2]) # self-contraction
+        return true
+    end
     _isbulk = isbulk(qs)
     _reg = regularisations(qs)
     T = propagator_type(qs...)
