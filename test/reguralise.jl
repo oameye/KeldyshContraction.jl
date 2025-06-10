@@ -4,7 +4,7 @@ using KeldyshContraction: Classical, Quantum, Plus, Minus
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
 
 @testset "is regular" begin
-    using KeldyshContraction:regular
+    using KeldyshContraction: regular
     @test !regular((q(Plus), c'))
     @test regular((q(Minus), c'))
     @test !regular((c(Minus), q'))
