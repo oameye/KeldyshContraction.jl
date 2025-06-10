@@ -38,7 +38,7 @@ end
         )
 
         # ∨ I check these by hand
-        simplify=false
+        simplify = false
         # i (c*c⁻*c⁻*̄c*̄q*̄c)/2
         truth = Diagrams(
             Dict(Diagram([(c(Out()), q'), (c, c'), (c, c'(In()))]) => complex(1.0))
@@ -212,29 +212,16 @@ end
         @test iszero(expr)
     end
 
-    # L1 = L(1)
-    # L2 = L(2)
-    # expr_r = c(Out()) * q'(In()) * L1.lagrangian * L2.lagrangian
-    # map(expr_r.arguments) do arg
-    #     wick_contraction(arg)
-    # end
-
-    # # -0.25*(c*c⁻*c⁻*c⁻*c⁻*̄q*̄c*̄q*̄c*̄q)
-    # @test iszero(wick_contraction(expr_r.arguments[1]))
-
-    # # -0.25*(c*c⁻*c⁻*q⁻*q⁻*̄q*̄c*̄q*̄c*̄q)
-    # @test iszero(wick_contraction(expr_r.arguments[2]))
-
     Σ = SelfEnergy(GF; order=2)
-
-    adjoint(Σ.keldysh).diagrams
-    (-1 * Σ.keldysh).diagrams
-
-    adjoint(Σ.advanced).diagrams
-    Σ.retarded.diagrams
 
     @test_broken isequal(adjoint(Σ.advanced), Σ.retarded)
     @test_broken isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)
-    # adjoint(Σ.keldysh).diagrams
-    # Σ.keldysh.diagrams
+
+    @test length(topologies(Σ.retarded)[[3]]) ==
+        length(topologies(adjoint(Σ.advanced))[[3]])
+    @test length(topologies(Σ.retarded)[[3]]) == 4
+    @test length(topologies(Σ.retarded)[[2]]) == 6
+
+    @test length(topologies(Σ.keldysh)[[2]]) == 6
+    @test length(topologies(Σ.keldysh)[[3]]) == 7
 end
