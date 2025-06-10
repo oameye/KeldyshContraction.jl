@@ -57,6 +57,7 @@ end
         # - i(c*c⁺*q⁺*̄q*̄q*̄ϕ)/2
         @test repr(wick_contraction(expr.arguments[4])) ==
             "-1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,x₂)"
+
         # c*c⁺*q⁺*̄c*̄q*̄c
         truth = Diagrams(
             Dict(
