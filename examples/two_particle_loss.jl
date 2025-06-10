@@ -12,7 +12,7 @@ using KeldyshContraction: Plus, Minus
 
 # In the RAK basis, this gives
 # ```math
-# S_\mathrm{int} = i\Gamma\int d^d x \, [\frac{1}{2}(\bar{\phi}_c\bar{\phi}_q(\phi_c^2+\phi_q^2)-\phi_c\phi_q(\bar{\phi}_c^2+\bar{\phi}_q^2)+2\bar{\phi}_c\bar{\phi}_q\phi_c\phi_q)]
+# S_\mathrm{int} = i\Gamma\int d^d x \, [\frac{1}{2}\bar{\phi}_c\bar{\phi}_q(\phi_c^2+\phi_q^2)-\frac{1}{2}\phi_c\phi_q(\bar{\phi}_c^2+\bar{\phi}_q^2)+2\bar{\phi}_c\bar{\phi}_q\phi_c\phi_q)]
 # ```
 
 # A good check if the interaction Lagrangian is a valid physical process, is to check if the
@@ -45,7 +45,7 @@ wick_contraction(loss2boson_unregular; simplify=true)
 # quantum jump operators, motivated by the underlying discrete Trotter structure. One gets:
 # ```math
 # \bar{L}_+(t)L_+(t) \to \bar{L}_+(t)L_+(t-\epsilon) \quad, \bar{L}_-(t)L_-(t) \to \bar{L}_-(t)L_-(t+\epsilon)
-# \qaud \text{and} \quad
+# \quad \text{and} \quad
 # \bar{L}_-(t)L_+(t) \to \frac{1}{2}(\bar{L}_-(t)L_+(t+\epsilon) + \bar{L}_-(t)L_+(t-\epsilon))
 # ```
 # Applying this regularization to the interaction Lagrangian, we get:
