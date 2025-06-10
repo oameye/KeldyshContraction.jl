@@ -59,7 +59,7 @@ function is_reversed(p1, p2)
     return isequal(p1[1], p2[2]) && isequal(p1[2], p2[1])
 end
 function retarded_and_advanced_pair(T1, T2)
-    (is_retarded(T1) && is_advanced(T2)) || (is_advanced(T1) && is_retarded(T2))
+    return (is_retarded(T1) && is_advanced(T2)) || (is_advanced(T1) && is_retarded(T2))
 end
 function find_equal_pairs(vec)
     n = length(vec)
@@ -106,6 +106,27 @@ function regular(qs::Contraction)
     else
         return true
     end
+end
+
+function should_regularise(qmul::QMul)::Bool
+    reguralise = false
+    for q in qmul.args_nc
+        if !iszero(Int(regularisation(q)))
+            reguralise = true
+            break
+        end
+    end
+    return reguralise
+end
+function should_regularise(qadd::QAdd)::Bool
+    reguralise = false
+    for q in qadd.arguments
+        if should_regularise(q)
+            reguralise = true
+            break
+        end
+    end
+    return reguralise
 end
 
 function is_connected(vs::Vector{Contraction})

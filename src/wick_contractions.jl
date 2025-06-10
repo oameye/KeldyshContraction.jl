@@ -26,23 +26,26 @@ function wick_contraction(a::QAdd; kwargs...)::Diagrams
     args = SymbolicUtils.arguments(a)
     E = number_of_propagators(first(args))
     diagrams = Diagrams{E}()
-    # foreach(args) do arg
+
+    regularise = should_regularise(a)
     for arg in args
-        wick_contraction!(diagrams, arg; kwargs...)
+        wick_contraction!(diagrams, arg; regularise, kwargs...)
     end
     return diagrams
 end # keep around?
 function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; kwargs...)
     l = length(L.lagrangian)
 
-    E = number_of_propagators(L)*order + 1 # +1 for in_out
+    E = number_of_propagators(L) * order + 1 # +1 for in_out
     diagrams = Diagrams{E}()
     prefactor = -1 * im * im^order / factorial(order)
+
+    regularise = should_regularise(L.lagrangian)
     for coefficients in Combinatorics.multiexponents(l, order) # TODO: remove complex conjugate to go from 10 to only 6 terms
         idxs = expand_coefficients(coefficients) # will be of length order
         mult = Combinatorics.multinomial(coefficients...)
         qmul = mult * prod(L(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
-        wick_contraction!(diagrams, prefactor * in_out * qmul; kwargs...)
+        wick_contraction!(diagrams, prefactor * in_out * qmul; regularise, kwargs...)
     end
     return diagrams
 end
@@ -53,7 +56,8 @@ function wick_contraction(a::QMul; kwargs...)::Diagrams
     E = number_of_propagators(a)
     diagrams = Diagrams{E}()
 
-    wick_contraction!(diagrams, a; kwargs...)
+    regularise = should_regularise(a)
+    wick_contraction!(diagrams, a; regularise, kwargs...)
     return diagrams
 end
 function wick_contraction!(diagrams::Diagrams, a::QMul; regularise=true, simplify=true)
