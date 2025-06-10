@@ -35,9 +35,11 @@ don't find that the vaccuum expectation value of the interaction Lagrangian is z
 ````@example two_particle_loss
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
 
-loss2boson_unregular = im*(
-    0.5 * c' * q' * (c^2 + q^2) - 0.5 * c * q * ((c')^2 + (q')^2) + c' * q' * (c * q + c * q)
-)
+loss2boson_unregular =
+    im*(
+        0.5 * c' * q' * (c^2 + q^2) - 0.5 * c * q * ((c')^2 + (q')^2) +
+        c' * q' * (c * q + c * q)
+    )
 
 wick_contraction(loss2boson_unregular; simplify=true)
 ````
@@ -58,11 +60,12 @@ quantum jump operators, motivated by the underlying discrete Trotter structure. 
 Applying this regularization to the interaction Lagrangian, we get:
 
 ````@example two_particle_loss
-loss2boson = im*(
-    0.5 * c' * q' * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
-    0.5 * c(Plus) * q(Plus) * (c' * c' + q' * q') +
-    c' * q' * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
-)
+loss2boson =
+    im*(
+        0.5 * c' * q' * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
+        0.5 * c(Plus) * q(Plus) * (c' * c' + q' * q') +
+        c' * q' * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
+    )
 L_int = InteractionLagrangian(loss2boson)
 ````
 
@@ -83,11 +86,11 @@ The following indeed corresponds with what is reported in [(Gerbino et al, 2024)
 ## Second order Green's function
 
 ````@example two_particle_loss
-GF = DressedPropagator(L_int; order = 2)
+GF = DressedPropagator(L_int; order=2)
 ````
 
 ````@example two_particle_loss
-Σ = SelfEnergy(GF; order = 2)
+Σ = SelfEnergy(GF; order=2)
 ````
 
 ---

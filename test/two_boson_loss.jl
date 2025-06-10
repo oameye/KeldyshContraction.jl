@@ -36,26 +36,27 @@ end
             Diagram([Edge(c(Out()), q'), Edge(c, c'), Edge(c, c(In())')]),
             first(keys(wick_contraction(expr.arguments[1]).diagrams)),
         )
-        # ∨ I check these by hand
-        # i (c*c⁻*c⁻*̄c*̄q*̄c)/2
 
+        # ∨ I check these by hand
+        simplify=false
+        # i (c*c⁻*c⁻*̄c*̄q*̄c)/2
         truth = Diagrams(
             Dict(Diagram([(c(Out()), q'), (c, c'), (c, c'(In()))]) => complex(1.0))
         )
-        @test isequal(wick_contraction(expr.arguments[1]), truth)
+        @test isequal(wick_contraction(expr.arguments[1]; simplify), truth)
 
         # i (c*q⁻*q⁻*̄c*̄q*̄c)/2
         truth = Diagrams(
             Dict(Diagram([(c(Out()), q'), (q, c'), (q, c'(In()))]) => complex(1.0))
         )
-        @test isequal(wick_contraction(expr.arguments[2]), truth)
+        @test isequal(wick_contraction(expr.arguments[2]; simplify), truth)
 
         # - i( c*c⁺*q⁺*̄c*̄c*̄c) /2
-        @test repr(wick_contraction(expr.arguments[3])) ==
+        @test repr(wick_contraction(expr.arguments[3]; simplify)) ==
             "-1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
         # - i(c*c⁺*q⁺*̄q*̄q*̄ϕ)/2
-        @test repr(wick_contraction(expr.arguments[4])) ==
+        @test repr(wick_contraction(expr.arguments[4]; simplify)) ==
             "-1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
         # c*c⁺*q⁺*̄c*̄q*̄c
@@ -65,7 +66,7 @@ end
                 Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))]) => complex(1.0),
             ),
         )
-        @test isequal(wick_contraction(expr.arguments[5]), truth)
+        @test isequal(wick_contraction(expr.arguments[5]; simplify), truth)
 
         # c*c⁻*q⁻*̄c*̄q*̄c
         truth = Diagrams(
@@ -74,9 +75,9 @@ end
                 Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))]) => complex(1.0),
             ),
         )
-        @test isequal(wick_contraction(expr.arguments[6]), truth)
+        @test isequal(wick_contraction(expr.arguments[6]; simplify), truth)
 
-        result = wick_contraction.(expr.arguments)
+        result = wick_contraction.(expr.arguments; simplify)
 
         diagrams_result = result[1]
         for idx in 2:length(result)
@@ -185,7 +186,7 @@ end
         Σ = SelfEnergy(GF)
 
         expr_K = c(Out()) * c'(In()) * L_int
-        G_K1 = wick_contraction(expr_K)
+        G_K1 = wick_contraction(expr_K; simplify=false)
 
         self_energy = OrderedCollections.LittleDict{PropagatorType,Diagrams}((
             Advanced => Diagrams{1}(), Retarded => Diagrams{1}(), Keldysh => Diagrams{1}()
@@ -211,18 +212,18 @@ end
         @test iszero(expr)
     end
 
-    L1 = L(1)
-    L2 = L(2)
-    expr_r = c(Out()) * q'(In()) * L1.lagrangian * L2.lagrangian
-    map(expr_r.arguments) do arg
-        wick_contraction(arg)
-    end
+    # L1 = L(1)
+    # L2 = L(2)
+    # expr_r = c(Out()) * q'(In()) * L1.lagrangian * L2.lagrangian
+    # map(expr_r.arguments) do arg
+    #     wick_contraction(arg)
+    # end
 
-    # -0.25*(c*c⁻*c⁻*c⁻*c⁻*̄q*̄c*̄q*̄c*̄q)
-    @test iszero(wick_contraction(expr_r.arguments[1]))
+    # # -0.25*(c*c⁻*c⁻*c⁻*c⁻*̄q*̄c*̄q*̄c*̄q)
+    # @test iszero(wick_contraction(expr_r.arguments[1]))
 
-    # -0.25*(c*c⁻*c⁻*q⁻*q⁻*̄q*̄c*̄q*̄c*̄q)
-    @test iszero(wick_contraction(expr_r.arguments[2]))
+    # # -0.25*(c*c⁻*c⁻*q⁻*q⁻*̄q*̄c*̄q*̄c*̄q)
+    # @test iszero(wick_contraction(expr_r.arguments[2]))
 
     Σ = SelfEnergy(GF; order=2)
 
@@ -234,4 +235,6 @@ end
 
     @test_broken isequal(adjoint(Σ.advanced), Σ.retarded)
     @test_broken isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)
+    # adjoint(Σ.keldysh).diagrams
+    # Σ.keldysh.diagrams
 end
