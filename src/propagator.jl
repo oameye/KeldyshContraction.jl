@@ -17,8 +17,8 @@ The Quantum-Quantum propagator should always be zero.
 end
 
 struct Edge{P2,P1}
-    out::Destroy{KeldyshContour,P2,Regularisation}
-    in::Create{KeldyshContour,P1,Regularisation}
+    out::Destroy{P2}
+    in::Create{P1}
     edgetype::PropagatorType
     function Edge(tt::Contraction)
         _out, _in = tt[1], tt[2]
