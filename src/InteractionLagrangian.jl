@@ -29,9 +29,9 @@ struct InteractionLagrangian{T}
     "The Lagrangian expression as a [`QTerm`](@ref)"
     lagrangian::T
     "The quantum field destruction operator"
-    qfield::Destroy{KeldyshContour,Bulk,Regularisation}
+    qfield::Destroy{Bulk}
     "The classical field destruction operator"
-    cfield::Destroy{KeldyshContour,Bulk,Regularisation}
+    cfield::Destroy{Bulk}
     "The position of the interaction Lagrangian"
     position::Bulk
     function InteractionLagrangian(expr::QTerm)

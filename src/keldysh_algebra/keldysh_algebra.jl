@@ -7,18 +7,18 @@
 
 Bosonic field representing the quantum field annihilation operator.
 """
-struct Destroy{C,P,R} <: QSym
+struct Destroy{P} <: QSym
     name::Symbol
-    contour::C
+    contour::KeldyshContour
     position::P
-    regularisation::R
+    regularisation::Regularisation
     function Destroy(
         name::Symbol,
         contour::KeldyshContour,
         reg::Regularisation=Zero,
         pos::AbstractPosition=Bulk(),
     )
-        return new{typeof(contour),typeof(pos),typeof(reg)}(name, contour, pos, reg)
+        return new{typeof(pos)}(name, contour, pos, reg)
     end
 end
 # TODO: now we can dispatch on Bulk and In as they are different structs.
@@ -30,18 +30,18 @@ end
 
 Bosonic field representing the quantum field creation operator.
 """
-struct Create{C,P,R} <: QSym
+struct Create{P} <: QSym
     name::Symbol
-    contour::C
+    contour::KeldyshContour
     position::P
-    regularisation::R
+    regularisation::Regularisation
     function Create(
         name::Symbol,
         contour::KeldyshContour,
         reg::Regularisation=Zero,
         pos::AbstractPosition=Bulk();
     )
-        return new{typeof(contour),typeof(pos),typeof(reg)}(name, contour, pos, reg)
+        return new{typeof(pos)}(name, contour, pos, reg)
     end
 end
 
