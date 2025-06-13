@@ -1,7 +1,7 @@
 const PositionPropagatorType = OrderedCollections.LittleDict{
-    AbstractPosition,
+    Position,
     PropagatorType,
-    Tuple{<:AbstractPosition,<:AbstractPosition,<:AbstractPosition},
+    Tuple{<:Position,<:Position,<:Position},
     Tuple{PropagatorType,PropagatorType,PropagatorType},
 }
 
@@ -43,7 +43,7 @@ function construct_self_energy!(
         ) # TODO Replace with SmallCollections
 
         # Find all bulk propagators (edges where both fields are bulk)
-        bulk_idxs = findall(isbulk, _contractions)
+        bulk_idxs = findall(is_bulk, _contractions)
         bulk_propagators = _contractions[bulk_idxs]
         push!(self_energy[self_energy_type(dict)], Diagram(bulk_propagators), prefactor)
     end

@@ -1,5 +1,5 @@
 using KeldyshContraction, Test
-using KeldyshContraction: In, Out, Classical, Quantum, Plus, Minus
+using KeldyshContraction: In, Out, Classical, Quantum, Plus, Minus, is_in
 using KeldyshContraction: Edge, position, contour
 
 @qfields ϕᶜ::Destroy(Classical) ϕᴾ::Destroy(Quantum)
@@ -16,9 +16,9 @@ end
 
 @testset "properties" begin
     p = Edge(ϕᴾ, ϕᶜ'(In()))
-    @test KeldyshContraction.position(p) isa In
+    @test is_in(KeldyshContraction.position(p))
     @test_broken KeldyshContraction.contours(p) == [Quantum, Classical] # not needed
-    @test !KeldyshContraction.isbulk(p)
+    @test !KeldyshContraction.is_bulk(p)
     @test_broken KeldyshContraction.regularisations(p) == fill(KeldyshContraction.Zero, 2) # not needed
     @test KeldyshContraction.propagator_type(p) == KeldyshContraction.Advanced
 end

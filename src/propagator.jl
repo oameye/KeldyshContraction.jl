@@ -16,21 +16,21 @@ The Quantum-Quantum propagator should always be zero.
     Retarded
 end
 
-struct Edge{P2,P1}
-    out::Destroy{P2}
-    in::Create{P1}
+struct Edge
+    out::Destroy
+    in::Create
     edgetype::PropagatorType
-    function Edge(tt::Contraction)
-        _out, _in = tt[1], tt[2]
-        propagator_checks(_out, _in)
-
-        type = propagator_type(_out, _in)
-        P2 = position(_out)
-        P1 = position(_in)
-        return new{typeof(P2),typeof(P1)}(_out, _in, type)
-    end
-    Edge(out::QSym, in::QSym) = Edge((out, in))
 end
+function Edge(tt::Contraction)
+    _out, _in = tt[1], tt[2]
+    propagator_checks(_out, _in)
+
+    type = propagator_type(_out, _in)
+    P2 = position(_out)
+    P1 = position(_in)
+    return Edge(_out, _in, type)
+end
+Edge(out::QSym, in::QSym) = Edge((out, in))
 
 "Collect and checks the rules for a physical propagator"
 function propagator_checks(out::QSym, in::QSym)::Nothing
@@ -39,8 +39,8 @@ function propagator_checks(out::QSym, in::QSym)::Nothing
     v = (out, in)
 
     positions = position.(v)
-    @assert !(first(positions) isa In) "The outgoing field can't be the In<:Position` coordinate"
-    @assert !(last(positions) isa Out) "The incoming field can't be the Out<:Position` coordinate"
+    @assert !(is_in(first(positions))) "The outgoing field can't be the In<:Position` coordinate"
+    @assert !(is_out(last(positions))) "The incoming field can't be the Out<:Position` coordinate"
     in_out = (In() ∈ positions ? !(Out() ∈ positions) : true)
     @assert in_out "Can't make a propagator with `In<:Position` and `Out<:Position` coordinate"
     contours = Int.(contour.(v))
@@ -96,8 +96,8 @@ Base.adjoint(c::Edge) = Edge(adjoint(fields(c)))
 #       Position
 #########################
 
-isbulk(p::Edge) = all(isbulk.(fields(p)))
-isbulk(qs::Contraction) = all(isbulk.(qs))
+is_bulk(p::Edge) = all(is_bulk.(fields(p)))
+is_bulk(qs::Contraction) = all(is_bulk.(qs))
 is_in(qs::Contraction) = any(is_in.(qs))
 is_out(qs::Contraction) = any(is_out.(qs))
 
@@ -108,11 +108,11 @@ function positions(p::Contraction)
     return position.(p)
 end
 
-function integer_positions(p::Contraction)::NTuple{2,Int}
-    return Int.(positions(p))
+function integer_positions(p::Contraction)
+    return index.(positions(p))
 end
-function integer_positions(p::Edge)::NTuple{2,Int}
-    return Int.(positions(p))
+function integer_positions(p::Edge)
+    return index.(positions(p))
 end
 function same_position(p::Contraction)
     _positions = positions(p)
@@ -121,11 +121,11 @@ end
 
 function position(p::Edge)
     _positions = positions(p)
-    if length(findall(x -> x isa In, _positions)) == 1
+    if length(findall(is_in, _positions)) == 1
         return In()
-    elseif length(findall(x -> x isa Out, _positions)) == 1
+    elseif length(findall(is_out, _positions)) == 1
         return Out()
-    elseif all(isbulk, _positions)
+    elseif all(is_bulk, _positions)
         idxs = map(x -> getproperty(x, :index), _positions)
         if isequal(idxs...)
             return _positions[1]

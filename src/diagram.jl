@@ -121,15 +121,16 @@ function adjoint_diagram(
     return Diagram(edges) => _simplify(adjoint(prefactor′))
 end
 
-function bulk_multiplicity(edges::AbstractArray{Tuple{Int,Int}})
-    ff = edge -> !(1 ∈ edge) && !(2 ∈ edge) && !isequal(edge[1], edge[2])
+function bulk_multiplicity(edges::SVector{N,Tuple{Int8,Int8}}) where {N}
+    ff =
+        edge ->
+            !(typemin(Int8) ∈ edge) && !(typemax(Int8) ∈ edge) && !isequal(edge[1], edge[2])
     edges = filter(ff, edges)
-    map!(edge -> edge .- 2, edges, edges)
 
     vert = vertices(edges)
     m = max_edges(length(vert))
     mult = SmallCollections.MutableSmallVector{m,Int}(0 for i in 1:m)
-    for edge in edges # TODO: probably should use pairing function
+    for edge in edges # TODO: probably should use pairibulk_multiplicityng function
         idx = edge_to_index(edge[1], edge[2], length(vert))
         mult[idx] += 1
     end
@@ -139,15 +140,15 @@ function bulk_multiplicity(vs::AbstractArray{Edge})
     return bulk_multiplicity(map(integer_positions, vs))
 end
 
-max_edges(n::Int)::Int = n * (n - 1) ÷ 2
+max_edges(n::Integer)::Integer = n * (n - 1) ÷ 2
 
 """
 maps edge (i,j) to a unique integer in range 1:max_edges(n).
 It assumes that i ≠ j
 """
-function edge_to_index(i::Int, j::Int, n::Int)
+function edge_to_index(i::Int8, j::Int8, n::Int)::Int # TODO change to pairing?
     # Ensure i < j
-    i, j = minmax(i, j)
+    i, j = Int.(minmax(i, j))
 
     # Calculate unique index
     # This maps edge (i,j) to a unique integer in range 1:max_edges(n)

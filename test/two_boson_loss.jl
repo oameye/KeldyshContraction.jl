@@ -1,7 +1,7 @@
 using KeldyshContraction, Test
 using KeldyshContraction: In, Out, Classical, Quantum, Plus, Minus, Diagram, Diagrams, Edge
 using KeldyshContraction: is_physical, is_conserved, construct_self_energy!
-
+import KeldyshContraction as KC
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
 
 L_int =
@@ -10,6 +10,20 @@ L_int =
         0.5 * c(Plus) * q(Plus) * (c' * c' + q' * q') +
         c' * q' * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
     )
+
+L = InteractionLagrangian(L_int)
+GF = DressedPropagator(L; order=2)
+Σ = SelfEnergy(GF; order=2)
+# topologies(Σ.retarded)
+
+ds = Σ.retarded
+terms = collect(keys(ds.diagrams))
+diagram = first(terms)
+vs = map(diagram.contractions) do c
+    ff = KC.fields(c)
+    KC.integer_positions((ff[1], ff[2]))
+end
+KC.bulk_multiplicity(vs)
 
 @testset "vacuum bubble" begin
     @test !iszero(wick_contraction(L_int; regularise=false))

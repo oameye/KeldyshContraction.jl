@@ -105,67 +105,44 @@ is_classical(x::QSym) = isone(Int(contour(x)))
 """
 $(TYPEDEF)
 
-Abstract Position type for the Keldysh quantum field.
+Position type for the Keldysh quantum field.
 The position is used to determine the coordinate of the field during the wick contraction.
 
-AbstractPosition has subtypes:
-- [`In`](@ref)
-- [`Out`](@ref)
-- [`Bulk`](@ref).
+Position has thee cases:
+- [`In`](@ref): Position.index will be `typemax(Int8)`, which is used to represent the input field.Position
+- [`Out`](@ref): Position.index will be `typemin(Int8)`, which is used to represent the output field.Position
+- [`Bulk`](@ref): Position.index will be a positive integer
 """
-abstract type AbstractPosition end
-
-"""
-    $(TYPEDEF)
-
-The `In` singleton to mark a field the incoming field.
-
-See also: [`Out`](@ref), [`Bulk`](@ref).
-"""
-struct In <: AbstractPosition end
-
-"""
-    $(TYPEDEF)
-
-The `Out` singleton to mark a field the outgoing field.
-
-See also: [`In`](@ref), [`Bulk`](@ref).
-"""
-struct Out <: AbstractPosition end
-
-"""
-    $(TYPEDEF)
-
-The `Bulk` struct to mark a field relies in the bulk of a feyman diagram.
-This means the field will contribute to the self-energy ([`SelfEnergy`](@ref).
-
-See also: [`In`](@ref), [`Out`](@ref).
-"""
-struct Bulk <: AbstractPosition
-    """
-    The index of the bulk coordinate.
-    This is used to distinguish between different bulk coordinates.
-    """
-    index::Int
-    Bulk() = new(1)
-    function Bulk(i::Int)
-        @assert i > 0 "Bulk index must be positive"
-        return new(i)
-    end
+struct Position
+    index::Int8
 end
-Base.isless(x::Bulk, y::Bulk) = x.index < y.index
-Base.isless(::Bulk, ::In) = true
-Base.isless(::In, ::Bulk) = false
-Base.isless(::Out, ::Bulk) = true
-Base.isless(::Bulk, ::Out) = false
-Base.isless(::Out, ::In) = true
-Base.isless(::In, ::Out) = false
+"""
+    Bulk(i::Int=1)
+Create a `Bulk` position with a positive integer index `i`.
+"""
+function Bulk(i::Int=1)
+    @assert i > 0 "Bulk index must be positive"
+    return Position(i)
+end
+"""
+    In()
+Create a `Position` representing the input field.
+"""
+In() = Position(typemax(Int8))
+"""
+    Out()
+Create a `Position` representing the output field.
+"""
+Out() = Position(typemin(Int8))
 
-isbulk(x::AbstractPosition) = x isa Bulk
-is_in(x::AbstractPosition) = x isa In
-is_out(x::AbstractPosition) = x isa Out
 
-index(p::Bulk) = p.index
-Base.Int(p::Bulk) = index(p) + 2
-Base.Int(p::In) = 2
-Base.Int(p::Out) = 1
+Base.isless(x::Position, y::Position) = x.index < y.index
+
+is_bulk(x::Position) = typemin(Int8) < index(x) < typemax(Int8)
+is_in(x::Position) = isequal(index(x), typemax(Int8))
+is_out(x::Position) = isequal(index(x), typemin(Int8))
+
+index(p::Position) = p.index
+Base.Int(p::Position) = index(p)
+
+# TODO make has_in and replace `In() ∈ positions`

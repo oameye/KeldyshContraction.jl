@@ -144,10 +144,10 @@ const underscore_dict = Dict(
     1 => "₁", 2 => "₂", 3 => "₃", 4 => "₄", 5 => "₅", 6 => "₆", 7 => "₇", 8 => "₈", 9 => "₉"
 )
 
-function pos_string(p)
-    if p isa In
+function pos_string(p::Position)
+    if is_in(p)
         return "x₂"
-    elseif p isa Out
+    elseif is_out(p)
         return "x₁"
     else
         return "y" * underscore_dict[p.index]

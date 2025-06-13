@@ -94,7 +94,7 @@ function regular(qs::Contraction)
     if !isequal(positions[1], positions[2]) # self-contraction
         return true
     end
-    _isbulk = isbulk(qs)
+    _isbulk = is_bulk(qs)
     _reg = regularisations(qs)
     T = propagator_type(qs...)
     if !_isbulk || subtraction(_reg) == 0
@@ -136,7 +136,7 @@ function is_connected(vs::Vector{Contraction})
     return is_connected(edges)
 end
 
-function is_connected(edges::Vector{Tuple{Int,Int}})
+function is_connected(edges::Union{Vector{Tuple{Int,Int}},Vector{Tuple{Int8,Int8}}})
     # Find all unique vertices
     all_vertices = vertices(edges)
     if isempty(all_vertices)

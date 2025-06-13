@@ -64,15 +64,15 @@ Base.zero(q::QMul) = QMul(0.0, QSym[])
 Base.iszero(q::QMul) = iszero(q.arg_c)
 
 """
-    isbulk(q::QTerm)
+    is_bulk(q::QTerm)
 
-Checks if a term is in the bulk. A term is bulk if it has no `In` or `Out` position fields ([`AbstractPosition`](@ref)).
+Checks if a term is in the bulk. A term is bulk if it has no `In` or `Out` position fields ([`Position`](@ref)).
 """
-function isbulk(q::QMul) # TODO to make type stable QMul should contain size information
+function is_bulk(q::QMul) # TODO to make type stable QMul should contain size information
     args = q.args_nc
     bool = false
     for f in args
-        if isbulk(f)
+        if is_bulk(f)
             bool = true
         else
             return false
@@ -197,14 +197,14 @@ end
 #       Position
 #########################
 
-isbulk(q::QAdd) = all(isbulk(q) for q in arguments(q))
+is_bulk(q::QAdd) = all(is_bulk(q) for q in arguments(q))
 
-function set_position_mul(a::QMul, p::AbstractPosition)::QMul
+function set_position_mul(a::QMul, p::Position)::QMul
     args = QSym[arg(p) for arg in a.args_nc]
     return QMul(a.arg_c, args)
 end
 
-function set_position(a::QAdd, p::AbstractPosition)::QAdd
+function set_position(a::QAdd, p::Position)::QAdd
     args = QMul[set_position_mul(arg, p) for arg in arguments(a)]
     return QAdd(args)
 end

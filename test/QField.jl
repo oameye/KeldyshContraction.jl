@@ -141,7 +141,7 @@ end
 end
 
 @testset "position" begin
-    using KeldyshContraction: position, isbulk
+    using KeldyshContraction: position, is_bulk
     @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
     # Test the position function
     @test KC.position(ϕ).index == 1
@@ -156,8 +156,8 @@ end
     sorted = [ψ(Out()), ϕ, ϕ(Bulk(1)), ϕ(Bulk(3)), ψ(In())]
     @test isequal(sort(to_sort; by=KC.position), sorted)
 
-    @inferred isbulk(ϕ)
-    @inferred isbulk(ϕ * ψ)
+    @inferred is_bulk(ϕ)
+    @inferred is_bulk(ϕ * ψ)
 end
 
 @testset "more math" begin
@@ -165,7 +165,7 @@ end
 
     # Test the math operations
     @test isequal(ϕ / 2, 0.5 * ϕ)
-    @test isequal(ϕ // 2, 0.5 * ϕ) skip = true
+    @test isequal(ϕ//2, 0.5 * ϕ) skip = true
 
     @test isequal((ϕ^2), ϕ * ϕ)
 

@@ -40,13 +40,8 @@ KeldyshContraction.Regularisation
 
 And the position of the field is determined by the `AbstractPosition` object:
 
-```@example API
-using Term, KeldyshContraction # hide
-Term.typestree(KeldyshContraction.Bulk) # hide
-```
-
 ```@docs
-KeldyshContraction.AbstractPosition
+KeldyshContraction.Position
 KeldyshContraction.In
 KeldyshContraction.Out
 KeldyshContraction.Bulk
@@ -89,7 +84,7 @@ arguments(::KeldyshContraction.QAdd)
 The properties of the expression can be checked using:
 
 ```@docs
-KeldyshContraction.isbulk
+KeldyshContraction.is_bulk
 KeldyshContraction.is_conserved
 KeldyshContraction.is_physical
 ```
