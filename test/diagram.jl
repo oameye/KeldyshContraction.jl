@@ -30,16 +30,40 @@ end
     @qfields c::Destroy(Classical) q::Destroy(Quantum)
     using StaticArrays
 
-    vs = SA[(1, 3), (3, 3), (3, 2)]
+    vs = SA[(Out(), Bulk()), (Bulk(), Bulk()), (Bulk(), In())]
+    vs = map(tt -> KeldyshContraction.index.(tt), vs)
     @test KeldyshContraction.bulk_multiplicity(vs) == Int[]
 
-    vs2 = SA[(1, 3), (3, 3), (3, 4), (4, 4), (4, 2)]
+    vs2 = SA[
+        (Out(), Bulk()),
+        (Bulk(), Bulk()),
+        (Bulk(), Bulk(2)),
+        (Bulk(2), Bulk(2)),
+        (Bulk(2), In()),
+    ]
+    vs2 = map(tt -> KeldyshContraction.index.(tt), vs2)
     @test KeldyshContraction.bulk_multiplicity(vs2) == Int[1]
 
-    vs3 = SA[(1, 3), (3, 4), (4, 3), (4, 4), (3, 2)]
+    vs3 = SA[
+        (Out(), Bulk()),
+        (Bulk(), Bulk(2)),
+        (Bulk(2), Bulk()),
+        (Bulk(2), Bulk(2)),
+        (Bulk(), In()),
+    ]
+    vs3 = map(tt -> KeldyshContraction.index.(tt), vs3)
     @test KeldyshContraction.bulk_multiplicity(vs3) == Int[2]
 
-    vs4 = SA[(1, 3), (3, 4), (4, 3), (4, 4), (3, 5), (5, 5), (5, 2)]
+    vs4 = SA[
+        (Out(), Bulk()),
+        (Bulk(1), Bulk(2)),
+        (Bulk(2), Bulk(1)),
+        (Bulk(2), Bulk(2)),
+        (Bulk(1), Bulk(3)),
+        (Bulk(3), Bulk(3)),
+        (Bulk(3), In()),
+    ]
+    vs4 = map(tt -> KeldyshContraction.index.(tt), vs4)
     @test KeldyshContraction.bulk_multiplicity(vs4) == Int[2, 1, 0]
 end
 

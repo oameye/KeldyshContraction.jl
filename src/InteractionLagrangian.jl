@@ -18,7 +18,7 @@ Constructs an InteractionLagrangian from a given [`QTerm`](@ref) expression.
 
 # Requirements
 The constructor enforces several constraints on the input expression and throws `AssertionError` if any of them are not met:
-- Must be a bulk term ([`isbulk`](@ref))
+- Must be a bulk term ([`is_bulk`](@ref))
 - Must be conserved ([`is_conserved`](@ref))
 - Must be physical ([`is_physical`](@ref))
 - Can only contain up to two different fields
@@ -29,11 +29,11 @@ struct InteractionLagrangian{T}
     "The Lagrangian expression as a [`QTerm`](@ref)"
     lagrangian::T
     "The quantum field destruction operator"
-    qfield::Destroy{Bulk}
+    qfield::Destroy
     "The classical field destruction operator"
-    cfield::Destroy{Bulk}
+    cfield::Destroy
     "The position of the interaction Lagrangian"
-    position::Bulk
+    position::Position
     function InteractionLagrangian(expr::QTerm)
         fields = _extract_unique_fields(expr)
         contours = contour_integers(fields)
@@ -54,7 +54,7 @@ function _extract_unique_fields(expr)
     filter(is_annihilation, unique_fields)
 end
 function _assert_lagrangian(expr, fields, contours)
-    @assert isbulk(expr) "An interaction Lagrangian only accepts bulk terms"
+    @assert is_bulk(expr) "An interaction Lagrangian only accepts bulk terms"
     @assert is_conserved(expr) "An interaction Lagrangian only accepts conserved terms"
     @assert is_physical(expr) "An interaction Lagrangian only accepts physical terms"
     @assert length(fields) <= 2 "An interaction Lagrangian only accepts up to two different fields"
@@ -103,8 +103,8 @@ function is_physical(args_nc_::Vector{<:QField})
 end
 @inline is_physical(a::QMul) = is_physical(a.args_nc)
 is_physical(a::QAdd) = all(is_physical(arg) for arg in arguments(a))
-is_physical(a::Destroy) = !isa(position(a), In)
-is_physical(a::Create) = !isa(position(a), Out)
+is_physical(a::Destroy) = !is_in(a)
+is_physical(a::Create) = !is_out(a)
 
 function (L::InteractionLagrangian)(i::Int)
     new_lagrangian = set_position(L.lagrangian, Bulk(i))

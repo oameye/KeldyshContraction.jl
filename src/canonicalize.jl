@@ -43,7 +43,7 @@ function canonicalize(vs::Vector{Contraction})
     if !canonical
         vs = map(vs) do c
             map(c) do ψ
-                if isbulk(ψ)
+                if is_bulk(ψ)
                     idx = index(position(ψ))
                     ψ(Bulk(mod1(idx + 1, 2)))
                 else
@@ -54,24 +54,7 @@ function canonicalize(vs::Vector{Contraction})
     end
     return vs
 end
-# function swap_coordinates(cc::Vector{Contraction}, i::AbstractPosition, j::AbstractPosition)
-#     vs = map(cc) do c
-#         ps = positions(c)
-#         if i in ps || j in ps
-#             c′ = map(c) do ψ
-#                 if position(ψ) == i
-#                     ψ(j)
-#                 elseif position(ψ) == j
-#                     ψ(i)
-#                 end
-#             end
-#         else
-#             c′ = c
-#         end
-#         c′
-#     end
-#     return vs
-# end
+
 function is_canonical(vs::Vector{Contraction})
     # TODO: assumes lower then third order
     idx_out = findfirst(c -> Out() ∈ position.(c), vs)

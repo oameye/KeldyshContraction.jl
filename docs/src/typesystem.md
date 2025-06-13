@@ -23,7 +23,7 @@ QSym can then have additional properties to make it Keldsysh-specific type field
 
 - [`KeldyshContraction.KeldyshContour`](@ref) - the Keldysh contour of the field, which can be either `KeldyshContour.Quantum` or `KeldyshContour.Classical`.
 - [`KeldyshContraction.Regularisation`](@ref) - the tadpole regularisation of the field, which can be either `Regularisation.Zero`, `Regularisation.Plus` or `Regularisation.Minus`.
-- [`KeldyshContraction.AbstractPosition`](@ref) - the position of the field, which can be either `Position.In`, `Position.Out` or `Position.Bulk`.
+- [`KeldyshContraction.Position`](@ref) - the position of the field, which can be either `Position.In`, `Position.Out` or `Position.Bulk`.
 
 To make our quantum field types work with the symbolic algebra system, we need to implement several interface functions from SymbolicUtils.jl and TermInterface.jl:
 
