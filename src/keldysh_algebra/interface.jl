@@ -135,7 +135,6 @@ Create a `Position` representing the output field.
 """
 Out() = Position(typemin(Int8))
 
-
 Base.isless(x::Position, y::Position) = x.index < y.index
 
 is_bulk(x::Position) = typemin(Int8) < index(x) < typemax(Int8)
