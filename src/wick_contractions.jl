@@ -41,7 +41,8 @@ function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; 
     prefactor = -1 * im * im^order / factorial(order)
 
     regularise = should_regularise(L.lagrangian)
-    for coefficients in Combinatorics.multiexponents(l, order) # TODO: remove complex conjugate to go from 10 to only 6 terms
+    for coefficients in Combinatorics.multiexponents(l, order)
+        # TODO: remove complex conjugate to go from 10 to only 6 terms
         idxs = expand_coefficients(coefficients) # will be of length order
         mult = Combinatorics.multinomial(coefficients...)
         qmul = mult * prod(L(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
@@ -119,7 +120,6 @@ function _wick_contraction(
         else
             push!(wick_contractions, canonicalize(contraction))
         end
-        check_to_many_bulk(contraction, args_nc) # TODO: remove in future
     end
     return wick_contractions
 end
@@ -150,13 +150,13 @@ function prepare_args(args::Vector{<:QField})
 
     n_destroy = _length ÷ 2
 
-    # make sure that the fields are ordered position && ladder
-    check_sorted(args) # TODO should remove in future
-
     destroys = args[1:n_destroy]
     creates = reverse(args[(n_destroy + 1):end])
     return destroys, creates, n_destroy
 end
+
+# The following were used to check for bugs, we leave them here for reference
+# but they are not used in the main code.
 function check_sorted(args)
     args′ = sort(args; by=position)
     args′′ = sort(args′; by=ladder)

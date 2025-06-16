@@ -60,7 +60,7 @@ function _assert_lagrangian(expr, fields, contours)
     @assert length(fields) <= 2 "An interaction Lagrangian only accepts up to two different fields"
     @assert unique(contours) == contours "An interaction Lagrangian only accepts fields with opposite contours"
     return nothing
-end  # TODO what if only quantum or only classical
+end
 
 "get position of the interaction lagrangian"
 position(L::InteractionLagrangian) = L.position
