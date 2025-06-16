@@ -4,7 +4,7 @@ on:
     branches:
       - 'main'
     paths:
-      - '.github/workflows/Tests.yml'
+      - '.github/workflows/Benchmarks.yml'
       - 'src/**'
       - 'ext/**'
       - 'test/runtests.jl'
@@ -15,7 +15,7 @@ on:
     branches:
       - 'main'
     paths:
-      - '.github/workflows/Tests.yml'
+      - '.github/workflows/Benchmarks.yml'
       - 'src/**'
       - 'ext/**'
       - 'test/**'
@@ -25,6 +25,7 @@ on:
       - reopened
       - synchronize
       - ready_for_review
+  workflow_dispatch:
 
 permissions:
     actions: write
