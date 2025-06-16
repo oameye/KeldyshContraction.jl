@@ -25,10 +25,14 @@ The function returns a new expression of propagators of type `SymbolicUtils.Symb
 function wick_contraction(a::QAdd; kwargs...)::Diagrams
     args = SymbolicUtils.arguments(a)
     E = number_of_propagators(first(args))
-    if is_bulk(a) # for vacuum calculations
+    if !is_bulk(a) # for vacuum calculations
+        throw(ArgumentError(
+            """
+            Directly using  `wick_contraction` on a `QAdd` is only supported for vaccuum
+            calculations. Instead, use `wick_contraction` with InteractionLagrangian.
+            """))
+    else
         diagrams = Diagrams{E,topology_length(E+1)}()
-    else # TODO: type unstable
-        diagrams = Diagrams{E,topology_length(E)}()
     end
 
     regularise = should_regularise(a)
@@ -36,21 +40,25 @@ function wick_contraction(a::QAdd; kwargs...)::Diagrams
         wick_contraction!(diagrams, arg; regularise, kwargs...)
     end
     return diagrams
-end # keep around?
+end # keep for vacuum calculations
 function wick_contraction(a::QMul; kwargs...)::Diagrams
     @assert is_conserved(a)
     @assert is_physical(a)
 
     E = number_of_propagators(a)
-    if is_bulk(a) # for vacuum calculations
+    if !is_bulk(a) # for vacuum calculations
+        throw(ArgumentError(
+            """
+            Directly using  `wick_contraction` on a `QAdd` is only supported for vaccuum
+            calculations. Instead, use `wick_contraction` with InteractionLagrangian.
+            """))
+    else
         diagrams = Diagrams{E,topology_length(E+1)}()
-    else # TODO: type unstable
-        diagrams = Diagrams{E,topology_length(E)}()
     end
     regularise = should_regularise(a)
     wick_contraction!(diagrams, a; regularise, kwargs...)
     return diagrams
-end
+end # keep for vacuum calculations
 function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; kwargs...)
     l = length(L.lagrangian)
 
