@@ -1,12 +1,5 @@
-const PositionPropagatorType = OrderedCollections.LittleDict{
-    Position,
-    PropagatorType,
-    Tuple{<:Position,<:Position,<:Position},
-    Tuple{PropagatorType,PropagatorType,PropagatorType},
-}
-
 "compute the self-energy type from positions save in `dict`."
-function self_energy_type(dict::OrderedCollections.LittleDict)
+function self_energy_type(dict::SmallCollections.SmallDict)
     # G1K = GK[x1,y1] ΣA[y1,y1] GA[y1,x2] +GR[x1,y1] ΣK GA[y1,x2] + GR[x1,y1]ΣR[y1,y1] GK[y1,x2]
     if is_keldysh(dict[:out]) && is_advanced(dict[:in])
         return Advanced
@@ -22,8 +15,8 @@ end
 
 "Construct the self-energy from diagrams and save in LittleDict self_energy."
 function construct_self_energy!(
-    self_energy::OrderedCollections.LittleDict, diagrams::Diagrams; order::Int=1
-)
+    self_energy::SmallCollections.SmallDict, diagrams::Diagrams{E}; order::Int=1
+) where {E}
     if order > 2
         error("Higher than second order in self-energy is not supported.")
     end
@@ -38,9 +31,9 @@ function construct_self_energy!(
 
         positions = position_category.(_contractions)
         types_p = propagator_type.(_contractions)
-        dict = OrderedCollections.freeze(
-            OrderedCollections.OrderedDict(zip(positions, types_p))
-        ) # TODO Replace with SmallCollections
+        dict = SmallCollections.SmallDict{E,Symbol,PropagatorType}(
+            p => t for (p, t) in zip(positions, types_p)
+        )
 
         # Find all bulk propagators (edges where both fields are bulk)
         bulk_idxs = findall(is_bulk, _contractions)
@@ -77,7 +70,7 @@ struct SelfEnergy{E,T}
     advanced::Diagrams{E,T}
 end
 function SelfEnergy(G::DressedPropagator{E}; order=1) where {E}
-    self_energy = OrderedCollections.LittleDict{PropagatorType,Diagrams}((
+    self_energy = SmallCollections.SmallDict{3,PropagatorType,Diagrams}((
         Advanced => Diagrams{E-2}(), Retarded => Diagrams{E-2}(), Keldysh => Diagrams{E-2}()
     ))
     construct_self_energy!(self_energy, G.keldysh; order)
