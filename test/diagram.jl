@@ -15,6 +15,18 @@ using KeldyshContraction: Bulk, In, Out, Edge
     # @code_typed Diagram(vs)
 end
 
+@testset "prefactor multiplication" begin
+    using KeldyshContraction: Diagram, Diagrams, Contraction
+
+    @qfields c::Destroy(Classical) q::Destroy(Quantum)
+    vs = KeldyshContraction.Contraction[(c(Out()), q'), (c, q'), (c, q(In())')]
+    d = Diagram(vs)
+    ds = Diagrams(Dict(d => complex(1.0)))
+    ds2 = ds * 2.0
+    ds2′ = 2.0 * ds
+    @test isequal(ds2, ds2′)
+end
+
 @testset "is_connected" begin
     @qfields c::Destroy(Classical) q::Destroy(Quantum)
 
