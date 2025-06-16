@@ -102,7 +102,7 @@ In second order, we have many additional terms for the dressed propagator.
 These involve now 5 propagators:
 
 ````@example elastic_two_body
-GF = DressedPropagator(L_int; order=2)
+GF = DressedPropagator(L_int, 2)
 ````
 
 However, not all of them contribute to the second order self-energy. Indeed, many terms
@@ -123,7 +123,7 @@ topology_dict[[2]]
 The topology involving only one edge is the reducible diagram, which will not contribute to the self-energy in second order. Indeed, internally we only consider the irreducible diagrams.
 
 ````@example elastic_two_body
-Σ = SelfEnergy(GF; order=2)
+Σ = SelfEnergy(GF, 2)
 ````
 
 ---

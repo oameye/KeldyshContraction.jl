@@ -29,8 +29,8 @@ end
     @test isequal(GF_reg.retarded, GF_no_reg.retarded)
     @test isequal(GF_reg.advanced, GF_no_reg.advanced)
 
-    GF_reg2 = DressedPropagator(L_reg; order=2)
-    GF_no_reg2 = DressedPropagator(L_no_reg; order=2)
+    GF_reg2 = DressedPropagator(L_reg, 2)
+    GF_no_reg2 = DressedPropagator(L_no_reg, 2)
 
     @test isequal(GF_reg2.keldysh, GF_no_reg2.keldysh)
     @test isequal(GF_reg2.retarded, GF_no_reg2.retarded)

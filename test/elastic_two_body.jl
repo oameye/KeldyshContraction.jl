@@ -258,10 +258,10 @@ end
         #     "Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂)"
     end
 
-    GF = DressedPropagator(L_int; order=2)
+    GF = DressedPropagator(L_int, 2)
 
     @testset "collective terms" begin
-        GF = DressedPropagator(L_int; order=2)
+        GF = DressedPropagator(L_int, 2)
         GF.retarded.diagrams
 
         terms_k = collect(keys(GF.keldysh.diagrams))
@@ -274,7 +274,7 @@ end
         @test length(terms_a) == 6
     end
 
-    Σ = SelfEnergy(GF; order=2)
+    Σ = SelfEnergy(GF, 2)
 
     @test_broken isequal(adjoint(Σ.advanced), Σ.retarded) # up to some swap
     @test isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)

@@ -68,8 +68,12 @@ struct SelfEnergy{E,T}
     retarded::Diagrams{E,T}
     "The advanced component of the self-energy."
     advanced::Diagrams{E,T}
+    "The order of the self-energy in the perturbation series"
+    order::Int64
+    "Parameters of the perturbation series"
+    parameter::SymbolicUtils.BasicSymbolic{Float64}
 end
-function SelfEnergy(G::DressedPropagator{E}; order=1) where {E}
+function SelfEnergy(G::DressedPropagator{E}, order=1) where {E}
     self_energy = SmallCollections.SmallDict{3,PropagatorType,Diagrams}((
         Advanced => Diagrams{E - 2,topology_length(E)}(),
         Retarded => Diagrams{E - 2,topology_length(E)}(),
@@ -90,7 +94,13 @@ function SelfEnergy(G::DressedPropagator{E}; order=1) where {E}
     _simplify_prefactors!(self_energy[Keldysh])
     _simplify_prefactors!(self_energy[Retarded])
     _simplify_prefactors!(self_energy[Advanced])
-    return SelfEnergy(self_energy[Keldysh], self_energy[Retarded], self_energy[Advanced])
+    return SelfEnergy(
+        self_energy[Keldysh],
+        self_energy[Retarded],
+        self_energy[Advanced],
+        order,
+        G.parameter,
+    )
 end
 
 """

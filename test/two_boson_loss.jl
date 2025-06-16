@@ -201,7 +201,7 @@ end
 
 @testset "second order" begin
     L = InteractionLagrangian(L_int)
-    GF = DressedPropagator(L; order=2)
+    GF = DressedPropagator(L, 2)
 
     @testset " vacuum" begin
         using KeldyshContraction: filter_nonzero!
@@ -214,7 +214,7 @@ end
         @test iszero(expr)
     end
 
-    Σ = SelfEnergy(GF; order=2)
+    Σ = SelfEnergy(GF, 2)
 
     @test_broken isequal(adjoint(Σ.advanced), Σ.retarded)
     @test_broken isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)
