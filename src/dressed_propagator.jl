@@ -16,13 +16,13 @@ $(TYPEDSIGNATURES)
 
 Constructs a `DressedPropagator` with the given Keldysh, retarded, and advanced components.
 """
-struct DressedPropagator{E,T}
+struct DressedPropagator{E1,E2}
     "The Keldysh component of the propagator"
-    keldysh::Diagrams{E,T}
+    keldysh::Diagrams{E1,E2}
     "The retarded component of the propagator"
-    retarded::Diagrams{E,T}
+    retarded::Diagrams{E1,E2}
     "The advanced component of the propagator"
-    advanced::Diagrams{E,T}
+    advanced::Diagrams{E1,E2}
 end
 """
     matrix(G::DressedPropagator)
@@ -39,8 +39,8 @@ G^A\\left(x_1, x_2\\right) & 0
 \\right)
 ```
 """
-function matrix(G::DressedPropagator{E}) where {E}
-    return Diagrams[G.retarded G.keldysh; G.advanced Diagrams{E}()]
+function matrix(G::DressedPropagator{E1,E2}) where {E1,E2}
+    return Diagrams[G.retarded G.keldysh; G.advanced Diagrams{E1,E2}()]
 end
 
 """

@@ -11,8 +11,8 @@ using KeldyshContraction, Test
     all_concrete(KeldyshContraction.InteractionLagrangian)
 
     all_concrete(KeldyshContraction.Edge)
-    all_concrete(KeldyshContraction.Diagram)
-    all_concrete(KeldyshContraction.Diagrams)
+    all_concrete(KeldyshContraction.Diagram{5,3})
+    all_concrete(KeldyshContraction.Diagrams{5,3})
     all_concrete(KeldyshContraction.DressedPropagator)
     all_concrete(KeldyshContraction.SelfEnergy)
 end
