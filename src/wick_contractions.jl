@@ -43,7 +43,7 @@ function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; 
     regularise = should_regularise(L.lagrangian)
     for coefficients in Combinatorics.multiexponents(l, order)
         # TODO: remove complex conjugate to go from 10 to only 6 terms
-        idxs = expand_coefficients(coefficients) # will be of length order
+        idxs = indices_from_counts(coefficients) # will be of length order
         mult = Combinatorics.multinomial(coefficients...)
         qmul = mult * prod(L(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
         wick_contraction!(diagrams, prefactor * in_out * qmul; regularise, kwargs...)
