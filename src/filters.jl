@@ -9,7 +9,7 @@ function is_physical_propagator(a::Contraction)
     len = length(a) == 2 # propagator has length 2
     positions = position.(a)
     # ∨ Can't make a propagator with In and Out coordinate
-    in_out = In() ∈ positions ? !(Out() ∈ positions) : true
+    in_out = has_in(positions) ? !has_out(positions) : true
     physical = all(is_physical.(a))
     return len && in_out && physical
 end

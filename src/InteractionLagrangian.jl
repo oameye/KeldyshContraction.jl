@@ -95,8 +95,8 @@ See also: [`is_conserved`](@ref)
 function is_physical(args_nc_::Vector{<:QField})
     positions = [position(f) for f in args_nc_]
     # checks if a mul has both in-out in a lagrangian
-    in_out = In() ∈ positions ? (Out() ∈ positions ? true : false) : true
-    out_in = Out() ∈ positions ? (In() ∈ positions ? true : false) : true
+    in_out = has_in(positions) ? (has_out(positions) ? true : false) : true
+    out_in = has_out(positions) ? (has_in(positions) ? true : false) : true
     itr = map(is_physical, args_nc_)
     physical = all(itr) # individual field are physical
     return physical && in_out && out_in

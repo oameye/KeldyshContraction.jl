@@ -41,7 +41,7 @@ function propagator_checks(out::QSym, in::QSym)::Nothing
     positions = position.(v)
     @assert !(is_in(first(positions))) "The outgoing field can't be the In<:Position` coordinate"
     @assert !(is_out(last(positions))) "The incoming field can't be the Out<:Position` coordinate"
-    in_out = (In() ∈ positions ? !(Out() ∈ positions) : true)
+    in_out = (has_in(positions) ? !(has_out(positions)) : true)
     @assert in_out "Can't make a propagator with `In<:Position` and `Out<:Position` coordinate"
     contours = Int.(contour.(v))
     @assert !is_qq_contraction(v) "The quantum-quantum progator is zero"
