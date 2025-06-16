@@ -3,26 +3,16 @@ struct Diagram{E,T}
     topology::Vector{Int64} # TODO: make immutable
 end
 
-function Diagram(contractions::Vector{<:Contraction})
+function Diagram(contractions::Vector{T}) where {T<:Union{Contraction,Edge}}
     @assert length(contractions) > 0 "Contraction vector must not be empty"
-    E = length(contractions)
-    sort!(contractions; by=sort_by_position_and_type)
+    sort!(contractions; by=sort_by_position_and_type) #TODO: sort?
     edges = StaticArrays.sacollect(
-        SVector{length(contractions),Edge}, Edge(c) for c in contractions
+        SVector{length(contractions),Edge},
+        T <: Contraction ? Edge(c) : c for c in contractions
     ) # TODO this is type unstable move to FixedSizeArrays.jl when released
     # https://github.com/JuliaArrays/FixedSizeArrays.jl/issues/115
     return Diagram(edges)
 end
-function Diagram(contractions::Vector{<:Edge})
-    @assert length(contractions) > 0 "Contraction vector must not be empty"
-    E = length(contractions)
-    sort!(contractions; by=sort_by_position_and_type)
-    # TODO: sort to be sure?
-    edges = StaticArrays.sacollect(
-        SVector{length(contractions),Edge}, c for c in contractions
-    )
-    return Diagram(edges)
-end # TODO: make above two functions less redundant
 function Diagram(edges::SVector{E,Edge}) where {E}
     Diagram{E,SVector{E,Edge}}(edges, bulk_multiplicity(edges))
 end
