@@ -11,20 +11,6 @@ L_int =
         c' * q' * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
     )
 
-L = InteractionLagrangian(L_int)
-GF = DressedPropagator(L; order=2)
-Σ = SelfEnergy(GF; order=2)
-# topologies(Σ.retarded)
-
-ds = Σ.retarded
-terms = collect(keys(ds.diagrams))
-diagram = first(terms)
-vs = map(diagram.contractions) do c
-    ff = KC.fields(c)
-    KC.integer_positions((ff[1], ff[2]))
-end
-KC.bulk_multiplicity(vs)
-
 @testset "vacuum bubble" begin
     @test !iszero(wick_contraction(L_int; regularise=false))
     @test iszero(wick_contraction(L_int; regularise=true))
