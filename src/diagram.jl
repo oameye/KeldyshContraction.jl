@@ -5,7 +5,8 @@ end
 
 function Diagram(contractions::Vector{T}) where {T<:Union{Contraction,Edge}}
     @assert length(contractions) > 0 "Contraction vector must not be empty"
-    sort!(contractions; by=sort_by_position_and_type) #TODO: sort?
+    sort!(contractions; by=sort_by_position_and_type)
+
     edges = SmallCollections.FixedVector{length(contractions),Edge}(
         T <: Contraction ? Edge(c) : c for c in contractions
     )
@@ -13,14 +14,17 @@ function Diagram(contractions::Vector{T}) where {T<:Union{Contraction,Edge}}
     # https://github.com/JuliaArrays/FixedSizeArrays.jl/issues/115
     return Diagram(edges)
 end
+
 function Diagram(edges::FixedVector{E,Edge}) where {E}
     topology = bulk_multiplicity(edges)
     Diagram{E,length(topology)}(edges, topology)
 end
+
 Base.isequal(d1::Diagram, d2::Diagram) = isequal(contractions(d1), contractions(d2))
 Base.hash(d::Diagram, h::UInt) = hash(contractions(d), h)
 contractions(d::Diagram) = d.contractions
 topology(d::Diagram) = d.topology
+
 topology_length(x::Int) = max(0, x - 4)
 
 ################

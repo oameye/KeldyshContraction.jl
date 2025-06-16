@@ -1,6 +1,6 @@
 using KeldyshContraction, Test
 using KeldyshContraction: In, Out, Classical, Quantum, Plus, Minus, Diagram, Diagrams, Edge
-using KeldyshContraction: is_physical, is_conserved, construct_self_energy!
+using KeldyshContraction: is_physical, is_conserved, _wick_contraction
 import KeldyshContraction as KC
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
 
@@ -12,8 +12,8 @@ L_int =
     )
 
 @testset "vacuum bubble" begin
-    @test !iszero(wick_contraction(L_int; regularise=false))
-    @test iszero(wick_contraction(L_int; regularise=true))
+    @test !iszero(_wick_contraction(L_int; regularise=false))
+    @test iszero(_wick_contraction(L_int; regularise=true))
 end
 
 @testset "wick contractions first order" begin
@@ -34,7 +34,7 @@ end
 
         @test isequal(
             Diagram([Edge(c(Out()), q'), Edge(c, c'), Edge(c, c(In())')]),
-            first(keys(wick_contraction(expr.arguments[1]).diagrams)),
+            first(keys(_wick_contraction(expr.arguments[1]).diagrams)),
         )
 
         # ∨ I check these by hand
@@ -43,20 +43,20 @@ end
         truth = Diagrams(
             Dict(Diagram([(c(Out()), q'), (c, c'), (c, c'(In()))]) => complex(1.0))
         )
-        @test isequal(wick_contraction(expr.arguments[1]; simplify), truth)
+        @test isequal(_wick_contraction(expr.arguments[1]; simplify), truth)
 
         # i (c*q⁻*q⁻*̄c*̄q*̄c)/2
         truth = Diagrams(
             Dict(Diagram([(c(Out()), q'), (q, c'), (q, c'(In()))]) => complex(1.0))
         )
-        @test isequal(wick_contraction(expr.arguments[2]; simplify), truth)
+        @test isequal(_wick_contraction(expr.arguments[2]; simplify), truth)
 
         # - i( c*c⁺*q⁺*̄c*̄c*̄c) /2
-        @test repr(wick_contraction(expr.arguments[3]; simplify)) ==
+        @test repr(_wick_contraction(expr.arguments[3]; simplify)) ==
             "-1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
         # - i(c*c⁺*q⁺*̄q*̄q*̄ϕ)/2
-        @test repr(wick_contraction(expr.arguments[4]; simplify)) ==
+        @test repr(_wick_contraction(expr.arguments[4]; simplify)) ==
             "-1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
         # c*c⁺*q⁺*̄c*̄q*̄c
@@ -66,7 +66,7 @@ end
                 Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))]) => complex(1.0),
             ),
         )
-        @test isequal(wick_contraction(expr.arguments[5]; simplify), truth)
+        @test isequal(_wick_contraction(expr.arguments[5]; simplify), truth)
 
         # c*c⁻*q⁻*̄c*̄q*̄c
         truth = Diagrams(
@@ -75,9 +75,9 @@ end
                 Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))]) => complex(1.0),
             ),
         )
-        @test isequal(wick_contraction(expr.arguments[6]; simplify), truth)
+        @test isequal(_wick_contraction(expr.arguments[6]; simplify), truth)
 
-        result = wick_contraction.(expr.arguments; simplify)
+        result = _wick_contraction.(expr.arguments; simplify)
 
         diagrams_result = result[1]
         for idx in 2:length(result)
@@ -99,8 +99,8 @@ end
         @test is_physical(expr)
 
         # ∨ should this be zero?
-        @test !iszero(wick_contraction(expr; regularise=false))
-        @test iszero(wick_contraction(expr; regularise=true))
+        @test !iszero(_wick_contraction(expr; regularise=false))
+        @test iszero(_wick_contraction(expr; regularise=true))
     end
 
     @testset "R/A Green's function first order" begin
@@ -186,7 +186,7 @@ end
         Σ = SelfEnergy(GF)
 
         expr_K = c(Out()) * c'(In()) * L_int
-        G_K1 = wick_contraction(expr_K; simplify=false)
+        G_K1 = _wick_contraction(expr_K; simplify=false)
 
         self_energy = SmallCollections.SmallDict{3,PropagatorType,Diagrams}((
             Advanced => Diagrams{1,0}(),
@@ -209,7 +209,7 @@ end
         L1 = L(1)
         L2 = L(2)
         vacuum = L1.lagrangian * L2.lagrangian
-        expr = wick_contraction(vacuum; simplify=true)
+        expr = _wick_contraction(vacuum; simplify=true)
         filter_nonzero!(expr)
         @test iszero(expr)
     end

@@ -44,14 +44,14 @@ of the two-point correlators of the linear part of the system.
 In the package we can do this as follows:
 
 ````@example elastic_two_body
-wick_contraction(elasctic2boson; simplify=false)
+KeldyshContraction._wick_contraction(elasctic2boson; simplify=false)
 ````
 
 However, to show that these diagrams cancel out, we need to apply to condition $G^R = - G^A$.
 Inside the package we do this by
 
 ````@example elastic_two_body
-wick_contraction(elasctic2boson; simplify=true)
+KeldyshContraction._wick_contraction(elasctic2boson; simplify=true)
 ````
 
 Similarly, we can compute the next orders.

@@ -11,6 +11,8 @@ using KeldyshContraction: Bulk, In, Out, Edge
     @qfields c::Destroy(Classical) q::Destroy(Quantum)
     vs = KeldyshContraction.Contraction[(c(Out()), q'), (c, q'), (c, q(In())')]
     # @inferred Diagram(vs) #TODO
+    # @code_warntype Diagram(vs)
+    # @code_typed Diagram(vs)
 end
 
 @testset "is_connected" begin

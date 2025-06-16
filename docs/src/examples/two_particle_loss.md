@@ -41,7 +41,7 @@ loss2boson_unregular =
         c' * q' * (c * q + c * q)
     )
 
-wick_contraction(loss2boson_unregular; simplify=true)
+KeldyshContraction._wick_contraction(loss2boson_unregular; simplify=true)
 ````
 
 To make the interaction Lagrangian physically meaningful, we must regularize it by properly
