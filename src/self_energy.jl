@@ -8,11 +8,11 @@ const PositionPropagatorType = OrderedCollections.LittleDict{
 "compute the self-energy type from positions save in `dict`."
 function self_energy_type(dict::OrderedCollections.LittleDict)
     # G1K = GK[x1,y1] ΣA[y1,y1] GA[y1,x2] +GR[x1,y1] ΣK GA[y1,x2] + GR[x1,y1]ΣR[y1,y1] GK[y1,x2]
-    if is_keldysh(dict[Out()]) && is_advanced(dict[In()])
+    if is_keldysh(dict[:out]) && is_advanced(dict[:in])
         return Advanced
-    elseif is_retarded(dict[Out()]) && is_keldysh(dict[In()])
+    elseif is_retarded(dict[:out]) && is_keldysh(dict[:in])
         return Retarded
-    elseif is_retarded(dict[Out()]) && is_advanced(dict[In()])
+    elseif is_retarded(dict[:out]) && is_advanced(dict[:in])
         return Keldysh
     else
         @show dict
@@ -36,7 +36,7 @@ function construct_self_energy!(
             continue
         end
 
-        positions = position.(_contractions)
+        positions = position_category.(_contractions)
         types_p = propagator_type.(_contractions)
         dict = OrderedCollections.freeze(
             OrderedCollections.OrderedDict(zip(positions, types_p))
