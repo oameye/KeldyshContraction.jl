@@ -17,7 +17,7 @@ function benchmark_two_body_loss!(SUITE)
 
     order = 2
     SUITE["Two body loss"]["Green's function second order"] = @benchmarkable DressedPropagator(
-        $L_int; order=($order)
+        $L_int, $order
     ) seconds = 50
     return nothing
 end
