@@ -26,7 +26,7 @@ struct DressedPropagator{E1,E2}
     "The order of the dressed propagator in the perturbation series"
     order::Int64
     "Parameters of the perturbation series"
-    parameter::SymbolicUtils.BasicSymbolic{Float64}
+    parameter::SymbolicUtils.BasicSymbolic{Number}
 end
 """
     matrix(G::DressedPropagator)

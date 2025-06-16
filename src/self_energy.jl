@@ -71,7 +71,7 @@ struct SelfEnergy{E,T}
     "The order of the self-energy in the perturbation series"
     order::Int64
     "Parameters of the perturbation series"
-    parameter::SymbolicUtils.BasicSymbolic{Float64}
+    parameter::SymbolicUtils.BasicSymbolic{Number}
 end
 function SelfEnergy(G::DressedPropagator{E}, order=1) where {E}
     self_energy = SmallCollections.SmallDict{3,PropagatorType,Diagrams}((

@@ -1,4 +1,4 @@
-const DEFAULT_PARAMETER = SymbolicUtils.Sym{Float64}(:g)
+const DEFAULT_PARAMETER = SymbolicUtils.Sym{Number}(:g)
 
 ###########################
 #  Interaction Lagrangian
@@ -36,7 +36,7 @@ struct InteractionLagrangian{T}
     "The position of the interaction Lagrangian"
     position::Position
     "Parameters of the perturbation series"
-    parameter::SymbolicUtils.BasicSymbolic{Float64}
+    parameter::SymbolicUtils.BasicSymbolic{Number}
 
     function InteractionLagrangian(expr::QTerm, parameter=DEFAULT_PARAMETER)
         fields = _extract_unique_fields(expr)
