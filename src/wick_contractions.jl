@@ -26,11 +26,14 @@ function wick_contraction(a::QAdd; kwargs...)::Diagrams
     args = SymbolicUtils.arguments(a)
     E = number_of_propagators(first(args))
     if !is_bulk(a) # for vacuum calculations
-        throw(ArgumentError(
-            """
-            Directly using  `wick_contraction` on a `QAdd` is only supported for vaccuum
-            calculations. Instead, use `wick_contraction` with InteractionLagrangian.
-            """))
+        throw(
+            ArgumentError(
+                """
+                Directly using  `wick_contraction` on a `QAdd` is only supported for vacuum
+                calculations. Instead, use `wick_contraction` with InteractionLagrangian.
+                """
+            ),
+        )
     else
         diagrams = Diagrams{E,topology_length(E+1)}()
     end
@@ -47,11 +50,14 @@ function wick_contraction(a::QMul; kwargs...)::Diagrams
 
     E = number_of_propagators(a)
     if !is_bulk(a) # for vacuum calculations
-        throw(ArgumentError(
-            """
-            Directly using  `wick_contraction` on a `QAdd` is only supported for vaccuum
-            calculations. Instead, use `wick_contraction` with InteractionLagrangian.
-            """))
+        throw(
+            ArgumentError(
+                """
+                Directly using  `wick_contraction` on a `QAdd` is only supported for vacuum
+                calculations. Instead, use `wick_contraction` with InteractionLagrangian.
+                """
+            ),
+        )
     else
         diagrams = Diagrams{E,topology_length(E+1)}()
     end
