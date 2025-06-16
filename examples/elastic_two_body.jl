@@ -7,7 +7,7 @@ using KeldyshContraction
 # ```math
 # S_\mathrm{int} = -\frac{g}{2} \int d^d x \, [(\bar{\phi}_+\phi_+)^2 - (\bar{\phi}_-\phi_-)^2 ]
 # ```
-# Above interaction can typically represent s-wave scattering of bosons. Here, the overal
+# Above interaction can typically represent s-wave scattering of bosons. Here, the overall
 # minus sign comes from the relation of the Lagrangian to the Hamiltonian.
 
 # In the RAK basis, this gives
