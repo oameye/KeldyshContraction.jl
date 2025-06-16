@@ -119,21 +119,15 @@ function same_position(p::Contraction)
     return isequal(_positions...)
 end
 
-function position(p::Edge)
+function position_category(p::Edge)::Symbol
     _positions = positions(p)
     if length(findall(is_in, _positions)) == 1
-        return In()
+        return :in
     elseif length(findall(is_out, _positions)) == 1
-        return Out()
+        return :out
     elseif all(is_bulk, _positions)
-        idxs = map(x -> getproperty(x, :index), _positions)
-        if isequal(idxs...)
-            return _positions[1]
-        else
-            return minimum(_positions)
-            # ^  TODO what to do if both are bulk with different index?
-        end
+        return :bulk
     else
         throw(ArgumentError("Not a valid propagator."))
     end
-end # TODO move to Hopcroft-Ullman pairing
+end

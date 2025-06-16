@@ -178,7 +178,7 @@ end
     end
 
     @testset "Keldysh GF is enough" begin
-        using OrderedCollections
+        using SmallCollections
         using KeldyshContraction: construct_self_energy!, PropagatorType, Diagrams
 
         L = InteractionLagrangian(L_int)
@@ -188,7 +188,7 @@ end
         expr_K = c(Out()) * c'(In()) * L_int
         G_K1 = wick_contraction(expr_K; simplify=false)
 
-        self_energy = OrderedCollections.LittleDict{PropagatorType,Diagrams}((
+        self_energy = SmallCollections.SmallDict{3,PropagatorType,Diagrams}((
             Advanced => Diagrams{1}(), Retarded => Diagrams{1}(), Keldysh => Diagrams{1}()
         ))
         construct_self_energy!(self_energy, G_K1)

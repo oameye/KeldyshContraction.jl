@@ -8,7 +8,6 @@ using DocStringExtensions
 using TermInterface: TermInterface
 using SymbolicUtils: SymbolicUtils, @syms, arguments
 using Combinatorics: Combinatorics
-using OrderedCollections: OrderedCollections
 using SmallCollections: SmallCollections
 using StaticArrays: StaticArrays, SVector
 
