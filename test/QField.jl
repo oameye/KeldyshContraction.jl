@@ -136,7 +136,7 @@ end
     @test isequal(ϕ', ϕ′)
     @test adjoint(ψ) == ψ′
     @test adjoint(ψ′) == ψ
-    @test isequal(adjoint(ϕ * ψ), ψ′ * ϕ′) # fields switch under adjoint
+    @test isequal(adjoint(ϕ * ψ), ϕ′ * ψ′)
     @test isequal(adjoint(ϕ + ψ), ϕ′ + ψ′)
 end
 

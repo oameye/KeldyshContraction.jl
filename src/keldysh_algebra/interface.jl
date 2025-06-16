@@ -144,4 +144,5 @@ is_out(x::Position) = isequal(index(x), typemin(Int8))
 index(p::Position) = p.index
 Base.Int(p::Position) = index(p)
 
-# TODO make has_in and replace `In() ∈ positions`
+has_in(ps)::Bool = In() ∈ ps
+has_out(ps)::Bool = Out() ∈ ps
