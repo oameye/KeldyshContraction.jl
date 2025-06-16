@@ -80,17 +80,14 @@ function _wick_contraction(
 
     number_of_combinations = factorial(n_destroy)
     ps = map(position, args_nc)
-    if In() ∉ ps || Out() ∉ ps
-        to_skip = 0
-    else
-        to_skip = factorial(n_destroy - 1) # due in-out contraction constraint
-    end
+    skip = has_in(ps) && has_out(ps)
 
     wick_contractions = Vector{Contraction}[]
-    iter = 1:n_destroy
 
-    for i in (to_skip + 1):number_of_combinations
-        perm = Combinatorics.nthperm(iter, i)
+    for (i, perm) in enumerate(SmallCollections.Combinatorics.permutations(n_destroy))
+        if skip && isone(first(perm))
+            continue # skip the in-out contraction
+        end
         contraction, fail = _wick_contract(destroys, creates, perm; regularise)
 
         # TODO ∨ You can probably cache this
@@ -142,7 +139,7 @@ function _wick_contraction(a::QAdd; kwargs...)::Diagrams
     args = SymbolicUtils.arguments(a)
     E = number_of_propagators(first(args))
     if is_bulk(a) # for vacuum calculations
-        diagrams = Diagrams{E,topology_length(E+1)}()
+        diagrams = Diagrams{E,topology_length(E + 1)}()
     else # known type unstable
         @warn """
         Directly using `wick_contraction` on a `QAdd` is only publicly supported for vacuum
@@ -163,7 +160,7 @@ function _wick_contraction(a::QMul; kwargs...)::Diagrams
 
     E = number_of_propagators(a)
     if is_bulk(a) # for vacuum calculations
-        diagrams = Diagrams{E,topology_length(E+1)}()
+        diagrams = Diagrams{E,topology_length(E + 1)}()
     else # known type unstable
         @warn """
         Directly using `wick_contraction` on a `QAdd` is only publicly supported for vacuum
