@@ -157,17 +157,17 @@ end
 
 # The following were used to check for bugs, we leave them here for reference
 # but they are not used in the main code.
-function check_sorted(args)
-    args′ = sort(args; by=position)
-    args′′ = sort(args′; by=ladder)
-    @assert isequal(args, args′′) "Arguments are not sorted"
-end
-function check_to_many_bulk(contraction, args_nc)
-    pos = map(x -> Int(position(x)), Iterators.flatten(contraction))
-    for i in unique(pos)
-        if count(x -> x == i, pos) > 4
-            @show args_nc
-            error("Contraction is not unique")
-        end
-    end
-end
+# function check_sorted(args)
+#     args′ = sort(args; by=position)
+#     args′′ = sort(args′; by=ladder)
+#     @assert isequal(args, args′′) "Arguments are not sorted"
+# end
+# function check_to_many_bulk(contraction, args_nc)
+#     pos = map(x -> Int(position(x)), Iterators.flatten(contraction))
+#     for i in unique(pos)
+#         if count(x -> x == i, pos) > 4
+#             @show args_nc
+#             error("Contraction is not unique")
+#         end
+#     end
+# end
