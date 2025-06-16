@@ -80,18 +80,16 @@ end
 function Base.collect(collection::Diagrams)
     return collect(keys(collection.diagrams))
 end
-function multiply!(collection::Diagrams, prefactor::Number)
-    foreach(collection) do (diagram, coeff)
+
+function Base.:*(prefactor::Number, collection::Diagrams)
+    collection = deepcopy(collection) # needed so that -1 * Σ.keldysh does not change Σ
+    foreach(collection) do (diagram, _)
         collection.diagrams[diagram] *= prefactor
         collection.diagrams[diagram] = _simplify(collection.diagrams[diagram])
     end
     return collection
-end # TODO Instead of multiply! we could use Base.:*
-function Base.:*(prefactor::Number, collection::Diagrams)
-    diagrams = deepcopy(collection)
-    multiply!(diagrams, prefactor)
-    return diagrams
 end
+Base.:*(diagrams::Diagrams, prefactor::Number) = prefactor * diagrams
 
 # Make the collection iterable (iterate over pairs)
 Base.iterate(collection::Diagrams) = iterate(collection.diagrams)
