@@ -36,7 +36,7 @@ function construct_self_energy!(
             continue
         end
 
-        positions = position_catagory.(_contractions)
+        positions = position_category.(_contractions)
         types_p = propagator_type.(_contractions)
         dict = OrderedCollections.freeze(
             OrderedCollections.OrderedDict(zip(positions, types_p))

@@ -16,7 +16,7 @@ end
 
 @testset "properties" begin
     p = Edge(q, c'(In()))
-    @test KeldyshContraction.position_catagory(p) == :in
+    @test KeldyshContraction.position_category(p) == :in
     @test_broken KeldyshContraction.contours(p) == [Quantum, Classical] # not needed
     @test !KeldyshContraction.is_bulk(p)
     @test_broken KeldyshContraction.regularisations(p) == fill(KeldyshContraction.Zero, 2) # not needed

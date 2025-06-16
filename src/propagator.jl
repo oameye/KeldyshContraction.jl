@@ -119,7 +119,7 @@ function same_position(p::Contraction)
     return isequal(_positions...)
 end
 
-function position_catagory(p::Edge)::Symbol
+function position_category(p::Edge)::Symbol
     _positions = positions(p)
     if length(findall(is_in, _positions)) == 1
         return :in
