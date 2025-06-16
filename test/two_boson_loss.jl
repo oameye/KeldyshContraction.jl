@@ -84,7 +84,7 @@ end
             for (diagram, prefactor) in result[idx]
                 push!(diagrams_result, diagram, prefactor)
             end
-        end # TODO: implement merge!
+        end
         diagrams_result
 
         L = InteractionLagrangian(L_int)

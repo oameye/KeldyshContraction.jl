@@ -9,6 +9,17 @@ See https://mathworld.wolfram.com/PairingFunction.html
 """
 @inline pairing(i::Integer, j::Integer) = div((i+j-2)*(i+j-1), 2) + i
 
+"""
+maps edge (i,j) to a unique integer in range 1:max_edges(n).
+It is different from Hopcroft-Ullman pairing as it assumes that i ≠ j and the number of
+edges is used.
+"""
+function edge_to_index(i::Int8, j::Int8, n::Int)::Int
+    # Ensure i < j
+    i, j = Int.(minmax(i, j))
+    return (i - 1) * (n - i ÷ 2) + (j - i)
+end
+
 make_real(x::Number) = SymbolicUtils._isreal(x) ? real(x) : x
 
 _simplify(x::Complex) =

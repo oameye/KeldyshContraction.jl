@@ -63,7 +63,7 @@ function Base.push!(collection::Diagrams, diagram::Diagram, prefactor::Number)
         collection.diagrams[diagram] = prefactor
     end
     return collection
-end # TODO Instead of push! we could use setindex! to be more consistent with the rest of Julia
+end
 
 function filter_nonzero!(collection::Diagrams)
     filter!((kv) -> !iszero(kv[2]), collection.diagrams)
@@ -113,15 +113,13 @@ function adjoint_diagram(
 end
 
 function bulk_multiplicity(edges::SVector{N,Tuple{Int8,Int8}}) where {N}
-    ff =
-        edge ->
-            !(typemin(Int8) ∈ edge) && !(typemax(Int8) ∈ edge) && !isequal(edge[1], edge[2])
-    edges = filter(ff, edges)
+    edges = filter(is_not_equal_time_bulk_edge, edges)
 
     vert = vertices(edges)
     m = max_edges(length(vert))
+
     mult = SmallCollections.MutableSmallVector{m,Int}(0 for i in 1:m)
-    for edge in edges # TODO: probably should use pairibulk_multiplicityng function
+    for edge in edges
         idx = edge_to_index(edge[1], edge[2], length(vert))
         mult[idx] += 1
     end
@@ -133,17 +131,8 @@ end
 
 max_edges(n::Integer)::Integer = n * (n - 1) ÷ 2
 
-"""
-maps edge (i,j) to a unique integer in range 1:max_edges(n).
-It assumes that i ≠ j
-"""
-function edge_to_index(i::Int8, j::Int8, n::Int)::Int # TODO change to pairing?
-    # Ensure i < j
-    i, j = Int.(minmax(i, j))
-
-    # Calculate unique index
-    # This maps edge (i,j) to a unique integer in range 1:max_edges(n)
-    return (i - 1) * (n - i ÷ 2) + (j - i)
+function is_not_equal_time_bulk_edge(edge)
+    return !(typemin(Int8) ∈ edge) && !(typemax(Int8) ∈ edge) && !isequal(edge[1], edge[2])
 end
 
 function topologies(ds::Diagrams)
