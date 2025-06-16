@@ -73,7 +73,7 @@ struct SelfEnergy{E,T}
     "Parameters of the perturbation series"
     parameter::SymbolicUtils.BasicSymbolic{Number}
 end
-function SelfEnergy(G::DressedPropagator{E}, order=1) where {E}
+function SelfEnergy(G::DressedPropagator{E}, order=G.order) where {E}
     self_energy = SmallCollections.SmallDict{3,PropagatorType,Diagrams}((
         Advanced => Diagrams{E - 2,topology_length(E)}(),
         Retarded => Diagrams{E - 2,topology_length(E)}(),
