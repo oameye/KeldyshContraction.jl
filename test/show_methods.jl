@@ -63,6 +63,8 @@ end
 
 @testset "Structs" begin
     using KeldyshContraction: Diagram, Diagrams
+    using SymbolicUtils
+
     L = InteractionLagrangian(ϕ * ψ * ϕ' * ψ')
     @test repr(MIME"text/plain"(), L) ==
         "Interaction Lagrangian with fields ϕ and ψ:\n(ϕ*ψ*̄ψ*̄ϕ)"
@@ -70,7 +72,7 @@ end
     @test repr(MIME"text/latex"(), L) == "\$\\phi \\psi \\bar{\\psi} \\bar{\\phi}\$"
 
     ds = Diagrams([Diagram([Edge(ϕ, ϕ')])], complex(1.0))
-    DP = DressedPropagator(ds, ds, ds)
+    DP = DressedPropagator(ds, ds, ds, 1, SymbolicUtils.Sym{Number}(:g))
     @test repr(MIME"text/plain"(), DP) ==
         "Dressed Propagator:\nkeldysh:  Gᴷ(y₁,y₁)\nretarded: Gᴷ(y₁,y₁)\nadvanced: Gᴷ(y₁,y₁)"
 end

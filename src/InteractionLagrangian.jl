@@ -1,3 +1,4 @@
+const DEFAULT_PARAMETER = SymbolicUtils.Sym{Number}(:g)
 
 ###########################
 #  Interaction Lagrangian
@@ -34,7 +35,10 @@ struct InteractionLagrangian{T}
     cfield::Destroy
     "The position of the interaction Lagrangian"
     position::Position
-    function InteractionLagrangian(expr::QTerm)
+    "Parameters of the perturbation series"
+    parameter::SymbolicUtils.BasicSymbolic{Number}
+
+    function InteractionLagrangian(expr::QTerm, parameter=DEFAULT_PARAMETER)
         fields = _extract_unique_fields(expr)
         contours = contour_integers(fields)
 
@@ -43,7 +47,7 @@ struct InteractionLagrangian{T}
         q_idx = findfirst(iszero, contours)
         c_idx = findfirst(isone, contours)
         return new{typeof(expr)}(
-            expr, fields[q_idx], fields[c_idx], position(fields[q_idx])
+            expr, fields[q_idx], fields[c_idx], position(fields[q_idx]), parameter
         )
     end
 end # Does not have to be type stable, as it is called only once
@@ -62,8 +66,11 @@ function _assert_lagrangian(expr, fields, contours)
     return nothing
 end
 
-"get position of the interaction lagrangian"
+"get the position of the interaction lagrangian"
 position(L::InteractionLagrangian) = L.position
+
+"get parameter of the interaction lagrangian"
+parameter(L::InteractionLagrangian) = L.parameter
 
 """
     is_conserved(a::QTerm)

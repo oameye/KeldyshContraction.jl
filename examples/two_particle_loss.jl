@@ -72,8 +72,8 @@ GF = DressedPropagator(L_int)
 
 # ## Second order Green's function
 
-GF = DressedPropagator(L_int; order=2)
+GF = DressedPropagator(L_int, 2)
 
 #
 
-Σ = SelfEnergy(GF; order=2)
+Σ = SelfEnergy(GF, 2)

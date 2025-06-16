@@ -86,11 +86,11 @@ The following indeed corresponds with what is reported in [(Gerbino et al, 2024)
 ## Second order Green's function
 
 ````@example two_particle_loss
-GF = DressedPropagator(L_int; order=2)
+GF = DressedPropagator(L_int, 2)
 ````
 
 ````@example two_particle_loss
-Σ = SelfEnergy(GF; order=2)
+Σ = SelfEnergy(GF, 2)
 ````
 
 ---

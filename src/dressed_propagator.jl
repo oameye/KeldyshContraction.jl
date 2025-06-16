@@ -23,6 +23,10 @@ struct DressedPropagator{E1,E2}
     retarded::Diagrams{E1,E2}
     "The advanced component of the propagator"
     advanced::Diagrams{E1,E2}
+    "The order of the dressed propagator in the perturbation series"
+    order::Int64
+    "Parameters of the perturbation series"
+    parameter::SymbolicUtils.BasicSymbolic{Number}
 end
 """
     matrix(G::DressedPropagator)
@@ -44,12 +48,12 @@ function matrix(G::DressedPropagator{E1,E2}) where {E1,E2}
 end
 
 """
-    wick_contraction(L::InteractionLagrangian; order=1)
+    wick_contraction(L::InteractionLagrangian, order=1)
 
 
 All the same coordinate advanced propagators are converted to retarded propagators.
 """
-function DressedPropagator(L::InteractionLagrangian; order=1, kwargs...)
+function DressedPropagator(L::InteractionLagrangian, order=1; kwargs...)
     ϕ = L.qfield
     ψ = L.cfield
 
@@ -64,5 +68,8 @@ function DressedPropagator(L::InteractionLagrangian; order=1, kwargs...)
         _simplify_prefactors!(component)
     end
 
-    return DressedPropagator(keldysh, retarded, advanced)
+    return DressedPropagator(keldysh, retarded, advanced, order, parameter(L))
 end
+
+"get parameter of the interaction lagrangian"
+parameter(d::DressedPropagator) = d.parameter
