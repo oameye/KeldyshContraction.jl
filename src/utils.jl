@@ -20,17 +20,45 @@ _simplify(x::Complex) =
         x
     end
 
-function expand_coefficients(v::Vector{Int})
-    v′ = deepcopy(v)
-    o = Vector{Int}()
-    while sum(v′) > 0
-        for idx in eachindex(v′)
-            if v′[idx] > 0
-                push!(o, idx)
-                v′[idx] -= 1
+"""
+    indices_from_counts(counts::Vector{Int})
+
+Convert a vector of counts into a flat vector of indices where each index appears
+according to its count.
+
+## Examples
+```jldoctest
+julia> using KeldyshContraction: indices_from_counts
+
+julia> indices_from_counts([2, 0, 1])
+3-element Vector{Int64}:
+ 1
+ 1
+ 3
+
+julia> indices_from_counts([1, 2, 1])
+4-element Vector{Int64}:
+ 1
+ 2
+ 2
+ 3
+```
+
+## Notes
+This function is commonly used to expand multinomial coefficients from
+`Combinatorics.multiexponents` into index lists for perturbation theory calculations.
+"""
+function indices_from_counts(counts::Vector{Int})
+    counts′ = deepcopy(counts)
+    indices = Vector{Int}()
+    while sum(counts′) > 0
+        for idx in eachindex(counts′)
+            if counts′[idx] > 0
+                push!(indices, idx)
+                counts′[idx] -= 1
                 break
             end
         end
     end
-    return o
-end # TODO: need better name
+    return indices
+end
