@@ -1,56 +1,58 @@
-struct Diagram{E,T}
-    contractions::T
-    topology::Vector{Int64} # TODO: make immutable
+struct Diagram{E1,E2}
+    contractions::SmallCollections.FixedVector{E1,Edge}
+    topology::SmallCollections.FixedVector{E2,Int64}
 end
 
 function Diagram(contractions::Vector{T}) where {T<:Union{Contraction,Edge}}
     @assert length(contractions) > 0 "Contraction vector must not be empty"
     sort!(contractions; by=sort_by_position_and_type) #TODO: sort?
-    edges = StaticArrays.sacollect(
-        SVector{length(contractions),Edge},
+    edges = SmallCollections.FixedVector{length(contractions),Edge}(
         T <: Contraction ? Edge(c) : c for c in contractions
-    ) # TODO this is type unstable move to FixedSizeArrays.jl when released
+    )
+    # TODO this is type unstable move to FixedSizeArrays.jl when released
     # https://github.com/JuliaArrays/FixedSizeArrays.jl/issues/115
     return Diagram(edges)
 end
-function Diagram(edges::SVector{E,Edge}) where {E}
-    Diagram{E,SVector{E,Edge}}(edges, bulk_multiplicity(edges))
+function Diagram(edges::FixedVector{E,Edge}) where {E}
+    topology = bulk_multiplicity(edges)
+    Diagram{E,length(topology)}(edges, topology)
 end
 Base.isequal(d1::Diagram, d2::Diagram) = isequal(contractions(d1), contractions(d2))
 Base.hash(d::Diagram, h::UInt) = hash(contractions(d), h)
 contractions(d::Diagram) = d.contractions
 topology(d::Diagram) = d.topology
+topology_length(x::Int) = max(0, x - 4)
 
 ################
 #   Diagrams
 ###############
 
-struct Diagrams{E,T}
-    diagrams::Dict{Diagram{E,T},ComplexF64}
+struct Diagrams{E1,E2}
+    diagrams::Dict{Diagram{E1,E2},ComplexF64}
 end # TODO try SwissDict or RobinDict from DataStructures.jl.
-function Diagrams{E}() where {E}
-    dict = Dict{Diagram{E,SVector{E,Edge}},ComplexF64}()
+function Diagrams{E1,E2}() where {E1,E2}
+    dict = Dict{Diagram{E1,E2},ComplexF64}()
     return Diagrams(dict)
 end
-function Diagrams(diagrams::Vector{Diagram{E,T}}, prefactor::ComplexF64) where {E,T}
-    dict = Dict{Diagram{E,T},ComplexF64}(d => prefactor for d in diagrams)
-    return Diagrams{E,T}(dict)
+function Diagrams(diagrams::Vector{Diagram{E1,E2}}, prefactor::ComplexF64) where {E1,E2}
+    dict = Dict{Diagram{E1,E2},ComplexF64}(d => prefactor for d in diagrams)
+    return Diagrams{E1,E2}(dict)
 end
 function Diagrams(contractions::Vector{Vector{Contraction}}, prefactor::ComplexF64)
     @assert length(contractions) > 0 "Contraction vector must not be empty"
     c = first(contractions)
     E = length(c)
-    T = SVector{E,Edge}
+
     imag_factor = im^E # Contraction becomes propagator
-    dict = Dict{Diagram{E,T},ComplexF64}(
+    dict = Dict{Diagram{E,topology_length(E)},ComplexF64}(
         Diagram(c) => _simplify(imag_factor * prefactor) for c in contractions
     )
-    return Diagrams{E,T}(dict)
+    return Diagrams{E,topology_length(E)}(dict)
 end
 Base.isequal(d1::Diagrams, d2::Diagrams) = isequal(d1.diagrams, d2.diagrams)
 Base.hash(d::Diagrams, h::UInt) = hash(d.diagrams, h)
 Base.iszero(d::Diagrams) = isempty(d.diagrams)
-SmallCollections.default(::Type{Diagrams}) = Diagrams{0}()
+SmallCollections.default(::Type{Diagrams}) = Diagrams{0,0}()
 
 number_of_propagators(a::QMul) = length(a) ÷ 2
 number_of_propagators(L::InteractionLagrangian) = length(first(L.lagrangian.arguments)) ÷ 2
@@ -93,13 +95,13 @@ Base.iterate(collection::Diagrams, state) = iterate(collection.diagrams, state)
 Base.length(collection::Diagrams) = length(collection.diagrams)
 Base.eltype(::Type{Diagrams}) = Pair{Diagram,Number}
 
-function Base.adjoint(d::Diagrams{E}) where {E}
+function Base.adjoint(d::Diagrams)
     dict = Dict(adjoint_diagram(pair) for pair in d)
     return Diagrams(dict)
 end
 function adjoint_diagram(
-    pair::Pair{Diagram{E,T},ComplexF64}
-)::Pair{Diagram{E,T},ComplexF64} where {E,T}
+    pair::Pair{Diagram{E1,E2},ComplexF64}
+)::Pair{Diagram{E1,E2},ComplexF64} where {E1,E2}
     # G^R = G^A
     # G^K = -G^K
     d, prefactor = pair
@@ -108,23 +110,31 @@ function adjoint_diagram(
     prefactor′ = prefactor * (-1)^minus_signs
     adjoint_edges = Edge[adjoint(e) for e in _contractions]
     sorted_adjoint_edges = sort(collect(adjoint_edges); by=sort_by_position_and_type)
-    edges = StaticArrays.sacollect(T, e for e in sorted_adjoint_edges)
+    edges = SmallCollections.FixedVector{E1,Edge}(e for e in sorted_adjoint_edges)
     return Diagram(edges) => _simplify(adjoint(prefactor′))
 end
 
-function bulk_multiplicity(edges::SVector{N,Tuple{Int8,Int8}}) where {N}
+"""
+Compute multiplicity of the edges between two differenct vertices in the bulk.
+The resulting vector is a signture for the topology of the diagram.
+"""
+function bulk_multiplicity(edges::FixedVector{N,Tuple{Int8,Int8}}) where {N}
     edges = filter(is_not_equal_time_bulk_edge, edges)
 
     vert = vertices(edges)
     m = max_edges(length(vert))
 
-    mult = SmallCollections.MutableSmallVector{m,Int}(0 for i in 1:m)
+    if iszero(m)
+        mult = SmallCollections.MutableFixedVector{0,Int}(undef)
+    else
+        mult = SmallCollections.MutableFixedVector{m,Int}(0 for i in 1:m)
+    end # https://github.com/matthias314/SmallCollections.jl/issues/12
     for edge in edges
         idx = edge_to_index(edge[1], edge[2], length(vert))
         mult[idx] += 1
     end
-    return mult
-end # TODO: do we need to sort?
+    return SmallCollections.FixedVector(mult)
+end
 function bulk_multiplicity(vs::AbstractArray{Edge})
     return bulk_multiplicity(map(integer_positions, vs))
 end

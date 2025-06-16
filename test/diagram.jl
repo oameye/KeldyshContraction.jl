@@ -5,7 +5,7 @@ using KeldyshContraction: Bulk, In, Out, Edge
 
 @testset "construction" begin
     using KeldyshContraction: Diagram, Diagrams, Contraction
-    @inferred Diagrams{2}()
+    @inferred Diagrams{3,0}()
     # @code_warntype Diagrams{2}()
 
     @qfields c::Destroy(Classical) q::Destroy(Quantum)
@@ -28,33 +28,33 @@ end
 
 @testset "bulk multiplicity" begin
     @qfields c::Destroy(Classical) q::Destroy(Quantum)
-    using StaticArrays
+    using SmallCollections
 
-    vs = SA[(Out(), Bulk()), (Bulk(), Bulk()), (Bulk(), In())]
+    vs = FixedVector([(Out(), Bulk()), (Bulk(), Bulk()), (Bulk(), In())])
     vs = map(tt -> KeldyshContraction.index.(tt), vs)
     @test KeldyshContraction.bulk_multiplicity(vs) == Int[]
 
-    vs2 = SA[
+    vs2 = FixedVector([
         (Out(), Bulk()),
         (Bulk(), Bulk()),
         (Bulk(), Bulk(2)),
         (Bulk(2), Bulk(2)),
         (Bulk(2), In()),
-    ]
+    ])
     vs2 = map(tt -> KeldyshContraction.index.(tt), vs2)
     @test KeldyshContraction.bulk_multiplicity(vs2) == Int[1]
 
-    vs3 = SA[
+    vs3 = FixedVector([
         (Out(), Bulk()),
         (Bulk(), Bulk(2)),
         (Bulk(2), Bulk()),
         (Bulk(2), Bulk(2)),
         (Bulk(), In()),
-    ]
+    ])
     vs3 = map(tt -> KeldyshContraction.index.(tt), vs3)
     @test KeldyshContraction.bulk_multiplicity(vs3) == Int[2]
 
-    vs4 = SA[
+    vs4 = FixedVector([
         (Out(), Bulk()),
         (Bulk(1), Bulk(2)),
         (Bulk(2), Bulk(1)),
@@ -62,7 +62,7 @@ end
         (Bulk(1), Bulk(3)),
         (Bulk(3), Bulk(3)),
         (Bulk(3), In()),
-    ]
+    ])
     vs4 = map(tt -> KeldyshContraction.index.(tt), vs4)
     @test KeldyshContraction.bulk_multiplicity(vs4) == Int[2, 1, 0]
 end
@@ -152,7 +152,7 @@ end
     d3 = Diagram(contractions3) # should be considered equal to d1 (after sorting)
     d4 = Diagram(contractions4) # unique
 
-    diagrams = Diagrams{3}()
+    diagrams = Diagrams{3,0}()
     push!(diagrams, d1, 1.0)
     push!(diagrams, d2, 1.0)
     push!(diagrams, d3, 1.0)

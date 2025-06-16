@@ -25,7 +25,11 @@ The function returns a new expression of propagators of type `SymbolicUtils.Symb
 function wick_contraction(a::QAdd; kwargs...)::Diagrams
     args = SymbolicUtils.arguments(a)
     E = number_of_propagators(first(args))
-    diagrams = Diagrams{E}()
+    if is_bulk(a) # for vaccuum calculations
+        diagrams = Diagrams{E,topology_length(E+1)}()
+    else # TODO: type unstable
+        diagrams = Diagrams{E,topology_length(E)}()
+    end
 
     regularise = should_regularise(a)
     for arg in args
@@ -33,11 +37,25 @@ function wick_contraction(a::QAdd; kwargs...)::Diagrams
     end
     return diagrams
 end # keep around?
+function wick_contraction(a::QMul; kwargs...)::Diagrams
+    @assert is_conserved(a)
+    @assert is_physical(a)
+
+    E = number_of_propagators(a)
+    if is_bulk(a) # for vaccuum calculations
+        diagrams = Diagrams{E,topology_length(E+1)}()
+    else # TODO: type unstable
+        diagrams = Diagrams{E,topology_length(E)}()
+    end
+    regularise = should_regularise(a)
+    wick_contraction!(diagrams, a; regularise, kwargs...)
+    return diagrams
+end
 function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; kwargs...)
     l = length(L.lagrangian)
 
     E = number_of_propagators(L) * order + 1 # +1 for in_out
-    diagrams = Diagrams{E}()
+    diagrams = Diagrams{E,topology_length(E)}()
     prefactor = -1 * im * im^order / factorial(order)
 
     regularise = should_regularise(L.lagrangian)
@@ -50,17 +68,7 @@ function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; 
     end
     return diagrams
 end
-function wick_contraction(a::QMul; kwargs...)::Diagrams
-    @assert is_conserved(a)
-    @assert is_physical(a)
 
-    E = number_of_propagators(a)
-    diagrams = Diagrams{E}()
-
-    regularise = should_regularise(a)
-    wick_contraction!(diagrams, a; regularise, kwargs...)
-    return diagrams
-end
 function wick_contraction!(diagrams::Diagrams, a::QMul; regularise=true, simplify=true)
     @assert is_conserved(a)
     @assert is_physical(a)
