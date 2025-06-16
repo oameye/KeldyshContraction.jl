@@ -58,7 +58,7 @@ end
 """
 A canonical contraction (diagram) is one where the output field is connected to the
 bulk position with the lowest index, canonically `index=1`.
-TODO: How shoould higher orders be handled?
+TODO: How should higher orders be handled?
 """
 function is_canonical(vs::Vector{Contraction})
     # TODO: assumes lower then third order
