@@ -41,6 +41,10 @@ end
     Aqua.test_all(KeldyshContraction; ambiguities=false)
 end
 
+using Logging
+logger = NullLogger()
+global_logger(logger);
+
 @testset "show methods" begin
     include("show_methods.jl")
 end

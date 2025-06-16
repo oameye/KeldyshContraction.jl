@@ -1,5 +1,5 @@
 using KeldyshContraction, Test
-using KeldyshContraction: In, Out
+using KeldyshContraction: In, Out, _wick_contraction
 using OrderedCollections
 using Random
 Random.seed!(1234) # for reproducibility
@@ -11,7 +11,7 @@ L_int = InteractionLagrangian(elasctic2boson)
 @testset "first order" begin
     @testset "Bubble diagrams" begin
         using KeldyshContraction: filter_nonzero!
-        expr = wick_contraction(elasctic2boson; simplify=true)
+        expr = _wick_contraction(elasctic2boson; simplify=true)
         filter_nonzero!(expr)
         @test iszero(expr)
     end
@@ -32,7 +32,7 @@ L_int = InteractionLagrangian(elasctic2boson)
                 Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => -0.0 + 1.0 * im,
             ),
         )
-        result = wick_contraction(expr.arguments[1])
+        result = _wick_contraction(expr.arguments[1])
         KeldyshContraction._simplify_prefactors!(result)
         @test isequal(result, truth)
         # The keldysh in and keldysh out will disappear later
@@ -70,11 +70,11 @@ end
 
         vacuum = L1.lagrangian * L2.lagrangian
         map(vacuum.arguments) do arg
-            wick_contraction(arg; simplify=false)
+            _wick_contraction(arg; simplify=false)
         end
-        wick_contraction(vacuum.arguments[1]; simplify=false)
+        _wick_contraction(vacuum.arguments[1]; simplify=false)
 
-        expr = wick_contraction(vacuum; simplify=true)
+        expr = _wick_contraction(vacuum; simplify=true)
         filter_nonzero!(expr)
         @test iszero(expr)
     end
@@ -98,7 +98,7 @@ end
             qmul = mult * prod(L_int(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
 
             term = prefactor * in_out * qmul
-            diagrams = wick_contraction(term; simplify=true)
+            diagrams = _wick_contraction(term; simplify=true)
             KC._simplify_prefactors!(diagrams)
             dict[term] = diagrams
             push!(keys, term)
