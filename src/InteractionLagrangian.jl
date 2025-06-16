@@ -37,7 +37,8 @@ struct InteractionLagrangian{T}
     position::Position
     "Parameters of the perturbation series"
     parameter::SymbolicUtils.BasicSymbolic{Float64}
-    function InteractionLagrangian(expr::QTerm)
+
+    function InteractionLagrangian(expr::QTerm, parameter=DEFAULT_PARAMETER)
         fields = _extract_unique_fields(expr)
         contours = contour_integers(fields)
 
@@ -46,7 +47,7 @@ struct InteractionLagrangian{T}
         q_idx = findfirst(iszero, contours)
         c_idx = findfirst(isone, contours)
         return new{typeof(expr)}(
-            expr, fields[q_idx], fields[c_idx], position(fields[q_idx]), DEFAULT_PARAMETER
+            expr, fields[q_idx], fields[c_idx], position(fields[q_idx]), parameter
         )
     end
 end # Does not have to be type stable, as it is called only once

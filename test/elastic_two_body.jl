@@ -6,7 +6,11 @@ Random.seed!(1234) # for reproducibility
 
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
 elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
-L_int = InteractionLagrangian(elasctic2boson)
+
+@syms g
+L_int = InteractionLagrangian(elasctic2boson, g)
+
+@test isequal(KeldyshContraction.parameter(L_int), g)
 
 @testset "first order" begin
     @testset "Bubble diagrams" begin
