@@ -93,7 +93,7 @@ end
         prefactor = -1 * im * im^order / factorial(order)
 
         for coefficients in Combinatorics.multiexponents(l, order)
-            idxs = KC.expand_coefficients(coefficients) # will be of length order
+            idxs = KC.indices_from_counts(coefficients) # will be of length order
             mult = Combinatorics.multinomial(coefficients...)
             qmul = mult * prod(L_int(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
 

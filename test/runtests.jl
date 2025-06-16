@@ -80,3 +80,11 @@ end
 @testset "second order" begin
     include("second_order.jl")
 end
+
+@testset "Documentation" begin
+    using Documenter
+    DocMeta.setdocmeta!(
+        KeldyshContraction, :DocTestSetup, :(using KeldyshContraction); recursive=true
+    )
+    Documenter.doctest(KeldyshContraction)
+end
