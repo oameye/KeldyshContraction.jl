@@ -17,6 +17,7 @@ function advanced_to_retarded(
         return x, prefactor
     end
     x′ = deepcopy(x)
+    # TODO or make x immutable or change in place
     for i in adv_idx
         prefactor *= -1
         x′[i] = adjoint(x[i])
