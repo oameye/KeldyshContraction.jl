@@ -20,14 +20,14 @@ function Momenta(idx::Int)
 end
 
 function construct_momenta(dep_idx, free_idx, P)
-    l = size(P,2)
+    l = size(P, 2)
 
-    if length(unique(eachrow(P))) |> isone
+    if isone(length(unique(eachrow(P))))
         return [Momenta(0) for _ in 1:l]
     end
     out = Vector{Momenta}(undef, l)
 
-    idxs = free_idx .-1
+    idxs = free_idx .- 1
     idxs[end] = 0 # last index is external momentum
 
     for idx in idxs
@@ -36,8 +36,8 @@ function construct_momenta(dep_idx, free_idx, P)
         end
         out[idx] = Momenta(idx)
     end
-    ms = map(Momentum,idxs)
-    out[last(dep_idx)-1] = Momenta(Vector{Int}(P[2,:]), ms)
+    ms = map(Momentum, idxs)
+    out[last(dep_idx) - 1] = Momenta(Vector{Int}(P[2, :]), ms)
     return out
 end
 
