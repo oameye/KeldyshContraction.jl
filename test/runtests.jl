@@ -80,6 +80,10 @@ end
     include("self_energy.jl")
 end
 
+@testset "wigner" begin
+    include("wigner.jl")
+end
+
 @testset "two boson loss" begin
     include("two_boson_loss.jl")
 end
