@@ -1,3 +1,45 @@
+struct Momentum
+    index::Int8
+    function Momentum(index)
+        index < 0 && error("Momentum index must be non-negative, got $index")
+        new(index)
+    end
+end
+
+struct Momenta
+    prefactors::Vector{Int}
+    Momenta::Vector{Momentum}
+    function Momenta(prefactors::Vector{Int}, Momenta::Vector{Momentum})
+        @assert length(prefactors) == length(Momenta) "Length of prefactors and momenta must match"
+        idxs = findall(x->!iszero(x), prefactors)
+        new(prefactors[idxs], Momenta[idxs])
+    end
+end
+function Momenta(idx::Int)
+    Momenta([1], [Momentum(idx)])
+end
+
+function construct_momenta(dep_idx, free_idx, P)
+    l = size(P,2)
+
+    if length(unique(eachrow(P))) |> isone
+        return [Momenta(0) for _ in 1:l]
+    end
+    out = Vector{Momenta}(undef, l)
+
+    idxs = free_idx .-1
+    idxs[end] = 0 # last index is external momentum
+
+    for idx in idxs
+        if idx == 0
+            continue
+        end
+        out[idx] = Momenta(idx)
+    end
+    ms = map(Momentum,idxs)
+    out[last(dep_idx)-1] = Momenta(Vector{Int}(P[2,:]), ms)
+    return out
+end
 
 function construct_linear_system(contractions)::Matrix{Int}
     # TODO supports only second-order contractions

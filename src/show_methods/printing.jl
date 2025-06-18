@@ -170,3 +170,32 @@ function Base.show(io::IO, mime::MIME"text/plain", Σ::Union{SelfEnergy,DressedP
     show(io, Σ.advanced)
     return nothing
 end
+
+function momentum_string(p::Momentum)
+    if iszero(p.index)
+        return "k"
+    else
+        return "q" * underscore_dict[p.index]
+    end
+end
+
+function Base.show(io::IO, p::Momentum)
+    write(io, momentum_string(p))
+end
+
+function Base.show(io::IO, ms::Momenta)
+    if length(ms.prefactors) == 1 && iszero(ms.prefactors[1])
+        return write(io, "0")
+    end
+    for (i, m) in enumerate(ms.Momenta)
+        if i > 1
+            write(io, " + ")
+        end
+        if ms.prefactors[i] != 1
+            print_number(io, ms.prefactors[i])
+            write(io, "*")
+        end
+        show(io, m)
+    end
+    return nothing
+end

@@ -1,5 +1,5 @@
 using KeldyshContraction, Test
-using KeldyshContraction: construct_linear_system, solve_linear_system
+using KeldyshContraction: construct_linear_system, solve_linear_system, construct_momenta
 
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
 elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
@@ -16,6 +16,7 @@ topologies = KeldyshContraction.topologies(GF.keldysh)
     @test dep_idx == [1, 4]
     @test free_idx == [2, 3, 5]
     @test P == [0.0 0.0 1.0; 1.0 1.0 -1.0]
+    construct_momenta(dep_idx, free_idx, P)
 end
 
 @testset "Topology [2]" begin
@@ -25,6 +26,7 @@ end
     @test dep_idx == [1, 3]
     @test free_idx == [2, 4, 5]
     @test P == [0.0 0.0 1.0; 1.0 0.0 0.0]
+    construct_momenta(dep_idx, free_idx, P)
 end
 
 @testset "Topology [1]" begin
