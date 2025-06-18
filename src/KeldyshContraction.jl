@@ -3,7 +3,9 @@ $(DocStringExtensions.README)
 """
 module KeldyshContraction
 
-using DocStringExtensions
+using DocStringExtensions: DocStringExtensions
+using LinearAlgebra: LinearAlgebra
+using EnumX: @enumx
 
 using TermInterface: TermInterface
 using SymbolicUtils: SymbolicUtils, @syms, arguments
@@ -29,6 +31,7 @@ include("InteractionLagrangian.jl")
 include("propagator_algebra/propagator.jl")
 include("propagator_algebra/diagram.jl")
 include("propagator_algebra/canonicalize.jl")
+include("propagator_algebra/wigner.jl")
 include("dressed_propagator.jl")
 
 include("wick_contractions.jl")
