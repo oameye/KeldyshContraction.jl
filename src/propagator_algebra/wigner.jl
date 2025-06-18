@@ -2,10 +2,10 @@
 function construct_linear_system(contractions)::Matrix{Int}
     # TODO supports only second-order contractions
     A = zeros(Int, 2, length(contractions))
-    pos = KeldyshContraction.positions.(contractions)
+    pos = positions.(contractions)
     for (j, ps) in enumerate(pos)
         for (i, p) in enumerate(ps)
-            idx = KeldyshContraction.index(p)
+            idx = index(p)
             if idx == typemax(Int8) || idx == typemin(Int8)
                 continue
             elseif !iszero(A[idx, j])
@@ -45,7 +45,7 @@ function solve_linear_system(A::Matrix{Int})
     end
 
     # Compute P = -inv(A1) * A2
-    P = -LinearAlgebra.inv(A1) * A2
+    P = -inv(A1) * A2
     return idxs, idxs_diff, P
 end
 
