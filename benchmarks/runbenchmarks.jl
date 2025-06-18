@@ -1,6 +1,6 @@
 using BenchmarkTools
 using KeldyshContraction
-using KeldyshContraction: Classical, Quantum, Plus, Minus
+using KeldyshContraction: Classical, Quantum
 
 const SUITE = BenchmarkGroup()
 

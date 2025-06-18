@@ -10,7 +10,7 @@ The type of propagator taken of two fields with the x-y Contour where `x` is the
 
 The Quantum-Quantum propagator should always be zero.
 """
-@enum PropagatorType begin
+@enumx PropagatorType begin
     Keldysh
     Advanced
     Retarded
@@ -19,7 +19,7 @@ end
 struct Edge
     out::Destroy
     in::Create
-    edgetype::PropagatorType
+    edgetype::PropagatorType.T
 end
 function Edge(tt::Contraction)
     _out, _in = tt[1], tt[2]
@@ -49,25 +49,25 @@ function propagator_checks(out::QSym, in::QSym)::Nothing
 end
 
 """
-$(TYPEDSIGNATURES)
+$(DocStringExtensions.TYPEDSIGNATURES)
 
 Determine the type of the propagator in the Retarded-Advance-Keldysh ([`PropagatorType`](@ref)) based on the contour of the output and input quantum field.
 """
-function propagator_type(out::QSym, in::QSym)::PropagatorType
+function propagator_type(out::QSym, in::QSym)::PropagatorType.T
     contours = Int.(contour.((out, in)))
     diff_contour = first(-(contours...))
     if iszero(diff_contour)
-        return Keldysh
+        return PropagatorType.Keldysh
     elseif isone(diff_contour)
-        return Retarded
+        return PropagatorType.Retarded
     else
-        return Advanced
+        return PropagatorType.Advanced
     end
 end
 propagator_type(e::Edge) = e.edgetype
-is_advanced(x::PropagatorType) = Int(x) == Int(Advanced)
-is_retarded(x::PropagatorType) = Int(x) == Int(Retarded)
-is_keldysh(x::PropagatorType) = Int(x) == Int(Keldysh)
+is_advanced(x::PropagatorType.T) = Int(x) == Int(PropagatorType.Advanced)
+is_retarded(x::PropagatorType.T) = Int(x) == Int(PropagatorType.Retarded)
+is_keldysh(x::PropagatorType.T) = Int(x) == Int(PropagatorType.Keldysh)
 is_advanced(x::Edge) = is_advanced(propagator_type(x))
 is_retarded(x::Edge) = is_retarded(propagator_type(x))
 is_keldysh(x::Edge) = is_keldysh(propagator_type(x))

@@ -77,9 +77,15 @@ end
 #     return write(io,latexify([L.retarded,L.advanced, L.keldysh]))
 # end
 function Base.show(io::IO, x::Edge)
-    prop_type = Dict(Retarded => "ᴿ", Advanced => "ᴬ", Keldysh => "ᴷ")
+    prop_type = Dict(
+        PropagatorType.Retarded => "ᴿ",
+        PropagatorType.Advanced => "ᴬ",
+        PropagatorType.Keldysh => "ᴷ",
+    )
 
-    reg_string = Dict(Plus => "⁺", Zero => "", Minus => "⁻")
+    reg_string = Dict(
+        Regularisation.Plus => "⁺", Regularisation.Zero => "", Regularisation.Minus => "⁻"
+    )
 
     (out, in) = positions(x)
     (r2, r1) = regularisations(x)

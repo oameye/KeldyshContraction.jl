@@ -1,5 +1,7 @@
 using KeldyshContraction, Test
-using KeldyshContraction: In, Out, Bulk, Classical, Quantum, Plus, Minus
+using KeldyshContraction: In, Out, Bulk
+using KeldyshContraction: Regularisation.Plus as Plus
+using KeldyshContraction: Regularisation.Minus as Minus
 import KeldyshContraction as KC
 
 @testset "typestable QSym" begin
@@ -61,8 +63,8 @@ end
     @test SymbolicUtils.operation(ϕ + ϕ) == +
     @test SymbolicUtils.operation(ϕ * ϕ) == *
     @test SymbolicUtils.arguments(2 * ϕ * ϕ) == [2, ϕ, ϕ]
-    @test isnothing(SymbolicUtils.metadata(2 * ϕ * ϕ))
-    @test isequal(SymbolicUtils.maketerm(KC.QMul, *, [ϕ, ϕ], nothing), ϕ * ϕ)
+    @test isnothing(TermInterface.metadata(2 * ϕ * ϕ))
+    @test isequal(TermInterface.maketerm(KC.QMul, *, [ϕ, ϕ], nothing), ϕ * ϕ)
 
     @testset "SymbolicUtils promotion" begin
         # Test the promotion of Keldysh fields

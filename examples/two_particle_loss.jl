@@ -1,6 +1,7 @@
 # ## Two Body Loss
 using KeldyshContraction
-using KeldyshContraction: Plus, Minus
+using KeldyshContraction: Regularisation.Plus as Plus
+using KeldyshContraction: Regularisation.Minus as Minus
 
 # ## System and regularization
 

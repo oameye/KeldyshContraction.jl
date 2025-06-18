@@ -6,7 +6,8 @@ EditURL = "../../../examples/two_particle_loss.jl"
 
 ````@example two_particle_loss
 using KeldyshContraction
-using KeldyshContraction: Plus, Minus
+using KeldyshContraction: Regularisation.Plus as Plus
+using KeldyshContraction: Regularisation.Minus as Minus
 ````
 
 ## System and regularization

@@ -2,11 +2,11 @@
 function self_energy_type(dict::SmallCollections.SmallDict)
     # G1K = GK[x1,y1] ΣA[y1,y1] GA[y1,x2] +GR[x1,y1] ΣK GA[y1,x2] + GR[x1,y1]ΣR[y1,y1] GK[y1,x2]
     if is_keldysh(dict[:out]) && is_advanced(dict[:in])
-        return Advanced
+        return PropagatorType.Advanced
     elseif is_retarded(dict[:out]) && is_keldysh(dict[:in])
-        return Retarded
+        return PropagatorType.Retarded
     elseif is_retarded(dict[:out]) && is_advanced(dict[:in])
-        return Keldysh
+        return PropagatorType.Keldysh
     else
         @show dict
         error("Classical-Classical for self-energy should be zero.")
@@ -31,7 +31,7 @@ function construct_self_energy!(
 
         positions = position_category.(_contractions)
         types_p = propagator_type.(_contractions)
-        dict = SmallCollections.SmallDict{E,Symbol,PropagatorType}(
+        dict = SmallCollections.SmallDict{E,Symbol,PropagatorType.T}(
             p => t for (p, t) in zip(positions, types_p)
         )
 
@@ -44,18 +44,18 @@ function construct_self_energy!(
 end
 
 """
-$(TYPEDEF)
+$(DocStringExtensions.TYPEDEF)
 
 A struct representing the self-energy components in the Retarded-Advance-Keldysh basis ([`PropagatorType`](@ref)).
 The self-energy is divided into three components: Keldysh, retarded, and advanced.
 
 # Fields
-$(FIELDS)
+$(DocStringExtensions.FIELDS)
 where it assumed that the fields are of type `Union{SymbolicUtils.Symbolic{<:Number}, Number}`.
 
 
 # Constructor
-$(TYPEDSIGNATURES)
+$(DocStringExtensions.TYPEDSIGNATURES)
 Constructs a `SelfEnergy` object from a [`DressedPropagator`](@ref).
 The self-energy is computed based on the Keldysh Green's function (`G.keldysh`) and expanded into
 its quantum-quantum (`qq`), classical-quantum (`cq`), and quantum-classical (`qc`) components.
@@ -74,10 +74,10 @@ struct SelfEnergy{E,T}
     parameter::SymbolicUtils.BasicSymbolic{Number}
 end
 function SelfEnergy(G::DressedPropagator{E}, order=G.order) where {E}
-    self_energy = SmallCollections.SmallDict{3,PropagatorType,Diagrams}((
-        Advanced => Diagrams{E - 2,topology_length(E)}(),
-        Retarded => Diagrams{E - 2,topology_length(E)}(),
-        Keldysh => Diagrams{E - 2,topology_length(E)}(),
+    self_energy = SmallCollections.SmallDict{3,PropagatorType.T,Diagrams}((
+        PropagatorType.Advanced => Diagrams{E - 2,topology_length(E)}(),
+        PropagatorType.Retarded => Diagrams{E - 2,topology_length(E)}(),
+        PropagatorType.Keldysh => Diagrams{E - 2,topology_length(E)}(),
     ))
     construct_self_energy!(self_energy, G.keldysh; order)
     # ^ keldysh GF should contain everything
@@ -91,13 +91,13 @@ function SelfEnergy(G::DressedPropagator{E}, order=G.order) where {E}
     # G_A(1) = G₀_A Σ_A G₀_A
     # G_K(1) = G₀_K(x1) Σ_A(y) G₀_A(x2) + G_A(x2) Σ_A(y) G_R(x1) + G_R(x1) Σ_R(y) G_K(x2)
     # G₀_K Σ_K G₀_K = 0
-    _simplify_prefactors!(self_energy[Keldysh])
-    _simplify_prefactors!(self_energy[Retarded])
-    _simplify_prefactors!(self_energy[Advanced])
+    _simplify_prefactors!(self_energy[PropagatorType.Keldysh])
+    _simplify_prefactors!(self_energy[PropagatorType.Retarded])
+    _simplify_prefactors!(self_energy[PropagatorType.Advanced])
     return SelfEnergy(
-        self_energy[Keldysh],
-        self_energy[Retarded],
-        self_energy[Advanced],
+        self_energy[PropagatorType.Keldysh],
+        self_energy[PropagatorType.Retarded],
+        self_energy[PropagatorType.Advanced],
         order,
         G.parameter,
     )

@@ -1,3 +1,6 @@
+using KeldyshContraction: KeldyshContraction.Regularisation.Plus as Plus
+using KeldyshContraction: KeldyshContraction.Regularisation.Minus as Minus
+
 function benchmark_two_body_loss!(SUITE)
     @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
 

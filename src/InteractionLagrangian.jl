@@ -5,15 +5,15 @@ const DEFAULT_PARAMETER = SymbolicUtils.Sym{Number}(:g)
 ###########################
 
 """
-$(TYPEDEF)
+$(DocStringExtensions.TYPEDEF)
 
 Represents an interaction Lagrangian
 
 # Fields
-$(FIELDS)
+$(DocStringExtensions.FIELDS)
 
 # Constructor
-$(TYPEDSIGNATURES)
+$(DocStringExtensions.TYPEDSIGNATURES)
 
 Constructs an InteractionLagrangian from a given [`QTerm`](@ref) expression.
 
