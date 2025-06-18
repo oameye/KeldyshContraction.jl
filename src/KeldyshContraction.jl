@@ -9,7 +9,6 @@ using TermInterface: TermInterface
 using SymbolicUtils: SymbolicUtils, @syms, arguments
 using Combinatorics: Combinatorics
 using SmallCollections: SmallCollections, FixedVector
-using StaticArrays: StaticArrays
 
 using Latexify
 using MacroTools: MacroTools
@@ -27,13 +26,13 @@ include("keldysh_algebra/hashing.jl")
 include("InteractionLagrangian.jl")
 
 # Propagators
-include("propagator.jl")
-include("diagram.jl")
+include("propagator_algebra/propagator.jl")
+include("propagator_algebra/diagram.jl")
+include("propagator_algebra/canonicalize.jl")
 include("dressed_propagator.jl")
 
 include("wick_contractions.jl")
 include("filters.jl")
-include("canonicalize.jl")
 include("self_energy.jl")
 
 # show methods
