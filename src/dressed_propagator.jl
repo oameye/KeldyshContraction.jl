@@ -2,17 +2,17 @@
 #       dressed green's function
 ##########################################
 """
-$(TYPEDEF)
+$(DocStringExtensions.TYPEDEF)
 
 A structure representing dressed propagator in the Retarded-Advanced-Keldysh basis
 ([`PropagatorType`](@ref)).
 
 # Fields
-$(FIELDS)
+$(DocStringExtensions.FIELDS)
 where it assumed that the fields are of type `Union{SymbolicUtils.Symbolic{<:Number}, Number}`.
 
 # Constructor
-$(TYPEDSIGNATURES)
+$(DocStringExtensions.TYPEDSIGNATURES)
 
 Constructs a `DressedPropagator` with the given Keldysh, retarded, and advanced components.
 """

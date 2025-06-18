@@ -1,6 +1,8 @@
 using KeldyshContraction, Test
-using KeldyshContraction: In, Out, Classical, Quantum, Plus, Minus, Diagram, Diagrams, Edge
+using KeldyshContraction: In, Out, Diagram, Diagrams, Edge
 using KeldyshContraction: is_physical, is_conserved, _wick_contraction
+using KeldyshContraction: Regularisation.Plus as Plus
+using KeldyshContraction: Regularisation.Minus as Minus
 import KeldyshContraction as KC
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
 
@@ -135,7 +137,6 @@ end
 end
 
 @testset "self-energy first order" begin
-    using KeldyshContraction: Advanced, Retarded, Keldysh
     using KeldyshContraction: Edge, matrix, Diagrams, Diagram
     L = InteractionLagrangian(L_int)
 
@@ -188,14 +189,14 @@ end
         expr_K = c(Out()) * c'(In()) * L_int
         G_K1 = _wick_contraction(expr_K; simplify=false)
 
-        self_energy = SmallCollections.SmallDict{3,PropagatorType,Diagrams}((
-            Advanced => Diagrams{1,0}(),
-            Retarded => Diagrams{1,0}(),
-            Keldysh => Diagrams{1,0}(),
+        self_energy = SmallCollections.SmallDict{3,PropagatorType.T,Diagrams}((
+            PropagatorType.Advanced => Diagrams{1,0}(),
+            PropagatorType.Retarded => Diagrams{1,0}(),
+            PropagatorType.Keldysh => Diagrams{1,0}(),
         ))
         construct_self_energy!(self_energy, G_K1)
-        @test isequal(self_energy[Advanced], Σ.advanced)
-        @test isequal(self_energy[Retarded], Σ.retarded)
+        @test isequal(self_energy[PropagatorType.Advanced], Σ.advanced)
+        @test isequal(self_energy[PropagatorType.Retarded], Σ.retarded)
     end
 end
 

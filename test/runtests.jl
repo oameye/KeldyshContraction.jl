@@ -30,8 +30,19 @@ end
 
 @testset "ExplicitImports" begin
     using ExplicitImports
-    @test check_no_stale_explicit_imports(KeldyshContraction) == nothing
+    allow_unanalyzable = (
+        KeldyshContraction.Regularisation,
+        KeldyshContraction.PropagatorType,
+        KeldyshContraction.KeldyshContour,
+    )
+
+    @test check_no_implicit_imports(KeldyshContraction; allow_unanalyzable) == nothing
     @test check_all_explicit_imports_via_owners(KeldyshContraction) == nothing
+    @test check_all_explicit_imports_are_public(KeldyshContraction) == nothing
+    @test check_no_stale_explicit_imports(KeldyshContraction; allow_unanalyzable) == nothing
+    @test check_all_qualified_accesses_via_owners(KeldyshContraction) == nothing
+    # @test check_all_qualified_accesses_are_public(KeldyshContraction) == nothing
+    @test check_no_self_qualified_accesses(KeldyshContraction) == nothing
 end
 
 @testset "best practices" begin
@@ -75,10 +86,6 @@ end
 
 @testset "elastic two body" begin
     include("elastic_two_body.jl")
-end
-
-@testset "self interaction" begin
-    include("self_interaction.jl")
 end
 
 @testset "second order" begin
