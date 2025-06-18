@@ -3,11 +3,11 @@
 ########################
 
 """
-$(TYPEDEF)
+$(DocStringExtensions.TYPEDEF)
 
 Represent a multiplication involving quantum fields  of [`QSym`](@ref) types.
 
-$(FIELDS)
+$(DocStringExtensions.FIELDS)
 """
 struct QMul{T<:Number} <: QTerm
     "The commutative prefactor."
@@ -42,7 +42,7 @@ Return the vector of the factors of [`QMul`](@ref).
 """
 SymbolicUtils.arguments(a::QMul) = vcat(a.arg_c, a.args_nc)
 
-function SymbolicUtils.maketerm(::Type{<:QMul}, ::typeof(*), args, metadata)
+function TermInterface.maketerm(::Type{<:QMul}, ::typeof(*), args, metadata)
     args_c = filter(x -> !(x isa QField), args)
     args_nc = filter(x -> x isa QField, args)
     arg_c = isempty(args_c) ? 1 : *(args_c...)
@@ -50,7 +50,7 @@ function SymbolicUtils.maketerm(::Type{<:QMul}, ::typeof(*), args, metadata)
     return QMul(arg_c, args_nc)
 end
 
-SymbolicUtils.metadata(a::QMul) = nothing
+TermInterface.metadata(a::QMul) = nothing
 
 function Base.adjoint(q::QMul)
     args_nc = map(adjoint, q.args_nc)
@@ -112,8 +112,8 @@ SymbolicUtils.operation(::QAdd) = (+)
 Return the vector of the arguments of [`QAdd`](@ref).
 """
 SymbolicUtils.arguments(a::QAdd) = a.arguments
-SymbolicUtils.maketerm(::Type{<:QAdd}, ::typeof(+), args, metadata) = QAdd(args)
-SymbolicUtils.metadata(a::QAdd) = nothing
+TermInterface.maketerm(::Type{<:QAdd}, ::typeof(+), args, metadata) = QAdd(args)
+TermInterface.metadata(a::QAdd) = nothing
 
 Base.adjoint(q::QAdd) = QAdd(map(adjoint, arguments(q)))
 function allfields(q::QAdd)

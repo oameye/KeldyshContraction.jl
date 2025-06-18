@@ -3,7 +3,8 @@ $(DocStringExtensions.README)
 """
 module KeldyshContraction
 
-using DocStringExtensions
+using DocStringExtensions: DocStringExtensions
+using EnumX: @enumx
 
 using TermInterface: TermInterface
 using SymbolicUtils: SymbolicUtils, @syms, arguments
@@ -11,9 +12,9 @@ using Combinatorics: Combinatorics
 using SmallCollections: SmallCollections, FixedVector
 using StaticArrays: StaticArrays
 
-using Latexify
+using Latexify: Latexify, latexify, @latexrecipe
 using MacroTools: MacroTools
-using LaTeXStrings
+using LaTeXStrings: LaTeXStrings, latexstring
 
 # utils
 include("utils.jl")
@@ -39,6 +40,9 @@ include("self_energy.jl")
 # show methods
 include("show_methods/latexify_recipes.jl")
 include("show_methods/printing.jl")
+
+const Quantum = KeldyshContour.Quantum
+const Classical = KeldyshContour.Classical
 
 export @qfields,
     Destroy,

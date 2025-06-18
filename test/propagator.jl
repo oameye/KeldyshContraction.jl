@@ -1,6 +1,8 @@
 using KeldyshContraction, Test
-using KeldyshContraction: In, Out, Classical, Quantum, Plus, Minus, is_in
+using KeldyshContraction: In, Out, Classical, Quantum, is_in
 using KeldyshContraction: Edge, position, contour
+using KeldyshContraction: Regularisation.Plus as Plus
+using KeldyshContraction: Regularisation.Minus as Minus
 
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
 
@@ -15,12 +17,13 @@ using KeldyshContraction: Edge, position, contour
 end
 
 @testset "properties" begin
+    using KeldyshContraction: PropagatorType, Regularisation
     p = Edge(q, c'(In()))
     @test KeldyshContraction.position_category(p) == :in
     @test_broken KeldyshContraction.contours(p) == [Quantum, Classical] # not needed
     @test !KeldyshContraction.is_bulk(p)
-    @test_broken KeldyshContraction.regularisations(p) == fill(KeldyshContraction.Zero, 2) # not needed
-    @test KeldyshContraction.propagator_type(p) == KeldyshContraction.Advanced
+    @test_broken KeldyshContraction.regularisations(p) == fill(Regularisation.Zero, 2) # not needed
+    @test KeldyshContraction.propagator_type(p) == PropagatorType.Advanced
 end
 
 @testset "diagram construction" begin
@@ -77,11 +80,11 @@ end
 
 @testset "propagator type" begin
     using KeldyshContraction: is_keldysh, is_retarded, is_advanced
-    using KeldyshContraction: Advanced, Retarded, Keldysh
+    using KeldyshContraction: PropagatorType
 
-    @test is_keldysh(Keldysh)
-    @test is_retarded(Retarded)
-    @test is_advanced(Advanced)
+    @test is_keldysh(PropagatorType.Keldysh)
+    @test is_retarded(PropagatorType.Retarded)
+    @test is_advanced(PropagatorType.Advanced)
     @test is_keldysh(Edge(c, c'))
     @test is_retarded(Edge(c, q'))
     @test is_advanced(Edge(q, c'))

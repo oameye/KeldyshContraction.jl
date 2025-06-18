@@ -9,13 +9,13 @@ Bosonic field representing the quantum field annihilation operator.
 """
 struct Destroy <: QSym
     name::Symbol
-    contour::KeldyshContour
+    contour::KeldyshContour.T
     position::Position
-    regularisation::Regularisation
+    regularisation::Regularisation.T
     function Destroy(
         name::Symbol,
-        contour::KeldyshContour,
-        reg::Regularisation=Zero,
+        contour::KeldyshContour.T,
+        reg::Regularisation.T=Regularisation.Zero,
         pos::Position=Bulk(),
     )
         return new(name, contour, pos, reg)
@@ -29,13 +29,13 @@ Bosonic field representing the quantum field creation operator.
 """
 struct Create <: QSym
     name::Symbol
-    contour::KeldyshContour
+    contour::KeldyshContour.T
     position::Position
-    regularisation::Regularisation
+    regularisation::Regularisation.T
     function Create(
         name::Symbol,
-        contour::KeldyshContour,
-        reg::Regularisation=Zero,
+        contour::KeldyshContour.T,
+        reg::Regularisation.T=Regularisation.Zero,
         pos::Position=Bulk();
     )
         return new(name, contour, pos, reg)
@@ -54,7 +54,7 @@ for f in [:Destroy, :Create]
     @eval function (ff::$f)(pos::Position)
         return $(f)(name(ff), contour(ff), regularisation(ff), pos)
     end
-    @eval function (ff::$f)(reg::Regularisation)
+    @eval function (ff::$f)(reg::Regularisation.T)
         return $(f)(name(ff), contour(ff), reg, position(ff))
     end
 
@@ -66,7 +66,9 @@ for f in [:Destroy, :Create]
     @eval is_in(ϕ::$(f)) = is_in(position(ϕ))
     @eval is_out(ϕ::$(f)) = is_out(position(ϕ))
 
-    @eval set_reg_to_zero(ϕ::$(f)) = $(f)(name(ϕ), contour(ϕ), Zero, position(ϕ))
+    @eval set_reg_to_zero(ϕ::$(f)) = $(f)(
+        name(ϕ), contour(ϕ), Regularisation.Zero, position(ϕ)
+    )
 end
 function set_reg_to_zero!(v::Vector{QSym})
     for (i, f) in pairs(v)

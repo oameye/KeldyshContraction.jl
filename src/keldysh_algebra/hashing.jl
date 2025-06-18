@@ -3,7 +3,7 @@ Base.hash(q::QMul, h::UInt) = hash(QMul, hash(q.arg_c, SymbolicUtils.hashvec(q.a
 
 Base.hash(q::QAdd, h::UInt) = hash(QAdd, SymbolicUtils.hashvec(arguments(q), h))
 
-function Base.hash(h::Union{KeldyshContour,Regularisation}, i::UInt)
+function Base.hash(h::Union{KeldyshContour.T,Regularisation.T}, i::UInt)
     return hash(Int(h), i)
 end
 

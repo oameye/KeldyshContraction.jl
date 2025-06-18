@@ -1,5 +1,7 @@
 using KeldyshContraction, Test
-using KeldyshContraction: Classical, Quantum, Plus, Minus, In, Out, Edge, Bulk
+using KeldyshContraction: In, Out, Edge, Bulk
+using KeldyshContraction: Regularisation.Plus as Plus
+using KeldyshContraction: Regularisation.Minus as Minus
 
 @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
 

@@ -99,9 +99,9 @@ function regular(qs::Contraction)
     T = propagator_type(qs...)
     if !_isbulk || subtraction(_reg) == 0
         return true
-    elseif subtraction(_reg) < 0 && T == Retarded
+    elseif subtraction(_reg) < 0 && T == PropagatorType.Retarded
         return false
-    elseif subtraction(_reg) > 0 && T == Advanced
+    elseif subtraction(_reg) > 0 && T == PropagatorType.Advanced
         return false
     else
         return true

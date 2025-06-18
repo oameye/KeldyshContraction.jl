@@ -75,13 +75,13 @@ name(ϕ::QSym) = ϕ.name
 
 Regularisation enum for the Keldysh quantum field. The regularisation is used to perform tadpole regularisation during the Wick contraction.
 """
-@enum Regularisation begin
+@enumx Regularisation begin
     Plus = 1
     Zero = 0
     Minus = -1
 end
-subtraction(x::NTuple{2,Regularisation}) = -(Int.(x)...)
-function subtraction(x::Vector{Regularisation})
+subtraction(x::NTuple{2,Regularisation.T}) = -(Int.(x)...)
+function subtraction(x::Vector{Regularisation.T})
     @assert length(x) == 2
     return subtraction(Tuple(x))
 end
@@ -91,7 +91,7 @@ end
 
 Keldysh contour enum for the Keldysh quantum field. The Keldysh contour is used to distinguish the field on quantum and classical contour.
 """
-@enum KeldyshContour begin
+@enumx KeldyshContour begin
     Quantum = 0
     Classical = 1
 end
@@ -103,7 +103,7 @@ is_classical(x::QSym) = isone(Int(contour(x)))
 #########################
 
 """
-$(TYPEDEF)
+$(DocStringExtensions.TYPEDEF)
 
 Position type for the Keldysh quantum field.
 The position is used to determine the coordinate of the field during the wick contraction.
