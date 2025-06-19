@@ -19,7 +19,9 @@ function Diagram(edges::FixedVector{E,Edge}) where {E}
     return Diagram{E,length(topology)}(edges, topology)
 end
 function Diagram(d::Diagram{E1,E2}, momenta::FixedVector{E1,Momenta}) where {E1,E2}
-    contractions = FixedVector{E1,Edge}(Edge(c, m) for (c, m) in zip(d.contractions, momenta))
+    contractions = FixedVector{E1,Edge}(
+        Edge(c, m) for (c, m) in zip(d.contractions, momenta)
+    )
     return Diagram{E1,E2}(contractions, d.topology)
 end
 

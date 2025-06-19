@@ -78,13 +78,13 @@ end
 # end
 
 const prop_type = Dict(
-        PropagatorType.Retarded => "ᴿ",
-        PropagatorType.Advanced => "ᴬ",
-        PropagatorType.Keldysh => "ᴷ",
-    )
+    PropagatorType.Retarded => "ᴿ",
+    PropagatorType.Advanced => "ᴬ",
+    PropagatorType.Keldysh => "ᴷ",
+)
 const reg_string = Dict(
-        Regularisation.Plus => "⁺", Regularisation.Zero => "", Regularisation.Minus => "⁻"
-    )
+    Regularisation.Plus => "⁺", Regularisation.Zero => "", Regularisation.Minus => "⁻"
+)
 
 function Base.show(io::IO, x::Edge)
     if !has_momenta(x)
@@ -113,13 +113,7 @@ end
 function construct_momentum_basis(x::Edge)
     m = repr(x.momenta)
     (r2, r1) = regularisations(x)
-    s = string(
-        "G",
-        prop_type[propagator_type(x)],
-        "(",
-        m,
-        ")",
-    )
+    s = string("G", prop_type[propagator_type(x)], "(", m, ")")
 end
 
 function Base.show(io::IO, d::Diagram)
@@ -207,7 +201,7 @@ function Base.show(io::IO, ms::Momenta)
         return write(io, "0")
     end
 
-    for (i,(p, m)) in enumerate(zip(ms.prefactors,ms.momenta))
+    for (i, (p, m)) in enumerate(zip(ms.prefactors, ms.momenta))
         if i > 1
             if p < 0
                 write(io, " - ")

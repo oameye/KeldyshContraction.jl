@@ -55,7 +55,9 @@ struct Edge
     edgetype::PropagatorType.T
     momenta::Momenta
 
-    Edge(out::Destroy, in::Create, edgetype::PropagatorType.T) = new(out, in, edgetype, Momenta())
+    function Edge(out::Destroy, in::Create, edgetype::PropagatorType.T)
+        new(out, in, edgetype, Momenta())
+    end
     Edge(edge::Edge, momenta::Momenta) = new(edge.out, edge.in, edge.edgetype, momenta)
 end
 function Edge(tt::Contraction)
@@ -73,7 +75,7 @@ momenta(e::Edge) = e.momenta
 has_momenta(edge::Edge) = !isempty(edge.momenta.prefactors)
 
 function Base.isequal(e1::Edge, e2::Edge)
-    isequal(e1.out, e2.out) && isequal(e1.in, e2.in) && isequal(e1.edgetype ,e2.edgetype)
+    isequal(e1.out, e2.out) && isequal(e1.in, e2.in) && isequal(e1.edgetype, e2.edgetype)
 end
 Base.hash(q::Edge, h::UInt) = hash(Edge, hash(q.in, hash(q.edgetype, hash(q.out, h))))
 
