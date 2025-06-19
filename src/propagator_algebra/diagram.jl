@@ -1,6 +1,15 @@
 struct Diagram{E1,E2}
     contractions::SmallCollections.FixedVector{E1,Edge}
     topology::SmallCollections.FixedVector{E2,Int64}
+    momenta::Vector{Momenta}
+
+    function Diagram(edges::FixedVector{E,Edge}) where {E}
+        topology = bulk_multiplicity(edges)
+        return new{E,length(topology)}(edges, topology)
+    end
+    function Diagram(d::Diagram{E1,E2}, momenta::Vector{Momenta}) where {E1,E2}
+        return new{E1,E2}(d.contractions, d.topology, momenta)
+    end
 end
 
 function Diagram(contractions::Vector{T}) where {T<:Union{Contraction,Edge}}
@@ -13,11 +22,6 @@ function Diagram(contractions::Vector{T}) where {T<:Union{Contraction,Edge}}
     # TODO this is type unstable move to FixedSizeArrays.jl when released
     # https://github.com/JuliaArrays/FixedSizeArrays.jl/issues/115
     return Diagram(edges)
-end
-
-function Diagram(edges::FixedVector{E,Edge}) where {E}
-    topology = bulk_multiplicity(edges)
-    Diagram{E,length(topology)}(edges, topology)
 end
 
 Base.isequal(d1::Diagram, d2::Diagram) = isequal(contractions(d1), contractions(d2))
@@ -161,7 +165,7 @@ function topologies(ds::Diagrams)
         idxs = findall(i -> i == t, _bulk_multiplicity)
         t => terms[idxs]
     end
-    Dict(pairs)
+    return Dict(pairs)
 end
 
 function _simplify_prefactors!(g::Diagrams)
