@@ -76,17 +76,26 @@ end
 # function Base.show(io::IO, ::MIME"text/latex", L::DressedPropagator)
 #     return write(io,latexify([L.retarded,L.advanced, L.keldysh]))
 # end
-function Base.show(io::IO, x::Edge)
-    prop_type = Dict(
+
+const prop_type = Dict(
         PropagatorType.Retarded => "ᴿ",
         PropagatorType.Advanced => "ᴬ",
         PropagatorType.Keldysh => "ᴷ",
     )
-
-    reg_string = Dict(
+const reg_string = Dict(
         Regularisation.Plus => "⁺", Regularisation.Zero => "", Regularisation.Minus => "⁻"
     )
 
+function Base.show(io::IO, x::Edge)
+    if !has_momenta(x)
+        s = construct_position_basis(x)
+    else
+        s = construct_momentum_basis(x)
+    end
+    write(io, s)
+    return nothing
+end
+function construct_position_basis(x::Edge)
     (out, in) = positions(x)
     (r2, r1) = regularisations(x)
     s = string(
@@ -100,9 +109,19 @@ function Base.show(io::IO, x::Edge)
         reg_string[r1],
         ")",
     )
-    write(io, s)
-    return nothing
 end
+function construct_momentum_basis(x::Edge)
+    m = repr(x.momenta)
+    (r2, r1) = regularisations(x)
+    s = string(
+        "G",
+        prop_type[propagator_type(x)],
+        "(",
+        m,
+        ")",
+    )
+end
+
 function Base.show(io::IO, d::Diagram)
     _contractions = contractions(d)
     l = length(_contractions)
@@ -187,13 +206,14 @@ function Base.show(io::IO, ms::Momenta)
     if length(ms.prefactors) == 1 && iszero(ms.prefactors[1])
         return write(io, "0")
     end
-    for (i, m) in enumerate(ms.Momenta)
+
+    for (i,(p, m)) in enumerate(zip(ms.prefactors,ms.momenta))
         if i > 1
-            write(io, " + ")
-        end
-        if ms.prefactors[i] != 1
-            print_number(io, ms.prefactors[i])
-            write(io, "*")
+            if p < 0
+                write(io, " - ")
+            else
+                write(io, " + ")
+            end
         end
         show(io, m)
     end

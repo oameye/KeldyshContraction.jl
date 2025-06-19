@@ -40,6 +40,8 @@ L_int = InteractionLagrangian(elasctic2boson)
         @test free_idx == [2, 4, 5]
         @test P == [0.0 0.0 1.0; 1.0 0.0 0.0]
         construct_momenta(dep_idx, free_idx, P)
+
+        construct_momenta_from_gf(diagram2)
     end
 
     @testset "Topology [1]" begin
@@ -49,6 +51,8 @@ L_int = InteractionLagrangian(elasctic2boson)
         @test dep_idx == [1, 3]
         @test free_idx == [2, 4, 5]
         @test P == [0.0 0.0 1.0; 0.0 0.0 1.0]
+
+        construct_momenta_from_gf(diagram1)
     end
 end
 
