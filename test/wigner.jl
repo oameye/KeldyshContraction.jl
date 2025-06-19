@@ -103,7 +103,19 @@ end
     end
 end
 
-# TODO topology -> positions
-# function positions(topo::FixedVector{E,Int}) where {E}
-#     return map(e -> e.position, topo)
-# end
+@testset "Wigner tranform" begin
+    @testset "first order" begin
+        GF = DressedPropagator(L_int, 1)
+        SE = SelfEnergy(GF)
+
+        wigner_transform(GF)
+        wigner_transform(SE)
+    end
+    @testset "second order" begin
+        GF = DressedPropagator(L_int, 2)
+        SE = SelfEnergy(GF)
+
+        wigner_transform(GF)
+        wigner_transform(SE)
+    end
+end

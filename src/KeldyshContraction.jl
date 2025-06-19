@@ -57,6 +57,7 @@ export @qfields,
     InteractionLagrangian,
     @syms,
     arguments,
-    topologies
+    topologies,
+    wigner_transform
 
 end

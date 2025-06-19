@@ -38,13 +38,13 @@ function construct_momenta_from_gf(d::Diagram{E1,E2}) where {E1,E2}
     end
     return Diagram(d, momenta)
 end
-function construct_momenta_from_gf(d::Diagrams)
-    new_diagrams = Dict{Diagram{E1,E2},Diagram{E1,E2}}() where {E1,E2}
+function construct_momenta_from_gf(d::Diagrams{E1,E2}) where {E1,E2}
+    new_diagrams = Diagrams{E1,E2}()
     for (diagram, prefactor) in d
         new_diagram = construct_momenta_from_gf(diagram)
-        new_diagrams[new_diagram] = prefactor
+        push!(new_diagrams, new_diagram, prefactor)
     end
-    return Diagrams(new_diagrams)
+    return new_diagrams
 end # TODO: can this be faster?
 
 function construct_momenta_from_self_energy(d::Diagram{E1,E2}) where {E1,E2}
@@ -72,13 +72,13 @@ function construct_momenta_from_self_energy(d::Diagram{E1,E2}) where {E1,E2}
     end
     return Diagram(d, momenta)
 end
-function construct_momenta_from_self_energy(d::Diagrams)
-    new_diagrams = Dict{Diagram{E1,E2},Diagram{E1,E2}}() where {E1,E2}
+function construct_momenta_from_self_energy(d::Diagrams{E1,E2}) where {E1,E2}
+    new_diagrams = Diagrams{E1,E2}()
     for (diagram, prefactor) in d
         new_diagram = construct_momenta_from_self_energy(diagram)
-        new_diagrams[new_diagram] = prefactor
+        push!(new_diagrams, new_diagram, prefactor)
     end
-    return Diagrams(new_diagrams)
+    return new_diagrams
 end # TODO: can this be faster?
 
 function construct_momenta(dep_idx, free_idx, P)
@@ -156,3 +156,8 @@ function solve_linear_system(A::Matrix{Int})
     P = -inv(A1) * A2
     return idxs, idxs_diff, P
 end
+
+# TODO topology -> positions
+# function positions(topo::FixedVector{E,Int}) where {E}
+#     return map(e -> e.position, topo)
+# end
