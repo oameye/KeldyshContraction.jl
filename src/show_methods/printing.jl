@@ -81,6 +81,7 @@ const prop_type = Dict(
     PropagatorType.Retarded => "ᴿ",
     PropagatorType.Advanced => "ᴬ",
     PropagatorType.Keldysh => "ᴷ",
+    PropagatorType.Spectral => "",
 )
 const reg_string = Dict(
     Regularisation.Plus => "⁺", Regularisation.Zero => "", Regularisation.Minus => "⁻"
@@ -96,11 +97,12 @@ function Base.show(io::IO, x::Edge)
     return nothing
 end
 function construct_position_basis(x::Edge)
+    type = propagator_type(x)
     (out, in) = positions(x)
     (r2, r1) = regularisations(x)
     s = string(
-        "G",
-        prop_type[propagator_type(x)],
+        is_spectral(type) ? "A" : "G",
+        prop_type[type],
         "(",
         pos_string(out),
         reg_string[r2],

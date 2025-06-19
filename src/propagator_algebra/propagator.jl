@@ -49,6 +49,7 @@ The Quantum-Quantum propagator should always be zero.
     Keldysh
     Advanced
     Retarded
+    Spectral
 end
 
 struct Edge
@@ -74,7 +75,7 @@ end
 Edge(out::QSym, in::QSym) = Edge((out, in))
 
 momenta(e::Edge) = e.momenta
-type(e::Edge) = e.edgetype
+
 has_momenta(edge::Edge) = !isempty(edge.momenta.prefactors)
 
 function Base.isequal(e1::Edge, e2::Edge)
@@ -118,9 +119,11 @@ propagator_type(e::Edge) = e.edgetype
 is_advanced(x::PropagatorType.T) = Int(x) == Int(PropagatorType.Advanced)
 is_retarded(x::PropagatorType.T) = Int(x) == Int(PropagatorType.Retarded)
 is_keldysh(x::PropagatorType.T) = Int(x) == Int(PropagatorType.Keldysh)
+is_spectral(x::PropagatorType.T) = Int(x) == Int(PropagatorType.Spectral)
 is_advanced(x::Edge) = is_advanced(propagator_type(x))
 is_retarded(x::Edge) = is_retarded(propagator_type(x))
 is_keldysh(x::Edge) = is_keldysh(propagator_type(x))
+is_spectral(x::Edge) = is_spectral(propagator_type(x))
 is_advanced(x::Contraction) = is_advanced(propagator_type(x...))
 is_retarded(x::Contraction) = is_retarded(propagator_type(x...))
 is_keldysh(x::Contraction) = is_keldysh(propagator_type(x...))

@@ -35,7 +35,7 @@ end
 function imaginary_part(d::Diagram, coeff::ComplexF64=complex(1.0))
     bds = Vector{Momenta}()
     for edge in contractions(d)
-        edgetype = type(edge)
+        edgetype = propagator_type(edge)
         if is_keldysh(edgetype)
             push!(bds, edge.momenta)
         end
