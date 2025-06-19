@@ -72,6 +72,9 @@ function solve_linear_system(A::Matrix{Int})
             break
         end
     end
+    if idx == 1
+        error("No two dependent index found in the linear system.")
+    end
     idxs = [1, idx]
     idxs_diff = setdiff(1:size(A, 2), idxs)
     A1 = A[:, idxs]
