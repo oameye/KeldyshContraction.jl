@@ -4,6 +4,7 @@ $(DocStringExtensions.README)
 module KeldyshContraction
 
 using DocStringExtensions: DocStringExtensions
+using LinearAlgebra: LinearAlgebra
 using EnumX: @enumx
 
 using TermInterface: TermInterface
@@ -28,13 +29,15 @@ include("InteractionLagrangian.jl")
 
 # Propagators
 include("propagator_algebra/propagator.jl")
-include("propagator_algebra/diagram.jl")
 include("propagator_algebra/canonicalize.jl")
+include("propagator_algebra/diagram.jl")
 include("dressed_propagator.jl")
 
 include("wick_contractions.jl")
 include("filters.jl")
 include("self_energy.jl")
+
+include("propagator_algebra/wigner.jl")
 
 # show methods
 include("show_methods/latexify_recipes.jl")
@@ -54,6 +57,7 @@ export @qfields,
     InteractionLagrangian,
     @syms,
     arguments,
-    topologies
+    topologies,
+    wigner_transform
 
 end

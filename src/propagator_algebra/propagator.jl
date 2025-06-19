@@ -1,3 +1,36 @@
+#########################
+#        Momentum
+#########################
+
+struct Momentum
+    index::Int8
+    function Momentum(index)
+        index < 0 && error("Momentum index must be non-negative, got $index")
+        return new(index)
+    end
+end
+Base.isequal(m1::Momentum, m2::Momentum) = m1.index == m2.index
+struct Momenta
+    prefactors::Vector{Int}
+    momenta::Vector{Momentum}
+    function Momenta(prefactors::Vector{Int}, momenta::Vector{Momentum})
+        @assert length(prefactors) == length(momenta) "Length of prefactors and momenta must match"
+        idxs = findall(x -> !iszero(x), prefactors)
+        return new(prefactors[idxs], momenta[idxs])
+    end
+end
+Momenta(idx::Int) = Momenta([1], [Momentum(idx)])
+Momenta() = Momenta(Int[], Momentum[])
+
+function Base.isequal(m1::Momenta, m2::Momenta)
+    isequal(m1.prefactors, m2.prefactors) && isequal(m1.momenta, m2.momenta)
+end
+# SmallCollections.default(::Type{Momenta}) = Momenta(Int[], Momentum[])
+
+#########################
+#         Edge
+#########################
+
 const Contraction = Tuple{<:Destroy,<:Create}
 
 """
@@ -20,6 +53,12 @@ struct Edge
     out::Destroy
     in::Create
     edgetype::PropagatorType.T
+    momenta::Momenta
+
+    function Edge(out::Destroy, in::Create, edgetype::PropagatorType.T)
+        new(out, in, edgetype, Momenta())
+    end
+    Edge(edge::Edge, momenta::Momenta) = new(edge.out, edge.in, edge.edgetype, momenta)
 end
 function Edge(tt::Contraction)
     _out, _in = tt[1], tt[2]
@@ -31,6 +70,14 @@ function Edge(tt::Contraction)
     return Edge(_out, _in, type)
 end
 Edge(out::QSym, in::QSym) = Edge((out, in))
+
+momenta(e::Edge) = e.momenta
+has_momenta(edge::Edge) = !isempty(edge.momenta.prefactors)
+
+function Base.isequal(e1::Edge, e2::Edge)
+    isequal(e1.out, e2.out) && isequal(e1.in, e2.in) && isequal(e1.edgetype, e2.edgetype)
+end
+Base.hash(q::Edge, h::UInt) = hash(Edge, hash(q.in, hash(q.edgetype, hash(q.out, h))))
 
 "Collect and checks the rules for a physical propagator"
 function propagator_checks(out::QSym, in::QSym)::Nothing

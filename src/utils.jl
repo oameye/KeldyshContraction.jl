@@ -22,6 +22,8 @@ end
 
 make_real(x::Number) = SymbolicUtils._isreal(x) ? real(x) : x
 
+bool_to_index(x::Bool) = 2 * x - 1
+
 _simplify(x::Complex) =
     if iszero(x.im)
         complex(x.re)

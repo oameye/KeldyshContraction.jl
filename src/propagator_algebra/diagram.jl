@@ -1,6 +1,6 @@
 struct Diagram{E1,E2}
-    contractions::SmallCollections.FixedVector{E1,Edge}
-    topology::SmallCollections.FixedVector{E2,Int64}
+    contractions::FixedVector{E1,Edge}
+    topology::FixedVector{E2,Int}
 end
 
 function Diagram(contractions::Vector{T}) where {T<:Union{Contraction,Edge}}
@@ -14,17 +14,24 @@ function Diagram(contractions::Vector{T}) where {T<:Union{Contraction,Edge}}
     # https://github.com/JuliaArrays/FixedSizeArrays.jl/issues/115
     return Diagram(edges)
 end
-
 function Diagram(edges::FixedVector{E,Edge}) where {E}
     topology = bulk_multiplicity(edges)
-    Diagram{E,length(topology)}(edges, topology)
+    return Diagram{E,length(topology)}(edges, topology)
+end
+function Diagram(d::Diagram{E1,E2}, momenta::FixedVector{E1,Momenta}) where {E1,E2}
+    contractions = FixedVector{E1,Edge}(
+        Edge(c, m) for (c, m) in zip(d.contractions, momenta)
+    )
+    return Diagram{E1,E2}(contractions, d.topology)
 end
 
 Base.isequal(d1::Diagram, d2::Diagram) = isequal(contractions(d1), contractions(d2))
 Base.hash(d::Diagram, h::UInt) = hash(contractions(d), h)
 contractions(d::Diagram) = d.contractions
 topology(d::Diagram) = d.topology
-
+function momenta(d::Diagram)
+    map(momenta, d.contractions)
+end
 topology_length(x::Int) = max(0, x - 4)
 
 ################
@@ -161,7 +168,7 @@ function topologies(ds::Diagrams)
         idxs = findall(i -> i == t, _bulk_multiplicity)
         t => terms[idxs]
     end
-    Dict(pairs)
+    return Dict(pairs)
 end
 
 function _simplify_prefactors!(g::Diagrams)

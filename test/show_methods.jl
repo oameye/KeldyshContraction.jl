@@ -78,3 +78,23 @@ end
     @test repr(MIME"text/plain"(), DP) ==
         "Dressed Propagator:\nkeldysh:  Gᴷ(y₁,y₁)\nretarded: Gᴷ(y₁,y₁)\nadvanced: Gᴷ(y₁,y₁)"
 end
+
+@testset "Momentum" begin
+    using KeldyshContraction: Momenta, Edge, Bulk, Momentum
+
+    @test repr(Momenta(0)) == "k"
+    @test repr(Momenta(1)) == "q₁"
+    @test repr(Momenta(2)) == "q₂"
+
+    ms = Momenta([1, 1, -1], [Momentum(1), Momentum(2), Momentum(0)])
+    @test repr(ms) == "q₁ + q₂ - k"
+
+    e = Edge(ψ(Bulk(2)), ϕ')
+    e0 = Edge(e, Momenta(0))
+    e1 = Edge(e, Momenta(1))
+    e2 = Edge(e, Momenta(2))
+
+    @test repr(e0) == "Gᴬ(k)"
+    @test repr(e1) == "Gᴬ(q₁)"
+    @test repr(e2) == "Gᴬ(q₂)"
+end

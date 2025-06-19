@@ -64,6 +64,7 @@ end
 @testset "adjoint" begin
     p1 = Edge(q, c'(In()))
     p2 = Edge(c, q'(In()))
+
     @test isequal(p1', p2) # (G^R)† = G^A
 
     p = Edge(c, c'(In()))
