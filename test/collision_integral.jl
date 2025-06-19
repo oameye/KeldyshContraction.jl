@@ -13,6 +13,5 @@ GF = DressedPropagator(L_int, 2)
 diagram = first(first(Σk.retarded))
 KeldyshContraction.imaginary_part(diagram)
 
-
 dict = KeldyshContraction.imaginary_part(Σk.retarded)
 repr(dict[[3]])
