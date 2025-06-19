@@ -1,5 +1,5 @@
 using KeldyshContraction, Test
-using KeldyshContraction: construct_linear_system, solve_linear_system, construct_momenta
+using KeldyshContraction: construct_linear_system, solve_linear_system, construct_momenta, momenta
 
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
 elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
@@ -13,7 +13,8 @@ L_int = InteractionLagrangian(elasctic2boson)
         diagram = first(first(GF.keldysh))
 
         d′ = construct_momenta_from_gf(diagram)
-        @test isequal(d′.momenta, FixedVector([Momenta(0), Momenta(1), Momenta(0)]))
+
+        @test isequal(momenta(d′), FixedVector([Momenta(0), Momenta(1), Momenta(0)]))
     end
 
     GF = DressedPropagator(L_int, 2)
@@ -67,7 +68,7 @@ end
         diagram = first(first(SE.retarded))
 
         d′ = construct_momenta_from_self_energy(diagram)
-        @test isequal(d′.momenta, FixedVector([Momenta(1)]))
+        @test isequal(momenta(d′), FixedVector([Momenta(1)]))
     end
 
     GF = DressedPropagator(L_int, 2)
@@ -80,7 +81,7 @@ end
         diagram3 = first(topologies[[3]])
         d′ = construct_momenta_from_self_energy(diagram3)
         @test isequal(
-            d′.momenta,
+            momenta(d′),
             FixedVector([
                 Momenta(1),
                 Momenta(2),
@@ -93,7 +94,7 @@ end
         using KeldyshContraction: Momenta, FixedVector, Momentum
         diagram2 = first(topologies[[2]])
         d′ = construct_momenta_from_self_energy(diagram2)
-        @test isequal(d′.momenta, FixedVector([
+        @test isequal(momenta(d′), FixedVector([
             Momenta(1),
             Momenta(1),
             Momenta(3), # rather have seen it to be Momenta(2)

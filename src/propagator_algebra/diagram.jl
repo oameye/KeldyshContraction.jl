@@ -27,7 +27,9 @@ Base.isequal(d1::Diagram, d2::Diagram) = isequal(contractions(d1), contractions(
 Base.hash(d::Diagram, h::UInt) = hash(contractions(d), h)
 contractions(d::Diagram) = d.contractions
 topology(d::Diagram) = d.topology
-
+function momenta(d::Diagram)
+    map(momenta, d.contractions)
+end
 topology_length(x::Int) = max(0, x - 4)
 
 ################
