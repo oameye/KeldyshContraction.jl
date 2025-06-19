@@ -103,7 +103,7 @@ end
     end
 end
 
-@testset "Wigner tranform" begin
+@testset "Wigner transform" begin
     @testset "first order" begin
         GF = DressedPropagator(L_int, 1)
         SE = SelfEnergy(GF)
