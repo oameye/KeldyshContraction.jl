@@ -30,8 +30,9 @@ include("InteractionLagrangian.jl")
 # Propagators
 include("propagator_algebra/propagator.jl")
 include("propagator_algebra/canonicalize.jl")
-include("propagator_algebra/wigner.jl")
+include("propagator_algebra/Momentum.jl")
 include("propagator_algebra/diagram.jl")
+include("propagator_algebra/wigner.jl")
 
 include("dressed_propagator.jl")
 

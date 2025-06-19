@@ -1,22 +1,48 @@
-struct Momentum
-    index::Int8
-    function Momentum(index)
-        index < 0 && error("Momentum index must be non-negative, got $index")
-        new(index)
+function construct_momenta_from_gf(d::Diagram{E1,E2}) where {E1,E2}
+    if iszero(E2)
+        momenta = map(positions.(d.contractions)) do ps
+            if has_in(ps) || has_out(ps)
+                m = Momenta(0)
+            else
+                m = Momenta(1)
+            end
+            m
+        end
+    else
+        A = construct_linear_system(d.contractions)
+        dep_idx, free_idx, P = solve_linear_system(A)
+        momenta = construct_momenta(dep_idx, free_idx, P)
+        pushfirst!(momenta, Momenta(0))
+        push!(momenta, Momenta(0))
+        momenta = FixedVector(momenta)
     end
+    return Diagram(d, momenta)
 end
 
-struct Momenta
-    prefactors::Vector{Int}
-    Momenta::Vector{Momentum}
-    function Momenta(prefactors::Vector{Int}, Momenta::Vector{Momentum})
-        @assert length(prefactors) == length(Momenta) "Length of prefactors and momenta must match"
-        idxs = findall(x->!iszero(x), prefactors)
-        new(prefactors[idxs], Momenta[idxs])
+function construct_momenta_from_self_energy(d::Diagram{E1,E2}) where {E1,E2}
+    if iszero(E2)
+        momenta = map(positions.(d.contractions)) do ps
+            if has_in(ps) || has_out(ps)
+                m = Momenta(0)
+            else
+                m = Momenta(1)
+            end
+            m
+        end
+    else
+        A = construct_linear_system(d.contractions)
+        A = hcat([-1; 0], A) # canonicalize diagram
+        if !iseven(first(d.topology))
+            A = hcat(A, [0; 1]) #
+        else
+            A = hcat(A, [1; 0]) # canonicalize diagram
+        end # TODO instead replace with topology -> positions function
+
+        dep_idx, free_idx, P = solve_linear_system(A)
+        momenta = construct_momenta(dep_idx, free_idx, P)
+        momenta = FixedVector(momenta)
     end
-end
-function Momenta(idx::Int)
-    Momenta([1], [Momentum(idx)])
+    return Diagram(d, momenta)
 end
 
 function construct_momenta(dep_idx, free_idx, P)
@@ -38,6 +64,7 @@ function construct_momenta(dep_idx, free_idx, P)
     end
     ms = map(Momentum, idxs)
     out[last(dep_idx) - 1] = Momenta(Vector{Int}(P[2, :]), ms)
+
     return out
 end
 
@@ -93,5 +120,3 @@ function solve_linear_system(A::Matrix{Int})
     P = -inv(A1) * A2
     return idxs, idxs_diff, P
 end
-
-bool_to_index(x::Bool) = 2 * x - 1
