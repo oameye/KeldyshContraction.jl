@@ -134,17 +134,20 @@ function Base.show(io::IO, ds::Diagrams)
     l = length(diagrams)
     for idx in eachindex(diagrams)
         if idx == l
-            prefactor = ds.diagrams[diagrams[idx]]
-            print_number(io, prefactor)
-            !SymbolicUtils._isone(prefactor) ? show(io, *) : write(io, "")
-            show(io, diagrams[idx])
+            show_key(io, ds.diagrams, diagrams[idx])
         else
-            prefactor = ds.diagrams[diagrams[idx]]
-            print_number(io, prefactor)
-            !SymbolicUtils._isone(prefactor) ? show(io, *) : write(io, "")
-            show(io, diagrams[idx])
+            show_key(io, ds.diagrams, diagrams[idx])
             write(io, " + ")
         end
+    end
+    return nothing
+end
+function show_key(io, terms::Dict, key)
+    prefactor = terms[key]
+    print_number(io, prefactor)
+    if !isempty(key)
+        !SymbolicUtils._isone(prefactor) ? show(io, *) : write(io, "")
+        show(io, key)
     end
     return nothing
 end
@@ -210,6 +213,30 @@ function Base.show(io::IO, ms::Momenta)
             end
         end
         show(io, m)
+    end
+    return nothing
+end
+
+function Base.show(io::IO, ds::BosonicDistributionAdd)
+    bd_terms = collect(keys(ds.terms))
+    l = length(bd_terms)
+    for idx in eachindex(bd_terms)
+        if idx == l
+            show_key(io, ds.terms, bd_terms[idx])
+        else
+            show_key(io, ds.terms, bd_terms[idx])
+            write(io, " + ")
+        end
+    end
+    return nothing
+end
+
+function Base.show(io::IO, bds::BosonicDistributionTerm)
+    for (i, ms) in enumerate(bds.momenta)
+        if i > 1
+            write(io, "*")
+        end
+        write(io, string("F(", ms, ")"))
     end
     return nothing
 end

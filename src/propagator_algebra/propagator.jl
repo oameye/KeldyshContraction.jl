@@ -10,6 +10,7 @@ struct Momentum
     end
 end
 Base.isequal(m1::Momentum, m2::Momentum) = m1.index == m2.index
+Base.hash(m::Momentum, h::UInt) = hash(Momenta, hash(m.index, h))
 struct Momenta
     prefactors::Vector{Int}
     momenta::Vector{Momentum}
@@ -25,6 +26,7 @@ Momenta() = Momenta(Int[], Momentum[])
 function Base.isequal(m1::Momenta, m2::Momenta)
     isequal(m1.prefactors, m2.prefactors) && isequal(m1.momenta, m2.momenta)
 end
+Base.hash(m::Momenta, h::UInt) = hash(Momenta, hash(m.momenta, hash(m.prefactors, h)))
 # SmallCollections.default(::Type{Momenta}) = Momenta(Int[], Momentum[])
 
 #########################
@@ -72,6 +74,7 @@ end
 Edge(out::QSym, in::QSym) = Edge((out, in))
 
 momenta(e::Edge) = e.momenta
+type(e::Edge) = e.edgetype
 has_momenta(edge::Edge) = !isempty(edge.momenta.prefactors)
 
 function Base.isequal(e1::Edge, e2::Edge)
