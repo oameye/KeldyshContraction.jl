@@ -40,6 +40,7 @@ function Base.push!(
     return collection
 end
 Base.length(collection::BosonicDistributions) = length(collection.terms)
+Base.isempty(collection::BosonicDistributions) = isempty(collection.terms)
 
 function Base.:*(term::BosonicDistributions, collection::BosonicDistributions)
     length(term) == 1 || throw(
@@ -49,6 +50,13 @@ function Base.:*(term::BosonicDistributions, collection::BosonicDistributions)
     bd, coeff = first(term.terms)
     for (key, val) in collection.terms
         out.terms[bd * key] = coeff * val
+    end
+    return out
+end
+function Base.:*(x::Number, collection::BosonicDistributions)
+    out = BosonicDistributions()
+    for (key, val) in collection.terms
+        out.terms[key] = x * val
     end
     return out
 end
@@ -68,7 +76,11 @@ end
 #################################
 #      imaginary_part Im(Σᴿ)
 #################################
-
+"""
+Im(Gᴿ) = -0.5 * A
+Im(Gᴬ) = 0.5 * A
+Im(Gᴷ) = 0.5 * F * A
+"""
 function imaginary_part(d::Diagram, coeff::ComplexF64=complex(1.0))
     bds = Vector{Momenta}()
     for edge in contractions(d)
@@ -170,7 +182,7 @@ end
 
 """
 Convert a `Diagrams` object to a dictionary of `BosonicDistributions`. By substituting:
-Gᴷ(k) = 0.5*A
+Gᴷ(k) = im*0.5*F(k)A(k)
 
 """
 
@@ -196,7 +208,7 @@ function kelysh_to_distribution(d::Diagram, coeff::ComplexF64=complex(1.0))
         edgetype = propagator_type(edge)
         if is_keldysh(edgetype)
             push!(bds, edge.momenta)
-            coeff *= 0.5
+            coeff *= 0.5*im
         end
     end
     return BosonicDistributionTerm(bds), coeff
@@ -214,7 +226,7 @@ function CollisionIntegral(Σ::SelfEnergy{E1,E2}) where {E1,E2}
     Σk = wigner_transform(Σ)
 
     tmp = reduce_to_spectral(Σk.keldysh)
-    iΣk = kelysh_to_distribution(tmp)
+    ΣkF = kelysh_to_distribution(tmp)
 
     imΣr = imaginary_part(Σk.retarded)
 
@@ -222,14 +234,14 @@ function CollisionIntegral(Σ::SelfEnergy{E1,E2}) where {E1,E2}
     Fks2 = BosonicDistributions(Dict(Fk => complex(2.0)))
 
     dict = Dict{FixedVector{E2,Int},BosonicDistributions}()
-    for t_ in intersect(keys(iΣk), keys(imΣr))
-        dict[t_] = iΣk[t_] + Fks2 * imΣr[t_]
+    for t_ in intersect(keys(ΣkF), keys(imΣr))
+        dict[t_] = im*ΣkF[t_] + Fks2 * imΣr[t_]
     end
-    for t_ in setdiff(keys(imΣr), keys(iΣk))
+    for t_ in setdiff(keys(imΣr), keys(ΣkF))
         dict[t_] = Fks2 * imΣr[t_]
     end
-    for t_ in setdiff(keys(iΣk), keys(imΣr))
-        dict[t_] = iΣk[t_]
+    for t_ in setdiff(keys(ΣkF), keys(imΣr))
+        dict[t_] = im*ΣkF[t_]
     end
     return CollisionIntegral{E2}(dict)
 end
