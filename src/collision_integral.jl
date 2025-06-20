@@ -174,14 +174,14 @@ Gᴷ(k) = 0.5*A
 
 """
 
-function kelysh_to_distrubution(ds::Diagrams)
+function kelysh_to_distribution(ds::Diagrams)
     topo = topologies(ds)
     dict = Dict{keytype(topo),BosonicDistributions}()
     for (t_, keys) in topo
         bda = BosonicDistributions()
         for key in keys
             coeff = ds.diagrams[key]
-            bds, coeff′ = kelysh_to_distrubution(key, coeff)
+            bds, coeff′ = kelysh_to_distribution(key, coeff)
             push!(bda, bds, coeff′)
         end
         filter_nonzero!(bda)
@@ -190,7 +190,7 @@ function kelysh_to_distrubution(ds::Diagrams)
     return dict
 end
 
-function kelysh_to_distrubution(d::Diagram, coeff::ComplexF64=complex(1.0))
+function kelysh_to_distribution(d::Diagram, coeff::ComplexF64=complex(1.0))
     bds = Vector{Momenta}()
     for edge in contractions(d)
         edgetype = propagator_type(edge)
@@ -209,12 +209,12 @@ end
 struct CollisionIntegral{E}
     terms::Dict{FixedVector{E,Int},BosonicDistributions}
 end
-function CollisionIntregral(Σ::SelfEnergy{E1,E2}) where {E1,E2}
+function CollisionIntegral(Σ::SelfEnergy{E1,E2}) where {E1,E2}
     # TODO: assert has momenta
     Σk = wigner_transform(Σ)
 
     tmp = reduce_to_spectral(Σk.keldysh)
-    iΣk = kelysh_to_distrubution(tmp)
+    iΣk = kelysh_to_distribution(tmp)
 
     imΣr = imaginary_part(Σk.retarded)
 

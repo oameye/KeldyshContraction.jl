@@ -21,5 +21,5 @@ GF = DressedPropagator(L_int, 2)
 
 #
 
-ci = KeldyshContraction.CollisionIntregral(Σk)
+ci = KeldyshContraction.CollisionIntegral(Σk)
 ci.terms[[3]]
