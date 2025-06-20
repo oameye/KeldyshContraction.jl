@@ -26,3 +26,4 @@ Manifest.toml
 benchmarks_output.json
 
 *.ipynb
+.vscode/extensions.json

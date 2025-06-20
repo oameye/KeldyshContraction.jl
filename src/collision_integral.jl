@@ -1,7 +1,10 @@
 
-struct CollisionIntegral
-    terms::Vector{Float64}
-end
+###############################
+#      BosonicDistribution
+###############################
+
+## BosonicDistributionTerm
+
 struct BosonicDistributionTerm
     momenta::Vector{Momenta}
 end
@@ -12,17 +15,22 @@ end
 function Base.hash(bds::BosonicDistributionTerm, h::UInt)
     return hash(BosonicDistributionTerm, hash(bds.momenta, h))
 end
-
 Base.isempty(bds::BosonicDistributionTerm) = isempty(bds.momenta)
+function Base.:*(x::BosonicDistributionTerm, y::BosonicDistributionTerm)
+    return BosonicDistributionTerm(vcat(x.momenta, y.momenta))
+end
 
-struct BosonicDistributionAdd
+## BosonicDistributions
+
+struct BosonicDistributions
     terms::Dict{BosonicDistributionTerm,ComplexF64}
 end
-function BosonicDistributionAdd()
-    return BosonicDistributionAdd(Dict{BosonicDistributionTerm,ComplexF64}())
+function BosonicDistributions()
+    return BosonicDistributions(Dict{BosonicDistributionTerm,ComplexF64}())
 end
+
 function Base.push!(
-    collection::BosonicDistributionAdd, diagram::BosonicDistributionTerm, prefactor::Number
+    collection::BosonicDistributions, diagram::BosonicDistributionTerm, prefactor::Number
 )
     if haskey(collection.terms, diagram)
         collection.terms[diagram] += prefactor
@@ -31,6 +39,35 @@ function Base.push!(
     end
     return collection
 end
+Base.length(collection::BosonicDistributions) = length(collection.terms)
+
+function Base.:*(term::BosonicDistributions, collection::BosonicDistributions)
+    length(term) == 1 || throw(
+        ArgumentError("BosonicDistributions can only be multiplied with a single term.")
+    )
+    out = BosonicDistributions()
+    bd, coeff = first(term.terms)
+    for (key, val) in collection.terms
+        out.terms[bd * key] = coeff * val
+    end
+    return out
+end
+function Base.:+(xs::BosonicDistributions, ys::BosonicDistributions)
+    out = deepcopy(xs)
+    for (key, val) in ys.terms
+        push!(out, key, val)
+    end
+    return out
+end
+
+function filter_nonzero!(collection::BosonicDistributions)
+    filter!((kv) -> !iszero(kv[2]), collection.terms)
+    return collection
+end
+
+#################################
+#      imaginary_part Im(Σᴿ)
+#################################
 
 function imaginary_part(d::Diagram, coeff::ComplexF64=complex(1.0))
     bds = Vector{Momenta}()
@@ -46,18 +83,23 @@ end
 
 function imaginary_part(ds::Diagrams)
     topo = topologies(ds)
-    dict = Dict{keytype(topo),BosonicDistributionAdd}()
+    dict = Dict{keytype(topo),BosonicDistributions}()
     for (t_, keys) in topo
-        bda = BosonicDistributionAdd()
+        bda = BosonicDistributions()
         for key in keys
             coeff = ds.diagrams[key]
             bds, coeff′ = imaginary_part(key, coeff)
             push!(bda, bds, coeff′)
         end
+        filter_nonzero!(bda)
         dict[t_] = bda
     end
     return dict
 end
+
+############################
+#          i Σᴷ
+############################
 
 """
 ⃗a ⃗a = - A A -  ⃗r ⃗r
@@ -66,9 +108,9 @@ end
 function reduce_to_spectral(ds::Diagrams{E1,E2}) where {E1,E2}
     ds′ = Diagrams{E1,E2}()
     for (d, coeff) in ds.diagrams
-        contractions = contractions(d)
-        types = propagator_type.(contractions)
-        directions = direction.(contractions)
+        _contractions = contractions(d)
+        types = propagator_type.(_contractions)
+        directions = direction.(_contractions)
 
         idxs = [1, 2]
         aa_simplification = false
@@ -89,19 +131,19 @@ function reduce_to_spectral(ds::Diagrams{E1,E2}) where {E1,E2}
             continue
         elseif aa_simplification
             contractions′ = FixedVector(
-                i ∈ idxs ? make_spectral(e) : e for (i, e) in enumerate(contractions)
+                i ∈ idxs ? make_spectral(e) : e for (i, e) in enumerate(_contractions)
             )
             d′ = Diagram(contractions′, d.topology)
             push!(ds′, d′, -coeff)
             contractions′ = FixedVector(
-                i ∈ idxs ? make_retarded(e) : e for (i, e) in enumerate(contractions)
+                i ∈ idxs ? make_retarded(e) : e for (i, e) in enumerate(_contractions)
             )
             d′ = Diagram(contractions′, d.topology)
             push!(ds′, d′, -coeff)
             continue
         elseif ar_simplification
             contractions′ = FixedVector(
-                i ∈ idxs ? make_spectral(e) : e for (i, e) in enumerate(contractions)
+                i ∈ idxs ? make_spectral(e) : e for (i, e) in enumerate(_contractions)
             )
             d′ = Diagram(contractions′, d.topology)
             push!(ds′, d′, coeff)
@@ -112,7 +154,7 @@ function reduce_to_spectral(ds::Diagrams{E1,E2}) where {E1,E2}
                     make_advanced(e)
                 else
                     e
-                end for (i, e) in enumerate(contractions)
+                end for (i, e) in enumerate(_contractions)
             )
             d′ = Diagram(contractions′, d.topology)
             push!(ds′, d′, -coeff)
@@ -124,4 +166,70 @@ function reduce_to_spectral(ds::Diagrams{E1,E2}) where {E1,E2}
     end
     filter_nonzero!(ds′)
     return ds′
+end
+
+"""
+Convert a `Diagrams` object to a dictionary of `BosonicDistributions`. By substituting:
+Gᴷ(k) = 0.5*A
+
+"""
+
+function kelysh_to_distrubution(ds::Diagrams)
+    topo = topologies(ds)
+    dict = Dict{keytype(topo),BosonicDistributions}()
+    for (t_, keys) in topo
+        bda = BosonicDistributions()
+        for key in keys
+            coeff = ds.diagrams[key]
+            bds, coeff′ = kelysh_to_distrubution(key, coeff)
+            push!(bda, bds, coeff′)
+        end
+        filter_nonzero!(bda)
+        dict[t_] = bda
+    end
+    return dict
+end
+
+function kelysh_to_distrubution(d::Diagram, coeff::ComplexF64=complex(1.0))
+    bds = Vector{Momenta}()
+    for edge in contractions(d)
+        edgetype = propagator_type(edge)
+        if is_keldysh(edgetype)
+            push!(bds, edge.momenta)
+            coeff *= 0.5
+        end
+    end
+    return BosonicDistributionTerm(bds), coeff
+end
+
+#################################
+#      CollisionIntegral
+#################################
+
+struct CollisionIntegral{E}
+    terms::Dict{FixedVector{E,Int},BosonicDistributions}
+end
+function CollisionIntregral(Σ::SelfEnergy{E1,E2}) where {E1,E2}
+    # TODO: assert has momenta
+    Σk = wigner_transform(Σ)
+
+    tmp = reduce_to_spectral(Σk.keldysh)
+    iΣk = kelysh_to_distrubution(tmp)
+
+    imΣr = imaginary_part(Σk.retarded)
+
+    Fk = BosonicDistributionTerm([Momenta(0)])
+    Fks2 = BosonicDistributions(Dict(Fk => complex(2.0)))
+
+    dict = Dict{FixedVector{E2,Int},BosonicDistributions}()
+    for t_ in intersect(keys(iΣk), keys(imΣr))
+        dict[t_] = iΣk[t_] + Fks2 * imΣr[t_]
+    end
+    for t_ in setdiff(keys(imΣr), keys(iΣk))
+        dict[t_] = Fks2 * imΣr[t_]
+    end
+    for t_ in setdiff(keys(iΣk), keys(imΣr))
+        dict[t_] = iΣk[t_]
+    end
+    return CollisionIntegral{E2}(dict)
 end

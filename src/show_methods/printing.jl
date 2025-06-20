@@ -221,7 +221,7 @@ function Base.show(io::IO, ms::Momenta)
     return nothing
 end
 
-function Base.show(io::IO, ds::BosonicDistributionAdd)
+function Base.show(io::IO, ds::BosonicDistributions)
     bd_terms = collect(keys(ds.terms))
     l = length(bd_terms)
     for idx in eachindex(bd_terms)
@@ -242,5 +242,12 @@ function Base.show(io::IO, bds::BosonicDistributionTerm)
         end
         write(io, string("F(", ms, ")"))
     end
+    return nothing
+end
+
+function Base.show(io::IO, ci::CollisionIntegral)
+    write(io, "Collision integral ")
+    write(io, ":\n")
+    show(io, ci.terms)
     return nothing
 end
