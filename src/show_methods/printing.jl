@@ -100,7 +100,7 @@ function construct_position_basis(x::Edge)
     type = propagator_type(x)
     (out, in) = positions(x)
     (r2, r1) = regularisations(x)
-    s = string(
+    return string(
         is_spectral(type) ? "A" : "G",
         prop_type[type],
         "(",
@@ -113,9 +113,10 @@ function construct_position_basis(x::Edge)
     )
 end
 function construct_momentum_basis(x::Edge)
+    type = propagator_type(x)
     m = repr(x.momenta)
     (r2, r1) = regularisations(x)
-    s = string("G", prop_type[propagator_type(x)], "(", m, ")")
+    return string(is_spectral(type) ? "A" : "G", prop_type[type], "(", m, ")")
 end
 
 function Base.show(io::IO, d::Diagram)
@@ -199,6 +200,7 @@ end
 
 function Base.show(io::IO, p::Momentum)
     write(io, momentum_string(p))
+    return nothing
 end
 
 function Base.show(io::IO, ms::Momenta)

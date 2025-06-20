@@ -14,4 +14,9 @@ diagram = first(first(Σk.retarded))
 KeldyshContraction.imaginary_part(diagram)
 
 dict = KeldyshContraction.imaginary_part(Σk.retarded)
-repr(dict[[3]])
+
+Σk.keldysh
+
+terms = KeldyshContraction.reduce_to_spectral(Σk.keldysh)
+
+repr(terms)

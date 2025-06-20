@@ -57,12 +57,11 @@ struct Edge
     in::Create
     edgetype::PropagatorType.T
     momenta::Momenta
-
-    function Edge(out::Destroy, in::Create, edgetype::PropagatorType.T)
-        new(out, in, edgetype, Momenta())
-    end
-    Edge(edge::Edge, momenta::Momenta) = new(edge.out, edge.in, edge.edgetype, momenta)
 end
+function Edge(out::Destroy, in::Create, edgetype::PropagatorType.T)
+    Edge(out, in, edgetype, Momenta())
+end
+Edge(edge::Edge, momenta::Momenta) = Edge(edge.out, edge.in, edge.edgetype, momenta)
 function Edge(tt::Contraction)
     _out, _in = tt[1], tt[2]
     propagator_checks(_out, _in)
@@ -128,6 +127,24 @@ is_advanced(x::Contraction) = is_advanced(propagator_type(x...))
 is_retarded(x::Contraction) = is_retarded(propagator_type(x...))
 is_keldysh(x::Contraction) = is_keldysh(propagator_type(x...))
 
+make_spectral(edge::Edge) = Edge(edge.out, edge.in, PropagatorType.Spectral, edge.momenta)
+function make_retarded(edge::Edge)
+    Edge(
+        edge.in'(position(edge.out)),
+        edge.out'(position(edge.in)),
+        PropagatorType.Retarded,
+        edge.momenta,
+    )
+end
+function make_advanced(edge::Edge)
+    Edge(
+        edge.in'(position(edge.out)),
+        edge.out'(position(edge.in)),
+        PropagatorType.Advanced,
+        edge.momenta,
+    )
+end
+
 fields(e::Edge) = (e.out, e.in)
 function regularisations(p::Edge)
     return regularisation.(fields(p))
@@ -182,5 +199,14 @@ function position_category(p::Edge)::Symbol
         return :bulk
     else
         throw(ArgumentError("Not a valid propagator."))
+    end
+end
+
+function direction(edge::Edge)
+    ps = integer_positions(edge)
+    if ps[1] < ps[2]
+        return true
+    elseif ps[1] > ps[2]
+        return false
     end
 end

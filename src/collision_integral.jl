@@ -58,3 +58,70 @@ function imaginary_part(ds::Diagrams)
     end
     return dict
 end
+
+"""
+⃗a ⃗a = - A A -  ⃗r ⃗r
+⃗a ⃖r =  A A -  ⃗r ⃖a
+"""
+function reduce_to_spectral(ds::Diagrams{E1,E2}) where {E1,E2}
+    ds′ = Diagrams{E1,E2}()
+    for (d, coeff) in ds.diagrams
+        contractions = contractions(d)
+        types = propagator_type.(contractions)
+        directions = direction.(contractions)
+
+        idxs = [1, 2]
+        aa_simplification = false
+        ar_simplification = false
+        while last(idxs) <= E1
+            if all(is_advanced, types[idxs]) && all(directions[idxs])
+                aa_simplification = true
+                break
+            elseif types[idxs] == [PropagatorType.Advanced, PropagatorType.Retarded] &&
+                directions[idxs] == [true, false]
+                ar_simplification = true
+                break
+            end
+            idxs .+= 1
+        end
+        if last(idxs) > E1
+            push!(ds′, d, coeff)
+            continue
+        elseif aa_simplification
+            contractions′ = FixedVector(
+                i ∈ idxs ? make_spectral(e) : e for (i, e) in enumerate(contractions)
+            )
+            d′ = Diagram(contractions′, d.topology)
+            push!(ds′, d′, -coeff)
+            contractions′ = FixedVector(
+                i ∈ idxs ? make_retarded(e) : e for (i, e) in enumerate(contractions)
+            )
+            d′ = Diagram(contractions′, d.topology)
+            push!(ds′, d′, -coeff)
+            continue
+        elseif ar_simplification
+            contractions′ = FixedVector(
+                i ∈ idxs ? make_spectral(e) : e for (i, e) in enumerate(contractions)
+            )
+            d′ = Diagram(contractions′, d.topology)
+            push!(ds′, d′, coeff)
+            contractions′ = FixedVector(
+                if i == idxs[1]
+                    make_retarded(e)
+                elseif i == idxs[2]
+                    make_advanced(e)
+                else
+                    e
+                end for (i, e) in enumerate(contractions)
+            )
+            d′ = Diagram(contractions′, d.topology)
+            push!(ds′, d′, -coeff)
+            continue
+        else
+            push!(ds′, d′, coeff)
+            continue
+        end
+    end
+    filter_nonzero!(ds′)
+    return ds′
+end
