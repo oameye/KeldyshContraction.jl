@@ -49,6 +49,16 @@ end
     imΣr = imaginary_part(Σk.retarded)[[3]]
     @test length(imΣr.terms) == 3
     @test Set(real.(values(imΣr.terms))) == Set([-1 / 16, 1 / 8])
+
+    imΣr_string = repr(imΣr)
+    @test contains(imΣr_string, "-0.0625*F(q₁)*F(q₂)")
+    @test contains(imΣr_string, "0.125*F(q₁)*F(q₁ + q₂ - k)")
+    @test contains(imΣr_string, "-0.0625")
+
+    @test isequal(
+        Set(repr.(collect(keys(imΣr.terms)))),
+        Set(["F(q₁)*F(q₂)", "", "F(q₁)*F(q₁ + q₂ - k)"]),
+    )
 end
 
 @testset "Collision Integral" begin
@@ -57,6 +67,8 @@ end
     @test isempty(ci.terms[[2]])
     Cint = ci.terms[[3]]
     @test length(Cint) == 6
+
+    @test contains(repr(ci), "Collision integral")
     # @test Set(real.(values(ci.terms))) == Set([-1 / 16, -1 / 4, 1 / 2])
     # number_of_F = Set(map(t -> length(t.momenta), collect(keys(ci.terms))))
     # @test isequal(number_of_F, Set([1, 3]))
