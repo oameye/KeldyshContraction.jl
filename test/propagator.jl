@@ -100,3 +100,14 @@ end
     p = (q(Bulk(3)), c(Bulk(3))')
     @test same_position(p)
 end
+
+@testset "make spectral" begin
+    using KeldyshContraction:
+        make_spectral, make_retarded, make_advanced, PropagatorType, Bulk
+    p = Edge(q, c'(Bulk(2)))
+    k = Edge(c, q'(Bulk(2)))
+    @test isequal(repr(make_spectral(p)), "A(y₁,y₂)")
+    @test isequal(make_spectral(p), Edge(q, c'(Bulk(2)), PropagatorType.Spectral))
+    @test isequal(make_retarded(p), k)
+    @test isequal(make_advanced(k), p)
+end

@@ -34,6 +34,8 @@ function momenta(d::Diagram)
 end
 topology_length(x::Int) = max(0, x - 4)
 
+Base.isempty(d::Diagram) = isempty(d.contractions)
+
 ################
 #   Diagrams
 ###############

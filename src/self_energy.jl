@@ -61,13 +61,13 @@ The self-energy is computed based on the Keldysh Green's function (`G.keldysh`) 
 its quantum-quantum (`qq`), classical-quantum (`cq`), and quantum-classical (`qc`) components.
 
 """
-struct SelfEnergy{E,T}
+struct SelfEnergy{E1,E2}
     "The Keldysh component of the self-energy."
-    keldysh::Diagrams{E,T}
+    keldysh::Diagrams{E1,E2}
     " The retarded component of the self-energy."
-    retarded::Diagrams{E,T}
+    retarded::Diagrams{E1,E2}
     "The advanced component of the self-energy."
-    advanced::Diagrams{E,T}
+    advanced::Diagrams{E1,E2}
     "The order of the self-energy in the perturbation series"
     order::Int64
     "Parameters of the perturbation series"

@@ -81,6 +81,7 @@ const prop_type = Dict(
     PropagatorType.Retarded => "ᴿ",
     PropagatorType.Advanced => "ᴬ",
     PropagatorType.Keldysh => "ᴷ",
+    PropagatorType.Spectral => "",
 )
 const reg_string = Dict(
     Regularisation.Plus => "⁺", Regularisation.Zero => "", Regularisation.Minus => "⁻"
@@ -96,11 +97,12 @@ function Base.show(io::IO, x::Edge)
     return nothing
 end
 function construct_position_basis(x::Edge)
+    type = propagator_type(x)
     (out, in) = positions(x)
     (r2, r1) = regularisations(x)
-    s = string(
-        "G",
-        prop_type[propagator_type(x)],
+    return string(
+        is_spectral(type) ? "A" : "G",
+        prop_type[type],
         "(",
         pos_string(out),
         reg_string[r2],
@@ -111,9 +113,10 @@ function construct_position_basis(x::Edge)
     )
 end
 function construct_momentum_basis(x::Edge)
+    type = propagator_type(x)
     m = repr(x.momenta)
     (r2, r1) = regularisations(x)
-    s = string("G", prop_type[propagator_type(x)], "(", m, ")")
+    return string(is_spectral(type) ? "A" : "G", prop_type[type], "(", m, ")")
 end
 
 function Base.show(io::IO, d::Diagram)
@@ -134,17 +137,20 @@ function Base.show(io::IO, ds::Diagrams)
     l = length(diagrams)
     for idx in eachindex(diagrams)
         if idx == l
-            prefactor = ds.diagrams[diagrams[idx]]
-            print_number(io, prefactor)
-            !SymbolicUtils._isone(prefactor) ? show(io, *) : write(io, "")
-            show(io, diagrams[idx])
+            show_key(io, ds.diagrams, diagrams[idx])
         else
-            prefactor = ds.diagrams[diagrams[idx]]
-            print_number(io, prefactor)
-            !SymbolicUtils._isone(prefactor) ? show(io, *) : write(io, "")
-            show(io, diagrams[idx])
+            show_key(io, ds.diagrams, diagrams[idx])
             write(io, " + ")
         end
+    end
+    return nothing
+end
+function show_key(io, terms::Dict, key)
+    prefactor = terms[key]
+    print_number(io, prefactor)
+    if !isempty(key)
+        !SymbolicUtils._isone(prefactor) ? show(io, *) : write(io, "")
+        show(io, key)
     end
     return nothing
 end
@@ -194,6 +200,7 @@ end
 
 function Base.show(io::IO, p::Momentum)
     write(io, momentum_string(p))
+    return nothing
 end
 
 function Base.show(io::IO, ms::Momenta)
@@ -211,5 +218,36 @@ function Base.show(io::IO, ms::Momenta)
         end
         show(io, m)
     end
+    return nothing
+end
+
+function Base.show(io::IO, ds::BosonicDistributions)
+    bd_terms = collect(keys(ds.terms))
+    l = length(bd_terms)
+    for idx in eachindex(bd_terms)
+        if idx == l
+            show_key(io, ds.terms, bd_terms[idx])
+        else
+            show_key(io, ds.terms, bd_terms[idx])
+            write(io, " + ")
+        end
+    end
+    return nothing
+end
+
+function Base.show(io::IO, bds::BosonicDistributionTerm)
+    for (i, ms) in enumerate(bds.momenta)
+        if i > 1
+            write(io, "*")
+        end
+        write(io, string("F(", ms, ")"))
+    end
+    return nothing
+end
+
+function Base.show(io::IO, ci::CollisionIntegral)
+    write(io, "Collision integral ")
+    write(io, ":\n")
+    show(io, ci.terms)
     return nothing
 end

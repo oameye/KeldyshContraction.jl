@@ -38,6 +38,7 @@ include("filters.jl")
 include("self_energy.jl")
 
 include("propagator_algebra/wigner.jl")
+include("collision_integral.jl")
 
 # show methods
 include("show_methods/latexify_recipes.jl")
