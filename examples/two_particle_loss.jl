@@ -78,3 +78,15 @@ GF = DressedPropagator(L_int, 2)
 #
 
 Σ = SelfEnergy(GF, 2)
+
+# ## Wigner transform
+
+Σk = wigner_transform(Σ)
+
+# ## Collision integral
+
+KeldyshContraction.CollisionIntegral(Σk).terms[[2]]
+
+#
+
+KeldyshContraction.CollisionIntegral(Σk).terms[[3]]
