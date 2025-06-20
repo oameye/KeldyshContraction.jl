@@ -15,7 +15,7 @@ function wigner_transform(se::SelfEnergy)
     advanced = construct_momenta_from_self_energy(se.advanced)
 
     # Return a new DressedPropagator with the transformed components
-    return DressedPropagator(keldysh, retarded, advanced, se.order, se.parameter)
+    return SelfEnergy(keldysh, retarded, advanced, se.order, se.parameter)
 end
 
 function construct_momenta_from_gf(d::Diagram{E1,E2}) where {E1,E2}
