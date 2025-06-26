@@ -53,7 +53,12 @@ end
 
 All the same coordinate advanced propagators are converted to retarded propagators.
 """
-function DressedPropagator(L::InteractionLagrangian, order=1; simplify=should_regularise(L.lagrangian), kwargs...)
+function DressedPropagator(
+    L::InteractionLagrangian,
+    order=1;
+    simplify=(!should_regularise(L.lagrangian)),
+    kwargs...,
+)
     ϕ = L.qfield
     ψ = L.cfield
 

@@ -15,6 +15,7 @@ end
 
 @testset "regularise vs no regularise" begin
     using KeldyshContraction
+    using KeldyshContraction: set_reg_to_zero
 
     elasctic2boson_reguralisation =
         -0.5 * ((c(Minus)^2 + q(Minus)^2) * c' * q' + c(Plus) * q(Plus) * ((c')^2 + (q')^2))
@@ -23,15 +24,15 @@ end
     L_reg = InteractionLagrangian(elasctic2boson_reguralisation)
     L_no_reg = InteractionLagrangian(elasctic2boson)
 
-    GF_reg = DressedPropagator(L_reg)
-    GF_no_reg = DressedPropagator(L_no_reg)
+    GF_reg = DressedPropagator(L_reg; simplify=true, _set_reg_to_zero=true)
+    GF_no_reg = DressedPropagator(L_no_reg; simplify=true)
 
     @test isequal(GF_reg.keldysh, GF_no_reg.keldysh)
     @test isequal(GF_reg.retarded, GF_no_reg.retarded)
     @test isequal(GF_reg.advanced, GF_no_reg.advanced)
 
-    GF_reg2 = DressedPropagator(L_reg, 2)
-    GF_no_reg2 = DressedPropagator(L_no_reg, 2)
+    GF_reg2 = DressedPropagator(L_reg, 2; simplify=true, _set_reg_to_zero=true)
+    GF_no_reg2 = DressedPropagator(L_no_reg, 2; simplify=true)
 
     @test isequal(GF_reg2.keldysh, GF_no_reg2.keldysh)
     @test isequal(GF_reg2.retarded, GF_no_reg2.retarded)

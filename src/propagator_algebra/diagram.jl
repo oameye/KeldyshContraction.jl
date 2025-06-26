@@ -36,6 +36,11 @@ topology_length(x::Int) = max(0, x - 4)
 
 Base.isempty(d::Diagram) = isempty(d.contractions)
 
+function set_reg_to_zero(d::Diagram{E1,E2}) where {E1,E2}
+    new_contractions = map(set_reg_to_zero, d.contractions)
+    return Diagram{E1,E2}(new_contractions, d.topology)
+end
+
 ################
 #   Diagrams
 ###############
@@ -123,6 +128,11 @@ function adjoint_diagram(
     sorted_adjoint_edges = sort(collect(adjoint_edges); by=sort_by_position_and_type)
     edges = SmallCollections.FixedVector{E1,Edge}(e for e in sorted_adjoint_edges)
     return Diagram(edges) => _simplify(adjoint(prefactor′))
+end
+
+function set_reg_to_zero(d::Diagrams)
+    dict = Dict(set_reg_to_zero(diagram) => value for (diagram, value) in d)
+    return Diagrams(dict)
 end
 
 """
