@@ -152,6 +152,11 @@ end
 function regularisations(p::Contraction)
     return regularisation.(p)
 end
+
+function set_reg_to_zero(p::Edge)
+    new_fields = map(set_reg_to_zero, fields(p))
+    return Edge(new_fields..., p.edgetype, p.momenta)
+end
 contours(p::Edge) = contour.(fields(p))
 
 """

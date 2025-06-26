@@ -53,14 +53,19 @@ end
 
 All the same coordinate advanced propagators are converted to retarded propagators.
 """
-function DressedPropagator(L::InteractionLagrangian, order=1; kwargs...)
+function DressedPropagator(
+    L::InteractionLagrangian,
+    order=1;
+    simplify=(!should_regularise(L.lagrangian)),
+    kwargs...,
+)
     ϕ = L.qfield
     ψ = L.cfield
 
     # Compute Wick contractions for each component
-    keldysh = wick_contraction(ψ(Out()) * ψ'(In()), L, order; kwargs...)
-    retarded = wick_contraction(ψ(Out()) * ϕ'(In()), L, order; kwargs...)
-    advanced = wick_contraction(ϕ(Out()) * ψ'(In()), L, order; kwargs...)
+    keldysh = wick_contraction(ψ(Out()) * ψ'(In()), L, order; simplify, kwargs...)
+    retarded = wick_contraction(ψ(Out()) * ϕ'(In()), L, order; simplify, kwargs...)
+    advanced = wick_contraction(ϕ(Out()) * ψ'(In()), L, order; simplify, kwargs...)
 
     # Apply filtering and simplification to all components
     for component in (keldysh, retarded, advanced)

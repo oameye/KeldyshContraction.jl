@@ -40,11 +40,13 @@ function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; 
     return diagrams
 end
 
-function wick_contraction!(diagrams::Diagrams, a::QMul; regularise=true, simplify=true)
+function wick_contraction!(
+    diagrams::Diagrams, a::QMul; regularise=true, simplify=false, _set_reg_to_zero=false
+)
     @assert is_conserved(a)
     @assert is_physical(a)
 
-    contractions = _wick_contraction(a.args_nc; regularise)
+    contractions = _wick_contraction(a.args_nc; regularise, _set_reg_to_zero)
     make_diagram!(diagrams, contractions, a.arg_c, simplify)
     return nothing
 end
@@ -74,7 +76,7 @@ out fields first. Computing the permutatins in lexicographic order, we can skip 
 (n-1)! permutations.
 """
 function _wick_contraction(
-    args_nc::Vector{<:QField}; regularise=true
+    args_nc::Vector{<:QField}; regularise=true, _set_reg_to_zero=false
 )::Vector{Vector{Contraction}}
     destroys, creates, n_destroy = prepare_args(args_nc)
 
@@ -88,7 +90,9 @@ function _wick_contraction(
         if skip && isone(first(perm))
             continue # skip the in-out contraction
         end
-        contraction, fail = _wick_contract(destroys, creates, perm; regularise)
+        contraction, fail = _wick_contract(
+            destroys, creates, perm; regularise, _set_reg_to_zero
+        )
 
         # TODO ∨ You can probably cache this
         if fail || !is_connected(contraction) || has_zero_loop(contraction)
@@ -99,7 +103,7 @@ function _wick_contraction(
     end
     return wick_contractions
 end
-function _wick_contract(destroys, creates, perm; regularise=true)
+function _wick_contract(destroys, creates, perm; regularise=true, _set_reg_to_zero=false)
     contraction = Contraction[]
     fail = false
     for (k, l) in pairs(perm)
@@ -113,7 +117,9 @@ function _wick_contract(destroys, creates, perm; regularise=true)
                 fail = true
                 break
             else
-                potential_contraction = set_reg_to_zero.(potential_contraction)
+                if _set_reg_to_zero
+                    potential_contraction = set_reg_to_zero.(potential_contraction)
+                end
             end
         end
         push!(contraction, potential_contraction)
