@@ -1,3 +1,4 @@
+using KeldyshContraction
 using KeldyshContraction: KeldyshContraction.Regularisation.Plus as Plus
 using KeldyshContraction: KeldyshContraction.Regularisation.Minus as Minus
 
@@ -10,19 +11,18 @@ function benchmark_two_body_loss!(SUITE)
         ϕ' * ψ' * (ϕ(Plus) * ψ(Plus) + ϕ(Minus) * ψ(Minus))
     L_int = InteractionLagrangian(loss2boson)
 
-    GF = DressedPropagator(L_int)
+    GF = DressedPropagator(L_int; simplify=true, _set_reg_to_zero=true)
     Σ = SelfEnergy(GF)
 
-    simplify = true
-    _set_reg_to_zero=true
+
     SUITE["Two body loss"]["Green's function"] = @benchmarkable DressedPropagator(
-        $L_int; $simplify, $_set_reg_to_zero
+        $L_int; simplify=true, _set_reg_to_zero=true
     ) seconds = 10
     SUITE["Two body loss"]["Self-energy"] = @benchmarkable SelfEnergy($GF) seconds = 10
 
     order = 2
     SUITE["Two body loss"]["Green's function second order"] = @benchmarkable DressedPropagator(
-        $L_int, $order; $simplify, $_set_reg_to_zero
+        $L_int, $order; simplify=true, _set_reg_to_zero=true
     ) seconds = 50
     return nothing
 end
