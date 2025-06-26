@@ -13,14 +13,15 @@ function benchmark_two_body_loss!(SUITE)
     GF = DressedPropagator(L_int)
     Σ = SelfEnergy(GF)
 
-    simplify = false
-    SUITE["Two body loss"]["Green's function"] = @benchmarkable DressedPropagator($L_int;) seconds =
+    simplify = true
+    _set_reg_to_zero=true
+    SUITE["Two body loss"]["Green's function"] = @benchmarkable DressedPropagator($L_int;simplify,_set_reg_to_zero) seconds =
         10
     SUITE["Two body loss"]["Self-energy"] = @benchmarkable SelfEnergy($GF) seconds = 10
 
     order = 2
     SUITE["Two body loss"]["Green's function second order"] = @benchmarkable DressedPropagator(
-        $L_int, $order
+        $L_int, $order;simplify,_set_reg_to_zero
     ) seconds = 50
     return nothing
 end
