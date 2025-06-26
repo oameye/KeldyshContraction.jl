@@ -5,11 +5,10 @@ using KeldyshContraction: Regularisation.Minus as Minus
 
 # ## System and regularization
 
-# The interaction action of elastic two body scattering, is defined as
+# The interaction action of two body loss, is defined as
 # ```math
 # S_\mathrm{int} = i\Gamma \int d^d x \, [\frac{1}{2}(\bar{\phi}_+\phi_+)^2 +\frac{1}{2} (\bar{\phi}_-\phi_-)^2 -\bar{\phi}_-^2\phi_+^2]
 # ```
-# Above interaction can typically represent s-wave scattering of bosons.
 
 # In the RAK basis, this gives
 # ```math
@@ -34,7 +33,7 @@ loss2boson_unregular =
         c' * q' * (c * q + c * q)
     )
 
-KeldyshContraction._wick_contraction(loss2boson_unregular; simplify=true)
+KeldyshContraction._wick_contraction(loss2boson_unregular)
 
 # To make the interaction Lagrangian physically meaningful, we must regularize it by properly
 # handling equal-space-time propagators. These equal-time arguments emerge from the continuum
@@ -61,6 +60,8 @@ L_int = InteractionLagrangian(loss2boson)
 
 # Indeed, the vacuum expectation value of the interaction Lagrangian is now zero:
 
+KeldyshContraction._wick_contraction(loss2boson)
+
 # ## First order Green's function
 
 GF = DressedPropagator(L_int)
@@ -78,15 +79,3 @@ GF = DressedPropagator(L_int, 2)
 #
 
 Σ = SelfEnergy(GF, 2)
-
-# ## Wigner transform
-
-Σk = wigner_transform(Σ)
-
-# ## Collision integral
-
-KeldyshContraction.CollisionIntegral(Σk).terms[[2]]
-
-#
-
-KeldyshContraction.CollisionIntegral(Σk).terms[[3]]

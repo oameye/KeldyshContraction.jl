@@ -40,7 +40,7 @@ function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; 
     return diagrams
 end
 
-function wick_contraction!(diagrams::Diagrams, a::QMul; regularise=true, simplify=true)
+function wick_contraction!(diagrams::Diagrams, a::QMul; regularise=true, simplify=false)
     @assert is_conserved(a)
     @assert is_physical(a)
 
@@ -113,7 +113,8 @@ function _wick_contract(destroys, creates, perm; regularise=true)
                 fail = true
                 break
             else
-                potential_contraction = set_reg_to_zero.(potential_contraction)
+                # I don't think we should do this
+                # potential_contraction = set_reg_to_zero.(potential_contraction)
             end
         end
         push!(contraction, potential_contraction)
