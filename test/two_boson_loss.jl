@@ -45,21 +45,25 @@ end
         truth = Diagrams(
             Dict(Diagram([(c(Out()), q'), (c, c'), (c, c'(In()))]) => complex(1.0))
         )
-        @test isequal(set_reg_to_zero(_wick_contraction(expr.arguments[1]; simplify)), truth)
+        @test isequal(
+            set_reg_to_zero(_wick_contraction(expr.arguments[1]; simplify)), truth
+        )
 
         # i (c*q⁻*q⁻*̄c*̄q*̄c)/2
         truth = Diagrams(
             Dict(Diagram([(c(Out()), q'), (q, c'), (q, c'(In()))]) => complex(1.0))
         )
-        @test isequal(set_reg_to_zero(_wick_contraction(expr.arguments[2]; simplify)), truth)
+        @test isequal(
+            set_reg_to_zero(_wick_contraction(expr.arguments[2]; simplify)), truth
+        )
 
         # - i( c*c⁺*q⁺*̄c*̄c*̄c) /2
         @test repr(set_reg_to_zero(_wick_contraction(expr.arguments[3]; simplify))) ==
-              "-1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)"
+            "-1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
         # - i(c*c⁺*q⁺*̄q*̄q*̄ϕ)/2
         @test repr(set_reg_to_zero(_wick_contraction(expr.arguments[4]; simplify))) ==
-              "-1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,x₂)"
+            "-1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
         # c*c⁺*q⁺*̄c*̄q*̄c
         truth = Diagrams(
@@ -68,7 +72,9 @@ end
                 Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))]) => complex(1.0),
             ),
         )
-        @test isequal(set_reg_to_zero(_wick_contraction(expr.arguments[5]; simplify)), truth)
+        @test isequal(
+            set_reg_to_zero(_wick_contraction(expr.arguments[5]; simplify)), truth
+        )
 
         # c*c⁻*q⁻*̄c*̄q*̄c
         truth = Diagrams(
@@ -77,7 +83,9 @@ end
                 Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))]) => complex(1.0),
             ),
         )
-        @test isequal(set_reg_to_zero(_wick_contraction(expr.arguments[6]; simplify)), truth)
+        @test isequal(
+            set_reg_to_zero(_wick_contraction(expr.arguments[6]; simplify)), truth
+        )
 
         result = _wick_contraction.(expr.arguments; simplify, _set_reg_to_zero=true)
 
@@ -221,7 +229,7 @@ end
     @test_broken isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)
 
     @test length(topologies(Σ.retarded)[[3]]) ==
-          length(topologies(adjoint(Σ.advanced))[[3]])
+        length(topologies(adjoint(Σ.advanced))[[3]])
     @test length(topologies(Σ.retarded)[[3]]) == 4
     @test length(topologies(Σ.retarded)[[2]]) == 6
 
