@@ -64,7 +64,7 @@ end
     topology_reg = topologies(GF_reg2.keldysh)
     topology_no_reg = topologies(GF_no_reg2.keldysh)
 
-    # The [3] multiplicity doesn't contain equal-time propagators, so the reguralisation shoudn't have any affect.
+    # The [3] multiplicity doesn't contain equal-time propagators, so the reguralisation shouldn't have any affect.
     @test isequal(Set(topology_reg[[3]]), Set(topology_no_reg[[3]]))
     @test !isequal(Set(topology_reg[[2]]), Set(topology_no_reg[[2]]))
     @test !isequal(Set(topology_reg[[1]]), Set(topology_no_reg[[1]]))
