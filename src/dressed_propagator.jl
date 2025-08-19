@@ -9,7 +9,6 @@ A structure representing dressed propagator in the Retarded-Advanced-Keldysh bas
 
 # Fields
 $(DocStringExtensions.FIELDS)
-where it assumed that the fields are of type `Union{SymbolicUtils.Symbolic{<:Number}, Number}`.
 
 # Constructor
 $(DocStringExtensions.TYPEDSIGNATURES)
@@ -25,9 +24,10 @@ struct DressedPropagator{E1,E2}
     advanced::Diagrams{E1,E2}
     "The order of the dressed propagator in the perturbation series"
     order::Int64
-    "Parameters of the perturbation series"
+    "Parameters of the perturbation series of the `order`, i.e., ``g^2`` means `order=2`."
     parameter::SymbolicUtils.BasicSymbolic{Number}
 end
+
 """
     matrix(G::DressedPropagator)
 
@@ -73,8 +73,67 @@ function DressedPropagator(
         _simplify_prefactors!(component)
     end
 
-    return DressedPropagator(keldysh, retarded, advanced, order, parameters(L))
+    return DressedPropagator(keldysh, retarded, advanced, order, parameters(L)^order)
 end
 
 "get parameter of the interaction lagrangian"
 parameters(d::DressedPropagator) = d.parameter
+
+"""
+$(DocStringExtensions.TYPEDEF)
+
+A structure representing a collection of dressed propagator each involving a
+different parameter of the expansion.
+
+# Fields
+$(DocStringExtensions.FIELDS)
+
+"""
+struct DressedPropagatorSum{GS}
+    "The arguments of the dressed propagator sum. Each involving a different parameter."
+    arguments::Dict{SymbolicUtils.BasicSymbolic{Number},GS}
+    "The order of the dressed propagator in the perturbation series"
+    order::Int64
+end
+
+SymbolicUtils.arguments(d::DressedPropagatorSum) = d.arguments
+order(d::DressedPropagatorSum) = d.order
+parameters(d::DressedPropagatorSum) = map(G -> G.parameter, arguments(d))
+
+function DressedPropagator(
+    Ls::LagrangianSum,
+    order=1;
+    simplify::Union{Bool,Vector{Bool}}=Bool[
+        !should_regularise(L.lagrangian) for L in arguments(Ls)
+    ],
+    kwargs...,
+)
+    ϕ = first(arguments(Ls)).qfield
+    ψ = first(arguments(Ls)).cfield
+
+    simplify = isa(simplify, Bool) ? fill(simplify, length(Ls)) : simplify
+
+    # Compute Wick contractions for each component
+    keldysh_pairs = wick_contraction(ψ(Out()) * ψ'(In()), Ls, order; simplify, kwargs...)
+    retarded_pairs = wick_contraction(ψ(Out()) * ϕ'(In()), Ls, order; simplify, kwargs...)
+    advanced_pairs = wick_contraction(ϕ(Out()) * ψ'(In()), Ls, order; simplify, kwargs...)
+
+    # Apply filtering and simplification to all components
+
+    dict = Dict(
+        begin
+            for component in
+                last.((keldysh_pairs[idx], retarded_pairs[idx], advanced_pairs[idx]))
+                filter_nonzero!(component)
+                _simplify_prefactors!(component)
+            end
+            first(keldysh_pairs[idx]) => DressedPropagator(
+                last.((keldysh_pairs[idx], retarded_pairs[idx], advanced_pairs[idx]))...,
+                order,
+                first(keldysh_pairs[idx]),
+            )
+        end for idx in eachindex(keldysh_pairs)
+    )
+
+    return DressedPropagatorSum(dict, order)
+end

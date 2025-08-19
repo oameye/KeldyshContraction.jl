@@ -73,6 +73,7 @@ Base.iszero(d::Diagrams) = isempty(d.diagrams)
 SmallCollections.default(::Type{Diagrams}) = Diagrams{0,0}()
 
 number_of_propagators(a::QMul) = length(a) ÷ 2
+number_of_propagators(a::QAdd) = length(first(a.arguments)) ÷ 2
 number_of_propagators(L::InteractionLagrangian) = length(first(L.lagrangian.arguments)) ÷ 2
 
 # Add a single diagram, summing prefactors if it already exists

@@ -1,5 +1,7 @@
 const DEFAULT_PARAMETER = SymbolicUtils.Sym{Number}(:g)
 
+abstract type Lagrangian end
+
 ###########################
 #  Interaction Lagrangian
 ###########################
@@ -26,7 +28,7 @@ The constructor enforces several constraints on the input expression and throws 
 - Fields must have opposite contours
 
 """
-struct InteractionLagrangian{T}
+struct InteractionLagrangian{T} <: Lagrangian
     "The Lagrangian expression as a [`QTerm`](@ref)"
     lagrangian::T
     "The quantum field destruction operator"
@@ -118,6 +120,16 @@ function (L::InteractionLagrangian)(i::Int)
     return InteractionLagrangian(new_lagrangian)
 end
 
+# function Base.:*(L::InteractionLagrangian{T}, K::InteractionLagrangian{T}) where {T}
+#     @assert L.qfield == K.qfield "InteractionLagrangian must have the same quantum field"
+#     @assert L.cfield == K.cfield "InteractionLagrangian must have the same classical field"
+#     new_lagrangian = L.lagrangian * K.lagrangian
+#     a = parameters(L)
+#     b = parameters(K)
+#     p = SymbolicUtils.Mul(Number, 1, Dict(a =>1, b => 1))
+#     return InteractionLagrangian(new_lagrangian, p)
+# end
+
 """
 $(DocStringExtensions.TYPEDEF)
 
@@ -130,17 +142,25 @@ $(DocStringExtensions.FIELDS)
 $(DocStringExtensions.TYPEDSIGNATURES)
 
 """
-struct LagrangianSum{T}
+struct LagrangianSum{T} <: Lagrangian
     arguments::Vector{InteractionLagrangian{T}}
     function LagrangianSum(args::Vector{<:InteractionLagrangian})
+        @assert allequal(getfield.(args, :qfield)) "All InteractionLagrangian must have the same quantum field"
+        @assert allequal(getfield.(args, :cfield)) "All InteractionLagrangian must have the same classical field"
+
         vs = promote(args...)
         return new{typeof(first(vs)).parameters[1]}(collect(vs))
     end
     function LagrangianSum(args::Vector{InteractionLagrangian{T}}) where {T}
+        @assert allequal(getfield.(args, :qfield)) "All InteractionLagrangian must have the same quantum field"
+        @assert allequal(getfield.(args, :cfield)) "All InteractionLagrangian must have the same classical field"
         return new{T}(args)
     end
 end
-Base.length(a::LagrangianSum) = length(a.arguments)
+
+SymbolicUtils.arguments(Ls::LagrangianSum) = Ls.arguments
+parameters(Ls::LagrangianSum) = [L.parameter for L in arguments(Ls)]
+Base.length(a::LagrangianSum) = length(arguments(a))
 SymbolicUtils.operation(::LagrangianSum) = (+) # TODO needed?
 
 function Base.:+(a::InteractionLagrangian{T}, b::InteractionLagrangian{S}) where {T,S}
@@ -159,6 +179,3 @@ function Base.convert(
 ) where {T,S}
     return InteractionLagrangian(convert(T, L.lagrangian), parameters(L))
 end
-
-SymbolicUtils.arguments(Ls::LagrangianSum) = Ls.arguments
-parameters(Ls::LagrangianSum) = [L.parameter for L in arguments(Ls)]

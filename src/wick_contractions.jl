@@ -40,6 +40,45 @@ function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; 
     return diagrams
 end
 
+function wick_contraction(
+    in_out::QMul, Ls::LagrangianSum, order::Int64; simplify::Vector{Bool}, kwargs...
+)
+    ps = parameters(Ls)
+    exponents = Combinatorics.multiexponents(length(Ls), order)
+    L_args = arguments(Ls)
+
+    pairs = map(exponents) do coefficients
+        idxs = indices_from_counts(coefficients) # will be of length order
+
+        diagrams = if allequal(idxs)
+            idx = first(idxs)
+            wick_contraction(in_out, L_args[idx], order; simplify=simplify[idx], kwargs...)
+        else
+            mult = Combinatorics.multinomial(coefficients...)
+            qadd = mult * prod(L_args[j](i).lagrangian for (i, j) in enumerate(idxs))
+            _simplify = prod(simplify[i] for i in idxs)
+
+            E = number_of_propagators(qadd) + 1
+            diagrams = Diagrams{E,topology_length(E)}()
+            prefactor = -1 * im * im^order / factorial(order)
+
+            regularise = should_regularise(qadd)
+            for arg in arguments(qadd)
+                wick_contraction!(
+                    diagrams,
+                    prefactor * in_out * arg;
+                    simplify=_simplify,
+                    regularise,
+                    kwargs...,
+                )
+            end
+            diagrams
+        end
+        (prod(ps[idx] for idx in idxs), diagrams)
+    end
+    pairs
+end
+
 function wick_contraction!(
     diagrams::Diagrams, a::QMul; regularise=true, simplify=false, _set_reg_to_zero=false
 )
