@@ -79,3 +79,11 @@ GF = DressedPropagator(L_int, 2)
 #
 
 Σ = SelfEnergy(GF, 2)
+
+#
+
+[key => Σ.advanced.diagrams[key] for key in topologies(Σ.advanced)[[2]]]
+
+#
+
+[key => Σ.retarded.diagrams[key] for key in topologies(Σ.retarded)[[2]]]
