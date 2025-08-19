@@ -47,8 +47,8 @@ end
 
 @testset "Correctness second order" begin
     GF2 = DressedPropagator(L, 2)
-    GF2_elastic = arguments(GF2)[g ^ 2]
-    GF2_inelastic = arguments(GF2)[Γ ^ 2]
+    GF2_elastic = arguments(GF2)[g^2]
+    GF2_inelastic = arguments(GF2)[Γ^2]
 
     trued_elastic = DressedPropagator(L_elastic, 2)
     @test isequal(trued_elastic.keldysh, GF2_elastic.keldysh)
@@ -60,9 +60,43 @@ end
     @test isequal(trued_inelastic.retarded, GF2_inelastic.retarded)
     @test isequal(trued_inelastic.advanced, GF2_inelastic.advanced)
 
+    @testset "cross-terms are swappable" begin
+        term12 = L_elastic(1).lagrangian * L_inelastic(2).lagrangian
+        term21 = L_elastic(2).lagrangian * L_inelastic(1).lagrangian
+        regularise = KeldyshContraction.should_regularise(term12)
+        diagrams12 = Diagrams{5,1}()
+        diagrams21 = Diagrams{5,1}()
+        for arg in arguments(term12)
+            KeldyshContraction.wick_contraction!(
+                diagrams12, c(Out()) * c'(In()) * arg; simplify=false, regularise
+            )
+        end
+        for arg in arguments(term21)
+            KeldyshContraction.wick_contraction!(
+                diagrams21, c(Out()) * c'(In()) * arg; simplify=false, regularise
+            )
+        end
+        @test isequal(diagrams21, diagrams12)
+    end
+end
+
+@testset "SelfEnergy" begin
+    GF2 = DressedPropagator(L, 2; _set_reg_to_zero=true)
+    Σ2 = SelfEnergy(GF2)
     # arguments(GF2)[g*Γ] |> typeof
 end
 
-# GF2 = DressedPropagator(L, 2)
-# arguments(GF2)[g^2] |> typeof
-# arguments(GF2)[g*Γ] |> typeof
+GF2 = DressedPropagator(L, 2; _set_reg_to_zero=true)
+topo = topologies(arguments(GF2)[g * Γ].keldysh)
+topo[[2]]
+topo[[3]]
+
+[key => arguments(GF2)[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]
+
+
+
+G_elastic = DressedPropagator(L_elastic, 2)
+topologies(G_elastic.keldysh)
+
+G_elastic = DressedPropagator(L_inelastic, 2; _set_reg_to_zero=true)
+topologies(G_elastic.keldysh)

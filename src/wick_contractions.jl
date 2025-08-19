@@ -156,7 +156,8 @@ function _wick_contract(destroys, creates, perm; regularise=true, _set_reg_to_ze
                 fail = true
                 break
             else
-                if _set_reg_to_zero
+                same_position = !allequal(position.(potential_contraction))
+                if _set_reg_to_zero && (same_position || is_keldysh(potential_contraction))
                     potential_contraction = set_reg_to_zero.(potential_contraction)
                 end
             end
