@@ -73,8 +73,8 @@ function DressedPropagator(
         _simplify_prefactors!(component)
     end
 
-    return DressedPropagator(keldysh, retarded, advanced, order, parameter(L))
+    return DressedPropagator(keldysh, retarded, advanced, order, parameters(L))
 end
 
 "get parameter of the interaction lagrangian"
-parameter(d::DressedPropagator) = d.parameter
+parameters(d::DressedPropagator) = d.parameter

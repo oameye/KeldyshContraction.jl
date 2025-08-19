@@ -55,7 +55,7 @@ function _extract_unique_fields(expr)
     fields = allfields(expr)
     set_reg_to_zero!(fields)
     unique_fields = unique(fields)
-    filter(is_annihilation, unique_fields)
+    return filter(is_annihilation, unique_fields)
 end
 function _assert_lagrangian(expr, fields, contours)
     @assert is_bulk(expr) "An interaction Lagrangian only accepts bulk terms"
@@ -70,7 +70,7 @@ end
 position(L::InteractionLagrangian) = L.position
 
 "get parameter of the interaction lagrangian"
-parameter(L::InteractionLagrangian) = L.parameter
+parameters(L::InteractionLagrangian) = L.parameter
 
 """
     is_conserved(a::QTerm)
@@ -117,3 +117,48 @@ function (L::InteractionLagrangian)(i::Int)
     new_lagrangian = set_position(L.lagrangian, Bulk(i))
     return InteractionLagrangian(new_lagrangian)
 end
+
+"""
+$(DocStringExtensions.TYPEDEF)
+
+Represents a sum of interaction Lagrangians, each representing a different process.
+
+# Fields
+$(DocStringExtensions.FIELDS)
+
+# Constructor
+$(DocStringExtensions.TYPEDSIGNATURES)
+
+"""
+struct LagrangianSum{T}
+    arguments::Vector{InteractionLagrangian{T}}
+    function LagrangianSum(args::Vector{<:InteractionLagrangian})
+        vs = promote(args...)
+        return new{typeof(first(vs)).parameters[1]}(collect(vs))
+    end
+    function LagrangianSum(args::Vector{InteractionLagrangian{T}}) where {T}
+        return new{T}(args)
+    end
+end
+Base.length(a::LagrangianSum) = length(a.arguments)
+SymbolicUtils.operation(::LagrangianSum) = (+) # TODO needed?
+
+function Base.:+(a::InteractionLagrangian{T}, b::InteractionLagrangian{S}) where {T,S}
+    TT = promote_type(T, S)
+    args = InteractionLagrangian{TT}[a]
+    return LagrangianSum(push!(args, b))
+end
+
+function Base.promote_rule(
+    ::Type{InteractionLagrangian{S}}, ::Type{InteractionLagrangian{T}}
+) where {S,T}
+    return InteractionLagrangian{promote_rule(S, T)}
+end
+function Base.convert(
+    ::Type{InteractionLagrangian{T}}, L::InteractionLagrangian{S}
+) where {T,S}
+    return InteractionLagrangian(convert(T, L.lagrangian), parameters(L))
+end
+
+SymbolicUtils.arguments(Ls::LagrangianSum) = Ls.arguments
+parameters(Ls::LagrangianSum) = [L.parameter for L in arguments(Ls)]

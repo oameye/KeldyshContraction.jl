@@ -10,7 +10,7 @@ elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2)
 @syms g
 L_int = InteractionLagrangian(elasctic2boson, g)
 
-@test isequal(KeldyshContraction.parameter(L_int), g)
+@test isequal(KeldyshContraction.parameters(L_int), g)
 
 @testset "first order" begin
     @testset "Bubble diagrams" begin

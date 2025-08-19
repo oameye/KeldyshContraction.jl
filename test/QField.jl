@@ -248,3 +248,17 @@ end
     # type promotion
     promote_type(KC.QMul{Int64}, KC.QMul{Float64})
 end
+
+@testset "conversion/promotion" begin
+    using KeldyshContraction: QAdd, QMul
+
+    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
+
+    a = QAdd([ϕ, ψ])
+    b = QAdd([QMul(1, [ϕ]), QMul(1, [ψ])])
+    @test isequal(a, b)
+    @test typeof(a + b) == QAdd{Float64}
+    @test typeof(a * b) == QAdd{Float64}
+    @test typeof(convert(QAdd{Float64}, a)) == QAdd{Float64}
+    @test typeof(convert(QMul{Float64}, QMul(1, [ϕ]))) == QMul{Float64}
+end
