@@ -80,6 +80,9 @@ number_of_propagators(L::InteractionLagrangian) = length(first(L.lagrangian.argu
 function Base.push!(collection::Diagrams, diagram::Diagram, prefactor::Number)
     if haskey(collection.diagrams, diagram)
         collection.diagrams[diagram] += prefactor
+        if iszero(collection.diagrams[diagram])
+            delete!(collection.diagrams, diagram)
+        end
     else
         collection.diagrams[diagram] = prefactor
     end
@@ -131,9 +134,12 @@ function adjoint_diagram(
     return Diagram(edges) => _simplify(adjoint(prefactor′))
 end
 
-function set_reg_to_zero(d::Diagrams)
-    dict = Dict(set_reg_to_zero(diagram) => value for (diagram, value) in d)
-    return Diagrams(dict)
+function set_reg_to_zero(d::Diagrams{E1,E2}) where {E1,E2}
+    diagrams = Diagrams{E1,E2}()
+    for (diagram, value) in d
+        push!(diagrams, set_reg_to_zero(diagram), value)
+    end
+    return diagrams
 end
 
 """
