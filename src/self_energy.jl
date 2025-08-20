@@ -119,3 +119,31 @@ in the Retarded-Advanced-Keldysh basis.
 function matrix(Σ::SelfEnergy{E}) where {E}
     return Diagrams[Diagrams{E,E}() Σ.advanced; Σ.retarded Σ.keldysh]
 end
+
+parameters(Σ::SelfEnergy) = Σ.parameter
+
+"""
+$(DocStringExtensions.TYPEDEF)
+
+A structure representing a collection of dressed propagator each involving a
+different parameter of the expansion.
+
+# Fields
+$(DocStringExtensions.FIELDS)
+
+"""
+struct SelfEnergySum{Σs}
+    "The arguments of the dressed propagator sum. Each involving a different parameter."
+    arguments::Dict{SymbolicUtils.BasicSymbolic{Number},Σs}
+    "The order of the dressed propagator in the perturbation series"
+    order::Int64
+end
+
+SymbolicUtils.arguments(d::SelfEnergySum) = d.arguments
+order(d::SelfEnergySum) = d.order
+parameters(d::SelfEnergySum) = map(G -> G.parameter, arguments(d))
+
+function SelfEnergy(G::DressedPropagatorSum, order=order(G))
+    dict = Dict(key => SelfEnergy(val, order) for (key, val) in arguments(G))
+    return SelfEnergySum(dict, order)
+end

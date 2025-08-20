@@ -59,6 +59,7 @@ export @qfields,
     @syms,
     arguments,
     topologies,
-    wigner_transform
+    wigner_transform,
+    parameters
 
 end

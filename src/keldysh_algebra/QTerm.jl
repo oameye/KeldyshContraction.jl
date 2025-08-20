@@ -121,6 +121,11 @@ function allfields(q::QAdd)
     reduce(vcat, vfields)
 end
 
+Base.promote_rule(::Type{QAdd{S}}, ::Type{QAdd{T}}) where {S,T} = QAdd{promote_rule(S, T)}
+function Base.convert(::Type{QAdd{T}}, xadd::QAdd{S}) where {T<:Number,S<:Number}
+    return QAdd([QMul(convert(T, x.arg_c), x.args_nc) for x in xadd.arguments])
+end
+
 #########################
 #       isequal
 #########################

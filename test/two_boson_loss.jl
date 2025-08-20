@@ -129,8 +129,8 @@ end
                 Diagram([(q(Out()), c'), (c, c'), (q, c'(In()))]) => complex(-1.0),
             ),
         )
-        @test isequal(GF.retarded, truth_retarded)
-        @test isequal(GF.advanced, truth_advanced)
+        @test isequal(set_reg_to_zero(GF.retarded), truth_retarded)
+        @test isequal(set_reg_to_zero(GF.advanced), truth_advanced)
     end
 
     @testset "simplification" begin
@@ -162,15 +162,17 @@ end
                 Dict(kp => complex(2.0), rp => complex(-1.0), ap => complex(1.0))
             )
 
-            @test isequal(Σ.advanced, advanced_truth)
-            @test isequal(Σ.retarded, retarded_truth)
-            @test isequal(Σ.keldysh, keldysh_truth)
+            @test isequal(set_reg_to_zero(Σ.advanced), advanced_truth)
+            @test isequal(set_reg_to_zero(Σ.retarded), retarded_truth)
+            @test isequal(set_reg_to_zero(Σ.keldysh), keldysh_truth)
             # ^ pretty sure Gerbino et al https://arxiv.org/pdf/2406.20028
             # is wrong and switshes retarded and advanced
             # and we compute the correct with a overall minus sign
 
-            @test isequal(adjoint(Σ.advanced), Σ.retarded)
-            @test isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)
+            @test isequal(adjoint(set_reg_to_zero(Σ.advanced)), set_reg_to_zero(Σ.retarded))
+            @test isequal(
+                adjoint(set_reg_to_zero(Σ.keldysh)), -1 * set_reg_to_zero(Σ.keldysh)
+            )
 
             @testset "simplified" begin
                 GF = DressedPropagator(L; simplify=true, _set_reg_to_zero=true)
@@ -179,9 +181,9 @@ end
                 advanced_truth = Diagrams(Dict(kp => complex(-1.0), rp => complex(1.0)))
                 retarded_truth = Diagrams(Dict(kp => complex(1.0), rp => complex(-1.0)))
 
-                @test isequal(Σ.advanced, advanced_truth)
-                @test isequal(Σ.retarded, retarded_truth)
-                @test isequal(Σ.keldysh, keldysh_truth)
+                @test isequal(set_reg_to_zero(Σ.advanced), advanced_truth)
+                @test isequal(set_reg_to_zero(Σ.retarded), retarded_truth)
+                @test isequal(set_reg_to_zero(Σ.keldysh), keldysh_truth)
             end
         end
     end
@@ -231,8 +233,8 @@ end
     @test length(topologies(Σ.retarded)[[3]]) ==
         length(topologies(adjoint(Σ.advanced))[[3]])
     @test length(topologies(Σ.retarded)[[3]]) == 4
-    @test length(topologies(Σ.retarded)[[2]]) == 6
+    @test length(topologies(Σ.retarded)[[2]]) == 7
 
-    @test length(topologies(Σ.keldysh)[[2]]) == 6
+    @test length(topologies(Σ.keldysh)[[2]]) == 7
     @test length(topologies(Σ.keldysh)[[3]]) == 7
 end
