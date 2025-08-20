@@ -34,13 +34,29 @@ GF1_inelastic = arguments(GF1)[Γ]
 
 #
 
-GF2 = DressedPropagator(L, 2; _set_reg_to_zero=true)
+GF2 = DressedPropagator(L, 2; _set_reg_to_zero=true, simplify=true)
 topo = topologies(arguments(GF2)[g * Γ].keldysh)
 
 #
 
-topo[[2]]
+[key => arguments(GF2)[g * Γ].keldysh.diagrams[key] for key in topo[[2]]]
 
 #
 
 [key => arguments(GF2)[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]
+
+#
+
+Σ2 = SelfEnergy(GF2)
+arguments(Σ2)[g * Γ].keldysh
+
+#
+
+topo = topologies(arguments(Σ2)[g * Γ].retarded)
+
+[key => arguments(Σ2)[g * Γ].retarded.diagrams[key] for key in topo[[2]]]
+
+#
+
+topo = topologies(arguments(Σ2)[g * Γ].keldysh)
+[key => arguments(Σ2)[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]

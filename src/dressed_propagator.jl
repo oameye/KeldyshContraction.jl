@@ -56,16 +56,23 @@ All the same coordinate advanced propagators are converted to retarded propagato
 function DressedPropagator(
     L::InteractionLagrangian,
     order=1;
-    simplify=(!should_regularise(L.lagrangian)),
+    simplify=true, #(!should_regularise(L.lagrangian)),
+    _set_reg_to_zero=true,
     kwargs...,
 )
     ϕ = L.qfield
     ψ = L.cfield
 
     # Compute Wick contractions for each component
-    keldysh = wick_contraction(ψ(Out()) * ψ'(In()), L, order; simplify, kwargs...)
-    retarded = wick_contraction(ψ(Out()) * ϕ'(In()), L, order; simplify, kwargs...)
-    advanced = wick_contraction(ϕ(Out()) * ψ'(In()), L, order; simplify, kwargs...)
+    keldysh = wick_contraction(
+        ψ(Out()) * ψ'(In()), L, order; simplify, _set_reg_to_zero, kwargs...
+    )
+    retarded = wick_contraction(
+        ψ(Out()) * ϕ'(In()), L, order; simplify, _set_reg_to_zero, kwargs...
+    )
+    advanced = wick_contraction(
+        ϕ(Out()) * ψ'(In()), L, order; simplify, _set_reg_to_zero, kwargs...
+    )
 
     # Apply filtering and simplification to all components
     for component in (keldysh, retarded, advanced)
@@ -103,9 +110,11 @@ parameters(d::DressedPropagatorSum) = map(G -> G.parameter, arguments(d))
 function DressedPropagator(
     Ls::LagrangianSum,
     order=1;
-    simplify::Union{Bool,Vector{Bool}}=Bool[
-        !should_regularise(L.lagrangian) for L in arguments(Ls)
-    ],
+    simplify=true,
+    _set_reg_to_zero=true,
+    # simplify::Union{Bool,Vector{Bool}}=Bool[
+    #     !should_regularise(L.lagrangian) for L in arguments(Ls)
+    # ],
     kwargs...,
 )
     ϕ = first(arguments(Ls)).qfield
@@ -114,9 +123,15 @@ function DressedPropagator(
     simplify = isa(simplify, Bool) ? fill(simplify, length(Ls)) : simplify
 
     # Compute Wick contractions for each component
-    keldysh_pairs = wick_contraction(ψ(Out()) * ψ'(In()), Ls, order; simplify, kwargs...)
-    retarded_pairs = wick_contraction(ψ(Out()) * ϕ'(In()), Ls, order; simplify, kwargs...)
-    advanced_pairs = wick_contraction(ϕ(Out()) * ψ'(In()), Ls, order; simplify, kwargs...)
+    keldysh_pairs = wick_contraction(
+        ψ(Out()) * ψ'(In()), Ls, order; simplify, _set_reg_to_zero, kwargs...
+    )
+    retarded_pairs = wick_contraction(
+        ψ(Out()) * ϕ'(In()), Ls, order; simplify, _set_reg_to_zero, kwargs...
+    )
+    advanced_pairs = wick_contraction(
+        ϕ(Out()) * ψ'(In()), Ls, order; simplify, _set_reg_to_zero, kwargs...
+    )
 
     # Apply filtering and simplification to all components
 
