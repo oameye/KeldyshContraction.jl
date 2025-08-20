@@ -1,5 +1,4 @@
 using KeldyshContraction
-
 using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus
 
@@ -20,6 +19,10 @@ L_inelastic = InteractionLagrangian(inelastic_terms, Γ)
 L_elastic = InteractionLagrangian(elastic_terms, g)
 
 L = L_inelastic + L_elastic
+
+#
+
+GF1 = DressedPropagator(L, 1; _set_reg_to_zero=true)
 
 #
 

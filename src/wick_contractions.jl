@@ -76,7 +76,7 @@ function wick_contraction(
         end
         (prod(ps[idx] for idx in idxs), diagrams)
     end
-    pairs
+    return pairs
 end
 
 function wick_contraction!(
@@ -140,6 +140,15 @@ function _wick_contraction(
             push!(wick_contractions, canonicalize(contraction))
         end
     end
+    # for contraction in wick_contractions
+    #     if is_keldysh(first(contraction)) && is_keldysh(last(contraction))
+    #         a = 1
+    #         # @show args_nc
+    #         # @show wick_contractions
+    #         # @error "This diagram should not exist, it is a bug in the code."
+    #     end
+    # end # TODO: debugging code, remove later
+
     return wick_contractions
 end
 function _wick_contract(destroys, creates, perm; regularise=true, _set_reg_to_zero=false)

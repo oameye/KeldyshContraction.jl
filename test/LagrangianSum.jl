@@ -47,8 +47,8 @@ end
 
 @testset "Correctness second order" begin
     GF2 = DressedPropagator(L, 2)
-    GF2_elastic = arguments(GF2)[g^2]
-    GF2_inelastic = arguments(GF2)[Γ^2]
+    GF2_elastic = arguments(GF2)[g ^ 2]
+    GF2_inelastic = arguments(GF2)[Γ ^ 2]
 
     trued_elastic = DressedPropagator(L_elastic, 2)
     @test isequal(trued_elastic.keldysh, GF2_elastic.keldysh)
@@ -92,8 +92,6 @@ topo[[2]]
 topo[[3]]
 
 [key => arguments(GF2)[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]
-
-
 
 G_elastic = DressedPropagator(L_elastic, 2)
 topologies(G_elastic.keldysh)
