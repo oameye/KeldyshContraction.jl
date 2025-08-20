@@ -1,10 +1,10 @@
 using BenchmarkTools
 
-using SmallCollections: SmallCollections
+using SmallCombinatorics: SmallCombinatorics
 using Combinatorics: Combinatorics
 using Combinat: Combinat
 n = 9;
-@btime sum(p[1] for p in SmallCollections.Combinatorics.permutations($n)); # SmallCollections.jl
+@btime sum(p[1] for p in SmallCombinatorics.permutations($n)); # SmallCollections.jl
 # 13.424 ms (10 allocations: 192 bytes)
 @btime sum(p[1] for p in Combinatorics.permutations(1:($n))); # Combinatorics.jl
 # 5.469 s (725761 allocations: 55.37 MiB)
