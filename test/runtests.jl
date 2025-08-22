@@ -64,16 +64,22 @@ end
     include("QField.jl")
 end
 
-@testset "propagator" begin
-    include("propagator.jl")
-end
+@testset "diagramatics" begin
+    @testset "propagator" begin
+        include("propagator.jl")
+    end
 
-@testset "tadpole reguralisation" begin
-    include("regularise.jl")
-end
+    @testset "diagram" begin
+        include("diagram.jl")
+    end
 
-@testset "diagram" begin
-    include("diagram.jl")
+    @testset "canonicalize" begin
+        include("canonicalize.jl")
+    end
+
+    @testset "tadpole reguralisation" begin
+        include("regularise.jl")
+    end
 end
 
 @testset "self-energy" begin
@@ -84,24 +90,26 @@ end
     include("wigner.jl")
 end
 
-@testset "wigner" begin
+@testset "collision_integral" begin
     include("collision_integral.jl")
 end
 
-@testset "two boson loss" begin
-    include("two_boson_loss.jl")
-end
+@testset "Correctness of contractions" begin
+    @testset "two boson loss" begin
+        include("two_boson_loss.jl")
+    end
 
-@testset "elastic two body" begin
-    include("elastic_two_body.jl")
-end
+    @testset "elastic two body" begin
+        include("elastic_two_body.jl")
+    end
 
-@testset "second order" begin
-    include("second_order.jl")
-end
+    @testset "second order" begin
+        include("second_order.jl")
+    end
 
-@testset "Cross Interactions" begin
-    include("LagrangianSum.jl")
+    @testset "Cross Interactions" begin
+        include("LagrangianSum.jl")
+    end
 end
 
 @testset "Documentation" begin
