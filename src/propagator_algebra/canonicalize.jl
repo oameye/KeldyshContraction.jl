@@ -38,7 +38,7 @@ function sort_by_position_and_type(p::Contraction)::Float64
 end
 sort_by_position_and_type(p::Edge)::Float64 = sort_by_position_and_type(fields(p))
 
-function canonicalize(vs::Vector{Contraction})
+function canonicalize(vs::Vector{Contraction}) # TODO: cache this on top of Vector{Ntuple{2,Position}}
     all_positions = vcat([collect(position.(c)) for c in vs]...)
     bulk_nodes = unique(filter(is_bulk, all_positions))
     isempty(bulk_nodes) && return vs
