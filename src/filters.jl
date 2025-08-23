@@ -202,3 +202,49 @@ function connected_components(vertices, edges)
     end
     return components
 end
+
+"""
+    is_irreducible(vs::Vector{Contraction}) -> Bool
+
+Check if a set of contractions forms an irreducible graph.
+A graph is irreducible if removing any single contraction does not disconnect it.
+
+# Arguments
+- `vs`: Vector of contractions representing edges in the graph
+
+# Returns
+- `true` if the graph is irreducible (cannot be disconnected by removing one contraction)
+- `false` if the graph is reducible (can be disconnected by removing one contraction)
+
+# Algorithm
+1. Check if the original graph is connected
+2. For each contraction, temporarily remove it from the vector
+3. Check if the resulting graph is still connected
+4. If any removal disconnects the graph, return false (reducible)
+5. If all removals keep the graph connected, return true (irreducible)
+"""
+function is_irreducible(vs::Vector{Contraction})
+    # If we have fewer than 2 contractions, it's trivially irreducible
+    if length(vs) < 2
+        return true
+    end
+
+    # If the original graph is not connected, it's not irreducible
+    if !is_connected(vs)
+        return false
+    end
+
+    # Test removing each contraction
+    for i in 1:length(vs)
+        # Create a copy without the i-th contraction
+        test_contractions = [vs[j] for j in 1:length(vs) if j != i]
+
+        # If removing this contraction disconnects the graph, it's reducible
+        if !is_connected(test_contractions)
+            return false
+        end
+    end
+
+    # If we reach here, removing any single contraction keeps the graph connected
+    return true
+end
