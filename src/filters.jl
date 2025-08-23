@@ -223,21 +223,18 @@ A graph is irreducible if removing any single contraction does not disconnect it
 4. If any removal disconnects the graph, return false (reducible)
 5. If all removals keep the graph connected, return true (irreducible)
 """
-function is_irreducible(vs::Vector{Contraction})
+function is_irreducible(vs::AbstractVector)
     # If we have fewer than 2 contractions, it's trivially irreducible
     if length(vs) < 2
         return true
     end
 
-    # If the original graph is not connected, it's not irreducible
-    if !is_connected(vs)
-        return false
-    end
+    ps = [integer_positions(edge) for edge in vs if is_bulk(edge)] # TODO Keep FixedVector
 
     # Test removing each contraction
-    for i in 1:length(vs)
+    for i in 1:length(ps)
         # Create a copy without the i-th contraction
-        test_contractions = [vs[j] for j in 1:length(vs) if j != i]
+        test_contractions = ps[setdiff(begin:end, i)] # TODO SmallCollections.deleteat
 
         # If removing this contraction disconnects the graph, it's reducible
         if !is_connected(test_contractions)

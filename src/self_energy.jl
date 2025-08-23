@@ -17,15 +17,10 @@ end
 function construct_self_energy!(
     self_energy::SmallCollections.SmallDict, diagrams::Diagrams{E}; order::Int=1
 ) where {E}
-    if order > 2
-        error("Higher than second order in self-energy is not supported.")
-    end
-
     for (diagram, prefactor) in diagrams
         _contractions = contractions(diagram)
 
-        mult = topology(diagram)
-        if !isempty(mult) && first(mult) < order
+        if !is_irreducible(_contractions)
             continue
         end
 

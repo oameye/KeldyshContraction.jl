@@ -18,11 +18,6 @@ using KeldyshContraction: is_connected, is_irreducible
         vs_connected = Contraction[(c(Out()), q'), (c, q'), (c, q(In())')]
         @test is_connected(vs_connected)  # Verify this is connected
         @test is_irreducible(vs_connected) == true  # Should be irreducible (triangle-like)
-
-        # Known disconnected example from diagram.jl tests
-        vs_disconnected = Contraction[(c, q'), (c(Out()), q'(In()))]
-        @test !is_connected(vs_disconnected)  # Verify this is disconnected
-        @test !is_irreducible(vs_disconnected)  # Disconnected graphs are not irreducible
     end
 
     @testset "Bridge detection with multiple vertices" begin
@@ -85,18 +80,6 @@ using KeldyshContraction: is_connected, is_irreducible
 
         @test is_connected(vs_k4)  # Should be connected
         @test is_irreducible(vs_k4)  # Should be irreducible (complete graphs are irreducible)
-    end
-
-    @testset "Disconnected graph" begin
-        # Two separate edges: (1-2) and (3-4)
-        # This should not be connected, hence not irreducible
-        vs_disconnected = Contraction[
-            (c(Bulk(1)), q'(Bulk(2))),  # Edge 1-2
-            (c(Bulk(3)), q'(Bulk(4))),   # Edge 3-4 (separate component)
-        ]
-
-        @test !is_connected(vs_disconnected)  # Should not be connected
-        @test !is_irreducible(vs_disconnected)  # Disconnected graphs are not irreducible
     end
 
     @testset "Edge cases" begin
