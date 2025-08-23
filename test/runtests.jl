@@ -73,6 +73,10 @@ end
         include("diagram.jl")
     end
 
+    @testset "irreducible" begin
+        include("irreducible.jl")
+    end
+
     @testset "canonicalize" begin
         include("canonicalize.jl")
     end

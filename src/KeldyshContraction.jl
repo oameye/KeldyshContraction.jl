@@ -35,6 +35,7 @@ include("dressed_propagator.jl")
 
 include("wick_contractions.jl")
 include("filters.jl")
+include("propagator_algebra/irreducible.jl")
 include("self_energy.jl")
 
 include("propagator_algebra/wigner.jl")
