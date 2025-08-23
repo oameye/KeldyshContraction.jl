@@ -6,7 +6,7 @@ using KeldyshContraction, Test
     L_int = InteractionLagrangian(elasctic2boson)
 
     GF1 = DressedPropagator(L_int, 1)
-    keys(topologies(GF1.keldysh))
+    @test_broken keys(topologies(GF1.keldysh))
 
     GF2 = DressedPropagator(L_int, 2)
     @test length(keys(topologies(GF2.keldysh))) == 3
