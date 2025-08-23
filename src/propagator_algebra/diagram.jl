@@ -32,7 +32,7 @@ topology(d::Diagram) = d.topology
 function momenta(d::Diagram)
     map(momenta, d.contractions)
 end
-topology_length(x::Int) = max(0, x - 4)
+topology_length(x::Int) = max(0, x - 4) # TODO review this
 
 Base.isempty(d::Diagram) = isempty(d.contractions)
 

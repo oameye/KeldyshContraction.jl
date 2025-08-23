@@ -75,9 +75,9 @@ struct SelfEnergy{E1,E2}
 end
 function SelfEnergy(G::DressedPropagator{E}, order=G.order) where {E}
     self_energy = SmallCollections.SmallDict{3,PropagatorType.T,Diagrams}((
-        PropagatorType.Advanced => Diagrams{E - 2,topology_length(E)}(),
-        PropagatorType.Retarded => Diagrams{E - 2,topology_length(E)}(),
-        PropagatorType.Keldysh => Diagrams{E - 2,topology_length(E)}(),
+        PropagatorType.Advanced => Diagrams{E - 2,max_edges(order)}(),
+        PropagatorType.Retarded => Diagrams{E - 2,max_edges(order)}(),
+        PropagatorType.Keldysh => Diagrams{E - 2,max_edges(order)}(),
     ))
     construct_self_energy!(self_energy, G.keldysh; order)
     # ^ keldysh GF should contain everything
