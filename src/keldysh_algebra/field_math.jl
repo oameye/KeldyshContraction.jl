@@ -42,8 +42,8 @@ Base.:/(a::QField, b::Number) = (1 / b) * a
 ## Powers
 function Base.:^(a::QField, n::Integer)
     # Type-stable implementation using Val
-    iszero(n) && return QMul(0.0, QSym[])
-    result = QMul(1.0, QSym[a])
+    iszero(n) && return QMul(0, QSym[])
+    result = QMul(1, QSym[a])
     for _ in 2:n
         result *= a
     end

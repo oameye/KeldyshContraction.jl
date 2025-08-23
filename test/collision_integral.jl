@@ -51,9 +51,9 @@ end
     @test Set(real.(values(imΣr.terms))) == Set([-1 / 16, 1 / 8])
 
     imΣr_string = repr(imΣr)
-    @test contains(imΣr_string, "-0.0625*F(q₁)*F(q₂)")
-    @test contains(imΣr_string, "0.125*F(q₁)*F(q₁ + q₂ - k)")
-    @test contains(imΣr_string, "-0.0625")
+    @test contains(imΣr_string, "-1//16*F(q₁)*F(q₂)")
+    @test contains(imΣr_string, "1//8*F(q₁)*F(q₁ + q₂ - k)")
+    @test contains(imΣr_string, "-1//16")
 
     @test isequal(
         Set(repr.(collect(keys(imΣr.terms)))),

@@ -30,7 +30,7 @@ Base.hash(d::Diagram, h::UInt) = hash(contractions(d), h)
 contractions(d::Diagram) = d.contractions
 topology(d::Diagram) = d.topology
 function momenta(d::Diagram)
-    map(momenta, d.contractions)
+    return map(momenta, d.contractions)
 end
 topology_length(x::Int) = max(0, x - 4) # TODO review this
 
@@ -46,23 +46,25 @@ end
 ###############
 
 struct Diagrams{E1,E2}
-    diagrams::Dict{Diagram{E1,E2},ComplexF64}
+    diagrams::Dict{Diagram{E1,E2},ComplexRationals}
 end # TODO try SwissDict or RobinDict from DataStructures.jl.
 function Diagrams{E1,E2}() where {E1,E2}
-    dict = Dict{Diagram{E1,E2},ComplexF64}()
+    dict = Dict{Diagram{E1,E2},ComplexRationals}()
     return Diagrams(dict)
 end
-function Diagrams(diagrams::Vector{Diagram{E1,E2}}, prefactor::ComplexF64) where {E1,E2}
-    dict = Dict{Diagram{E1,E2},ComplexF64}(d => prefactor for d in diagrams)
+function Diagrams(
+    diagrams::Vector{Diagram{E1,E2}}, prefactor::ComplexRationals
+) where {E1,E2}
+    dict = Dict{Diagram{E1,E2},ComplexRationals}(d => prefactor for d in diagrams)
     return Diagrams{E1,E2}(dict)
 end
-function Diagrams(contractions::Vector{Vector{Contraction}}, prefactor::ComplexF64)
+function Diagrams(contractions::Vector{Vector{Contraction}}, prefactor::ComplexRationals)
     @assert length(contractions) > 0 "Contraction vector must not be empty"
     c = first(contractions)
     E = length(c)
 
     imag_factor = im^E # Contraction becomes propagator
-    dict = Dict{Diagram{E,topology_length(E)},ComplexF64}(
+    dict = Dict{Diagram{E,topology_length(E)},ComplexRationals}(
         Diagram(c) => _simplify(imag_factor * prefactor) for c in contractions
     )
     return Diagrams{E,topology_length(E)}(dict)
@@ -120,8 +122,8 @@ function Base.adjoint(d::Diagrams)
     return Diagrams(dict)
 end
 function adjoint_diagram(
-    pair::Pair{Diagram{E1,E2},ComplexF64}
-)::Pair{Diagram{E1,E2},ComplexF64} where {E1,E2}
+    pair::Pair{Diagram{E1,E2},ComplexRationals}
+)::Pair{Diagram{E1,E2},ComplexRationals} where {E1,E2}
     # G^R = G^A
     # G^K = -G^K
     d, prefactor = pair
