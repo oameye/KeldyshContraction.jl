@@ -110,6 +110,10 @@ end
     @testset "Cross Interactions" begin
         include("LagrangianSum.jl")
     end
+
+    @testset "Higher orders" begin
+        include("higher_orders.jl")
+    end
 end
 
 @testset "Documentation" begin
