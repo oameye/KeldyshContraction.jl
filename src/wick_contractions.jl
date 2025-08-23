@@ -140,14 +140,6 @@ function _wick_contraction(
             push!(wick_contractions, canonicalize(contraction))
         end
     end
-    # for contraction in wick_contractions
-    #     if is_keldysh(first(contraction)) && is_keldysh(last(contraction))
-    #         a = 1
-    #         # @show args_nc
-    #         # @show wick_contractions
-    #         # @error "This diagram should not exist, it is a bug in the code."
-    #     end
-    # end # TODO: debugging code, remove later
 
     return wick_contractions
 end
