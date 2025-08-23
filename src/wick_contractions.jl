@@ -26,7 +26,7 @@ function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; 
     l = length(L.lagrangian)
 
     E = number_of_propagators(L) * order + 1 # +1 for in_out
-    diagrams = Diagrams{E,topology_length(E)}()
+    diagrams = Diagrams{E,max_edges(order)}()
     prefactor = -1 * im * im^order / factorial(order)
 
     regularise = should_regularise(L.lagrangian)
@@ -59,7 +59,7 @@ function wick_contraction(
             _simplify = prod(simplify[i] for i in idxs)
 
             E = number_of_propagators(qadd) + 1
-            diagrams = Diagrams{E,topology_length(E)}()
+            diagrams = Diagrams{E,max_edges(order)}()
             prefactor = -1 * im * im^order / factorial(order)
 
             regularise = should_regularise(qadd)
