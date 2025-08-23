@@ -16,3 +16,11 @@ using KeldyshContraction, Test
 
     @test_broken GF = DressedPropagator(L_int, 4)
 end
+
+@testset "third order run's" begin
+    @qfields c::Destroy(Classical) q::Destroy(Quantum)
+    elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
+    L_int = InteractionLagrangian(elasctic2boson)
+    GF3 = DressedPropagator(L_int, 3)
+    @test_broken SelfEnergy(GF3)
+end
