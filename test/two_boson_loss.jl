@@ -43,7 +43,10 @@ end
         simplify = false
         # i (c*c⁻*c⁻*̄c*̄q*̄c)/2
         truth = Diagrams(
-            Dict(Diagram([(c(Out()), q'), (c, c'), (c, c'(In()))]) => complex(1.0))
+            Dict(
+                Diagram([(c(Out()), q'), (c, c'), (c, c'(In()))]) =>
+                    Complex{Rational{Int}}(1.0),
+            ),
         )
         @test isequal(
             set_reg_to_zero(_wick_contraction(expr.arguments[1]; simplify)), truth
@@ -51,7 +54,10 @@ end
 
         # i (c*q⁻*q⁻*̄c*̄q*̄c)/2
         truth = Diagrams(
-            Dict(Diagram([(c(Out()), q'), (q, c'), (q, c'(In()))]) => complex(1.0))
+            Dict(
+                Diagram([(c(Out()), q'), (q, c'), (q, c'(In()))]) =>
+                    Complex{Rational{Int}}(1.0),
+            ),
         )
         @test isequal(
             set_reg_to_zero(_wick_contraction(expr.arguments[2]; simplify)), truth
@@ -59,17 +65,19 @@ end
 
         # - i( c*c⁺*q⁺*̄c*̄c*̄c) /2
         @test repr(set_reg_to_zero(_wick_contraction(expr.arguments[3]; simplify))) ==
-            "-1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)"
+            "-1//1*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
         # - i(c*c⁺*q⁺*̄q*̄q*̄ϕ)/2
         @test repr(set_reg_to_zero(_wick_contraction(expr.arguments[4]; simplify))) ==
-            "-1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,x₂)"
+            "-1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
         # c*c⁺*q⁺*̄c*̄q*̄c
         truth = Diagrams(
             Dict(
-                Diagram([(c(Out()), c'), (c, q'), (q, c'(In()))]) => complex(1.0),
-                Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))]) => complex(1.0),
+                Diagram([(c(Out()), c'), (c, q'), (q, c'(In()))]) =>
+                    Complex{Rational{Int}}(1.0),
+                Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))]) =>
+                    Complex{Rational{Int}}(1.0),
             ),
         )
         @test isequal(
@@ -79,8 +87,10 @@ end
         # c*c⁻*q⁻*̄c*̄q*̄c
         truth = Diagrams(
             Dict(
-                Diagram([(c(Out()), q'), (q, c'), (c, c'(In()))]) => complex(1.0),
-                Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))]) => complex(1.0),
+                Diagram([(c(Out()), q'), (q, c'), (c, c'(In()))]) =>
+                    Complex{Rational{Int}}(1.0),
+                Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))]) =>
+                    Complex{Rational{Int}}(1.0),
             ),
         )
         @test isequal(
@@ -119,14 +129,18 @@ end
 
         truth_retarded = Diagrams(
             Dict(
-                Diagram([(c(Out()), q'), (q, c'), (c, q'(In()))]) => complex(1.0),
-                Diagram([(c(Out()), q'), (c, c'), (c, q'(In()))]) => complex(1.0),
+                Diagram([(c(Out()), q'), (q, c'), (c, q'(In()))]) =>
+                    Complex{Rational{Int}}(1.0),
+                Diagram([(c(Out()), q'), (c, c'), (c, q'(In()))]) =>
+                    Complex{Rational{Int}}(1.0),
             ),
         )
         truth_advanced = Diagrams(
             Dict(
-                Diagram([(q(Out()), c'), (c, q'), (q, c'(In()))]) => complex(1.0),
-                Diagram([(q(Out()), c'), (c, c'), (q, c'(In()))]) => complex(-1.0),
+                Diagram([(q(Out()), c'), (c, q'), (q, c'(In()))]) =>
+                    Complex{Rational{Int}}(1.0),
+                Diagram([(q(Out()), c'), (c, c'), (q, c'(In()))]) =>
+                    Complex{Rational{Int}}(-1.0),
             ),
         )
         @test isequal(set_reg_to_zero(GF.retarded), truth_retarded)
@@ -156,10 +170,18 @@ end
             kp = Diagram([(c, c')])
             rp = Diagram([(c, q')])
             ap = Diagram([(q, c')])
-            advanced_truth = Diagrams(Dict(kp => complex(-1.0), rp => complex(1.0)))
-            retarded_truth = Diagrams(Dict(kp => complex(1.0), ap => complex(1.0)))
+            advanced_truth = Diagrams(
+                Dict(kp => Complex{Rational{Int}}(-1.0), rp => Complex{Rational{Int}}(1.0))
+            )
+            retarded_truth = Diagrams(
+                Dict(kp => Complex{Rational{Int}}(1.0), ap => Complex{Rational{Int}}(1.0))
+            )
             keldysh_truth = Diagrams(
-                Dict(kp => complex(2.0), rp => complex(-1.0), ap => complex(1.0))
+                Dict(
+                    kp => Complex{Rational{Int}}(2.0),
+                    rp => Complex{Rational{Int}}(-1.0),
+                    ap => Complex{Rational{Int}}(1.0),
+                ),
             )
 
             @test isequal(set_reg_to_zero(Σ.advanced), advanced_truth)
@@ -177,9 +199,24 @@ end
             @testset "simplified" begin
                 GF = DressedPropagator(L; simplify=true, _set_reg_to_zero=true)
                 Σ = SelfEnergy(GF)
-                keldysh_truth = Diagrams(Dict(kp => complex(2.0), rp => complex(-2.0)))
-                advanced_truth = Diagrams(Dict(kp => complex(-1.0), rp => complex(1.0)))
-                retarded_truth = Diagrams(Dict(kp => complex(1.0), rp => complex(-1.0)))
+                keldysh_truth = Diagrams(
+                    Dict(
+                        kp => Complex{Rational{Int}}(2.0),
+                        rp => Complex{Rational{Int}}(-2.0),
+                    ),
+                )
+                advanced_truth = Diagrams(
+                    Dict(
+                        kp => Complex{Rational{Int}}(-1.0),
+                        rp => Complex{Rational{Int}}(1.0),
+                    ),
+                )
+                retarded_truth = Diagrams(
+                    Dict(
+                        kp => Complex{Rational{Int}}(1.0),
+                        rp => Complex{Rational{Int}}(-1.0),
+                    ),
+                )
 
                 @test isequal(set_reg_to_zero(Σ.advanced), advanced_truth)
                 @test isequal(set_reg_to_zero(Σ.retarded), retarded_truth)

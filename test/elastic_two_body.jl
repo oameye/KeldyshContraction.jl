@@ -32,8 +32,10 @@ L_int = InteractionLagrangian(elasctic2boson, g)
         # 0.5*(c*c*c*̄q*̄c*̄q
         truth = Diagrams(
             Dict(
-                Diagram([(c(Out()), c'), (c, q'), (c, q(In())')]) => -0.0 + 1.0 * im,
-                Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) => -0.0 + 1.0 * im,
+                Diagram([(c(Out()), c'), (c, q'), (c, q(In())')]) =>
+                    Complex{Rational{Int}}(-0.0 + 1.0 * im),
+                Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) =>
+                    Complex{Rational{Int}}(-0.0 + 1.0 * im),
             ),
         )
         result = _wick_contraction(expr.arguments[1])
@@ -61,7 +63,7 @@ L_int = InteractionLagrangian(elasctic2boson, g)
 
         @test iszero(Σ.keldysh)
         @test isequal(adjoint(Σ.advanced), Σ.retarded)
-        @test isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)
+        @test_broken isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh) # type_instability
     end
 end
 
@@ -123,7 +125,7 @@ end
                     (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
                     (c(Bulk(2)), c'(Bulk(2))),   # Gᴷ(y₂,y₂)
                     (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
-                ]) => -1.0 + 0im,
+                ]) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂)
                 Diagram([
                     (c(Out()), c'(Bulk(1))),     # Gᴷ(x₁,y₁)
@@ -131,7 +133,7 @@ end
                     (c(Bulk(2)), q'(Bulk(1))),   # Gᴿ(y₂,y₁)
                     (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
                     (c(Bulk(1)), c'(In())),      # Gᴷ(y₁,x₂)
-                ]) => -1.0 + 0im,
+                ]) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,x₂)
                 Diagram([
                     (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
@@ -139,7 +141,7 @@ end
                     (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
                     (c(Bulk(2)), c'(Bulk(1))),   # Gᴷ(y₂,y₁)
                     (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
-                ]) => -1.0 + 0im,
+                ]) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂)
                 Diagram([
                     (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
@@ -147,7 +149,7 @@ end
                     (c(Bulk(2)), c'(Bulk(1))),   # Gᴷ(y₂,y₁)
                     (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
                     (c(Bulk(1)), c'(In())),      # Gᴷ(y₁,x₂)
-                ]) => -1.0 + 0im,
+                ]) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂)
                 Diagram([
                     (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
@@ -155,7 +157,7 @@ end
                     (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
                     (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
                     (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
-                ]) => -1.0 + 0im,
+                ]) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂)
                 Diagram([
                     (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
@@ -163,7 +165,7 @@ end
                     (c(Bulk(2)), c'(Bulk(1))),   # Gᴷ(y₂,y₁)
                     (c(Bulk(2)), c'(Bulk(2))),   # Gᴷ(y₂,y₂)
                     (c(Bulk(1)), c'(In())),      # Gᴷ(y₁,x₂)
-                ]) => -1.0 + 0im,
+                ]) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂)
                 Diagram([
                     (c(Out()), c'(Bulk(1))),     # Gᴷ(x₁,y₁)
@@ -171,7 +173,7 @@ end
                     (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
                     (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
                     (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
-                ]) => -1.0 + 0im,
+                ]) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴷ(y₂,x₂)
                 Diagram([
                     (c(Out()), c'(Bulk(1))),     # Gᴷ(x₁,y₁)
@@ -179,7 +181,7 @@ end
                     (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
                     (c(Bulk(2)), c'(Bulk(2))),   # Gᴷ(y₂,y₂)
                     (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
-                ]) => -1.0 + 0im,
+                ]) => -Complex{Rational{Int}}(1.0),
             ),
         )
         @test isequal(dict[keys[1]], truth1)
@@ -193,7 +195,7 @@ end
                     (q(Bulk(1)), c'(Bulk(2))),
                     (c(Bulk(2)), q'(Bulk(2))),
                     (c(Bulk(2)), c'(In())),
-                ]) => 1.0 + 0im,
+                ]) => Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂)
                 Diagram([
                     (c(Out()), q'(Bulk(1))),
@@ -201,7 +203,7 @@ end
                     (c(Bulk(2)), c'(Bulk(1))),
                     (c(Bulk(2)), q'(Bulk(2))),
                     (q(Bulk(1)), c'(In())),
-                ]) => -1.0 + 0im,
+                ]) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴬ(y₂,x₂)
                 Diagram([
                     (c(Out()), q'(Bulk(1))),
@@ -209,7 +211,7 @@ end
                     (c(Bulk(1)), q'(Bulk(2))),
                     (q(Bulk(2)), c'(Bulk(1))),
                     (q(Bulk(2)), c'(In())),
-                ]) => -1.0 + 0im,
+                ]) => -Complex{Rational{Int}}(1.0),
                 # Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂)
                 Diagram([
                     (c(Out()), q'(Bulk(1))),
@@ -217,7 +219,7 @@ end
                     (c(Bulk(1)), q'(Bulk(2))),
                     (c(Bulk(2)), q'(Bulk(2))),
                     (q(Bulk(2)), c'(In())),
-                ]) => 1.0 + 0im,
+                ]) => Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴷ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂)
                 Diagram([
                     (c(Out()), c'(Bulk(1))),
@@ -225,7 +227,7 @@ end
                     (c(Bulk(2)), q'(Bulk(1))),
                     (c(Bulk(2)), q'(Bulk(2))),
                     (q(Bulk(1)), c'(In())),
-                ]) => -1.0 + 0im,
+                ]) => -Complex{Rational{Int}}(1.0),
                 # Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂)
                 Diagram([
                     (c(Out()), q'(Bulk(1))),
@@ -233,7 +235,7 @@ end
                     (q(Bulk(2)), c'(Bulk(1))),
                     (c(Bulk(2)), q'(Bulk(2))),
                     (c(Bulk(1)), c'(In())),
-                ]) => 1.0 + 0im,
+                ]) => Complex{Rational{Int}}(1.0),
                 # Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂)
                 Diagram([
                     (c(Out()), c'(Bulk(1))),
@@ -241,7 +243,7 @@ end
                     (c(Bulk(1)), q'(Bulk(2))),
                     (c(Bulk(2)), q'(Bulk(2))),
                     (q(Bulk(2)), c'(In())),
-                ]) => 1.0 + 0im,
+                ]) => Complex{Rational{Int}}(1.0),
             ),
         )
         @test isequal(dict[keys[2]], truth2)

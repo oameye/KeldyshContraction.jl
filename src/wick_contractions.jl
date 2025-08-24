@@ -27,7 +27,7 @@ function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; 
 
     E = number_of_propagators(L) * order + 1 # +1 for in_out
     diagrams = Diagrams{E,max_edges(order)}()
-    prefactor = -1 * im * im^order / factorial(order)
+    prefactor = -1 * im * im^order // factorial(order)
 
     regularise = should_regularise(L.lagrangian)
     for coefficients in Combinatorics.multiexponents(l, order)
@@ -35,7 +35,8 @@ function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; 
         idxs = indices_from_counts(coefficients) # will be of length order
         mult = Combinatorics.multinomial(coefficients...)
         qmul = mult * prod(L(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
-        wick_contraction!(diagrams, prefactor * in_out * qmul; regularise, kwargs...)
+        term = prefactor * in_out * qmul
+        wick_contraction!(diagrams, term; regularise, kwargs...)
     end
     return diagrams
 end

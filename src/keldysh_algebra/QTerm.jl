@@ -15,17 +15,17 @@ struct QMul{T<:Number} <: QTerm
     "A vector containing all [`QSym`](@ref) types."
     args_nc::Vector{QSym}
     function QMul(arg_c::T, args_nc::Vector{<:QSym}) where {T<:Number}
-        if isequal(arg_c, 0.0)
-            return new{T}(0.0, QSym[])
+        if isequal(arg_c, 0)
+            return new{T}(0, QSym[])
         else
             return new{T}(arg_c, args_nc)
         end
     end
-    QMul(args_nc::Vector{<:QSym}) = new{Float64}(1.0, args_nc)
-    QMul(s) = new{Float64}(1.0, [s])
-    QMul{T}(s) where {T} = new{T}(T(1.0), [s])
-    QMul() = new{Float64}(0.0, QSym[])
-    QMul{T}() where {T} = new{T}(T(0.0), QSym[])
+    QMul(args_nc::Vector{<:QSym}) = new{Int}(1, args_nc)
+    QMul(s) = new{Int64}(1, [s])
+    QMul{T}(s) where {T} = new{T}(T(1), [s])
+    QMul() = new{Int64}(0, QSym[])
+    QMul{T}() where {T} = new{T}(T(0), QSym[])
 end
 
 Base.promote_rule(::Type{QMul{S}}, ::Type{QMul{T}}) where {S,T} = QMul{promote_rule(S, T)}
@@ -100,7 +100,7 @@ struct QAdd{T<:Number} <: QTerm
         new{T}(args)
     end
     function QAdd(args::Vector{<:QSym})
-        new{Float64}([QMul(s) for s in args])
+        new{Int64}([QMul(s) for s in args])
     end
     QAdd{T}() where {T} = new{T}([QMul{T}()])
 end

@@ -23,10 +23,10 @@ end
 ## BosonicDistributions
 
 struct BosonicDistributions
-    terms::Dict{BosonicDistributionTerm,ComplexF64}
+    terms::Dict{BosonicDistributionTerm,ComplexRationals}
 end
 function BosonicDistributions()
-    return BosonicDistributions(Dict{BosonicDistributionTerm,ComplexF64}())
+    return BosonicDistributions(Dict{BosonicDistributionTerm,ComplexRationals}())
 end
 
 function Base.push!(
@@ -81,7 +81,7 @@ Im(Gᴿ) = -0.5 * A
 Im(Gᴬ) = 0.5 * A
 Im(Gᴷ) = 0.5 * F * A
 """
-function imaginary_part(d::Diagram, coeff::ComplexF64=complex(1.0))
+function imaginary_part(d::Diagram, coeff::ComplexRationals=ComplexRationals(1.0))
     bds = Vector{Momenta}()
     for edge in contractions(d)
         edgetype = propagator_type(edge)
@@ -202,7 +202,7 @@ function kelysh_to_distribution(ds::Diagrams)
     return dict
 end
 
-function kelysh_to_distribution(d::Diagram, coeff::ComplexF64=complex(1.0))
+function kelysh_to_distribution(d::Diagram, coeff::ComplexRationals=ComplexRationals(1.0))
     bds = Vector{Momenta}()
     for edge in contractions(d)
         edgetype = propagator_type(edge)
@@ -231,7 +231,7 @@ function CollisionIntegral(Σ::SelfEnergy{E1,E2}) where {E1,E2}
     imΣr = imaginary_part(Σk.retarded)
 
     Fk = BosonicDistributionTerm([Momenta(0)])
-    Fks2 = BosonicDistributions(Dict(Fk => complex(2.0)))
+    Fks2 = BosonicDistributions(Dict(Fk => ComplexRationals(2.0)))
 
     dict = Dict{FixedVector{E2,Int},BosonicDistributions}()
     for t_ in intersect(keys(ΣkF), keys(imΣr))
