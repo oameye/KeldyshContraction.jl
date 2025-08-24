@@ -48,8 +48,9 @@ struct InteractionLagrangian{T} <: Lagrangian
 
         q_idx = findfirst(iszero, contours)
         c_idx = findfirst(isone, contours)
-        return new{typeof(expr)}(
-            maybe_rationalize(expr),
+        maybe_rational_expr = maybe_rationalize(expr)
+        return new{typeof(maybe_rational_expr)}(
+            maybe_rational_expr,
             fields[q_idx],
             fields[c_idx],
             position(fields[q_idx]),
