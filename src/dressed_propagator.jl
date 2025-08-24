@@ -77,7 +77,8 @@ function DressedPropagator(
     # Apply filtering and simplification to all components
     for component in (keldysh, retarded, advanced)
         filter_nonzero!(component)
-        _simplify_prefactors!(component)
+        # _simplify_prefactors!(component) # not needed anymore due to the move to rationals
+        # TODO Remove
     end
 
     return DressedPropagator(keldysh, retarded, advanced, order, parameters(L)^order)

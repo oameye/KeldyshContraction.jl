@@ -49,7 +49,11 @@ struct InteractionLagrangian{T} <: Lagrangian
         q_idx = findfirst(iszero, contours)
         c_idx = findfirst(isone, contours)
         return new{typeof(expr)}(
-            expr, fields[q_idx], fields[c_idx], position(fields[q_idx]), parameter
+            maybe_rationalize(expr),
+            fields[q_idx],
+            fields[c_idx],
+            position(fields[q_idx]),
+            parameter,
         )
     end
 end # Does not have to be type stable, as it is called only once
@@ -178,4 +182,29 @@ function Base.convert(
     ::Type{InteractionLagrangian{T}}, L::InteractionLagrangian{S}
 ) where {T,S}
     return InteractionLagrangian(convert(T, L.lagrangian), parameters(L))
+end
+
+function maybe_rationalize(q::QAdd{T}) where {T<:Number}
+    if T <: Rational
+        return q
+    else
+        args = map(q.arguments) do term
+            maybe_rationalize(term)
+        end
+        return QAdd(args)
+    end
+end
+
+function maybe_rationalize(q::QMul{T}) where {T<:Number}
+    if T <: Rational
+        return q
+    else
+        rational = rationalize(q.arg_c)
+        check = T(rational)
+        if isequal(check, q.arg_c)
+            return QMul(rational, q.args_nc)
+        else
+            return q
+        end
+    end
 end

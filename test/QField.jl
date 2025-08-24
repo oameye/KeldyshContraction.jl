@@ -262,3 +262,21 @@ end
     @test typeof(convert(QAdd{Float64}, a)) == QAdd{Float64}
     @test typeof(convert(QMul{Float64}, QMul(1, [ϕ]))) == QMul{Float64}
 end
+
+@testset "maybe_rationalize" begin
+    using KeldyshContraction: maybe_rationalize
+
+    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
+
+    a = 0.5 * (ϕ^2 + ψ^2) * ϕ' * ψ'
+    b = maybe_rationalize(a)
+    @test typeof(b) == KeldyshContraction.QAdd{Rational{Int64}}
+
+    c = 0.3 * (ϕ^2 + ψ^2) * ϕ' * ψ'
+    d = maybe_rationalize(c)
+    @test typeof(d) == KeldyshContraction.QAdd{Rational{Int64}}
+
+    e = 0.1 * (ϕ^2 + ψ^2) * ϕ' * ψ' + 0.5 * (ϕ^2 + ψ^2) * ϕ' * ψ'
+    f = maybe_rationalize(e)
+    @test typeof(f) == KeldyshContraction.QAdd{Rational{Int64}}
+end

@@ -4,7 +4,7 @@ function Base.:*(a::QSym, b::QSym)
     args = QSym[a, b]
     sort!(args; by=position)
     sort!(args; by=ladder)
-    return QMul(1.0, args)
+    return QMul(1, args)
 end
 
 function Base.:*(a::QSym, b::Number)
@@ -37,7 +37,7 @@ function Base.:*(a::QMul, b::QMul)
     return QMul(arg_c, args_nc)
 end
 
-Base.:/(a::QField, b::Number) = (1 / b) * a
+Base.:/(a::QField, b::Number) = (1 // b) * a ## TODO: maybe rationalize?
 
 ## Powers
 function Base.:^(a::QField, n::Integer)
