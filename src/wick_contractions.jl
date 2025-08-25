@@ -126,7 +126,7 @@ function _wick_contraction(
 
     wick_contractions = Vector{Contraction}[]
 
-    for (i, perm) in enumerate(SmallCollections.Combinatorics.permutations(n_destroy))
+    for (i, perm) in enumerate(SmallCombinatorics.permutations(n_destroy))
         if skip && isone(first(perm))
             continue # skip the in-out contraction
         end
