@@ -46,7 +46,6 @@ end
     @test_broken SelfEnergy(GF3)
 end
 
-
 # using KeldyshContraction, Test
 
 # using KeldyshContraction:

@@ -1,3 +1,6 @@
 [type.ipynb]
 extend-glob = ["*.ipynb"]
 check-file = false
+
+[files]
+extend-exclude = ["test/All_graph_topologies.nb"]

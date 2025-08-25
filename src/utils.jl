@@ -18,7 +18,7 @@ edges is used.
     @boundscheck begin
         1 ≤ i ≤ n || throw(ArgumentError("i must be in 1:$n, got $i"))
         1 ≤ j ≤ n || throw(ArgumentError("j must be in 1:$n, got $j"))
-        i ≠ j      || throw(ArgumentError("i and j must be different"))
+        i ≠ j || throw(ArgumentError("i and j must be different"))
     end
     i, j = minmax(i, j)                 # ensure i < j
     return (i - 1) * n - ((i - 1) * i) ÷ 2 + (j - i)
