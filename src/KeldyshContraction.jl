@@ -11,6 +11,8 @@ using TermInterface: TermInterface
 using SymbolicUtils: SymbolicUtils, @syms, arguments
 using Combinatorics: Combinatorics
 using SmallCollections: SmallCollections, FixedVector
+using NautyGraphs: NautyGraphs
+using Graphs: Graphs
 
 using Latexify: Latexify, latexify, @latexrecipe
 using MacroTools: MacroTools

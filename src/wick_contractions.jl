@@ -138,7 +138,8 @@ function _wick_contraction(
         if fail || !is_connected(contraction) || has_zero_loop(contraction)
             continue
         else
-            push!(wick_contractions, canonicalize(contraction))
+            canonical_ordered_contraction = canonicalize(contraction)
+            push!(wick_contractions, canonical_ordered_contraction)
         end
     end
 

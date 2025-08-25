@@ -75,10 +75,10 @@ end
         using KeldyshContraction: filter_nonzero!
 
         vacuum = L1.lagrangian * L2.lagrangian
-        map(vacuum.arguments) do arg
-            _wick_contraction(arg; simplify=false)
-        end
-        _wick_contraction(vacuum.arguments[1]; simplify=false)
+        # map(vacuum.arguments) do arg
+        #     _wick_contraction(arg; simplify=false)
+        # end
+        # _wick_contraction(vacuum.arguments[1]; simplify=false)
 
         expr = _wick_contraction(vacuum; simplify=true)
         filter_nonzero!(expr)

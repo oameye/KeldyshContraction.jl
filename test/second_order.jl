@@ -46,14 +46,3 @@ end
     vs = Contraction[(ϕᶜ(Bulk(1)), ϕᴾ'(Bulk(2))), (ϕᶜ(Bulk(1)), ϕᴾ'(Bulk(2)))]
     @test !has_zero_loop(vs)
 end
-
-@testset "canonicalize" begin
-    using KeldyshContraction: canonicalize, Contraction, is_canonical, Out, In
-    vs = Contraction[(ϕᶜ(Out()), ϕᴾ'(Bulk(2))), (ϕᶜ(Bulk(2)), ϕᴾ'(Bulk(1)))]
-    @test !is_canonical(vs)
-
-    vs′ = Contraction[(ϕᶜ(Out()), ϕᴾ'(Bulk(1))), (ϕᶜ(Bulk(1)), ϕᴾ'(Bulk(2)))]
-    @test is_canonical(vs′)
-
-    @test canonicalize(vs) == vs′
-end

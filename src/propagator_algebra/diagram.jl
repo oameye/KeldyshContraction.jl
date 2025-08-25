@@ -148,7 +148,7 @@ end
 Compute multiplicity of the edges between two different vertices in the bulk.
 The resulting vector is a signature for the topology of the diagram.
 """
-function bulk_multiplicity(edges::FixedVector{N,Tuple{Int8,Int8}}) where {N}
+function bulk_multiplicity(edges::AbstractArray{Tuple{Int8,Int8}})
     edges = filter(is_not_equal_time_bulk_edge, edges)
 
     vert = vertices(edges)
