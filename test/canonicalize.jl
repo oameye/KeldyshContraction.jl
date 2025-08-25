@@ -1,5 +1,5 @@
 using KeldyshContraction, Test
-using KeldyshContraction: canonicalize, Bulk, In, Out, is_canonical
+using KeldyshContraction: canonicalize, Bulk, In, Out, sort_by_position_and_type, positions
 
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
 
@@ -95,21 +95,44 @@ using KeldyshContraction: canonicalize, Bulk, In, Out, is_canonical
     ]
     @test canonicalize(vs_multi) == canonicalize(vs_multi) # should be deterministic
 
-    # Already canonical form (Out() connected to Bulk(1))
-    vs_canonical = [
-        (c(Out()), q'(Bulk(1))),
-        (c(Bulk(1)), q'(Bulk(3))),
-        (c(Bulk(3)), q'(Bulk(2))),
-        (c(Bulk(2)), q'(In())),
-    ]
-    @test canonicalize(vs_canonical) == vs_canonical
+    @testset "third order two body scattering" begin
+        vs1 = [
+            (c(Out()), q'(Bulk(1))),
+            (c(Bulk(1)), q'(Bulk(2))),
+            (c(Bulk(2)), q'(Bulk(2))),
+            (c(Bulk(3)), q'(Bulk(1))),
+            (c(Bulk(2)), q'(Bulk(3))),
+            (c(Bulk(3)), q'(Bulk(3))),
+            (c(Bulk(1)), q'(In())),
+        ]
+        vs2 = [
+            (c(Out()), q'(Bulk(2))),
+            (c(Bulk(1)), q'(Bulk(1))),
+            (c(Bulk(1)), q'(Bulk(2))),
+            (c(Bulk(3)), q'(Bulk(1))),
+            (c(Bulk(2)), q'(Bulk(3))),
+            (c(Bulk(3)), q'(Bulk(3))),
+            (c(Bulk(2)), q'(In())),
+        ]
+        vscanonical1 = canonicalize(vs1)
+        vscanonical2 = canonicalize(vs2)
+        sort!(vscanonical1; by=sort_by_position_and_type)
+        sort!(vscanonical2; by=sort_by_position_and_type)
+        @test vscanonical1 == vscanonical2
+    end
 
-    # Permutation invariance - same graph with different bulk numbering
-    vs_perm1 = [
-        (c(Out()), q'(Bulk(5))), (c(Bulk(5)), q'(Bulk(10))), (c(Bulk(10)), q'(In()))
-    ]
-    vs_perm2 = [
-        (c(Out()), q'(Bulk(100))), (c(Bulk(100)), q'(Bulk(7))), (c(Bulk(7)), q'(In()))
-    ]
-    @test canonicalize(vs_perm1) == canonicalize(vs_perm2)
+    @testset "type_stability" begin
+        using KeldyshContraction: make_NautyDiGraph
+
+        vs1 = [
+            (c(Out()), q'(Bulk(1))),
+            (c(Bulk(1)), q'(Bulk(2))),
+            (c(Bulk(2)), q'(Bulk(2))),
+            (c(Bulk(3)), q'(Bulk(1))),
+            (c(Bulk(2)), q'(Bulk(3))),
+            (c(Bulk(3)), q'(Bulk(3))),
+            (c(Bulk(1)), q'(In())),
+        ]
+        @inferred make_NautyDiGraph(vs1)
+    end
 end

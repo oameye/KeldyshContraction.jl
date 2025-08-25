@@ -120,7 +120,7 @@ end
     Bulk(i::Int=1)
 Create a `Bulk` position with a positive integer index `i`.
 """
-function Bulk(i::Int=1)
+function Bulk(i::Integer=1)
     @assert i > 0 "Bulk index must be positive"
     return Position(i)
 end

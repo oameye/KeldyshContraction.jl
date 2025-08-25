@@ -38,85 +38,58 @@ function sort_by_position_and_type(p::Contraction)::Float64
 end
 sort_by_position_and_type(p::Edge)::Float64 = sort_by_position_and_type(fields(p))
 
-function canonicalize(vs::Vector{Contraction}) # TODO: cache this on top of Vector{Ntuple{2,Position}}
-    all_positions = vcat([collect(position.(c)) for c in vs]...)
-    bulk_nodes = unique(filter(is_bulk, all_positions))
-    isempty(bulk_nodes) && return vs
+function make_NautyDiGraph(vs)
+    ps_int = map(integer_positions, vs)
+    flattened_int = Iterators.flatten(ps_int)
+    max_label = length(unique(flattened_int))
+    has_in = any(==(typemin(Int8)), flattened_int) # for vaccuum diagram
 
-    # Find which bulk node is connected to Out()
-    out_contraction = findfirst(c -> any(pos -> pos == Out(), position.(c)), vs)
-    if isnothing(out_contraction)
-        return vs  # No Out() connection found
+    _edges = map(ps_int) do int_pair
+        tt = if typemin(Int8) in int_pair
+            (1, last(int_pair) + Int(has_in))
+        elseif typemax(Int8) in int_pair
+            (first(int_pair) + Int(has_in), max_label)
+        else
+            int_pair .+ Int(has_in)
+        end
+        Graphs.Edge(tt)
     end
-
-    out_positions = position.(vs[out_contraction])
-    bulk_positions = filter(is_bulk, out_positions)
-    if isempty(bulk_positions)
-        return vs  # Out() not connected to bulk
-    end
-
-    out_connected_bulk = first(bulk_positions)
-
-    # Only consider permutations where the bulk node connected to Out() becomes Bulk(1)
-    best_perm = nothing
-    best_sig = nothing
-
-    for perm in SmallCollections.Combinatorics.permutations(length(bulk_nodes))
-        # Check if this permutation puts the Out()-connected bulk node at position 1
-        out_bulk_idx = findfirst(==(out_connected_bulk), bulk_nodes)
-        if perm[out_bulk_idx] == 1
-            sig = graph_signature(vs, bulk_nodes, perm)
-            if best_sig === nothing || sig < best_sig
-                best_sig = sig
-                best_perm = perm
+    return NautyGraphs.NautyDiGraph(_edges), max_label, has_in
+end
+function make_permution_dict(perm, max_label, has_in)
+    if has_in
+        l = length(perm)
+        tracker = 0
+        last_index = findfirst(==(max_label), perm)
+        first_index = findfirst(==(1), perm)
+        dict = Dict{Position,Position}()
+        for i in 1:l
+            if i == first_index || i == last_index
+                tracker += 1
+            else
+                dict[Bulk(perm[i] - 1)] = Bulk(i - tracker)
             end
         end
+    else # vaccuum diagram
+        dict = Dict{Position,Position}(Bulk(perm[i]) => Bulk(i) for i in 1:length(perm))
     end
 
-    return best_perm === nothing ? vs : apply_permutation(vs, bulk_nodes, best_perm)
+    return dict
 end
+function canonicalize(vs)
+    graph, max_label, has_in = make_NautyDiGraph(vs)
+    perm = NautyGraphs.canonical_permutation(graph)
+    permutation_map = make_permution_dict(perm, max_label, has_in)
 
-function graph_signature(vs::Vector{Contraction}, bulk_nodes, perm)
-    # Build adjacency matrix with ordered nodes: Out, Bulk(perm[1]), Bulk(perm[2]), ..., In
-    node_map = Dict{Position,Int}()
-    node_map[Out()] = 1
-    for (i, bulk_idx) in enumerate(perm)
-        node_map[bulk_nodes[bulk_idx]] = i + 1
-    end
-    node_map[In()] = length(bulk_nodes) + 2
-
-    n = length(bulk_nodes) + 2
-    adj = zeros(Int, n, n)
-
-    for c in vs
-        pos1, pos2 = position.(c)
-        i, j = node_map[pos1], node_map[pos2]
-        adj[i, j] += 1
-        adj[j, i] += 1  # undirected
-    end
-
-    return vec(adj)  # flatten to vector for comparison
-end
-
-function apply_permutation(vs::Vector{Contraction}, bulk_nodes, perm)
-    # Create mapping from old bulk nodes to new canonical numbering
-    perm_map = Dict{Position,Position}()
-    for (i, bulk_idx) in enumerate(perm)
-        perm_map[bulk_nodes[bulk_idx]] = Bulk(i)
-    end
-
-    return map(vs) do c
+    canonical_vs = map(vs) do c
         map(c) do ψ
             pos = position(ψ)
-            if is_bulk(pos) && haskey(perm_map, pos)
-                ψ(perm_map[pos])
+            if is_bulk(pos) && haskey(permutation_map, pos)
+                ψ(permutation_map[pos])
             else
                 ψ
             end
         end
     end
-end
-
-function is_canonical(vs::Vector{Contraction})
-    isequal(canonicalize(vs), vs)
+    return canonical_vs
 end
