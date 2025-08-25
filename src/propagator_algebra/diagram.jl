@@ -161,6 +161,15 @@ function bulk_multiplicity(edges::AbstractArray{Tuple{Int8,Int8}})
     end # https://github.com/matthias314/SmallCollections.jl/issues/12
     for edge in edges
         idx = edge_to_index(edge[1], edge[2], length(vert))
+        if length(mult) < idx
+            @show edges
+            @show edge[1], edge[2], length(vert)
+            @show idx
+            @show mult
+            @show m
+            @show vert
+            error("Index out of bounds")
+        end
         mult[idx] += 1
     end
     return SmallCollections.FixedVector(mult)

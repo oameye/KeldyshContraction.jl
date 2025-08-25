@@ -14,10 +14,14 @@ maps edge (i,j) to a unique integer in range 1:max_edges(n).
 It is different from Hopcroft-Ullman pairing as it assumes that i ≠ j and the number of
 edges is used.
 """
-function edge_to_index(i::Int8, j::Int8, n::Int)::Int
-    # Ensure i < j
-    i, j = Int.(minmax(i, j))
-    return (i - 1) * (n - i ÷ 2) + (j - i)
+@inline function edge_to_index(i::Integer, j::Integer, n::Integer)::Integer
+    @boundscheck begin
+        1 ≤ i ≤ n || throw(ArgumentError("i must be in 1:$n, got $i"))
+        1 ≤ j ≤ n || throw(ArgumentError("j must be in 1:$n, got $j"))
+        i ≠ j      || throw(ArgumentError("i and j must be different"))
+    end
+    i, j = minmax(i, j)                 # ensure i < j
+    return (i - 1) * n - ((i - 1) * i) ÷ 2 + (j - i)
 end
 
 make_real(x::Number) = SymbolicUtils._isreal(x) ? real(x) : x
