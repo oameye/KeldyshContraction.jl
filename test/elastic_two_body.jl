@@ -9,22 +9,8 @@ elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2)
 
 @syms g
 L_int = InteractionLagrangian(elasctic2boson, g)
+
 @test isequal(KeldyshContraction.parameters(L_int), g)
-
-
-# L1 = L_int(1)
-# L2 = L_int(2)
-
-# using KeldyshContraction: filter_nonzero!
-
-# vacuum = L1.lagrangian * L2.lagrangian
-# # map(vacuum.arguments) do arg
-# #     _wick_contraction(arg; simplify=false)
-# # end
-# # _wick_contraction(vacuum.arguments[1]; simplify=false)
-
-# expr = _wick_contraction(vacuum; simplify=true)
-
 
 @testset "first order" begin
     @testset "Bubble diagrams" begin
