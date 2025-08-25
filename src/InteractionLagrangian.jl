@@ -214,7 +214,7 @@ function maybe_rationalize(q::QMul{ComplexF64})
     rational_im = rationalize(imag(q.arg_c))
     check_re = float(rational_re)
     check_me = float(rational_im)
-    if isequal(check_re, real(q.arg_c)) && isequal(check_me, imag(q.arg_c))
+    if iszero(check_re - real(q.arg_c)) && iszero(check_me - imag(q.arg_c))
         return QMul(rational_re + im*rational_im, q.args_nc)
     else
         return q
