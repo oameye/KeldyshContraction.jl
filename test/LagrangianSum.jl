@@ -21,7 +21,7 @@ L_elastic = InteractionLagrangian(elastic_terms, g)
 L = L_inelastic + L_elastic
 
 @testset "Conversion" begin
-    @test typeof(L) == KeldyshContraction.LagrangianSum{KeldyshContraction.QAdd{ComplexF64}}
+    @test typeof(L) == KeldyshContraction.LagrangianSum{KeldyshContraction.QAdd{Complex{Rational{Int64}}}}
 end
 
 @testset "Accessing" begin
