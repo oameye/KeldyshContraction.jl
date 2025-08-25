@@ -48,8 +48,9 @@ struct InteractionLagrangian{T} <: Lagrangian
 
         q_idx = findfirst(iszero, contours)
         c_idx = findfirst(isone, contours)
-        return new{typeof(expr)}(
-            maybe_rationalize(expr),
+        maybe_rational_expr = maybe_rationalize(expr)
+        return new{typeof(maybe_rational_expr)}(
+            maybe_rational_expr,
             fields[q_idx],
             fields[c_idx],
             position(fields[q_idx]),
@@ -206,5 +207,16 @@ function maybe_rationalize(q::QMul{T}) where {T<:Number}
         else
             return q
         end
+    end
+end
+function maybe_rationalize(q::QMul{ComplexF64})
+    rational_re = rationalize(real(q.arg_c))
+    rational_im = rationalize(imag(q.arg_c))
+    check_re = float(rational_re)
+    check_me = float(rational_im)
+    if iszero(check_re - real(q.arg_c)) && iszero(check_me - imag(q.arg_c))
+        return QMul(rational_re + im*rational_im, q.args_nc)
+    else
+        return q
     end
 end
