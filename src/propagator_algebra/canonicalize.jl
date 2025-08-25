@@ -42,7 +42,7 @@ function make_NautyDiGraph(vs)
     ps_int = map(integer_positions, vs)
     flattened_int = Iterators.flatten(ps_int)
     max_label = length(unique(flattened_int))
-    has_in = any(==(typemin(Int8)), flattened_int) # for vaccuum diagram
+    has_in = any(==(typemin(Int8)), flattened_int) # for vacuum diagram
 
     _edges = map(ps_int) do int_pair
         tt = if typemin(Int8) in int_pair
@@ -56,7 +56,7 @@ function make_NautyDiGraph(vs)
     end
     return NautyGraphs.NautyDiGraph(_edges), max_label, has_in
 end
-function make_permution_dict(perm, max_label, has_in)
+function make_permutation_dict(perm, max_label, has_in)
     if has_in
         l = length(perm)
         tracker = 0
@@ -70,7 +70,7 @@ function make_permution_dict(perm, max_label, has_in)
                 dict[Bulk(perm[i] - 1)] = Bulk(i - tracker)
             end
         end
-    else # vaccuum diagram
+    else # vacuum diagram
         dict = Dict{Position,Position}(Bulk(perm[i]) => Bulk(i) for i in 1:length(perm))
     end
 
@@ -79,7 +79,7 @@ end
 function canonicalize(vs)
     graph, max_label, has_in = make_NautyDiGraph(vs)
     perm = NautyGraphs.canonical_permutation(graph)
-    permutation_map = make_permution_dict(perm, max_label, has_in)
+    permutation_map = make_permutation_dict(perm, max_label, has_in)
 
     canonical_vs = map(vs) do c
         map(c) do ψ
