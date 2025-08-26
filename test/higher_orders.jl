@@ -105,3 +105,25 @@ end
 
 # idxs = findall(pair -> topology(pair[1])==[2, 1, 1], collect(CCcollections))
 # collect(CCcollections)[idxs] # are zero due loop with only G^A or G^R
+
+
+# function has_zero_loop(vs::Vector{Contraction})
+#     ps = positions.(vs)
+#     sorted_ps = sort_tuple.(ps)
+#     loops = find_equal_pairs(sorted_ps)
+#     for loop in loops
+#         T1 = propagator_type(vs[loop[1]]...)
+#         T2 = propagator_type(vs[loop[2]]...)
+#         if all(is_retarded, (T1, T2)) && is_reversed(ps[loop[1]], ps[loop[2]])
+#             # @info "Has zero loop"
+#             return true
+#         elseif all(is_advanced, (T1, T2)) && is_reversed(ps[loop[1]], ps[loop[2]])
+#             # @info "Has zero loop"
+#             return true
+#         elseif isequal(ps[loop[1]], ps[loop[2]]) && retarded_and_advanced_pair(T1, T2)
+#             # @info "Has zero loop"
+#             return true
+#         end
+#     end
+#     return false
+# end
