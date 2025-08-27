@@ -34,7 +34,7 @@ Gᴿ(1,2) Gᴿ(2,1) = 0
 Gᴬ(1,2) Gᴬ(2,1) = 0
 Gᴿ(1,2) Gᴬ(1,2) = 0
 """
-function has_zero_loop(vs::Vector{Contraction})
+function has_two_zero_loop(vs::Vector{Contraction})
     ps = positions.(vs)
     sorted_ps = sort_tuple.(ps)
     loops = find_equal_pairs(sorted_ps)
@@ -54,6 +54,55 @@ function has_zero_loop(vs::Vector{Contraction})
     end
     return false
 end
+function has_zero_loop(vs::Vector{Contraction})
+    if has_two_zero_loop(vs)
+        return true
+    end
+
+    g, max_label, has_in = make_graph(Graphs.SimpleDiGraph, vs)
+    for cycle in Graphs.simplecycles(g)
+        if isone(length(cycle))
+            continue
+        end
+        for i in eachindex(cycle)
+            cycle[i] -= Int(has_in)
+        end
+
+        edges_in_cycle = make_directed_edges(cycle)
+        function is_in_cycle(edge)
+            ps = integer_positions(edge)
+            return ps ∈ edges_in_cycle
+        end
+        cycle_contractions = filter(is_in_cycle, vs)
+
+        cycle_ptype = map(cc -> propagator_type(cc...), cycle_contractions)
+        if count(is_advanced, cycle_ptype) >= length(cycle)
+            return true
+        elseif count(is_retarded, cycle_ptype) >= length(cycle)
+            return true
+        end
+
+        # # check for time incostencies $G^A(1,2)G^R(1,3)G^R(3,2)0$
+        # # t_1 < t_2 < t_3, t_3 < t_1,
+        # cycle_contractions = filter(is_keldysh, cycle_contractions)
+        # retarded_idxs = findall(is_retarded, cycle_contractions)
+        # for i in retarded_idxs
+        #     cycle_contractions[i] = reverse(cycle_contractions[i])
+        # end
+        # cycle_contractions_ps = map(integer_positions,cycle_contractions)
+        # _edges = Graphs.Edge.(cycle_contractions_ps)
+        # h_cycle = Graphs.SimpleDiGraph(_edges)
+        # if !Graphs.is_connected(h_cycle)
+        #     return true
+        # end
+    end
+    return false
+end
+
+function make_directed_edges(cycle)
+    l = length(cycle)
+    return Set((cycle[i], cycle[mod1(i + 1, l)]) for i in eachindex(cycle))
+end
 
 function is_reversed(p1, p2)
     return isequal(p1[1], p2[2]) && isequal(p1[2], p2[1])
@@ -61,6 +110,32 @@ end
 function retarded_and_advanced_pair(T1, T2)
     return (is_retarded(T1) && is_advanced(T2)) || (is_advanced(T1) && is_retarded(T2))
 end
+"""
+    find_equal_pairs(v::Vector)
+
+Find all indices of equal pairs in a vector.
+
+Returns a vector of tuples `(i, j)` where `i < j` and `v[i] == v[j]`.
+
+## Examples
+```jldoctest
+julia> using KeldyshContraction: find_equal_pairs
+
+julia> find_equal_pairs([1, 2, 1, 3, 2])
+2-element Vector{Tuple{Int64, Int64}}:
+ (1, 3)
+ (2, 5)
+
+julia> find_equal_pairs([1, 2, 3])
+Tuple{Int64, Int64}[]
+
+julia> find_equal_pairs([1, 1, 1])
+3-element Vector{Tuple{Int64, Int64}}:
+ (1, 2)
+ (1, 3)
+ (2, 3)
+```
+"""
 function find_equal_pairs(vec)
     n = length(vec)
     pairs = Tuple{Int,Int}[]
