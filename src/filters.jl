@@ -59,21 +59,21 @@ function has_zero_loop(vs::Vector{Contraction})
         return true
     end # TODO remove
 
-    g, _, has_in = make_graph(Graphs.SimpleDiGraph, vs)
-    for cycle in Graphs.simplecycles(g)
-        if isone(length(cycle))
-            continue
-        end
-        for i in eachindex(cycle)
-            cycle[i] -= Int(has_in)
-        end
+    # g, _, has_in = make_graph(Graphs.SimpleDiGraph, vs)
+    # for cycle in Graphs.simplecycles(g)
+    #     if isone(length(cycle))
+    #         continue
+    #     end
+    #     for i in eachindex(cycle)
+    #         cycle[i] -= Int(has_in)
+    #     end
 
-        all_equal_loop(cycle, vs) && return true
+    #     all_equal_loop(cycle, vs) && return true
 
-        # # check for time incostencies $G^A(1,2)G^R(1,3)G^R(3,2)0$
-        # # t_1 < t_2 < t_3, t_3 < t_1,
-        invalid_contrained_loop(cycle, vs) && return true
-    end
+    #     # # check for time incostencies $G^A(1,2)G^R(1,3)G^R(3,2)0$
+    #     # # t_1 < t_2 < t_3, t_3 < t_1,
+    #     invalid_contrained_loop(cycle, vs) && return true
+    # end
     return false
 end
 function all_equal_loop(cycle, vs)
