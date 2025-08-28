@@ -57,9 +57,9 @@ end
 function has_zero_loop(vs::Vector{Contraction})
     if has_two_zero_loop(vs)
         return true
-    end
+    end # TODO remove
 
-    g, max_label, has_in = make_graph(Graphs.SimpleDiGraph, vs)
+    g, _, has_in = make_graph(Graphs.SimpleDiGraph, vs)
     for cycle in Graphs.simplecycles(g)
         if isone(length(cycle))
             continue
@@ -68,40 +68,61 @@ function has_zero_loop(vs::Vector{Contraction})
             cycle[i] -= Int(has_in)
         end
 
-        edges_in_cycle = make_directed_edges(cycle)
-        function is_in_cycle(edge)
-            ps = integer_positions(edge)
-            return ps ∈ edges_in_cycle
-        end
-        cycle_contractions = filter(is_in_cycle, vs)
-
-        cycle_ptype = map(cc -> propagator_type(cc...), cycle_contractions)
-        if count(is_advanced, cycle_ptype) >= length(cycle)
-            return true
-        elseif count(is_retarded, cycle_ptype) >= length(cycle)
-            return true
-        end
+        all_equal_loop(cycle, vs) && return true
 
         # # check for time incostencies $G^A(1,2)G^R(1,3)G^R(3,2)0$
         # # t_1 < t_2 < t_3, t_3 < t_1,
-        # cycle_contractions = filter(is_keldysh, cycle_contractions)
-        # retarded_idxs = findall(is_retarded, cycle_contractions)
-        # for i in retarded_idxs
-        #     cycle_contractions[i] = reverse(cycle_contractions[i])
-        # end
-        # cycle_contractions_ps = map(integer_positions,cycle_contractions)
-        # _edges = Graphs.Edge.(cycle_contractions_ps)
-        # h_cycle = Graphs.SimpleDiGraph(_edges)
-        # if !Graphs.is_connected(h_cycle)
-        #     return true
-        # end
+        invalid_contrained_loop(cycle, vs) && return true
+    end
+    return false
+end
+function all_equal_loop(cycle, vs)
+    edges_in_cycle = make_directed_edges(cycle, false)
+    cycle_contractions = filter(x -> is_in_cycle(x, edges_in_cycle), vs)
+
+    cycle_ptype = map(cc -> propagator_type(cc...), cycle_contractions)
+    if count(is_advanced, cycle_ptype) >= length(cycle)
+        return true
+    elseif count(is_retarded, cycle_ptype) >= length(cycle)
+        return true
     end
     return false
 end
 
-function make_directed_edges(cycle)
+function invalid_contrained_loop(cycle, vs)
+    edges_in_cycle = make_directed_edges(cycle, true)
+    cycle_contractions = filter(x -> is_in_cycle(x, edges_in_cycle) && !is_keldysh(x), vs)
+    if length(cycle_contractions) < length(cycle)
+        return false
+    end
+    retarded_idxs = findall(is_retarded, cycle_contractions)
+    cycle_contractions_ps = map(integer_positions, cycle_contractions)
+    for i in retarded_idxs
+        cycle_contractions_ps[i] = reverse(cycle_contractions_ps[i])
+    end
+    _edges = Graphs.Edge.(cycle_contractions_ps)
+    h_cycle = Graphs.SimpleDiGraph(_edges)
+    if length(unique(_edges)) >= length(cycle) && Graphs.is_cyclic(h_cycle)
+        @show cycle
+        @show cycle_contractions_ps
+        return true
+    end
+    return false
+end
+
+function is_in_cycle(edge, edges_in_cycle)
+    ps = integer_positions(edge)
+    return ps ∈ edges_in_cycle
+end
+function make_directed_edges(cycle, all=false)
     l = length(cycle)
-    return Set((cycle[i], cycle[mod1(i + 1, l)]) for i in eachindex(cycle))
+    set = Set((cycle[i], cycle[mod1(i + 1, l)]) for i in eachindex(cycle))
+    if all
+        for i in eachindex(cycle)
+            push!(set, (cycle[mod1(i + 1, l)], cycle[i]))
+        end
+    end
+    return set
 end
 
 function is_reversed(p1, p2)
@@ -150,6 +171,10 @@ function find_equal_pairs(vec)
 
     return pairs
 end
+
+# function check_has_loop(edges, vertices)
+#     g = DiGraph(edges)
+#     return !is_acyclic(g)
 
 ######################
 #     regularise
