@@ -72,7 +72,7 @@ function has_zero_loop(vs::Vector{Contraction})
 
     #     # # check for time incostencies $G^A(1,2)G^R(1,3)G^R(3,2)0$
     #     # # t_1 < t_2 < t_3, t_3 < t_1,
-    #     invalid_contrained_loop(cycle, vs) && return true
+    #     invalid_constrained_loop(cycle, vs) && return true
     # end
     return false
 end
@@ -89,7 +89,7 @@ function all_equal_loop(cycle, vs)
     return false
 end
 
-function invalid_contrained_loop(cycle, vs)
+function invalid_constrained_loop(cycle, vs)
     edges_in_cycle = make_directed_edges(cycle, true)
     cycle_contractions = filter(x -> is_in_cycle(x, edges_in_cycle) && !is_keldysh(x), vs)
     if length(cycle_contractions) < length(cycle)

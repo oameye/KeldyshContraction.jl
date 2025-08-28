@@ -110,12 +110,12 @@ end
 # test = (x -> (x.out, x.in)).(contractions(collect(CCcollections)[idxs][1][1]))
 # test_v = [x for x in test]
 
-# using KeldyshContraction: invalid_contrained_loop, make_graph, make_directed_edges, is_in_cycle, is_keldysh, integer_positions
+# using KeldyshContraction: invalid_constrained_loop, make_graph, make_directed_edges, is_in_cycle, is_keldysh, integer_positions
 # using Graphs
 
 # g, _, has_in = make_graph(Graphs.SimpleDiGraph, test_v)
 # cycle = Graphs.simplecycles(g)[2] .-1
-# # invalid_contrained_loop(cycle, test_v)
+# # invalid_constrained_loop(cycle, test_v)
 #     edges_in_cycle = make_directed_edges(cycle, true)
 #     cycle_contractions = filter(x -> is_in_cycle(x, edges_in_cycle) && !is_keldysh(x), test_v)
 #     if length(cycle_contractions) < length(cycle)
