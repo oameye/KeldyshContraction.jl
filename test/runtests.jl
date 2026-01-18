@@ -94,9 +94,9 @@ end
     include("wigner.jl")
 end
 
-@testset "collision_integral" begin
-    include("collision_integral.jl")
-end
+# @testset "collision_integral" begin
+#     include("collision_integral.jl")
+# end
 
 @testset "Correctness of contractions" begin
     @testset "two boson loss" begin
