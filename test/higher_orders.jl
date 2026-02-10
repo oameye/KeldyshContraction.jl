@@ -24,7 +24,7 @@ using KeldyshContraction, Test
     end
     @test length(unique(sort.(irreduciable_topology))) == 5
 
-    GF4 = DressedPropagator(L_int, 4);
+    GF4 = DressedPropagator(L_int, 4)
     @test length(keys(topologies(GF4.keldysh))) == 59
     @test length(unique(sort.(keys(topologies(GF4.keldysh))))) == 17 # checked with mathematica (see test/All_graph_topologies.nb)
 
@@ -99,9 +99,40 @@ end
 #     end
 # end
 # CCcollections
-# topology.(keys(CCcollections)) |> unique
-# idxs = findall(pair -> topology(pair[1])==[1, 1, 1], collect(CCcollections))
+# unique(topology.(keys(CCcollections)))
+
+# idxs = findall(pair -> topology(pair[1]) == [2, 1, 1], collect(CCcollections))
 # collect(CCcollections)[idxs] # are zero due loop with only G^A or G^R
 
-# idxs = findall(pair -> topology(pair[1])==[2, 1, 1], collect(CCcollections))
-# collect(CCcollections)[idxs] # are zero due loop with only G^A or G^R
+# # idxs = findall(pair -> topology(pair[1]) == [1, 3, 1], collect(CCcollections))
+# # collect(CCcollections)[idxs] # are zero due loop with only G^A or G^R
+
+# test = (x -> (x.out, x.in)).(contractions(collect(CCcollections)[idxs][1][1]))
+# test_v = [x for x in test]
+
+# using KeldyshContraction: invalid_constrained_loop, make_graph, make_directed_edges, is_in_cycle, is_keldysh, integer_positions
+# using Graphs
+
+# g, _, has_in = make_graph(Graphs.SimpleDiGraph, test_v)
+# cycle = Graphs.simplecycles(g)[2] .-1
+# # invalid_constrained_loop(cycle, test_v)
+#     edges_in_cycle = make_directed_edges(cycle, true)
+#     cycle_contractions = filter(x -> is_in_cycle(x, edges_in_cycle) && !is_keldysh(x), test_v)
+#     if length(cycle_contractions) < length(cycle)
+#         return false
+#     end
+#     retarded_idxs = findall(is_retarded, cycle_contractions)
+#     cycle_contractions_ps = map(integer_positions, cycle_contractions)
+#     for i in retarded_idxs
+#         cycle_contractions_ps[i] = reverse(cycle_contractions_ps[i])
+#     end
+#     _edges = Graphs.Edge.(cycle_contractions_ps)
+#     h_cycle = Graphs.SimpleDiGraph(_edges)
+#     if  length(unique(_edges))  >= length(cycle) && Graphs.is_cyclic(h_cycle)
+#         @show cycle_contractions_ps cycle
+#         @show Graphs.edges(h_cycle) |> collect |> length
+#         return true
+#     end
+
+# g, max_label, has_in = make_graph(Graphs.SimpleDiGraph, test_v)
+# simplecycles_iter(g)
