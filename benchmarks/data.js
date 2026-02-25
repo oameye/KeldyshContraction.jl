@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1756135005896,
+  "lastUpdate": 1772016040751,
   "repoUrl": "https://github.com/oameye/KeldyshContraction.jl",
   "entries": {
     "Benchmark Results": [
@@ -5048,6 +5048,126 @@ window.BENCHMARK_DATA = {
             "value": 7253.571428571428,
             "unit": "ns",
             "extra": "gctime=0\nmemory=10768\nallocs=153\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":7,\"gcsample\":false,\"seconds\":5,\"overhead\":0,\"memory_tolerance\":0.01}"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "orjan.ameye@hotmail.com",
+            "name": "Orjan Ameye",
+            "username": "oameye"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "349c62ee2ed4273689d2250593610d42505566fe",
+          "message": "Revert \"CompatHelper: bump compat for SmallCollections to 0.6, (keep existing compat) (#207)\" (#208)",
+          "timestamp": "2026-02-25T11:33:24+01:00",
+          "tree_id": "645b686892d0c5ec0d591cdf8d1a204a929d864f",
+          "url": "https://github.com/oameye/KeldyshContraction.jl/commit/349c62ee2ed4273689d2250593610d42505566fe"
+        },
+        "date": 1772016040259,
+        "tool": "julia",
+        "benches": [
+          {
+            "name": "Two body loss/Green's function",
+            "value": 300879,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=338424\nallocs=8304\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":1,\"gcsample\":false,\"seconds\":10,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "Two body loss/Self-energy",
+            "value": 19056,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=18184\nallocs=290\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":1,\"gcsample\":false,\"seconds\":10,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "Two body loss/Green's function second order",
+            "value": 10071898.5,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=11594760\nallocs=292279\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":1,\"gcsample\":false,\"seconds\":50,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "Two body scattering/Green's function",
+            "value": 229499,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=271976\nallocs=5592\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":1,\"gcsample\":false,\"seconds\":10,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "Two body scattering/Collision integral",
+            "value": 136876,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=130624\nallocs=1889\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":1,\"gcsample\":false,\"seconds\":10,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "Two body scattering/Green's function second order",
+            "value": 6985634,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=9379544\nallocs=165556\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":1,\"gcsample\":false,\"seconds\":50,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "Two body scattering/Wigner transform",
+            "value": 178194,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=208584\nallocs=3343\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":1,\"gcsample\":false,\"seconds\":10,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "microbenchmark/canonicalize/5-node",
+            "value": 1867,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=2192\nallocs=33\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":10,\"gcsample\":false,\"seconds\":5,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "microbenchmark/canonicalize/3-node",
+            "value": 1775.3,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=1936\nallocs=33\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":10,\"gcsample\":false,\"seconds\":5,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "microbenchmark/canonicalize/4-node",
+            "value": 1516.8,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=1936\nallocs=33\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":10,\"gcsample\":false,\"seconds\":5,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "microbenchmark/canonicalize/2-node",
+            "value": 1451.7,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=1664\nallocs=33\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":10,\"gcsample\":false,\"seconds\":5,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "microbenchmark/irreducible/complete-k5",
+            "value": 13137.833333333332,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=17680\nallocs=265\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":3,\"gcsample\":false,\"seconds\":5,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "microbenchmark/irreducible/square-diagonal",
+            "value": 4178.888888888889,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=8784\nallocs=134\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":9,\"gcsample\":false,\"seconds\":5,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "microbenchmark/irreducible/tree",
+            "value": 866.3,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=2272\nallocs=36\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":95,\"gcsample\":false,\"seconds\":5,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "microbenchmark/irreducible/dumbbell",
+            "value": 5393.444444444444,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=7568\nallocs=115\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":9,\"gcsample\":false,\"seconds\":5,\"overhead\":0,\"memory_tolerance\":0.01}"
+          },
+          {
+            "name": "microbenchmark/irreducible/complete-k4",
+            "value": 6988.125,
+            "unit": "ns",
+            "extra": "gctime=0\nmemory=10608\nallocs=160\nparams={\"gctrial\":true,\"time_tolerance\":0.05,\"evals_set\":false,\"samples\":10000,\"evals\":8,\"gcsample\":false,\"seconds\":5,\"overhead\":0,\"memory_tolerance\":0.01}"
           }
         ]
       }
