@@ -38,24 +38,6 @@ function sort_by_position_and_type(p::Contraction)::Float64
 end
 sort_by_position_and_type(p::Edge)::Float64 = sort_by_position_and_type(fields(p))
 
-function make_NautyDiGraph(vs)
-    ps_int = map(integer_positions, vs)
-    flattened_int = Iterators.flatten(ps_int)
-    max_label = length(unique(flattened_int))
-    has_in = any(==(typemin(Int8)), flattened_int) # for vacuum diagram
-
-    _edges = map(ps_int) do int_pair
-        tt = if typemin(Int8) in int_pair
-            (1, last(int_pair) + Int(has_in))
-        elseif typemax(Int8) in int_pair
-            (first(int_pair) + Int(has_in), max_label)
-        else
-            int_pair .+ Int(has_in)
-        end
-        Graphs.Edge(tt)
-    end
-    return NautyGraphs.NautyDiGraph(_edges), max_label, has_in
-end
 function make_permutation_dict(perm, max_label, has_in)
     if has_in
         l = length(perm)
@@ -77,7 +59,7 @@ function make_permutation_dict(perm, max_label, has_in)
     return dict
 end
 function canonicalize(vs)
-    graph, max_label, has_in = make_NautyDiGraph(vs)
+    graph, max_label, has_in = make_graph(NautyGraphs.NautyDiGraph, vs)
     perm = NautyGraphs.canonical_permutation(graph)
     permutation_map = make_permutation_dict(perm, max_label, has_in)
 
