@@ -17,50 +17,50 @@ L_elastic = InteractionLagrangian(elastic_terms, g)
 
 L = L_inelastic + L_elastic</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">KeldyshContraction.LagrangianSum{KeldyshContraction.QAdd{Complex{Rational{Int64}}}}(InteractionLagrangian{KeldyshContraction.QAdd{Complex{Rational{Int64}}}}[Interaction Lagrangian with fields c and q:
 ((0//1 + 1//2*im)*(c⁻*c⁻*̄q*̄c)+(0//1 + 1//2*im)*(q⁻*q⁻*̄q*̄c)+(0//1 - 1//2*im)*(q⁺*c⁺*̄c*̄c)+(0//1 - 1//2*im)*(q⁺*c⁺*̄q*̄q)+(0//1 + 1//1*im)*(c⁺*q⁺*̄c*̄q)+(0//1 + 1//1*im)*(c⁻*q⁻*̄c*̄q)), Interaction Lagrangian with fields c and q:
-(-1//2*(c*c*̄q*̄c)+-1//2*(q*q*̄q*̄c)+-1//2*(q*c*̄c*̄c)+-1//2*(q*c*̄q*̄q))])</code></pre><pre><code class="language-julia hljs">GF1 = DressedPropagator(L, 1; _set_reg_to_zero=true)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">KeldyshContraction.DressedPropagatorSum{DressedPropagator{3, 0}}(Dict{SymbolicUtils.BasicSymbolic{Number}, DressedPropagator{3, 0}}(g =&gt; DressedPropagator{3, 0}((0//1 + 1//1*im)*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂) + (0//1 + 1//1*im)*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂), (0//1 + 1//1*im)*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,x₂), (0//1 + 1//1*im)*Gᴬ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂), 1, g), Γ =&gt; DressedPropagator{3, 0}(2//1*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂) + -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴷ(y₁,x₂) + -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴬ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1//1*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂), -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴿ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,x₂), Gᴬ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1//1*Gᴬ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂), 1, Γ)), 1)</code></pre><pre><code class="language-julia hljs">GF1_elastic = arguments(GF1)[g]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Dressed Propagator:
+(-1//2*(c*c*̄q*̄c)+-1//2*(q*q*̄q*̄c)+-1//2*(q*c*̄c*̄c)+-1//2*(q*c*̄q*̄q))])</code></pre><pre><code class="language-julia hljs">GF1 = DressedPropagator(L, 1; _set_reg_to_zero=true)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">KeldyshContraction.DressedPropagatorSum{DressedPropagator{3, 0}}(Dict{SymbolicUtils.BasicSymbolic{Number}, DressedPropagator{3, 0}}(g =&gt; DressedPropagator{3, 0}((0//1 + 1//1*im)*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂) + (0//1 + 1//1*im)*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂), (0//1 + 1//1*im)*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,x₂), (0//1 + 1//1*im)*Gᴬ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂), 1, g), Γ =&gt; DressedPropagator{3, 0}(Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂) + -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴷ(y₁,x₂) + 2//1*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴬ(y₁,x₂) + -1//1*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂), -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴿ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,x₂), Gᴬ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1//1*Gᴬ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂), 1, Γ)), 1)</code></pre><pre><code class="language-julia hljs">GF1_elastic = arguments(GF1)[g]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Dressed Propagator:
 keldysh:  (0//1 + 1//1*im)*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂) + (0//1 + 1//1*im)*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)
 retarded: (0//1 + 1//1*im)*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,x₂)
 advanced: (0//1 + 1//1*im)*Gᴬ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)</code></pre><pre><code class="language-julia hljs">GF1_inelastic = arguments(GF1)[Γ]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Dressed Propagator:
-keldysh:  2//1*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂) + -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴷ(y₁,x₂) + -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴬ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1//1*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂)
+keldysh:  Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂) + -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴷ(y₁,x₂) + 2//1*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴬ(y₁,x₂) + -1//1*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂)
 retarded: -1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴿ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,x₂)
 advanced: Gᴬ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1//1*Gᴬ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)</code></pre><pre><code class="language-julia hljs">GF2 = DressedPropagator(L, 2; _set_reg_to_zero=true, simplify=true)
 topo = topologies(arguments(GF2)[g * Γ].keldysh)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Dict{SmallCollections.FixedVector{1, Int64}, Vector{KeldyshContraction.Diagram{5, 1}}} with 3 entries:
-  [3] =&gt; [Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,x₂), Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂…
-  [1] =&gt; [Gᴷ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂), Gᴿ(x₁,y₁)*Gᴷ(y₁,y…
-  [2] =&gt; [Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴷ(y₁,x₂), Gᴷ(x₁,y₁)*Gᴷ(y₁,y…</code></pre><pre><code class="language-julia hljs">[key =&gt; arguments(GF2)[g * Γ].keldysh.diagrams[key] for key in topo[[2]]]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">14-element Vector{Pair{KeldyshContraction.Diagram{5, 1}, Complex{Rational{Int64}}}}:
- Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴷ(y₁,x₂) =&gt; 0//1 - 1//1*im
- Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴬ(y₁,x₂) =&gt; 0//1 + 1//1*im
-  Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) =&gt; 0//1 + 2//1*im
-  Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) =&gt; 0//1 - 2//1*im
-  Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂) =&gt; 0//1 + 2//1*im
- Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴬ(y₁,x₂) =&gt; 0//1 - 1//1*im
-  Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) =&gt; 0//1 + 2//1*im
- Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴬ(y₁,x₂) =&gt; 0//1 - 1//1*im
- Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴷ(y₁,x₂) =&gt; 0//1 - 1//1*im
+  [3] =&gt; [Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂), Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂…
+  [1] =&gt; [Gᴿ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂), Gᴷ(x₁,y₁)*Gᴿ(y₁⁺,…
+  [2] =&gt; [Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴷ(y₁,x₂), Gᴿ(x₁,y₁)*Gᴿ(y₁,y…</code></pre><pre><code class="language-julia hljs">[key =&gt; arguments(GF2)[g * Γ].keldysh.diagrams[key] for key in topo[[2]]]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">14-element Vector{Pair{KeldyshContraction.Diagram{5, 1}, Complex{Rational{Int64}}}}:
  Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴷ(y₁,x₂) =&gt; 0//1 - 1//1*im
- Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴷ(y₁,x₂) =&gt; 0//1 + 1//1*im
-  Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) =&gt; 0//1 + 2//1*im
+  Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) =&gt; 0//1 + 2//1*im
+  Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂) =&gt; 0//1 + 2//1*im
  Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴬ(y₁,x₂) =&gt; 0//1 - 1//1*im
-  Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂) =&gt; 0//1 + 2//1*im</code></pre><pre><code class="language-julia hljs">[key =&gt; arguments(GF2)[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">8-element Vector{Pair{KeldyshContraction.Diagram{5, 1}, Complex{Rational{Int64}}}}:
- Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,x₂) =&gt; 0//1 + 2//1*im
- Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0//1 - 2//1*im
- Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0//1 - 2//1*im
- Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,x₂) =&gt; 0//1 + 2//1*im
- Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0//1 + 2//1*im
- Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0//1 + 2//1*im
+  Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) =&gt; 0//1 - 2//1*im
+  Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) =&gt; 0//1 + 2//1*im
+  Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂) =&gt; 0//1 + 2//1*im
+ Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴷ(y₁,x₂) =&gt; 0//1 - 1//1*im
+ Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴬ(y₁,x₂) =&gt; 0//1 - 1//1*im
+ Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴷ(y₁,x₂) =&gt; 0//1 + 1//1*im
+ Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴬ(y₁,x₂) =&gt; 0//1 - 1//1*im
+  Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) =&gt; 0//1 + 2//1*im
+ Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴬ(y₁,x₂) =&gt; 0//1 + 1//1*im
+ Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴷ(y₁,x₂) =&gt; 0//1 - 1//1*im</code></pre><pre><code class="language-julia hljs">[key =&gt; arguments(GF2)[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">8-element Vector{Pair{KeldyshContraction.Diagram{5, 1}, Complex{Rational{Int64}}}}:
+ Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0//1 + 2//1*im
  Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0//1 + 2//1*im
- Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0//1 + 2//1*im</code></pre><pre><code class="language-julia hljs">Σ2 = SelfEnergy(GF2)
-arguments(Σ2)[g * Γ].keldysh</code></pre><p class="math-container">\[\left( \frac{0}{1} + \frac{2}{1} \cdot im \right) \cdot G^K\left( y_1, y_2 \right) \cdot G^A\left( y_2, y_1 \right) \cdot G^K\left( y_2, y_2 \right) + \left( \frac{0}{1} + \frac{2}{1} \cdot im \right) \cdot G^K\left( y_1, y_2 \right) \cdot G^R\left( y_1, y_2 \right) \cdot G^K\left( y_2, y_1 \right) + \left( \frac{0}{1} - \frac{2}{1} \cdot im \right) \cdot G^K\left( y_1, y_2 \right) \cdot G^A\left( y_1, y_2 \right) \cdot G^R\left( y_2, y_1 \right) + \left( \frac{0}{1} + \frac{2}{1} \cdot im \right) \cdot G^K\left( y_1, y_2 \right) \cdot G^A\left( y_1, y_2 \right) \cdot G^K\left( y_2, y_1 \right) + \left( \frac{0}{1} + \frac{2}{1} \cdot im \right) \cdot G^R\left( y_1, y_2 \right) \cdot G^K\left( y_2, y_1 \right) \cdot G^K\left( y_2, y_2 \right) + \left( \frac{0}{1} + \frac{2}{1} \cdot im \right) \cdot G^K\left( y_1, y_2 \right) \cdot G^R\left( y_1, y_2 \right) \cdot G^A\left( y_2, y_1 \right)\]</p><pre><code class="language-julia hljs">topo = topologies(arguments(Σ2)[g * Γ].retarded)
+ Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,x₂) =&gt; 0//1 + 2//1*im
+ Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0//1 - 2//1*im
+ Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0//1 + 2//1*im
+ Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0//1 + 2//1*im
+ Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0//1 - 2//1*im
+ Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,x₂) =&gt; 0//1 + 2//1*im</code></pre><pre><code class="language-julia hljs">Σ2 = SelfEnergy(GF2)
+arguments(Σ2)[g * Γ].keldysh</code></pre><p class="math-container">\[\left( \frac{0}{1} + \frac{2}{1} \cdot im \right) \cdot G^R\left( y_1, y_2 \right) \cdot G^K\left( y_2, y_1 \right) \cdot G^K\left( y_2, y_2 \right) + \left( \frac{0}{1} + \frac{2}{1} \cdot im \right) \cdot G^K\left( y_1, y_2 \right) \cdot G^A\left( y_2, y_1 \right) \cdot G^K\left( y_2, y_2 \right) + \left( \frac{0}{1} + \frac{2}{1} \cdot im \right) \cdot G^K\left( y_1, y_2 \right) \cdot G^R\left( y_1, y_2 \right) \cdot G^K\left( y_2, y_1 \right) + \left( \frac{0}{1} + \frac{2}{1} \cdot im \right) \cdot G^K\left( y_1, y_2 \right) \cdot G^A\left( y_1, y_2 \right) \cdot G^K\left( y_2, y_1 \right) + \left( \frac{0}{1} - \frac{2}{1} \cdot im \right) \cdot G^K\left( y_1, y_2 \right) \cdot G^A\left( y_1, y_2 \right) \cdot G^R\left( y_2, y_1 \right) + \left( \frac{0}{1} + \frac{2}{1} \cdot im \right) \cdot G^K\left( y_1, y_2 \right) \cdot G^R\left( y_1, y_2 \right) \cdot G^A\left( y_2, y_1 \right)\]</p><pre><code class="language-julia hljs">topo = topologies(arguments(Σ2)[g * Γ].retarded)
 
 [key =&gt; arguments(Σ2)[g * Γ].retarded.diagrams[key] for key in topo[[2]]]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">6-element Vector{Pair{KeldyshContraction.Diagram{3, 1}, Complex{Rational{Int64}}}}:
- Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂) =&gt; 0//1 - 1//1*im
- Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂) =&gt; 0//1 + 1//1*im
-  Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂) =&gt; 0//1 + 2//1*im
- Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂⁻) =&gt; 0//1 - 1//1*im
  Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂⁻) =&gt; 0//1 - 1//1*im
-  Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂) =&gt; 0//1 + 2//1*im</code></pre><pre><code class="language-julia hljs">topo = topologies(arguments(Σ2)[g * Γ].keldysh)
+  Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂) =&gt; 0//1 + 2//1*im
+ Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂) =&gt; 0//1 - 1//1*im
+ Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂⁻) =&gt; 0//1 - 1//1*im
+ Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂) =&gt; 0//1 + 1//1*im
+  Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂) =&gt; 0//1 + 2//1*im</code></pre><pre><code class="language-julia hljs">topo = topologies(arguments(Σ2)[g * Γ].keldysh)
 [key =&gt; arguments(Σ2)[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{Pair{KeldyshContraction.Diagram{3, 1}, Complex{Rational{Int64}}}}:
  Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁) =&gt; 0//1 + 2//1*im
- Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁) =&gt; 0//1 - 2//1*im
  Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁) =&gt; 0//1 + 2//1*im
- Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁) =&gt; 0//1 + 2//1*im</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Tuesday 17 February 2026 16:20">Tuesday 17 February 2026</span>. Using Julia version 1.10.10.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁) =&gt; 0//1 - 2//1*im
+ Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁) =&gt; 0//1 + 2//1*im</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Wednesday 25 February 2026 10:40">Wednesday 25 February 2026</span>. Using Julia version 1.10.10.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
