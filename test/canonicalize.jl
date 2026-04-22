@@ -122,8 +122,8 @@ using KeldyshContraction: canonicalize, Bulk, In, Out, sort_by_position_and_type
     end
 
     @testset "type_stability" begin
-        using KeldyshContraction: make_NautyDiGraph
-
+        using KeldyshContraction: make_graph
+        using NautyGraphs: NautyDiGraph
         vs1 = [
             (c(Out()), q'(Bulk(1))),
             (c(Bulk(1)), q'(Bulk(2))),
@@ -133,6 +133,6 @@ using KeldyshContraction: canonicalize, Bulk, In, Out, sort_by_position_and_type
             (c(Bulk(3)), q'(Bulk(3))),
             (c(Bulk(1)), q'(In())),
         ]
-        @inferred make_NautyDiGraph(vs1)
+        @inferred make_graph(NautyDiGraph, vs1)
     end
 end

@@ -7,7 +7,7 @@ The Hopcroft-Ullman pairing function, which bijectively maps two positive intege
 
 See https://mathworld.wolfram.com/PairingFunction.html
 """
-@inline pairing(i::Integer, j::Integer) = div((i+j-2)*(i+j-1), 2) + i
+@inline pairing(i::Integer, j::Integer) = div((i + j - 2) * (i + j - 1), 2) + i
 
 """
 maps edge (i,j) to a unique integer in range 1:max_edges(n).
@@ -32,7 +32,7 @@ _simplify(x::Complex) =
     if iszero(x.im)
         complex(x.re)
     elseif iszero(x.re)
-        0.0+im*x.im
+        0.0 + im * x.im
     else
         x
     end
@@ -78,4 +78,23 @@ function indices_from_counts(counts::Vector{Int})
         end
     end
     return indices
+end
+
+function make_graph(graph_type::Type{<:Graphs.AbstractGraph}, vs)
+    ps_int = map(integer_positions, vs)
+    flattened_int = Iterators.flatten(ps_int)
+    max_label = length(unique(flattened_int))
+    has_in = any(==(typemin(Int8)), flattened_int) # for vacuum diagram
+
+    _edges = map(ps_int) do int_pair
+        tt = if typemin(Int8) in int_pair
+            (1, last(int_pair) + Int(has_in))
+        elseif typemax(Int8) in int_pair
+            (first(int_pair) + Int(has_in), max_label)
+        else
+            int_pair .+ Int(has_in)
+        end
+        Graphs.Edge(tt)
+    end
+    return graph_type(_edges), max_label, has_in
 end
