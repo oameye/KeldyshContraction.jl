@@ -1,7 +1,7 @@
 name = "KeldyshContraction"
 uuid = "da6be1f2-7f61-475e-9253-2fea1ca4beca"
-authors = ["Orjan Ameye <orjan.ameye@hotmail.com>"]
 version = "0.1.0-DEV"
+authors = ["Orjan Ameye <orjan.ameye@hotmail.com>"]
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
@@ -35,7 +35,7 @@ MacroTools = "0.5.15"
 NautyGraphs = "0.6"
 OrderedCollections = "1"
 Random = "1.10"
-SmallCollections = "0.4.0"
+SmallCollections = "0.4.0, 0.6"
 SymbolicUtils = "3.26"
 TermInterface = "2"
 Test = "1.10"
