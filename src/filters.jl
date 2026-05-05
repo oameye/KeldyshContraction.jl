@@ -34,7 +34,7 @@ Gᴿ(1,2) Gᴿ(2,1) = 0
 Gᴬ(1,2) Gᴬ(2,1) = 0
 Gᴿ(1,2) Gᴬ(1,2) = 0
 """
-function has_zero_loop(vs::Vector{Contraction})
+function has_two_zero_loop(vs::Vector{Contraction})
     ps = positions.(vs)
     sorted_ps = sort_tuple.(ps)
     loops = find_equal_pairs(sorted_ps)
@@ -54,6 +54,76 @@ function has_zero_loop(vs::Vector{Contraction})
     end
     return false
 end
+function has_zero_loop(vs::Vector{Contraction})
+    if has_two_zero_loop(vs)
+        return true
+    end # TODO remove
+
+    # g, _, has_in = make_graph(Graphs.SimpleDiGraph, vs)
+    # for cycle in Graphs.simplecycles(g)
+    #     if isone(length(cycle))
+    #         continue
+    #     end
+    #     for i in eachindex(cycle)
+    #         cycle[i] -= Int(has_in)
+    #     end
+
+    #     all_equal_loop(cycle, vs) && return true
+
+    #     # # check for time incostencies $G^A(1,2)G^R(1,3)G^R(3,2)0$
+    #     # # t_1 < t_2 < t_3, t_3 < t_1,
+    #     invalid_constrained_loop(cycle, vs) && return true
+    # end
+    return false
+end
+function all_equal_loop(cycle, vs)
+    edges_in_cycle = make_directed_edges(cycle, false)
+    cycle_contractions = filter(x -> is_in_cycle(x, edges_in_cycle), vs)
+
+    cycle_ptype = map(cc -> propagator_type(cc...), cycle_contractions)
+    if count(is_advanced, cycle_ptype) >= length(cycle)
+        return true
+    elseif count(is_retarded, cycle_ptype) >= length(cycle)
+        return true
+    end
+    return false
+end
+
+function invalid_constrained_loop(cycle, vs)
+    edges_in_cycle = make_directed_edges(cycle, true)
+    cycle_contractions = filter(x -> is_in_cycle(x, edges_in_cycle) && !is_keldysh(x), vs)
+    if length(cycle_contractions) < length(cycle)
+        return false
+    end
+    retarded_idxs = findall(is_retarded, cycle_contractions)
+    cycle_contractions_ps = map(integer_positions, cycle_contractions)
+    for i in retarded_idxs
+        cycle_contractions_ps[i] = reverse(cycle_contractions_ps[i])
+    end
+    _edges = Graphs.Edge.(cycle_contractions_ps)
+    h_cycle = Graphs.SimpleDiGraph(_edges)
+    if length(unique(_edges)) >= length(cycle) && Graphs.is_cyclic(h_cycle)
+        @show cycle
+        @show cycle_contractions_ps
+        return true
+    end
+    return false
+end
+
+function is_in_cycle(edge, edges_in_cycle)
+    ps = integer_positions(edge)
+    return ps ∈ edges_in_cycle
+end
+function make_directed_edges(cycle, all=false)
+    l = length(cycle)
+    set = Set((cycle[i], cycle[mod1(i + 1, l)]) for i in eachindex(cycle))
+    if all
+        for i in eachindex(cycle)
+            push!(set, (cycle[mod1(i + 1, l)], cycle[i]))
+        end
+    end
+    return set
+end
 
 function is_reversed(p1, p2)
     return isequal(p1[1], p2[2]) && isequal(p1[2], p2[1])
@@ -61,6 +131,32 @@ end
 function retarded_and_advanced_pair(T1, T2)
     return (is_retarded(T1) && is_advanced(T2)) || (is_advanced(T1) && is_retarded(T2))
 end
+"""
+    find_equal_pairs(v::Vector)
+
+Find all indices of equal pairs in a vector.
+
+Returns a vector of tuples `(i, j)` where `i < j` and `v[i] == v[j]`.
+
+## Examples
+```jldoctest
+julia> using KeldyshContraction: find_equal_pairs
+
+julia> find_equal_pairs([1, 2, 1, 3, 2])
+2-element Vector{Tuple{Int64, Int64}}:
+ (1, 3)
+ (2, 5)
+
+julia> find_equal_pairs([1, 2, 3])
+Tuple{Int64, Int64}[]
+
+julia> find_equal_pairs([1, 1, 1])
+3-element Vector{Tuple{Int64, Int64}}:
+ (1, 2)
+ (1, 3)
+ (2, 3)
+```
+"""
 function find_equal_pairs(vec)
     n = length(vec)
     pairs = Tuple{Int,Int}[]
@@ -75,6 +171,10 @@ function find_equal_pairs(vec)
 
     return pairs
 end
+
+# function check_has_loop(edges, vertices)
+#     g = DiGraph(edges)
+#     return !is_acyclic(g)
 
 ######################
 #     regularise
