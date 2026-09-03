@@ -13,14 +13,14 @@ function f(n)
         perm = Combinatorics.nthperm(iter, i)
         push!(contraction, perm)
     end
-    contraction
+    return contraction
 end
 
 function g(n)
     number_of_combinations = factorial(n)
     to_skip = factorial(n - 1) # due in-out contraction constraint
     iter = 1:n
-    contraction = collect(permutations(iter))[(to_skip + 1):number_of_combinations]
+    return contraction = collect(permutations(iter))[(to_skip + 1):number_of_combinations]
 end
 
 function h(n)
@@ -34,7 +34,7 @@ function h(n)
         KC.next_permutation!(perm, 1, n)
         push!(contraction, collect(perm))
     end
-    contraction
+    return contraction
 end
 
 f(5)

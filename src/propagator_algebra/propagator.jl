@@ -24,7 +24,7 @@ Momenta(idx::Int) = Momenta([1], [Momentum(idx)])
 Momenta() = Momenta(Int[], Momentum[])
 
 function Base.isequal(m1::Momenta, m2::Momenta)
-    isequal(m1.prefactors, m2.prefactors) && isequal(m1.momenta, m2.momenta)
+    return isequal(m1.prefactors, m2.prefactors) && isequal(m1.momenta, m2.momenta)
 end
 Base.hash(m::Momenta, h::UInt) = hash(Momenta, hash(m.momenta, hash(m.prefactors, h)))
 # SmallCollections.default(::Type{Momenta}) = Momenta(Int[], Momentum[])
@@ -59,7 +59,7 @@ struct Edge
     momenta::Momenta
 end
 function Edge(out::Destroy, in::Create, edgetype::PropagatorType.T)
-    Edge(out, in, edgetype, Momenta())
+    return Edge(out, in, edgetype, Momenta())
 end
 Edge(edge::Edge, momenta::Momenta) = Edge(edge.out, edge.in, edge.edgetype, momenta)
 function Edge(tt::Contraction)
@@ -78,7 +78,9 @@ momenta(e::Edge) = e.momenta
 has_momenta(edge::Edge) = !isempty(edge.momenta.prefactors)
 
 function Base.isequal(e1::Edge, e2::Edge)
-    isequal(e1.out, e2.out) && isequal(e1.in, e2.in) && isequal(e1.edgetype, e2.edgetype)
+    return isequal(e1.out, e2.out) &&
+           isequal(e1.in, e2.in) &&
+           isequal(e1.edgetype, e2.edgetype)
 end
 Base.hash(q::Edge, h::UInt) = hash(Edge, hash(q.in, hash(q.edgetype, hash(q.out, h))))
 
@@ -129,7 +131,7 @@ is_keldysh(x::Contraction) = is_keldysh(propagator_type(x...))
 
 make_spectral(edge::Edge) = Edge(edge.out, edge.in, PropagatorType.Spectral, edge.momenta)
 function make_retarded(edge::Edge)
-    Edge(
+    return Edge(
         edge.in'(position(edge.out)),
         edge.out'(position(edge.in)),
         PropagatorType.Retarded,
@@ -137,7 +139,7 @@ function make_retarded(edge::Edge)
     )
 end
 function make_advanced(edge::Edge)
-    Edge(
+    return Edge(
         edge.in'(position(edge.out)),
         edge.out'(position(edge.in)),
         PropagatorType.Advanced,

@@ -193,7 +193,7 @@ function maybe_rationalize(q::QAdd{T}) where {T<:Number}
         return q
     else
         args = map(q.arguments) do term
-            maybe_rationalize(term)
+            return maybe_rationalize(term)
         end
         return QAdd(args)
     end

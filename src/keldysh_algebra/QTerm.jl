@@ -94,13 +94,13 @@ struct QAdd{T<:Number} <: QTerm
     arguments::Vector{QMul{T}}
     function QAdd(args::Vector{<:QMul})
         vs = promote(args...)
-        new{typeof(first(vs)).parameters[1]}(collect(vs))
+        return new{typeof(first(vs)).parameters[1]}(collect(vs))
     end
     function QAdd(args::Vector{QMul{T}}) where {T<:Number}
-        new{T}(args)
+        return new{T}(args)
     end
     function QAdd(args::Vector{<:QSym})
-        new{Int64}([QMul(s) for s in args])
+        return new{Int64}([QMul(s) for s in args])
     end
     QAdd{T}() where {T} = new{T}([QMul{T}()])
 end
@@ -118,7 +118,7 @@ TermInterface.metadata(a::QAdd) = nothing
 Base.adjoint(q::QAdd) = QAdd(map(adjoint, arguments(q)))
 function allfields(q::QAdd)
     vfields = map(allfields, arguments(q))
-    reduce(vcat, vfields)
+    return reduce(vcat, vfields)
 end
 
 Base.promote_rule(::Type{QAdd{S}}, ::Type{QAdd{T}}) where {S,T} = QAdd{promote_rule(S, T)}

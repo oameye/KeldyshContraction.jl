@@ -75,7 +75,7 @@ function wick_contraction(
             end
             diagrams
         end
-        (prod(ps[idx] for idx in idxs), diagrams)
+        return (prod(ps[idx] for idx in idxs), diagrams)
     end
     return pairs
 end

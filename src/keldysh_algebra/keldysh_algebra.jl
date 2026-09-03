@@ -66,9 +66,8 @@ for f in [:Destroy, :Create]
     @eval is_in(ϕ::$(f)) = is_in(position(ϕ))
     @eval is_out(ϕ::$(f)) = is_out(position(ϕ))
 
-    @eval set_reg_to_zero(ϕ::$(f)) = $(f)(
-        name(ϕ), contour(ϕ), Regularisation.Zero, position(ϕ)
-    )
+    @eval set_reg_to_zero(ϕ::$(f)) =
+        $(f)(name(ϕ), contour(ϕ), Regularisation.Zero, position(ϕ))
 end
 function set_reg_to_zero!(v::Vector{QSym})
     for (i, f) in pairs(v)
@@ -76,7 +75,7 @@ function set_reg_to_zero!(v::Vector{QSym})
     end
 end
 function contour_integers(v::Vector{QSym})
-    Int[Int(contour(x)) for x in v]
+    return Int[Int(contour(x)) for x in v]
 end
 ladder(::Destroy) = 0
 ladder(::Create) = 1
@@ -159,7 +158,7 @@ macro qfields(qs...)
         )
 
         # Define the field variable
-        :($(esc(name)) = $(field_construction))
+        return :($(esc(name)) = $(field_construction))
     end
 
     # Return both the definitions and the tuple of names

@@ -28,7 +28,7 @@ function construct_momenta_from_gf(d::Diagram{E1,E2}) where {E1,E2}
             else
                 m = Momenta(1)
             end
-            m
+            return m
         end
     else
         A = construct_linear_system(d.contractions)
@@ -57,7 +57,7 @@ function construct_momenta_from_self_energy(d::Diagram{E1,E2}) where {E1,E2}
             else
                 m = Momenta(1)
             end
-            m
+            return m
         end
     else
         A = construct_linear_system(d.contractions)
