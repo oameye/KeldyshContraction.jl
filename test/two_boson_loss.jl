@@ -1,5 +1,6 @@
 using KeldyshContraction, Test
 using KeldyshContraction: In, Out, Diagram, Diagrams, Edge
+using KeldyshContraction: set_reg_to_zero
 using KeldyshContraction: is_physical, is_conserved, _wick_contraction
 using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus

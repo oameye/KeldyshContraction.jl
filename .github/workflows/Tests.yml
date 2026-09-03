@@ -9,6 +9,7 @@ on:
       - 'src/**'
       - 'ext/**'
       - 'test/**'
+      - 'test/Project.toml'
       - 'Project.toml'
   pull_request:
     branches:
@@ -18,6 +19,7 @@ on:
       - 'src/**'
       - 'ext/**'
       - 'test/**'
+      - 'test/Project.toml'
       - 'Project.toml'
     types:
       - opened
