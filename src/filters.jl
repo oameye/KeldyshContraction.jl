@@ -65,11 +65,24 @@ function has_two_propagator_zero_loop(vs::Vector{Contraction})
     return false
 end
 
+# Position uses Int8: Out is -128, In is 127, and valid bulk positions are
+# 1:126. A UInt128 therefore represents every valid position exactly once.
 @inline function causal_position_bit(position::Int8)::UInt128
     if position == typemin(Int8)
         return one(UInt128)
     end
     return one(UInt128) << Int(position)
+end
+
+@inline function is_causal_propagator(propagator)
+    return is_retarded(propagator) || is_advanced(propagator)
+end
+
+# Represent a causal propagator as a directed edge source -> destination.
+# Gᴿ(x, y) constrains y -> x, while Gᴬ(x, y) constrains x -> y.
+@inline function causal_edge(contraction::Contraction, propagator)
+    positions = integer_positions(contraction)
+    return is_retarded(propagator) ? (positions[2], positions[1]) : positions
 end
 
 function visit_causal_position(
@@ -81,16 +94,9 @@ function visit_causal_position(
 
     for contraction in vs
         propagator = propagator_type(contraction...)
-        is_keldysh(propagator) && continue
+        is_causal_propagator(propagator) || continue
 
-        positions = integer_positions(contraction)
-        source, destination = if is_retarded(propagator)
-            positions[2], positions[1]
-        elseif is_advanced(propagator)
-            positions
-        else
-            continue
-        end
+        source, destination = causal_edge(contraction, propagator)
         source == destination && continue
         source == current || continue
 
@@ -111,7 +117,9 @@ Return whether `vs` contains a causal zero loop.
 
 The retarded and advanced propagators impose directed time-ordering constraints.
 Their product is zero when those constraints contain a directed cycle. Keldysh
-propagators do not impose a causal constraint and are therefore ignored.
+propagators do not impose a causal constraint and are therefore ignored. The
+cycle search is independent of the number of propagators; the `UInt128` state
+covers all valid values of the package's current `Position` representation.
 """
 function has_zero_loop(vs::Vector{Contraction})
     if length(vs) == 2 && has_two_propagator_zero_loop(vs)
@@ -122,16 +130,9 @@ function has_zero_loop(vs::Vector{Contraction})
     self_positions = zero(UInt128)
     for contraction in vs
         propagator = propagator_type(contraction...)
-        is_keldysh(propagator) && continue
+        is_causal_propagator(propagator) || continue
 
-        positions = integer_positions(contraction)
-        source, destination = if is_retarded(propagator)
-            positions[2], positions[1]
-        elseif is_advanced(propagator)
-            positions
-        else
-            continue
-        end
+        source, destination = causal_edge(contraction, propagator)
         if source == destination
             source_bit = causal_position_bit(source)
             if !iszero(self_positions & source_bit)
@@ -158,32 +159,6 @@ end
 function retarded_and_advanced_pair(T1, T2)
     return (is_retarded(T1) && is_advanced(T2)) || (is_advanced(T1) && is_retarded(T2))
 end
-"""
-    find_equal_pairs(v::Vector)
-
-Find all indices of equal pairs in a vector.
-
-Returns a vector of tuples `(i, j)` where `i < j` and `v[i] == v[j]`.
-
-## Examples
-```jldoctest
-julia> using KeldyshContraction: find_equal_pairs
-
-julia> find_equal_pairs([1, 2, 1, 3, 2])
-2-element Vector{Tuple{Int64, Int64}}:
- (1, 3)
- (2, 5)
-
-julia> find_equal_pairs([1, 2, 3])
-Tuple{Int64, Int64}[]
-
-julia> find_equal_pairs([1, 1, 1])
-3-element Vector{Tuple{Int64, Int64}}:
- (1, 2)
- (1, 3)
- (2, 3)
-```
-"""
 function find_equal_pairs(vec)
     n = length(vec)
     pairs = Tuple{Int,Int}[]
@@ -198,10 +173,6 @@ function find_equal_pairs(vec)
 
     return pairs
 end
-
-# function check_has_loop(edges, vertices)
-#     g = DiGraph(edges)
-#     return !is_acyclic(g)
 
 ######################
 #     regularise

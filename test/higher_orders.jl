@@ -1,5 +1,23 @@
 using KeldyshContraction, Test
 
+function has_no_zero_loops(component)
+    return all(component) do pair
+        diagram = first(pair)
+        vs = KeldyshContraction.Contraction[
+            (edge.out, edge.in) for edge in KeldyshContraction.contractions(diagram)
+        ]
+        return !KeldyshContraction.has_zero_loop(vs)
+    end
+end
+
+function has_valid_self_energy_diagrams(component)
+    return all(component) do pair
+        edges = KeldyshContraction.contractions(first(pair))
+        return all(KeldyshContraction.is_bulk, edges) &&
+               KeldyshContraction.is_irreducible(edges)
+    end
+end
+
 @testset "number of topologies" begin
     @qfields c::Destroy(Classical) q::Destroy(Quantum)
     elasctic2boson = -(1//2 * (c^2 + q^2) * c' * q' + 1//2 * c * q * ((c')^2 + (q')^2))
@@ -25,15 +43,7 @@ using KeldyshContraction, Test
     @test length(unique(sort.(irreduciable_topology))) == 5
 
     @testset "zero-loop filtering" begin
-        for component in (GF3.keldysh, GF3.retarded, GF3.advanced)
-            @test all(component) do pair
-                diagram = first(pair)
-                vs = KeldyshContraction.Contraction[
-                    (edge.out, edge.in) for edge in KeldyshContraction.contractions(diagram)
-                ]
-                !KeldyshContraction.has_zero_loop(vs)
-            end
-        end
+        @test all(has_no_zero_loops, (GF3.keldysh, GF3.retarded, GF3.advanced))
     end
 
     GF4 = DressedPropagator(L_int, 4)
@@ -48,6 +58,10 @@ using KeldyshContraction, Test
         end
     end
     @test length(unique(sort.(irreduciable_topology))) == 11 # checked with mathematica (see test/All_graph_topologies.nb)
+
+    @testset "zero-loop filtering" begin
+        @test all(has_no_zero_loops, (GF4.keldysh, GF4.retarded, GF4.advanced))
+    end
 end
 
 @testset "third order run's" begin
@@ -55,5 +69,8 @@ end
     elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
     L_int = InteractionLagrangian(elasctic2boson)
     GF3 = DressedPropagator(L_int, 3)
-    @test SelfEnergy(GF3) isa SelfEnergy
+    Σ = SelfEnergy(GF3)
+    @test Σ isa SelfEnergy
+    @test all(component -> !isempty(component), (Σ.keldysh, Σ.retarded, Σ.advanced))
+    @test all(has_valid_self_energy_diagrams, (Σ.keldysh, Σ.retarded, Σ.advanced))
 end
