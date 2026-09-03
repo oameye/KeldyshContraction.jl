@@ -45,4 +45,90 @@ end
 
     vs = Contraction[(ϕᶜ(Bulk(1)), ϕᴾ'(Bulk(2))), (ϕᶜ(Bulk(1)), ϕᴾ'(Bulk(2)))]
     @test !has_zero_loop(vs)
+
+    # A causal cycle can contain more than two propagators.
+    vs = Contraction[
+        (ϕᶜ(Bulk(1)), ϕᴾ'(Bulk(2))),
+        (ϕᶜ(Bulk(2)), ϕᴾ'(Bulk(3))),
+        (ϕᶜ(Bulk(3)), ϕᴾ'(Bulk(1))),
+    ]
+    @test has_zero_loop(vs)
+
+    vs = Contraction[
+        (ϕᴾ(Bulk(1)), ϕᶜ'(Bulk(2))),
+        (ϕᴾ(Bulk(2)), ϕᶜ'(Bulk(3))),
+        (ϕᴾ(Bulk(3)), ϕᶜ'(Bulk(1))),
+    ]
+    @test has_zero_loop(vs)
+
+    # Mixed retarded/advanced constraints can also be inconsistent.
+    vs = Contraction[
+        (ϕᴾ(Bulk(1)), ϕᶜ'(Bulk(2))),
+        (ϕᶜ(Bulk(1)), ϕᴾ'(Bulk(3))),
+        (ϕᶜ(Bulk(3)), ϕᴾ'(Bulk(2))),
+    ]
+    @test has_zero_loop(vs)
+
+    vs = Contraction[
+        (ϕᴾ(Bulk(1)), ϕᶜ'(Bulk(2))),
+        (ϕᶜ(Bulk(1)), ϕᴾ'(Bulk(3))),
+        (ϕᶜ(Bulk(2)), ϕᴾ'(Bulk(3))),
+    ]
+    @test !has_zero_loop(vs)
+
+    # Keldysh propagators do not impose causal constraints.
+    vs = Contraction[
+        (ϕᶜ(Bulk(1)), ϕᶜ'(Bulk(2))),
+        (ϕᶜ(Bulk(2)), ϕᶜ'(Bulk(3))),
+        (ϕᶜ(Bulk(3)), ϕᶜ'(Bulk(1))),
+    ]
+    @test !has_zero_loop(vs)
+
+    retarded(i, j) = (ϕᶜ(Bulk(i)), ϕᴾ'(Bulk(j)))
+    advanced(i, j) = (ϕᴾ(Bulk(i)), ϕᶜ'(Bulk(j)))
+    keldysh(i, j) = (ϕᶜ(Bulk(i)), ϕᶜ'(Bulk(j)))
+
+    @testset "longer homogeneous cycles" begin
+        @test has_zero_loop(
+            Contraction[retarded(1, 2), retarded(2, 3), retarded(3, 4), retarded(4, 1)]
+        )
+        @test has_zero_loop(
+            Contraction[
+                advanced(1, 2),
+                advanced(2, 3),
+                advanced(3, 4),
+                advanced(4, 5),
+                advanced(5, 1),
+            ],
+        )
+    end
+
+    @testset "mixed cycles with extra edges" begin
+        vs = Contraction[
+            advanced(1, 2),
+            retarded(3, 2),
+            advanced(3, 4),
+            retarded(5, 4),
+            advanced(5, 1),
+            advanced(1, 6),
+        ]
+        @test has_zero_loop(vs)
+
+        # The cycle is independent of the input order and of the extra edges.
+        vs = [vs[4], vs[2], vs[6], vs[1], vs[3], vs[5]]
+        @test has_zero_loop(vs)
+    end
+
+    @testset "non-causal and acyclic graphs" begin
+        @test !has_zero_loop(Contraction[advanced(1, 2), keldysh(2, 3), advanced(3, 1)])
+        @test !has_zero_loop(
+            Contraction[
+                advanced(1, 2),
+                retarded(3, 2),
+                advanced(3, 4),
+                retarded(5, 4),
+                advanced(1, 5),
+            ],
+        )
+    end
 end

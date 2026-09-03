@@ -28,28 +28,126 @@ function contraction_filter(v)
 end
 
 """
-Filter the zero loops from the list of contractions
+    has_two_propagator_zero_loop(vs)
 
-Gᴿ(1,2) Gᴿ(2,1) = 0
-Gᴬ(1,2) Gᴬ(2,1) = 0
-Gᴿ(1,2) Gᴬ(1,2) = 0
+Return whether `vs` contains a zero loop formed by two propagators.
+
+In particular, this detects the pairwise causal identities
+
+```math
+G^R(1,2)G^R(2,1) = 0,
+\\qquad
+G^A(1,2)G^A(2,1) = 0,
+\\qquad
+G^R(1,2)G^A(1,2) = 0.
+```
+
+For a two-propagator input, [`has_zero_loop`](@ref) checks this fast path
+before checking arbitrary-order causal cycles. The helper is also useful on
+its own for detecting pairwise zero loops inside a larger contraction list.
+"""
+function has_two_propagator_zero_loop(vs::Vector{Contraction})
+    for i in 1:(length(vs) - 1)
+        p1 = positions(vs[i])
+        T1 = propagator_type(vs[i]...)
+        for j in (i + 1):length(vs)
+            p2 = positions(vs[j])
+            T2 = propagator_type(vs[j]...)
+            if is_retarded(T1) && is_retarded(T2) && is_reversed(p1, p2)
+                return true
+            elseif is_advanced(T1) && is_advanced(T2) && is_reversed(p1, p2)
+                return true
+            elseif isequal(p1, p2) && retarded_and_advanced_pair(T1, T2)
+                return true
+            end
+        end
+    end
+    return false
+end
+
+# Position uses Int8: Out is -128, In is 127, and valid bulk positions are
+# 1:126. A UInt128 therefore represents every valid position exactly once.
+@inline function causal_position_bit(position::Int8)::UInt128
+    if position == typemin(Int8)
+        return one(UInt128)
+    end
+    return one(UInt128) << Int(position)
+end
+
+@inline function is_causal_propagator(propagator)
+    return is_retarded(propagator) || is_advanced(propagator)
+end
+
+# Represent a causal propagator as a directed edge source -> destination.
+# Gᴿ(x, y) constrains y -> x, while Gᴬ(x, y) constrains x -> y.
+@inline function causal_edge(contraction::Contraction, propagator)
+    positions = integer_positions(contraction)
+    return is_retarded(propagator) ? (positions[2], positions[1]) : positions
+end
+
+function visit_causal_position(
+    vs::Vector{Contraction}, current::Int8, visited::UInt128, active::UInt128
+)::Tuple{Bool,UInt128}
+    current_bit = causal_position_bit(current)
+    visited |= current_bit
+    active |= current_bit
+
+    for contraction in vs
+        propagator = propagator_type(contraction...)
+        is_causal_propagator(propagator) || continue
+
+        source, destination = causal_edge(contraction, propagator)
+        source == destination && continue
+        source == current || continue
+
+        destination_bit = causal_position_bit(destination)
+        !iszero(active & destination_bit) && return true, visited
+        if iszero(visited & destination_bit)
+            has_loop, visited = visit_causal_position(vs, destination, visited, active)
+            has_loop && return true, visited
+        end
+    end
+    return false, visited
+end
+
+"""
+    has_zero_loop(vs)
+
+Return whether `vs` contains a causal zero loop.
+
+The retarded and advanced propagators impose directed time-ordering constraints.
+Their product is zero when those constraints contain a directed cycle. Keldysh
+propagators do not impose a causal constraint and are therefore ignored. The
+cycle search is independent of the number of propagators; the `UInt128` state
+covers all valid values of the package's current `Position` representation.
 """
 function has_zero_loop(vs::Vector{Contraction})
-    ps = positions.(vs)
-    sorted_ps = sort_tuple.(ps)
-    loops = find_equal_pairs(sorted_ps)
-    for loop in loops
-        T1 = propagator_type(vs[loop[1]]...)
-        T2 = propagator_type(vs[loop[2]]...)
-        if all(is_retarded, (T1, T2)) && is_reversed(ps[loop[1]], ps[loop[2]])
-            # @info "Has zero loop"
-            return true
-        elseif all(is_advanced, (T1, T2)) && is_reversed(ps[loop[1]], ps[loop[2]])
-            # @info "Has zero loop"
-            return true
-        elseif isequal(ps[loop[1]], ps[loop[2]]) && retarded_and_advanced_pair(T1, T2)
-            # @info "Has zero loop"
-            return true
+    if length(vs) == 2 && has_two_propagator_zero_loop(vs)
+        return true
+    end
+
+    visited = zero(UInt128)
+    self_positions = zero(UInt128)
+    for contraction in vs
+        propagator = propagator_type(contraction...)
+        is_causal_propagator(propagator) || continue
+
+        source, destination = causal_edge(contraction, propagator)
+        if source == destination
+            source_bit = causal_position_bit(source)
+            if !iszero(self_positions & source_bit)
+                return true
+            end
+            self_positions |= source_bit
+            continue
+        end
+
+        source_bit = causal_position_bit(source)
+        if iszero(visited & source_bit)
+            has_loop, visited = visit_causal_position(vs, source, visited, zero(UInt128))
+            if has_loop
+                return true
+            end
         end
     end
     return false
