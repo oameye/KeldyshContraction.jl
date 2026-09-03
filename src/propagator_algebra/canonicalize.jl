@@ -1,5 +1,5 @@
 """
-    advanced_to_retarded(x::T) where {T<:SymbolicUtils.Symbolic}
+    advanced_to_retarded(x::T) where {T<:SymbolicUtils.BasicSymbolic}
 
 Apply the transformation to change the advanced propagator to retarded:
 

@@ -172,7 +172,7 @@ function reduce_to_spectral(ds::Diagrams{E1,E2}) where {E1,E2}
             push!(ds′, d′, -coeff)
             continue
         else
-            push!(ds′, d′, coeff)
+            push!(ds′, d, coeff)
             continue
         end
     end
