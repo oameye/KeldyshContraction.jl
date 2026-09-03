@@ -17,6 +17,13 @@ GF = DressedPropagator(L_int, 2)
     @test Set(abs.(values(tmp.diagrams))) == Set(abs.(values(Σk.keldysh.diagrams)))
 end
 
+@testset "reduce to spectral without simplification" begin
+    using KeldyshContraction: reduce_to_spectral, Bulk, Diagram, Diagrams, Edge
+    d = Diagram([Edge(c(Bulk(1)), c'(Bulk(2))), Edge(c(Bulk(3)), c'(Bulk(4)))])
+    ds = Diagrams([d], Complex{Rational{Int}}(1.0))
+    @test isequal(reduce_to_spectral(ds), ds)
+end
+
 @testset "reduce to spectral" begin
     using KeldyshContraction: reduce_to_spectral
     tmp = reduce_to_spectral(Σk.keldysh)

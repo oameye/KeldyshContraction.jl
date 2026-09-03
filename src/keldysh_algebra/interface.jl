@@ -8,11 +8,9 @@
 Abstract type representing any expression involving Fields.
 """
 abstract type QField end
-const CSym = if isdefined(SymbolicUtils, :SymReal)
-    SymbolicUtils.BasicSymbolic{SymbolicUtils.SymReal}
-else
-    SymbolicUtils.BasicSymbolic{Number}
-end
+const CSym = SymbolicUtils.BasicSymbolic{
+    isdefined(SymbolicUtils, :SymReal) ? SymbolicUtils.SymReal : Number
+}
 const SNuN = Union{CSym,Number}
 const QSymbol = Union{QField,SNuN}
 

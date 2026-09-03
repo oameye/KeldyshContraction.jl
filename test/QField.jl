@@ -87,10 +87,10 @@ end
     @test zero(ϕ) == 0
 end
 
-# @testset "hash" begin # how to test hashes?
-#     @test hash(ϕ * ϕ, hash(4)) == 0x85ebad55106e875a
-#     @test hash(ϕ + ϕ, hash(4)) == 0x8fc9006919ba7ef2
-# end
+@testset "hash" begin
+    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
+    @test isequal(hash(ϕ + ψ), hash(ϕ + ψ))
+end
 
 @testset "isequal" begin
     @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
