@@ -80,21 +80,27 @@ function indices_from_counts(counts::Vector{Int})
     return indices
 end
 
-function make_graph(graph_type::Type{<:Graphs.AbstractGraph}, vs)
+function make_graph_edge(int_pair, max_label, has_out)
+    if typemin(Int8) in int_pair
+        return Graphs.Edge(1, last(int_pair) + Int(has_out))
+    elseif typemax(Int8) in int_pair
+        return Graphs.Edge(first(int_pair) + Int(has_out), max_label)
+    else
+        return Graphs.Edge(int_pair .+ Int(has_out))
+    end
+end
+
+function graph_parameters(vs)
     ps_int = map(integer_positions, vs)
     flattened_int = Iterators.flatten(ps_int)
     max_label = length(unique(flattened_int))
-    has_in = any(==(typemin(Int8)), flattened_int) # for vacuum diagram
+    has_out = any(==(typemin(Int8)), flattened_int) # for non-vacuum diagrams
+    return ps_int, max_label, has_out
+end
 
-    _edges = map(ps_int) do int_pair
-        tt = if typemin(Int8) in int_pair
-            (1, last(int_pair) + Int(has_in))
-        elseif typemax(Int8) in int_pair
-            (first(int_pair) + Int(has_in), max_label)
-        else
-            int_pair .+ Int(has_in)
-        end
-        Graphs.Edge(tt)
-    end
-    return graph_type(_edges), max_label, has_in
+function make_graph(graph_type::Type{<:Graphs.AbstractGraph}, vs)
+    ps_int, max_label, has_out = graph_parameters(vs)
+
+    _edges = map(int_pair -> make_graph_edge(int_pair, max_label, has_out), ps_int)
+    return graph_type(_edges), max_label, has_out
 end

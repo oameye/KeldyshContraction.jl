@@ -38,8 +38,8 @@ function sort_by_position_and_type(p::Contraction)::Float64
 end
 sort_by_position_and_type(p::Edge)::Float64 = sort_by_position_and_type(fields(p))
 
-function make_permutation_dict(perm, max_label, has_in)
-    if has_in
+function make_permutation_dict(perm, max_label, has_out)
+    if has_out
         l = length(perm)
         tracker = 0
         last_index = findfirst(==(max_label), perm)
@@ -59,9 +59,9 @@ function make_permutation_dict(perm, max_label, has_in)
     return dict
 end
 function canonicalize(vs)
-    graph, max_label, has_in = make_graph(NautyGraphs.NautyDiGraph, vs)
+    graph, max_label, has_out = make_graph(NautyGraphs.NautyDiGraph, vs)
     perm = NautyGraphs.canonical_permutation(graph)
-    permutation_map = make_permutation_dict(perm, max_label, has_in)
+    permutation_map = make_permutation_dict(perm, max_label, has_out)
 
     canonical_vs = map(vs) do c
         map(c) do ψ

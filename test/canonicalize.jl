@@ -1,5 +1,7 @@
 using KeldyshContraction, Test
-using KeldyshContraction: canonicalize, Bulk, In, Out, sort_by_position_and_type, positions
+using KeldyshContraction:
+    canonicalize, Bulk, In, Out, sort_by_position_and_type, positions, make_graph
+using NautyGraphs: NautyDiGraph
 
 @qfields c::Destroy(Classical) q::Destroy(Quantum)
 
@@ -122,8 +124,6 @@ using KeldyshContraction: canonicalize, Bulk, In, Out, sort_by_position_and_type
     end
 
     @testset "type_stability" begin
-        using KeldyshContraction: make_graph
-        using NautyGraphs: NautyDiGraph
         vs1 = [
             (c(Out()), q'(Bulk(1))),
             (c(Bulk(1)), q'(Bulk(2))),

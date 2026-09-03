@@ -28,13 +28,24 @@ function contraction_filter(v)
 end
 
 """
-Filter the zero loops from the list of contractions
+    has_two_propagator_zero_loop(vs)
 
-Gᴿ(1,2) Gᴿ(2,1) = 0
-Gᴬ(1,2) Gᴬ(2,1) = 0
-Gᴿ(1,2) Gᴬ(1,2) = 0
+Return whether `vs` contains a zero loop formed by two propagators.
+
+In particular, this detects the pairwise causal identities
+
+```math
+G^R(1,2)G^R(2,1) = 0,
+\\qquad
+G^A(1,2)G^A(2,1) = 0,
+\\qquad
+G^R(1,2)G^A(1,2) = 0.
+```
+
+This is the fast path used by [`has_zero_loop`](@ref) before checking
+arbitrary-order causal cycles.
 """
-function has_two_zero_loop(vs::Vector{Contraction})
+function has_two_propagator_zero_loop(vs::Vector{Contraction})
     ps = positions.(vs)
     sorted_ps = sort_tuple.(ps)
     loops = find_equal_pairs(sorted_ps)
@@ -54,75 +65,35 @@ function has_two_zero_loop(vs::Vector{Contraction})
     end
     return false
 end
+"""
+    has_zero_loop(vs)
+
+Return whether `vs` contains a causal zero loop.
+
+The retarded and advanced propagators impose directed time-ordering constraints.
+Their product is zero when those constraints contain a directed cycle. Keldysh
+propagators do not impose a causal constraint and are therefore ignored.
+"""
 function has_zero_loop(vs::Vector{Contraction})
-    if has_two_zero_loop(vs)
-        return true
-    end # TODO remove
-
-    # g, _, has_in = make_graph(Graphs.SimpleDiGraph, vs)
-    # for cycle in Graphs.simplecycles(g)
-    #     if isone(length(cycle))
-    #         continue
-    #     end
-    #     for i in eachindex(cycle)
-    #         cycle[i] -= Int(has_in)
-    #     end
-
-    #     all_equal_loop(cycle, vs) && return true
-
-    #     # # check for time incostencies $G^A(1,2)G^R(1,3)G^R(3,2)0$
-    #     # # t_1 < t_2 < t_3, t_3 < t_1,
-    #     invalid_constrained_loop(cycle, vs) && return true
-    # end
-    return false
-end
-function all_equal_loop(cycle, vs)
-    edges_in_cycle = make_directed_edges(cycle, false)
-    cycle_contractions = filter(x -> is_in_cycle(x, edges_in_cycle), vs)
-
-    cycle_ptype = map(cc -> propagator_type(cc...), cycle_contractions)
-    if count(is_advanced, cycle_ptype) >= length(cycle)
-        return true
-    elseif count(is_retarded, cycle_ptype) >= length(cycle)
+    if has_two_propagator_zero_loop(vs)
         return true
     end
-    return false
-end
 
-function invalid_constrained_loop(cycle, vs)
-    edges_in_cycle = make_directed_edges(cycle, true)
-    cycle_contractions = filter(x -> is_in_cycle(x, edges_in_cycle) && !is_keldysh(x), vs)
-    if length(cycle_contractions) < length(cycle)
-        return false
-    end
-    retarded_idxs = findall(is_retarded, cycle_contractions)
-    cycle_contractions_ps = map(integer_positions, cycle_contractions)
-    for i in retarded_idxs
-        cycle_contractions_ps[i] = reverse(cycle_contractions_ps[i])
-    end
-    _edges = Graphs.Edge.(cycle_contractions_ps)
-    h_cycle = Graphs.SimpleDiGraph(_edges)
-    if length(unique(_edges)) >= length(cycle) && Graphs.is_cyclic(h_cycle)
-        @show cycle
-        @show cycle_contractions_ps
-        return true
-    end
-    return false
-end
+    ps_int, max_label, has_out = graph_parameters(vs)
+    causal_edges = Graphs.Edge{Int}[]
+    for (contraction, edge) in zip(vs, ps_int)
+        is_keldysh(contraction) && continue
 
-function is_in_cycle(edge, edges_in_cycle)
-    ps = integer_positions(edge)
-    return ps ∈ edges_in_cycle
-end
-function make_directed_edges(cycle, all=false)
-    l = length(cycle)
-    set = Set((cycle[i], cycle[mod1(i + 1, l)]) for i in eachindex(cycle))
-    if all
-        for i in eachindex(cycle)
-            push!(set, (cycle[mod1(i + 1, l)], cycle[i]))
+        if is_retarded(contraction)
+            edge = reverse(edge)
+        elseif !is_advanced(contraction)
+            continue
         end
+        edge[1] == edge[2] && continue
+        push!(causal_edges, make_graph_edge(edge, max_label, has_out))
     end
-    return set
+
+    return Graphs.is_cyclic(Graphs.SimpleDiGraph(causal_edges))
 end
 
 function is_reversed(p1, p2)
