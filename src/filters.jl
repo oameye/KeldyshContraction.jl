@@ -42,29 +42,68 @@ G^A(1,2)G^A(2,1) = 0,
 G^R(1,2)G^A(1,2) = 0.
 ```
 
-This is the fast path used by [`has_zero_loop`](@ref) before checking
-arbitrary-order causal cycles.
+For a two-propagator input, [`has_zero_loop`](@ref) checks this fast path
+before checking arbitrary-order causal cycles. The helper is also useful on
+its own for detecting pairwise zero loops inside a larger contraction list.
 """
 function has_two_propagator_zero_loop(vs::Vector{Contraction})
-    ps = positions.(vs)
-    sorted_ps = sort_tuple.(ps)
-    loops = find_equal_pairs(sorted_ps)
-    for loop in loops
-        T1 = propagator_type(vs[loop[1]]...)
-        T2 = propagator_type(vs[loop[2]]...)
-        if all(is_retarded, (T1, T2)) && is_reversed(ps[loop[1]], ps[loop[2]])
-            # @info "Has zero loop"
-            return true
-        elseif all(is_advanced, (T1, T2)) && is_reversed(ps[loop[1]], ps[loop[2]])
-            # @info "Has zero loop"
-            return true
-        elseif isequal(ps[loop[1]], ps[loop[2]]) && retarded_and_advanced_pair(T1, T2)
-            # @info "Has zero loop"
-            return true
+    for i in 1:(length(vs) - 1)
+        p1 = positions(vs[i])
+        T1 = propagator_type(vs[i]...)
+        for j in (i + 1):length(vs)
+            p2 = positions(vs[j])
+            T2 = propagator_type(vs[j]...)
+            if is_retarded(T1) && is_retarded(T2) && is_reversed(p1, p2)
+                return true
+            elseif is_advanced(T1) && is_advanced(T2) && is_reversed(p1, p2)
+                return true
+            elseif isequal(p1, p2) && retarded_and_advanced_pair(T1, T2)
+                return true
+            end
         end
     end
     return false
 end
+
+@inline function causal_position_bit(position::Int8)::UInt128
+    if position == typemin(Int8)
+        return one(UInt128)
+    end
+    return one(UInt128) << Int(position)
+end
+
+function visit_causal_position(
+    vs::Vector{Contraction}, current::Int8, visited::UInt128, active::UInt128
+)::Tuple{Bool,UInt128}
+    current_bit = causal_position_bit(current)
+    visited |= current_bit
+    active |= current_bit
+
+    for contraction in vs
+        propagator = propagator_type(contraction...)
+        is_keldysh(propagator) && continue
+
+        positions = integer_positions(contraction)
+        source, destination = if is_retarded(propagator)
+            positions[2], positions[1]
+        elseif is_advanced(propagator)
+            positions
+        else
+            continue
+        end
+        source == destination && continue
+        source == current || continue
+
+        destination_bit = causal_position_bit(destination)
+        !iszero(active & destination_bit) && return true, visited
+        if iszero(visited & destination_bit)
+            has_loop, visited = visit_causal_position(vs, destination, visited, active)
+            has_loop && return true, visited
+        end
+    end
+    return false, visited
+end
+
 """
     has_zero_loop(vs)
 
@@ -75,25 +114,42 @@ Their product is zero when those constraints contain a directed cycle. Keldysh
 propagators do not impose a causal constraint and are therefore ignored.
 """
 function has_zero_loop(vs::Vector{Contraction})
-    if has_two_propagator_zero_loop(vs)
+    if length(vs) == 2 && has_two_propagator_zero_loop(vs)
         return true
     end
 
-    ps_int, max_label, has_out = graph_parameters(vs)
-    causal_edges = Graphs.Edge{Int}[]
-    for (contraction, edge) in zip(vs, ps_int)
-        is_keldysh(contraction) && continue
+    visited = zero(UInt128)
+    self_positions = zero(UInt128)
+    for contraction in vs
+        propagator = propagator_type(contraction...)
+        is_keldysh(propagator) && continue
 
-        if is_retarded(contraction)
-            edge = reverse(edge)
-        elseif !is_advanced(contraction)
+        positions = integer_positions(contraction)
+        source, destination = if is_retarded(propagator)
+            positions[2], positions[1]
+        elseif is_advanced(propagator)
+            positions
+        else
             continue
         end
-        edge[1] == edge[2] && continue
-        push!(causal_edges, make_graph_edge(edge, max_label, has_out))
-    end
+        if source == destination
+            source_bit = causal_position_bit(source)
+            if !iszero(self_positions & source_bit)
+                return true
+            end
+            self_positions |= source_bit
+            continue
+        end
 
-    return Graphs.is_cyclic(Graphs.SimpleDiGraph(causal_edges))
+        source_bit = causal_position_bit(source)
+        if iszero(visited & source_bit)
+            has_loop, visited = visit_causal_position(vs, source, visited, zero(UInt128))
+            if has_loop
+                return true
+            end
+        end
+    end
+    return false
 end
 
 function is_reversed(p1, p2)
