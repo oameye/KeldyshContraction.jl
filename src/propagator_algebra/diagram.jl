@@ -105,7 +105,7 @@ function Base.:*(prefactor::Number, collection::Diagrams)
     collection = deepcopy(collection) # needed so that -1 * Σ.keldysh does not change Σ
     foreach(collection) do (diagram, _)
         collection.diagrams[diagram] *= prefactor
-        collection.diagrams[diagram] = _simplify(collection.diagrams[diagram])
+        return collection.diagrams[diagram] = _simplify(collection.diagrams[diagram])
     end
     return collection
 end
@@ -180,14 +180,14 @@ function topologies(ds::Diagrams)
     _bulk_multiplicity = map(terms) do diagram
         vs = map(diagram.contractions) do c
             ff = fields(c)
-            integer_positions((ff[1], ff[2]))
+            return integer_positions((ff[1], ff[2]))
         end
-        bulk_multiplicity(vs)
+        return bulk_multiplicity(vs)
     end
     _topologies = unique(_bulk_multiplicity)
     pairs = map(_topologies) do t
         idxs = findall(i -> i == t, _bulk_multiplicity)
-        t => terms[idxs]
+        return t => terms[idxs]
     end
     return Dict(pairs)
 end

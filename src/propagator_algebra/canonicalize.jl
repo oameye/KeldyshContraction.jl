@@ -1,5 +1,5 @@
 """
-    advanced_to_retarded(x::T) where {T<:SymbolicUtils.Symbolic}
+    advanced_to_retarded(x::T) where {T<:SymbolicUtils.BasicSymbolic}
 
 Apply the transformation to change the advanced propagator to retarded:
 
@@ -52,7 +52,7 @@ function make_NautyDiGraph(vs)
         else
             int_pair .+ Int(has_in)
         end
-        Graphs.Edge(tt)
+        return Graphs.Edge(tt)
     end
     return NautyGraphs.NautyDiGraph(_edges), max_label, has_in
 end

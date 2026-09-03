@@ -25,7 +25,7 @@ struct DressedPropagator{E1,E2}
     "The order of the dressed propagator in the perturbation series"
     order::Int64
     "Parameters of the perturbation series of the `order`, i.e., ``g^2`` means `order=2`."
-    parameter::SymbolicUtils.BasicSymbolic{Number}
+    parameter::CSym
 end
 
 """
@@ -99,7 +99,7 @@ $(DocStringExtensions.FIELDS)
 """
 struct DressedPropagatorSum{GS}
     "The arguments of the dressed propagator sum. Each involving a different parameter."
-    arguments::Dict{SymbolicUtils.BasicSymbolic{Number},GS}
+    arguments::Dict{CSym,GS}
     "The order of the dressed propagator in the perturbation series"
     order::Int64
 end

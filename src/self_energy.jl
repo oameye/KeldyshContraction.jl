@@ -32,7 +32,7 @@ function construct_self_energy!(
 
         # Find all bulk propagators (edges where both fields are bulk)
         bulk_idxs = findall(is_bulk, _contractions)
-        bulk_propagators = _contractions[bulk_idxs]
+        bulk_propagators = [_contractions[i] for i in bulk_idxs]
         push!(self_energy[self_energy_type(dict)], Diagram(bulk_propagators), prefactor)
     end
     return self_energy
@@ -46,7 +46,7 @@ The self-energy is divided into three components: Keldysh, retarded, and advance
 
 # Fields
 $(DocStringExtensions.FIELDS)
-where it assumed that the fields are of type `Union{SymbolicUtils.Symbolic{<:Number}, Number}`.
+where it assumed that the fields are of type `Union{SymbolicUtils.BasicSymbolic, Number}`.
 
 
 # Constructor
@@ -66,7 +66,7 @@ struct SelfEnergy{E1,E2}
     "The order of the self-energy in the perturbation series"
     order::Int64
     "Parameters of the perturbation series"
-    parameter::SymbolicUtils.BasicSymbolic{Number}
+    parameter::CSym
 end
 function SelfEnergy(G::DressedPropagator{E}, order=G.order) where {E}
     self_energy = SmallCollections.SmallDict{3,PropagatorType.T,Diagrams}((
@@ -129,7 +129,7 @@ $(DocStringExtensions.FIELDS)
 """
 struct SelfEnergySum{Σs}
     "The arguments of the dressed propagator sum. Each involving a different parameter."
-    arguments::Dict{SymbolicUtils.BasicSymbolic{Number},Σs}
+    arguments::Dict{CSym,Σs}
     "The order of the dressed propagator in the perturbation series"
     order::Int64
 end

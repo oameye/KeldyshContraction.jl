@@ -8,7 +8,9 @@
 Abstract type representing any expression involving Fields.
 """
 abstract type QField end
-const CSym = SymbolicUtils.Symbolic{<:Number}
+const CSym = SymbolicUtils.BasicSymbolic{
+    isdefined(SymbolicUtils, :SymReal) ? SymbolicUtils.SymReal : Number
+}
 const SNuN = Union{CSym,Number}
 const QSymbol = Union{QField,SNuN}
 
@@ -38,9 +40,8 @@ TermInterface.metadata(x::QSym) = nothing
 
 # Symbolic type promotion
 for f in SymbolicUtils.basic_diadic # [+, -, *, /, //, \, ^]
-    @eval SymbolicUtils.promote_symtype(::$(typeof(f)), Ts::Type{<:QField}...) = promote_type(
-        Ts...
-    )
+    @eval SymbolicUtils.promote_symtype(::$(typeof(f)), Ts::Type{<:QField}...) =
+        promote_type(Ts...)
     @eval SymbolicUtils.promote_symtype(::$(typeof(f)), T::Type{<:QField}, Ts...) = T
     @eval SymbolicUtils.promote_symtype(
         ::$(typeof(f)), T::Type{<:QField}, S::Type{<:Number}

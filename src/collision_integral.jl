@@ -171,9 +171,6 @@ function reduce_to_spectral(ds::Diagrams{E1,E2}) where {E1,E2}
             d′ = Diagram(contractions′, d.topology)
             push!(ds′, d′, -coeff)
             continue
-        else
-            push!(ds′, d′, coeff)
-            continue
         end
     end
     filter_nonzero!(ds′)

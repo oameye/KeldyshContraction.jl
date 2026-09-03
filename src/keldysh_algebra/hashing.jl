@@ -1,7 +1,9 @@
-# These has function are defined such that comparison functions work, e.g., `unique`.
-Base.hash(q::QMul, h::UInt) = hash(QMul, hash(q.arg_c, SymbolicUtils.hashvec(q.args_nc, h)))
+# These hash functions are defined such that comparison functions work, e.g., `unique`.
+_hashvec(xs, h::UInt) = foldr(hash, xs; init=h)
 
-Base.hash(q::QAdd, h::UInt) = hash(QAdd, SymbolicUtils.hashvec(arguments(q), h))
+Base.hash(q::QMul, h::UInt) = hash(QMul, hash(q.arg_c, _hashvec(q.args_nc, h)))
+
+Base.hash(q::QAdd, h::UInt) = hash(QAdd, _hashvec(arguments(q), h))
 
 function Base.hash(h::Union{KeldyshContour.T,Regularisation.T}, i::UInt)
     return hash(Int(h), i)
