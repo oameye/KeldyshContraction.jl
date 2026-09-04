@@ -32,7 +32,7 @@ end
 statistics(::Field{S}) where {S<:Statistics} = S
 orientation(f::Field) = f.orientation
 keldysh_index(f::Field) = f.keldysh
-contour(f::Field) = keldysh_index(f) # internal compatibility name; storage is neutral
+contour(f::Field) = keldysh_index(f)
 regularisation(f::Field) = f.regularisation
 position(f::Field) = f.position
 field_indices(f::Field) = f.indices
@@ -90,6 +90,28 @@ function bar(f::Field{S}) where {S}
         name(f), o, keldysh_index(f), position(f), regularisation(f), field_indices(f)
     )
 end
+
+# Transitional source/test compatibility shims. These are not exported and are removed
+# once the repository has been migrated to `Boson` / `bar` syntax.
+"""Transitional constructor for an unbarred bosonic field."""
+function Destroy(
+    name::Symbol,
+    keldysh::KeldyshIndex.T,
+    reg::Regularisation.T=Regularisation.Zero,
+    pos::Position=Bulk(),
+)
+    return Field{Boson}(name, keldysh, Orientation.Unbarred, reg, pos)
+end
+"""Transitional constructor for a barred bosonic field."""
+function Create(
+    name::Symbol,
+    keldysh::KeldyshIndex.T,
+    reg::Regularisation.T=Regularisation.Zero,
+    pos::Position=Bulk(),
+)
+    return Field{Boson}(name, keldysh, Orientation.Barred, reg, pos)
+end
+Base.adjoint(f::Field{Boson}) = bar(f)
 
 Base.isequal(a::Field{S}, b::Field{S}) where {S} =
     isequal(name(a), name(b)) &&
@@ -157,8 +179,7 @@ macro qfields(qs...)
         field_kind = field_expr.args[1]
         field_args = field_expr.args[2:end]
 
-        # Temporary parser compatibility keeps old examples loadable while they are
-        # migrated in this PR. No Destroy/Create Julia types are defined.
+        # Temporary parser compatibility while examples are migrated in this PR.
         statistics_expr = field_kind === :Destroy || field_kind === :Create ? :Boson : field_kind
         orientation_expr = field_kind === :Create ? :(Orientation.Barred) : :(Orientation.Unbarred)
 
