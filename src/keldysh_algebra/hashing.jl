@@ -1,21 +1,31 @@
-# These hash functions are defined such that comparison functions work, e.g., `unique`.
+# Hash functions are defined consistently with `isequal` so fields/terms remain safe
+# dictionary keys during canonicalization.
 _hashvec(xs, h::UInt) = foldr(hash, xs; init=h)
 
 Base.hash(q::QMul, h::UInt) = hash(QMul, hash(q.arg_c, _hashvec(q.args_nc, h)))
+Base.hash(q::QAdd, h::UInt) = hash(QAdd, _hashvec(q.arguments, h))
 
-Base.hash(q::QAdd, h::UInt) = hash(QAdd, _hashvec(arguments(q), h))
-
-function Base.hash(h::Union{KeldyshContour.T,Regularisation.T}, i::UInt)
+function Base.hash(h::Union{KeldyshIndex.T,Orientation.T,Regularisation.T}, i::UInt)
     return hash(Int(h), i)
 end
 
-for f in [:Destroy, :Create]
-    @eval function Base.hash(op::T, h::UInt) where {T<:($(f))}
-        return hash(
-            $(f),
+function Base.hash(f::Field{S}, h::UInt) where {S<:Statistics}
+    return hash(
+        Field{S},
+        hash(
+            name(f),
             hash(
-                name(op), hash(contour(op), hash(position(op), hash(regularisation(op), h)))
+                orientation(f),
+                hash(
+                    keldysh_index(f),
+                    hash(
+                        position(f),
+                        hash(regularisation(f), hash(field_indices(f), h)),
+                    ),
+                ),
             ),
-        )
-    end
+        ),
+    )
 end
+
+Base.hash(p::Position, h::UInt) = hash(Position, hash(p.index, h))
