@@ -5,10 +5,11 @@ using CheckConcreteStructs: all_concrete
 using ExplicitImports
 
 @testset "Concretely typed" begin
+    all_concrete(KeldyshContraction.Field{KeldyshContraction.Boson})
+    all_concrete(KeldyshContraction.FieldIndex)
+    all_concrete(KeldyshContraction.FieldIndices)
     all_concrete(KeldyshContraction.QMul)
     all_concrete(KeldyshContraction.QAdd)
-    all_concrete(KeldyshContraction.Destroy)
-    all_concrete(KeldyshContraction.Create)
     all_concrete(KeldyshContraction.InteractionLagrangian)
 
     all_concrete(KeldyshContraction.Edge)
@@ -22,7 +23,8 @@ end
     allow_unanalyzable = (
         KeldyshContraction.Regularisation,
         KeldyshContraction.PropagatorType,
-        KeldyshContraction.KeldyshContour,
+        KeldyshContraction.KeldyshIndex,
+        KeldyshContraction.Orientation,
     )
 
     @test check_no_implicit_imports(KeldyshContraction; allow_unanalyzable) == nothing
@@ -30,7 +32,6 @@ end
     @test check_all_explicit_imports_are_public(KeldyshContraction) == nothing
     @test check_no_stale_explicit_imports(KeldyshContraction; allow_unanalyzable) == nothing
     @test check_all_qualified_accesses_via_owners(KeldyshContraction) == nothing
-    # @test check_all_qualified_accesses_are_public(KeldyshContraction) == nothing
     @test check_no_self_qualified_accesses(KeldyshContraction) == nothing
 end
 
