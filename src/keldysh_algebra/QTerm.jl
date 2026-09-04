@@ -2,122 +2,152 @@
 #    Multiplication
 ########################
 
-"""
-$(DocStringExtensions.TYPEDEF)
-
-Represent a multiplication involving quantum fields  of [`QSym`](@ref) types.
-
-$(DocStringExtensions.FIELDS)
-"""
-struct QMul{T<:Number} <: QTerm
-    "The commutative prefactor."
-    arg_c::T
-    "A vector containing all [`QSym`](@ref) types."
-    args_nc::Vector{QSym}
+"""Concrete product of fields with coefficient type `C` and statistics `S`."""
+struct QMul{C<:Number,S<:Statistics} <: QTerm
+    arg_c::C
+    args_nc::Vector{Field{S}}
 end
-function QMul(arg_c::T, args_nc::Vector{<:QSym}) where {T<:Number}
-    if isequal(arg_c, 0)
-        return QMul{T}(zero(T), QSym[])
-    else
-        return QMul{T}(arg_c, args_nc)
+
+@inline _apply_exchange_sign(c::C, sign::Int8) where {C<:Number} = sign == 1 ? c : -c
+
+function QMul(arg_c::C, args_nc::Vector{Field{S}}) where {C<:Number,S<:Statistics}
+    if iszero(arg_c)
+        return QMul{C,S}(zero(C), Field{S}[])
     end
+    args = copy(args_nc)
+    sign = canonicalize_fields!(args)
+    coeff = _apply_exchange_sign(arg_c, sign)
+    return QMul{C,S}(coeff, args)
 end
-QMul(args_nc::Vector{<:QSym}) = QMul(1, args_nc)
-QMul(s) = QMul(1, [s])
-QMul{T}(s) where {T} = QMul{T}(T(1), [s])
-QMul() = QMul(0, QSym[])
-QMul{T}() where {T} = QMul{T}(T(0), QSym[])
 
-Base.promote_rule(::Type{QMul{S}}, ::Type{QMul{T}}) where {S,T} = QMul{promote_rule(S, T)}
-function Base.convert(::Type{QMul{T}}, x::QMul{S}) where {T<:Number,S<:Number}
-    return QMul(convert(T, x.arg_c), x.args_nc)
-end
+QMul(args_nc::Vector{Field{S}}) where {S<:Statistics} = QMul(1, args_nc)
+QMul(s::Field{S}) where {S<:Statistics} = QMul(1, Field{S}[s])
+QMul{C,S}() where {C<:Number,S<:Statistics} = QMul{C,S}(zero(C), Field{S}[])
+
 Base.length(a::QMul) = length(a.args_nc)
+Base.iszero(q::QMul) = iszero(q.arg_c)
+Base.isone(q::QMul) = isone(q.arg_c) && isempty(q.args_nc)
+Base.zero(q::QMul{C,S}) where {C,S} = QMul{C,S}(zero(C), Field{S}[])
+Base.one(q::QMul{C,S}) where {C,S} = QMul{C,S}(one(C), Field{S}[])
+Base.zero(::Type{QMul{C,S}}) where {C,S} = QMul{C,S}(zero(C), Field{S}[])
+Base.one(::Type{QMul{C,S}}) where {C,S} = QMul{C,S}(one(C), Field{S}[])
+
+function Base.promote_rule(
+    ::Type{QMul{C1,S}}, ::Type{QMul{C2,S}}
+) where {C1<:Number,C2<:Number,S<:Statistics}
+    return QMul{promote_type(C1, C2),S}
+end
+function Base.convert(
+    ::Type{QMul{C,S}}, q::QMul{D,S}
+) where {C<:Number,D<:Number,S<:Statistics}
+    return QMul{C,S}(convert(C, q.arg_c), copy(q.args_nc))
+end
+
+coefficient(q::QMul) = q.arg_c
+fields(q::QMul) = q.args_nc
+terms(q::QMul) = (q,)
+allfields(q::QMul) = q.args_nc
 
 SymbolicUtils.operation(::QMul) = (*)
-"""
-    arguments(a::QMul)
-
-Return the vector of the factors of [`QMul`](@ref).
-"""
-SymbolicUtils.arguments(a::QMul) = vcat(a.arg_c, a.args_nc)
-
-function TermInterface.maketerm(::Type{<:QMul}, ::typeof(*), args, metadata)
-    args_c = filter(x -> !(x isa QField), args)
-    args_nc = filter(x -> x isa QField, args)
-    arg_c = isempty(args_c) ? 1 : *(args_c...)
-    # isempty(args_nc) && return arg_c
-    return QMul(arg_c, args_nc)
+function SymbolicUtils.arguments(a::QMul{C,S}) where {C,S}
+    out = Vector{Union{C,Field{S}}}(undef, length(a.args_nc) + 1)
+    out[1] = a.arg_c
+    for i in eachindex(a.args_nc)
+        out[i + 1] = a.args_nc[i]
+    end
+    return out
 end
+TermInterface.metadata(::QMul) = nothing
 
-TermInterface.metadata(a::QMul) = nothing
-
-function Base.adjoint(q::QMul)
-    args_nc = map(adjoint, q.args_nc)
-    sort_fields!(args_nc)
-    return QMul(conj(q.arg_c), args_nc)
+function TermInterface.maketerm(
+    ::Type{<:QMul}, ::typeof(*), args::Vector{Field{S}}, metadata
+) where {S<:Statistics}
+    return QMul(1, args)
 end
-
-Base.zero(q::QMul) = QMul(0.0, QSym[])
-Base.iszero(q::QMul) = iszero(q.arg_c)
-
-"""
-    is_bulk(q::QTerm)
-
-Checks if a term is in the bulk. A term is bulk if it has no `In` or `Out` position fields ([`Position`](@ref)).
-"""
-function is_bulk(q::QMul)
-    args = q.args_nc
-    bool = false
-    for f in args
-        if is_bulk(f)
-            bool = true
+function TermInterface.maketerm(
+    ::Type{<:QMul},
+    ::typeof(*),
+    args::Vector{Union{C,Field{S}}},
+    metadata,
+) where {C<:Number,S<:Statistics}
+    coeff = one(C)
+    fs = Field{S}[]
+    for arg in args
+        if arg isa Field{S}
+            push!(fs, arg)
         else
-            return false
+            coeff *= arg
         end
     end
-    return bool
+    return QMul(coeff, fs)
 end
-allfields(q::QMul) = q.args_nc
+
+function bar(q::QMul{C,S}) where {C,S}
+    return QMul(conj(q.arg_c), Field{S}[bar(f) for f in q.args_nc])
+end
+
+function is_bulk(q::QMul)
+    isempty(q.args_nc) && return true
+    return all(is_bulk, q.args_nc)
+end
 
 ########################
 #       Addition
 ########################
 
-"""
-    QAdd <: QTerm
+"""Concrete sum of homogeneous `QMul{C,S}` terms."""
+struct QAdd{C<:Number,S<:Statistics} <: QTerm
+    arguments::Vector{QMul{C,S}}
+end
 
-Represent an addition involving [`QField`](@ref) and other types.
-"""
-struct QAdd{T<:Number} <: QTerm
-    arguments::Vector{QMul{T}}
+QAdd(args::Vector{QMul{C,S}}) where {C<:Number,S<:Statistics} = QAdd{C,S}(args)
+function QAdd(args::Vector{Field{S}}) where {S<:Statistics}
+    return QAdd{Int,S}(QMul{Int,S}[QMul(1, Field{S}[f]) for f in args])
 end
-@unstable function QAdd(args::Vector{<:QMul})
-    vs = promote(args...)
-    return QAdd(collect(vs))
-end
-QAdd(args::Vector{<:QSym}) = QAdd{Int64}([QMul(s) for s in args])
-QAdd{T}() where {T} = QAdd{T}([QMul{T}()])
+QAdd{C,S}() where {C<:Number,S<:Statistics} =
+    QAdd{C,S}(QMul{C,S}[QMul{C,S}(zero(C), Field{S}[])])
+
 Base.length(a::QAdd) = length(a.arguments)
+Base.iszero(a::QAdd) = all(iszero, a.arguments)
+Base.isone(a::QAdd) = length(a.arguments) == 1 && isone(first(a.arguments))
+Base.zero(a::QAdd{C,S}) where {C,S} = QAdd{C,S}()
+Base.one(a::QAdd{C,S}) where {C,S} =
+    QAdd{C,S}(QMul{C,S}[QMul{C,S}(one(C), Field{S}[])])
+Base.zero(::Type{QAdd{C,S}}) where {C,S} = QAdd{C,S}()
+Base.one(::Type{QAdd{C,S}}) where {C,S} =
+    QAdd{C,S}(QMul{C,S}[QMul{C,S}(one(C), Field{S}[])])
+
 SymbolicUtils.operation(::QAdd) = (+)
-"""
-    arguments(a::QAdd)
-
-Return the vector of the arguments of [`QAdd`](@ref).
-"""
 SymbolicUtils.arguments(a::QAdd) = a.arguments
-TermInterface.maketerm(::Type{<:QAdd}, ::typeof(+), args, metadata) = QAdd(args)
-TermInterface.metadata(a::QAdd) = nothing
-
-Base.adjoint(q::QAdd) = QAdd(map(adjoint, arguments(q)))
-function allfields(q::QAdd)
-    vfields = map(allfields, arguments(q))
-    return reduce(vcat, vfields)
+TermInterface.metadata(::QAdd) = nothing
+function TermInterface.maketerm(
+    ::Type{<:QAdd}, ::typeof(+), args::Vector{QMul{C,S}}, metadata
+) where {C<:Number,S<:Statistics}
+    return QAdd(args)
 end
 
-Base.promote_rule(::Type{QAdd{S}}, ::Type{QAdd{T}}) where {S,T} = QAdd{promote_rule(S, T)}
-function Base.convert(::Type{QAdd{T}}, xadd::QAdd{S}) where {T<:Number,S<:Number}
-    return QAdd([QMul(convert(T, x.arg_c), x.args_nc) for x in xadd.arguments])
+coefficient(q::QAdd) = map(coefficient, q.arguments)
+terms(q::QAdd) = q.arguments
+function allfields(q::QAdd{C,S}) where {C,S}
+    out = Field{S}[]
+    for term in q.arguments
+        append!(out, term.args_nc)
+    end
+    return out
+end
+function bar(q::QAdd{C,S}) where {C,S}
+    return QAdd(QMul{C,S}[bar(term) for term in q.arguments])
+end
+
+function Base.promote_rule(
+    ::Type{QAdd{C1,S}}, ::Type{QAdd{C2,S}}
+) where {C1<:Number,C2<:Number,S<:Statistics}
+    return QAdd{promote_type(C1, C2),S}
+end
+function Base.convert(
+    ::Type{QAdd{C,S}}, q::QAdd{D,S}
+) where {C<:Number,D<:Number,S<:Statistics}
+    return QAdd(QMul{C,S}[convert(QMul{C,S}, term) for term in q.arguments])
 end
 
 #########################
@@ -127,82 +157,43 @@ end
 function Base.isequal(a::QMul, b::QMul)
     isequal(a.arg_c, b.arg_c) || return false
     length(a.args_nc) == length(b.args_nc) || return false
-    for (arg_a, arg_b) in zip(a.args_nc, b.args_nc)
-        isequal(arg_a, arg_b) || return false
-    end
-    return true
+    return all(isequal(x, y) for (x, y) in zip(a.args_nc, b.args_nc))
 end
 
 function Base.isequal(a::QAdd, b::QAdd)
-    length(arguments(a)) == length(arguments(b)) || return false
-    for (arg_a, arg_b) in zip(arguments(a), arguments(b))
-        isequal(arg_a, arg_b) || return false
-    end
-    return true
+    length(a.arguments) == length(b.arguments) || return false
+    return all(isequal(x, y) for (x, y) in zip(a.arguments, b.arguments))
 end
 
-function Base.isequal(a::QAdd, b::QSym)
-    args = arguments(a)
-    if length(args) == 1
-        return isequal(args[1], b)
-    end
-    return false
+function Base.isequal(a::QAdd, b::Field)
+    length(a.arguments) == 1 || return false
+    return isequal(first(a.arguments), b)
 end
-function Base.isequal(b::QSym, a::QAdd)
-    args = arguments(a)
-    if length(args) == 1
-        return isequal(args[1], b)
-    end
-    return false
-end
+Base.isequal(b::Field, a::QAdd) = isequal(a, b)
 
-function Base.isequal(a::QMul, b::Int)
-    args = a.args_nc
-    if isempty(args)
-        return isequal(a.arg_c, b)
-    end
-    if iszero(QMul) && iszero(b)
-        return true
-    end
-    return false
+function Base.isequal(a::QMul, b::Number)
+    return isempty(a.args_nc) && isequal(a.arg_c, b)
 end
-function Base.isequal(b::Int, a::QMul)
-    args = a.args_nc
-    if isempty(args)
-        return isequal(a.arg_c, b)
-    end
-    if iszero(QMul) && iszero(b)
-        return true
-    end
-    return false
+Base.isequal(b::Number, a::QMul) = isequal(a, b)
+
+function Base.isequal(a::QMul, b::Field)
+    return length(a.args_nc) == 1 && isone(a.arg_c) && isequal(first(a.args_nc), b)
 end
-function Base.isequal(a::QMul, b::QSym)
-    args = a.args_nc
-    if length(args) == 1 && isone(a.arg_c)
-        return isequal(args[1], b)
-    end
-    return false
-end
-function Base.isequal(b::QSym, a::QMul)
-    args = a.args_nc
-    if length(args) == 1 && isone(a.arg_c)
-        return isequal(args[1], b)
-    end
-    return false
-end
+Base.isequal(b::Field, a::QMul) = isequal(a, b)
+
+Base.:(==)(a::QMul, b::QMul) = isequal(a, b)
+Base.:(==)(a::QAdd, b::QAdd) = isequal(a, b)
 
 #########################
 #       Position
 #########################
 
-is_bulk(q::QAdd) = all(is_bulk(q) for q in arguments(q))
+is_bulk(q::QAdd) = all(is_bulk, q.arguments)
 
-function set_position_mul(a::QMul{T}, p::Position)::QMul{T} where {T<:Number}
-    args = QSym[arg(p) for arg in a.args_nc]
+function set_position_mul(a::QMul{C,S}, p::Position) where {C<:Number,S<:Statistics}
+    args = Field{S}[f(p) for f in a.args_nc]
     return QMul(a.arg_c, args)
 end
-
-function set_position(a::QAdd{T}, p::Position)::QAdd{T} where {T<:Number}
-    args = QMul{T}[set_position_mul(arg, p) for arg in arguments(a)]
-    return QAdd(args)
+function set_position(a::QAdd{C,S}, p::Position) where {C<:Number,S<:Statistics}
+    return QAdd(QMul{C,S}[set_position_mul(arg, p) for arg in a.arguments])
 end
