@@ -8,11 +8,11 @@ L_int = InteractionLagrangian(elasctic2boson)
 
 #
 
-GF = DressedPropagator(L_int, 2)
+GF = DressedPropagator(L_int, Val(2), Val(5))
 
 #
 
-Σ = SelfEnergy(GF, 2)
+Σ = SelfEnergy(GF, Val(2))
 
 #
 

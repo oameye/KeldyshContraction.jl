@@ -44,14 +44,14 @@ of the two-point correlators of the linear part of the system.
 In the package we can do this as follows:
 
 ````@example elastic_two_body
-KeldyshContraction._wick_contraction(elasctic2boson; simplify=false)
+KeldyshContraction._wick_contraction(elasctic2boson, Val(2); simplify=false)
 ````
 
 However, to show that these diagrams cancel out, we need to apply to condition $G^R = - G^A$.
 Inside the package we do this by
 
 ````@example elastic_two_body
-KeldyshContraction._wick_contraction(elasctic2boson; simplify=true)
+KeldyshContraction._wick_contraction(elasctic2boson, Val(2); simplify=true)
 ````
 
 Similarly, we can compute the next orders.
@@ -71,7 +71,7 @@ So we can compute the first order Green's function correction $G_{(1)}$ by compu
 the Wick contraction of the interaction Lagrangian
 
 ````@example elastic_two_body
-GF = DressedPropagator(L_int)
+GF = DressedPropagator(L_int, Val(1), Val(3))
 ````
 
 Here, the simplification of the advanced to retarded propagator is done internally.
@@ -82,7 +82,7 @@ Often we are interested in the self-energy of the system, which is defined as
 the set of irreducible diagrams. Inside the package we can compute these to an order $g$ by
 
 ````@example elastic_two_body
-Σ = SelfEnergy(GF)
+Σ = SelfEnergy(GF, Val(1))
 ````
 
 ## Transport
@@ -102,7 +102,7 @@ In second order, we have many additional terms for the dressed propagator.
 These involve now 5 propagators:
 
 ````@example elastic_two_body
-GF = DressedPropagator(L_int, 2)
+GF = DressedPropagator(L_int, Val(2), Val(5))
 ````
 
 However, not all of them contribute to the second order self-energy. Indeed, many terms
@@ -123,10 +123,9 @@ topology_dict[[2]]
 The topology involving only one edge is the reducible diagram, which will not contribute to the self-energy in second order. Indeed, internally we only consider the irreducible diagrams.
 
 ````@example elastic_two_body
-Σ = SelfEnergy(GF, 2)
+Σ = SelfEnergy(GF, Val(2))
 ````
 
 ---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
-

@@ -44,44 +44,45 @@ G^A\\left(x_1, x_2\\right) & 0
 ```
 """
 function matrix(G::DressedPropagator{E1,E2}) where {E1,E2}
-    return Diagrams[G.retarded G.keldysh; G.advanced Diagrams{E1,E2}()]
+    return Diagrams{E1,E2}[
+        G.retarded G.keldysh
+        G.advanced Diagrams{E1,E2}()
+    ]
 end
 
 """
-    wick_contraction(L::InteractionLagrangian, order=1)
+    DressedPropagator(L::InteractionLagrangian, ::Val{order}, ::Val{edges}; kwargs...)
 
-
-All the same coordinate advanced propagators are converted to retarded propagators.
+All the same-coordinate advanced propagators are converted to retarded propagators when
+`simplify=true`.
 """
 function DressedPropagator(
     L::InteractionLagrangian,
-    order=1;
-    simplify=true, #(!should_regularise(L.lagrangian)),
+    ::Val{O},
+    ::Val{E};
+    simplify=true,
     _set_reg_to_zero=true,
     kwargs...,
-)
+) where {O,E}
+    @assert number_of_propagators(L) * O + 1 == E "The supplied Val{edges} must equal the interaction's propagator count times Val{order}, plus the external propagator"
     ϕ = L.qfield
     ψ = L.cfield
 
-    # Compute Wick contractions for each component
     keldysh = wick_contraction(
-        ψ(Out()) * ψ'(In()), L, order; simplify, _set_reg_to_zero, kwargs...
+        ψ(Out()) * ψ'(In()), L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
     retarded = wick_contraction(
-        ψ(Out()) * ϕ'(In()), L, order; simplify, _set_reg_to_zero, kwargs...
+        ψ(Out()) * ϕ'(In()), L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
     advanced = wick_contraction(
-        ϕ(Out()) * ψ'(In()), L, order; simplify, _set_reg_to_zero, kwargs...
+        ϕ(Out()) * ψ'(In()), L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
 
-    # Apply filtering and simplification to all components
     for component in (keldysh, retarded, advanced)
         filter_nonzero!(component)
-        # _simplify_prefactors!(component) # not needed anymore due to the move to rationals
-        # TODO Remove
     end
 
-    return DressedPropagator(keldysh, retarded, advanced, order, parameters(L)^order)
+    return DressedPropagator(keldysh, retarded, advanced, Int64(O), parameters(L)^O)
 end
 
 "get parameter of the interaction lagrangian"
@@ -108,16 +109,21 @@ SymbolicUtils.arguments(d::DressedPropagatorSum) = d.arguments
 order(d::DressedPropagatorSum) = d.order
 parameters(d::DressedPropagatorSum) = map(G -> G.parameter, arguments(d))
 
+"""
+    DressedPropagator(Ls::LagrangianSum, ::Val{order}, ::Val{edges}; kwargs...)
+"""
 function DressedPropagator(
     Ls::LagrangianSum,
-    order=1;
+    ::Val{O},
+    ::Val{E};
     simplify=true,
     _set_reg_to_zero=true,
     # simplify::Union{Bool,Vector{Bool}}=Bool[
     #     !should_regularise(L.lagrangian) for L in arguments(Ls)
     # ],
     kwargs...,
-)
+) where {O,E}
+    @assert all(number_of_propagators(L) * O + 1 == E for L in arguments(Ls)) "All LagrangianSum terms must produce the supplied number of propagator edges"
     ϕ = first(arguments(Ls)).qfield
     ψ = first(arguments(Ls)).cfield
 
@@ -125,13 +131,13 @@ function DressedPropagator(
 
     # Compute Wick contractions for each component
     keldysh_pairs = wick_contraction(
-        ψ(Out()) * ψ'(In()), Ls, order; simplify, _set_reg_to_zero, kwargs...
+        ψ(Out()) * ψ'(In()), Ls, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
     retarded_pairs = wick_contraction(
-        ψ(Out()) * ϕ'(In()), Ls, order; simplify, _set_reg_to_zero, kwargs...
+        ψ(Out()) * ϕ'(In()), Ls, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
     advanced_pairs = wick_contraction(
-        ϕ(Out()) * ψ'(In()), Ls, order; simplify, _set_reg_to_zero, kwargs...
+        ϕ(Out()) * ψ'(In()), Ls, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
 
     # Apply filtering and simplification to all components
@@ -145,11 +151,11 @@ function DressedPropagator(
             end
             first(keldysh_pairs[idx]) => DressedPropagator(
                 last.((keldysh_pairs[idx], retarded_pairs[idx], advanced_pairs[idx]))...,
-                order,
+                Int64(O),
                 first(keldysh_pairs[idx]),
             )
         end for idx in eachindex(keldysh_pairs)
     )
 
-    return DressedPropagatorSum(dict, order)
+    return DressedPropagatorSum(dict, Int64(O))
 end

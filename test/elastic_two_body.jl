@@ -15,7 +15,7 @@ L_int = InteractionLagrangian(elasctic2boson, g)
 @testset "first order" begin
     @testset "Bubble diagrams" begin
         using KeldyshContraction: filter_nonzero!
-        expr = _wick_contraction(elasctic2boson; simplify=true)
+        expr = _wick_contraction(elasctic2boson, Val(2); simplify=true)
         filter_nonzero!(expr)
         @test iszero(expr)
     end
@@ -32,13 +32,13 @@ L_int = InteractionLagrangian(elasctic2boson, g)
         # 0.5*(c*c*c*̄q*̄c*̄q
         truth = Diagrams(
             Dict(
-                Diagram([(c(Out()), c'), (c, q'), (c, q(In())')]) =>
+                Diagram([(c(Out()), c'), (c, q'), (c, q(In())')], Val(3), Val(0)) =>
                     Complex{Rational{Int}}(-0.0 + 1.0 * im),
-                Diagram([(c(Out()), q'), (c, c'), (c, q(In())')]) =>
+                Diagram([(c(Out()), q'), (c, c'), (c, q(In())')], Val(3), Val(0)) =>
                     Complex{Rational{Int}}(-0.0 + 1.0 * im),
             ),
         )
-        result = _wick_contraction(expr.arguments[1])
+        result = _wick_contraction(expr.arguments[1], Val(3))
         KeldyshContraction._simplify_prefactors!(result)
         @test isequal(result, truth)
         # The keldysh in and keldysh out will disappear later
@@ -47,7 +47,7 @@ L_int = InteractionLagrangian(elasctic2boson, g)
     @testset "green's function" begin
         # using KeldyshContraction: _conj
         L = InteractionLagrangian(elasctic2boson)
-        GF = DressedPropagator(L)
+        GF = DressedPropagator(L, Val(1), Val(3))
 
         @test_broken iszero(_conj(GF.advanced) - GF.retarded)
         @test_broken isequal(KeldyshContraction._conj(GF.keldysh), -1 * GF.keldysh)
@@ -58,12 +58,12 @@ L_int = InteractionLagrangian(elasctic2boson, g)
     @testset "self-energy" begin
         # using KeldyshContraction: _conj
         L = InteractionLagrangian(elasctic2boson)
-        GF = DressedPropagator(L)
-        Σ = SelfEnergy(GF)
+        GF = DressedPropagator(L, Val(1), Val(3))
+        Σ = SelfEnergy(GF, Val(1))
 
         @test iszero(Σ.keldysh)
         @test isequal(adjoint(Σ.advanced), Σ.retarded)
-        @test_broken isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh) # type_instability
+        @test isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)
     end
 end
 
@@ -76,11 +76,11 @@ end
 
         vacuum = L1.lagrangian * L2.lagrangian
         # map(vacuum.arguments) do arg
-        #     _wick_contraction(arg; simplify=false)
+        #     _wick_contraction(arg, Val(2); simplify=false)
         # end
-        # _wick_contraction(vacuum.arguments[1]; simplify=false)
+        # _wick_contraction(vacuum.arguments[1], Val(2); simplify=false)
 
-        expr = _wick_contraction(vacuum; simplify=true)
+        expr = _wick_contraction(vacuum, Val(4); simplify=true)
         filter_nonzero!(expr)
         @test iszero(expr)
     end
@@ -104,7 +104,7 @@ end
             qmul = mult * prod(L_int(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
 
             term = prefactor * in_out * qmul
-            diagrams = _wick_contraction(term; simplify=true)
+            diagrams = _wick_contraction(term, Val(5); simplify=true)
             KC._simplify_prefactors!(diagrams)
             dict[term] = diagrams
             push!(keys, term)
@@ -119,69 +119,101 @@ end
         truth1 = Diagrams(
             Dict(
                 # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴷ(y₂,x₂)
-                Diagram([
-                    (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
-                    (c(Bulk(1)), c'(Bulk(1))),   # Gᴷ(y₁,y₁)
-                    (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
-                    (c(Bulk(2)), c'(Bulk(2))),   # Gᴷ(y₂,y₂)
-                    (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
-                ]) => -Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
+                        (c(Bulk(1)), c'(Bulk(1))),   # Gᴷ(y₁,y₁)
+                        (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
+                        (c(Bulk(2)), c'(Bulk(2))),   # Gᴷ(y₂,y₂)
+                        (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂)
-                Diagram([
-                    (c(Out()), c'(Bulk(1))),     # Gᴷ(x₁,y₁)
-                    (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
-                    (c(Bulk(2)), q'(Bulk(1))),   # Gᴿ(y₂,y₁)
-                    (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
-                    (c(Bulk(1)), c'(In())),      # Gᴷ(y₁,x₂)
-                ]) => -Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), c'(Bulk(1))),     # Gᴷ(x₁,y₁)
+                        (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
+                        (c(Bulk(2)), q'(Bulk(1))),   # Gᴿ(y₂,y₁)
+                        (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
+                        (c(Bulk(1)), c'(In())),      # Gᴷ(y₁,x₂)
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,x₂)
-                Diagram([
-                    (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
-                    (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
-                    (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
-                    (c(Bulk(2)), c'(Bulk(1))),   # Gᴷ(y₂,y₁)
-                    (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
-                ]) => -Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
+                        (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
+                        (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
+                        (c(Bulk(2)), c'(Bulk(1))),   # Gᴷ(y₂,y₁)
+                        (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂)
-                Diagram([
-                    (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
-                    (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
-                    (c(Bulk(2)), c'(Bulk(1))),   # Gᴷ(y₂,y₁)
-                    (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
-                    (c(Bulk(1)), c'(In())),      # Gᴷ(y₁,x₂)
-                ]) => -Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
+                        (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
+                        (c(Bulk(2)), c'(Bulk(1))),   # Gᴷ(y₂,y₁)
+                        (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
+                        (c(Bulk(1)), c'(In())),      # Gᴷ(y₁,x₂)
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂)
-                Diagram([
-                    (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
-                    (c(Bulk(1)), c'(Bulk(1))),   # Gᴷ(y₁,y₁)
-                    (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
-                    (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
-                    (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
-                ]) => -Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
+                        (c(Bulk(1)), c'(Bulk(1))),   # Gᴷ(y₁,y₁)
+                        (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
+                        (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
+                        (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂)
-                Diagram([
-                    (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
-                    (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
-                    (c(Bulk(2)), c'(Bulk(1))),   # Gᴷ(y₂,y₁)
-                    (c(Bulk(2)), c'(Bulk(2))),   # Gᴷ(y₂,y₂)
-                    (c(Bulk(1)), c'(In())),      # Gᴷ(y₁,x₂)
-                ]) => -Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), q'(Bulk(1))),     # Gᴿ(x₁,y₁)
+                        (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
+                        (c(Bulk(2)), c'(Bulk(1))),   # Gᴷ(y₂,y₁)
+                        (c(Bulk(2)), c'(Bulk(2))),   # Gᴷ(y₂,y₂)
+                        (c(Bulk(1)), c'(In())),      # Gᴷ(y₁,x₂)
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂)
-                Diagram([
-                    (c(Out()), c'(Bulk(1))),     # Gᴷ(x₁,y₁)
-                    (c(Bulk(1)), q'(Bulk(1))),   # Gᴿ(y₁,y₁)
-                    (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
-                    (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
-                    (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
-                ]) => -Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), c'(Bulk(1))),     # Gᴷ(x₁,y₁)
+                        (c(Bulk(1)), q'(Bulk(1))),   # Gᴿ(y₁,y₁)
+                        (c(Bulk(1)), c'(Bulk(2))),   # Gᴷ(y₁,y₂)
+                        (c(Bulk(2)), q'(Bulk(2))),   # Gᴿ(y₂,y₂)
+                        (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴷ(y₂,x₂)
-                Diagram([
-                    (c(Out()), c'(Bulk(1))),     # Gᴷ(x₁,y₁)
-                    (c(Bulk(1)), q'(Bulk(1))),   # Gᴿ(y₁,y₁)
-                    (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
-                    (c(Bulk(2)), c'(Bulk(2))),   # Gᴷ(y₂,y₂)
-                    (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
-                ]) => -Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), c'(Bulk(1))),     # Gᴷ(x₁,y₁)
+                        (c(Bulk(1)), q'(Bulk(1))),   # Gᴿ(y₁,y₁)
+                        (c(Bulk(1)), q'(Bulk(2))),   # Gᴿ(y₁,y₂)
+                        (c(Bulk(2)), c'(Bulk(2))),   # Gᴷ(y₂,y₂)
+                        (c(Bulk(2)), c'(In())),      # Gᴷ(y₂,x₂)
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => -Complex{Rational{Int}}(1.0),
             ),
         )
         @test isequal(dict[keys[1]], truth1)
@@ -189,61 +221,89 @@ end
         truth2 = Diagrams(
             Dict(
                 # Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂)
-                Diagram([
-                    (c(Out()), q'(Bulk(1))),
-                    (c(Bulk(1)), q'(Bulk(1))),
-                    (q(Bulk(1)), c'(Bulk(2))),
-                    (c(Bulk(2)), q'(Bulk(2))),
-                    (c(Bulk(2)), c'(In())),
-                ]) => Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), q'(Bulk(1))),
+                        (c(Bulk(1)), q'(Bulk(1))),
+                        (q(Bulk(1)), c'(Bulk(2))),
+                        (c(Bulk(2)), q'(Bulk(2))),
+                        (c(Bulk(2)), c'(In())),
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂)
-                Diagram([
-                    (c(Out()), q'(Bulk(1))),
-                    (q(Bulk(1)), c'(Bulk(2))),
-                    (c(Bulk(2)), c'(Bulk(1))),
-                    (c(Bulk(2)), q'(Bulk(2))),
-                    (q(Bulk(1)), c'(In())),
-                ]) => -Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), q'(Bulk(1))),
+                        (q(Bulk(1)), c'(Bulk(2))),
+                        (c(Bulk(2)), c'(Bulk(1))),
+                        (c(Bulk(2)), q'(Bulk(2))),
+                        (q(Bulk(1)), c'(In())),
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => -Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴬ(y₂,x₂)
-                Diagram([
-                    (c(Out()), q'(Bulk(1))),
-                    (c(Bulk(1)), c'(Bulk(2))),
-                    (c(Bulk(1)), q'(Bulk(2))),
-                    (q(Bulk(2)), c'(Bulk(1))),
-                    (q(Bulk(2)), c'(In())),
-                ]) => -Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), q'(Bulk(1))),
+                        (c(Bulk(1)), c'(Bulk(2))),
+                        (c(Bulk(1)), q'(Bulk(2))),
+                        (q(Bulk(2)), c'(Bulk(1))),
+                        (q(Bulk(2)), c'(In())),
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => -Complex{Rational{Int}}(1.0),
                 # Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂)
-                Diagram([
-                    (c(Out()), q'(Bulk(1))),
-                    (c(Bulk(1)), c'(Bulk(1))),
-                    (c(Bulk(1)), q'(Bulk(2))),
-                    (c(Bulk(2)), q'(Bulk(2))),
-                    (q(Bulk(2)), c'(In())),
-                ]) => Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), q'(Bulk(1))),
+                        (c(Bulk(1)), c'(Bulk(1))),
+                        (c(Bulk(1)), q'(Bulk(2))),
+                        (c(Bulk(2)), q'(Bulk(2))),
+                        (q(Bulk(2)), c'(In())),
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => Complex{Rational{Int}}(1.0),
                 # -1.0*Gᴷ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂)
-                Diagram([
-                    (c(Out()), c'(Bulk(1))),
-                    (q(Bulk(1)), c'(Bulk(2))),
-                    (c(Bulk(2)), q'(Bulk(1))),
-                    (c(Bulk(2)), q'(Bulk(2))),
-                    (q(Bulk(1)), c'(In())),
-                ]) => -Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), c'(Bulk(1))),
+                        (q(Bulk(1)), c'(Bulk(2))),
+                        (c(Bulk(2)), q'(Bulk(1))),
+                        (c(Bulk(2)), q'(Bulk(2))),
+                        (q(Bulk(1)), c'(In())),
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => -Complex{Rational{Int}}(1.0),
                 # Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂)
-                Diagram([
-                    (c(Out()), q'(Bulk(1))),
-                    (c(Bulk(1)), q'(Bulk(2))),
-                    (q(Bulk(2)), c'(Bulk(1))),
-                    (c(Bulk(2)), q'(Bulk(2))),
-                    (c(Bulk(1)), c'(In())),
-                ]) => Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), q'(Bulk(1))),
+                        (c(Bulk(1)), q'(Bulk(2))),
+                        (q(Bulk(2)), c'(Bulk(1))),
+                        (c(Bulk(2)), q'(Bulk(2))),
+                        (c(Bulk(1)), c'(In())),
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => Complex{Rational{Int}}(1.0),
                 # Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂)
-                Diagram([
-                    (c(Out()), c'(Bulk(1))),
-                    (c(Bulk(1)), q'(Bulk(1))),
-                    (c(Bulk(1)), q'(Bulk(2))),
-                    (c(Bulk(2)), q'(Bulk(2))),
-                    (q(Bulk(2)), c'(In())),
-                ]) => Complex{Rational{Int}}(1.0),
+                Diagram(
+                    [
+                        (c(Out()), c'(Bulk(1))),
+                        (c(Bulk(1)), q'(Bulk(1))),
+                        (c(Bulk(1)), q'(Bulk(2))),
+                        (c(Bulk(2)), q'(Bulk(2))),
+                        (q(Bulk(2)), c'(In())),
+                    ],
+                    Val(5),
+                    Val(1),
+                ) => Complex{Rational{Int}}(1.0),
             ),
         )
         @test isequal(dict[keys[2]], truth2)
@@ -264,10 +324,10 @@ end
         #     "Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂)"
     end
 
-    GF = DressedPropagator(L_int, 2)
+    GF = DressedPropagator(L_int, Val(2), Val(5))
 
     @testset "collective terms" begin
-        GF = DressedPropagator(L_int, 2)
+        GF = DressedPropagator(L_int, Val(2), Val(5))
         GF.retarded.diagrams
 
         terms_k = collect(keys(GF.keldysh.diagrams))
@@ -280,7 +340,7 @@ end
         @test length(terms_a) == 6
     end
 
-    Σ = SelfEnergy(GF, 2)
+    Σ = SelfEnergy(GF, Val(2))
 
     @test_broken isequal(adjoint(Σ.advanced), Σ.retarded) # up to some swap
     @test isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)

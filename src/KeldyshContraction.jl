@@ -19,7 +19,7 @@ using Latexify: Latexify, latexify, @latexrecipe
 using MacroTools: MacroTools
 using LaTeXStrings: LaTeXStrings, latexstring
 
-ComplexRationals = Complex{Rational{Int64}}
+const ComplexRationals = Complex{Rational{Int64}}
 
 # utils
 include("utils.jl")

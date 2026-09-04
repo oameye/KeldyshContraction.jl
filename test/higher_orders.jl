@@ -23,13 +23,13 @@ end
     elasctic2boson = -(1//2 * (c^2 + q^2) * c' * q' + 1//2 * c * q * ((c')^2 + (q')^2))
     L_int = InteractionLagrangian(elasctic2boson)
 
-    GF1 = DressedPropagator(L_int, 1)
-    @test_broken keys(topologies(GF1.keldysh))
+    GF1 = DressedPropagator(L_int, Val(1), Val(3))
+    @test length(keys(topologies(GF1.keldysh))) == 1
 
-    GF2 = DressedPropagator(L_int, 2)
+    GF2 = DressedPropagator(L_int, Val(2), Val(5))
     @test length(keys(topologies(GF2.keldysh))) == 3
 
-    GF3 = DressedPropagator(L_int, 3)
+    GF3 = DressedPropagator(L_int, Val(3), Val(7))
     @test length(keys(topologies(GF3.keldysh))) == 11
     @test length(unique(sort.(keys(topologies(GF3.keldysh))))) == 8
 
@@ -46,7 +46,7 @@ end
         @test all(has_no_zero_loops, (GF3.keldysh, GF3.retarded, GF3.advanced))
     end
 
-    GF4 = DressedPropagator(L_int, 4)
+    GF4 = DressedPropagator(L_int, Val(4), Val(9))
     @test length(keys(topologies(GF4.keldysh))) == 59
     @test length(unique(sort.(keys(topologies(GF4.keldysh))))) == 17 # checked with mathematica (see test/All_graph_topologies.nb)
 
@@ -68,8 +68,8 @@ end
     @qfields c::Destroy(Classical) q::Destroy(Quantum)
     elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
     L_int = InteractionLagrangian(elasctic2boson)
-    GF3 = DressedPropagator(L_int, 3)
-    Σ = SelfEnergy(GF3)
+    GF3 = DressedPropagator(L_int, Val(3), Val(7))
+    Σ = SelfEnergy(GF3, Val(3))
     @test Σ isa SelfEnergy
     @test all(component -> !isempty(component), (Σ.keldysh, Σ.retarded, Σ.advanced))
     @test all(has_valid_self_energy_diagrams, (Σ.keldysh, Σ.retarded, Σ.advanced))

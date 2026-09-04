@@ -4,15 +4,55 @@ using KeldyshContraction: Bulk, In, Out, Edge
 @qfields ϕᶜ::Destroy(Classical) ϕᴾ::Destroy(Quantum)
 
 @testset "construction" begin
-    using KeldyshContraction: Diagram, Diagrams, Contraction
+    using KeldyshContraction: Diagram, Diagrams, Contraction, wick_contraction
     @inferred Diagrams{3,0}()
     # @code_warntype Diagrams{2}()
 
     @qfields c::Destroy(Classical) q::Destroy(Quantum)
     vs = KeldyshContraction.Contraction[(c(Out()), q'), (c, q'), (c, q(In())')]
-    # @inferred Diagram(vs) #TODO
-    # @code_warntype Diagram(vs)
-    # @code_typed Diagram(vs)
+    @inferred Diagram(vs, Val(3), Val(0))
+    @test_throws MethodError Diagram(vs)
+end
+
+@testset "static order entry point" begin
+    using KeldyshContraction:
+        In, Out, DressedPropagator, SelfEnergy, Diagram, FixedVector, matrix
+
+    @qfields c::Destroy(Classical) q::Destroy(Quantum)
+    L = InteractionLagrangian(
+        -(1//2 * (c^2 + q^2) * c' * q' + 1//2 * c * q * ((c')^2 + (q')^2))
+    )
+    inout = c(Out()) * q'(In())
+
+    diagrams = @inferred wick_contraction(
+        inout, L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true
+    )
+    @test diagrams isa Diagrams{3,0}
+    vacuum_diagrams = @inferred KeldyshContraction._wick_contraction(L.lagrangian, Val(2))
+    @test vacuum_diagrams isa Diagrams{2,0}
+    @test_throws MethodError KeldyshContraction._wick_contraction(L.lagrangian)
+
+    propagator = @inferred DressedPropagator(
+        L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true
+    )
+    @test propagator isa DressedPropagator{3,0}
+    @test @inferred(matrix(propagator)) isa Matrix{Diagrams{3,0}}
+    self_energy = @inferred SelfEnergy(propagator, Val(1))
+    @test self_energy isa SelfEnergy{1,0}
+    @test @inferred(matrix(self_energy)) isa Matrix{Diagrams{1,0}}
+    @test_throws AssertionError DressedPropagator(L, Val(1), Val(2))
+    @test_throws AssertionError wick_contraction(inout, L, Val(1), Val(2))
+    @test_throws AssertionError SelfEnergy(propagator, Val(2))
+    @test @inferred(topologies(propagator.keldysh)) isa
+        Dict{FixedVector{0,Int},Vector{Diagram{3,0}}}
+    @test @inferred(wigner_transform(propagator)) isa DressedPropagator{3,0}
+
+    @test_throws MethodError wick_contraction(inout, L, 1)
+    @test_throws MethodError wick_contraction(inout, L, Val(1))
+    @test_throws MethodError DressedPropagator(L, 1)
+    @test_throws MethodError DressedPropagator(L, Val(1))
+    @test_throws MethodError SelfEnergy(propagator, 1)
+    @test_throws MethodError SelfEnergy(propagator)
 end
 
 @testset "prefactor multiplication" begin
@@ -20,7 +60,7 @@ end
 
     @qfields c::Destroy(Classical) q::Destroy(Quantum)
     vs = KeldyshContraction.Contraction[(c(Out()), q'), (c, q'), (c, q(In())')]
-    d = Diagram(vs)
+    d = Diagram(vs, Val(3), Val(0))
     ds = Diagrams(Dict(d => Complex{Rational{Int64}}(1.0)))
     ds2 = ds * 2.0
     ds2′ = 2.0 * ds
@@ -161,10 +201,10 @@ end
     contractions3 = Contraction[c2, c3, c1] # same elements, different order
     contractions4 = Contraction[c1, c3]     # different contractions
 
-    d1 = Diagram(contractions1)
-    d2 = Diagram(contractions2) # should be considered equal to d1
-    d3 = Diagram(contractions3) # should be considered equal to d1 (after sorting)
-    d4 = Diagram(contractions4) # unique
+    d1 = Diagram(contractions1, Val(3), Val(0))
+    d2 = Diagram(contractions2, Val(3), Val(0)) # should be considered equal to d1
+    d3 = Diagram(contractions3, Val(3), Val(0)) # should be considered equal to d1 (after sorting)
+    d4 = Diagram(contractions4, Val(2), Val(0)) # unique
 
     diagrams = Diagrams{3,0}()
     push!(diagrams, d1, 1.0)
