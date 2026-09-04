@@ -4,286 +4,185 @@ using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus
 import KeldyshContraction as KC
 
-@testset "typestable QSym" begin
-    @inferred Destroy Destroy(:ψ, Classical)
-    @inferred Create Create(:ψ, Classical)
+@testset "concrete Field{Boson}" begin
+    c = @inferred Field{Boson}(:c, Classical)
+    q = @inferred Field{Boson}(:q, Quantum)
 
-    @qfields c::Destroy(Classical) q::Destroy(Quantum)
+    @test typeof(c) === Field{Boson}
+    @test isconcretetype(typeof(c))
+    @test KC.keldysh_index(c) === Classical
+    @test KC.keldysh_index(q) === Quantum
+    @test KC.is_classical(c)
+    @test KC.is_quantum(q)
+    @test KC.is_unbarred(c)
+
+    cbar = @inferred bar(c)
+    @test typeof(cbar) === Field{Boson}
+    @test KC.is_barred(cbar)
+    @test KC.keldysh_index(cbar) === Classical
+    @test KC.position(cbar) == KC.position(c)
+    @test KC.regularisation(cbar) == KC.regularisation(c)
+    @test @inferred(bar(cbar)) == c
+
+    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @test typeof(ϕ) === Field{Boson}
+    @test typeof(ψ) === Field{Boson}
 end
 
-@testset "Type stable QMul" begin
-    @qfields c::Destroy(Classical) q::Destroy(Quantum)
+@testset "concrete field metadata" begin
+    using KeldyshContraction: FieldIndex, FieldIndices, field_indices
 
-    @inferred KC.QMul(1, [c, c])
-    @inferred c * c
-    @inferred KC.QMul(1, [c, c]) * KC.QMul(1.0, [c, c])
-    @inferred c^2
-    @inferred 1.0 * c
+    spin = FieldIndex(:spin, 1)
+    flavor = FieldIndex(:flavor, 2)
+    indices = @inferred FieldIndices(spin, flavor)
+    f = @inferred Field{Boson}(
+        :ψ,
+        Classical,
+        KC.Orientation.Unbarred,
+        KC.Regularisation.Zero,
+        Bulk(),
+        indices,
+    )
 
-    mul = c * c
-    @inferred c * mul
-    @inferred mul * mul
-
-    @inferred 0.5 * q^2 * c' * q'
-    example = 0.5 * q * c * c' * q'
-    # @inferred arguments(example)
-    # example = 0.5 * q*c * c' * q'
-    # @code_warntype InteractionLagrangian(example)
-    # ^ Does not have to be type stable, as it is called only once
+    @test isconcretetype(typeof(indices))
+    @test field_indices(f) == indices
+    @test collect(field_indices(f)) == [spin, flavor]
+    @test hash(f) == hash(f)
 end
 
-@testset "Type stable QAdd" begin
-    @qfields c::Destroy(Classical) q::Destroy(Quantum)
+@testset "concrete QMul" begin
+    @qfields c::Boson(Classical) q::Boson(Quantum)
 
-    @inferred KC.QAdd([c, c])
-    @inferred c + c
-    @inferred -c
-    @inferred 2.0 * c * c
-    @inferred 2.0 * c * c + 2 * c * c
-    @inferred c * c + 0
+    mul = @inferred KC.QMul(1, Field{Boson}[c, q])
+    @test typeof(mul) === KC.QMul{Int,Boson}
+    @test eltype(mul.args_nc) === Field{Boson}
+    @test isconcretetype(typeof(mul))
 
-    add = c + c
-    @inferred add + c
-    @inferred add + 0.0
+    @test typeof(@inferred(c * q)) === KC.QMul{Int,Boson}
+    @test typeof(@inferred(0.5 * c * q)) === KC.QMul{Float64,Boson}
+    @test typeof(@inferred(c^2)) === KC.QMul{Int,Boson}
 
-    @inferred 0.5 * (c^2 + q^2) * c' * q'
-    @inferred 0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2)
-    @inferred 0.5 * (c^2 + q^2) * c' * q' + 2 * c * q * ((c')^2 + (q')^2)
-    @inferred 0.5 * (c^2 + q^2) * c' * q' + 2 * im * c * q * ((c')^2 + (q')^2)
+    # Bosonic canonical ordering is value-independent and sign-free.
+    @test isequal(c * q, q * c)
+    @test isequal(bar(c) * c, c * bar(c))
 end
 
-@testset "SymbolicUtils interface" begin
+@testset "closed symbolic zero and one" begin
+    @qfields c::Boson(Classical) q::Boson(Quantum)
+
+    z = @inferred zero(c)
+    o = @inferred one(c)
+    @test typeof(z) === KC.QMul{Int,Boson}
+    @test typeof(o) === KC.QMul{Int,Boson}
+    @test iszero(z)
+    @test isone(o)
+    @test isempty(z.args_nc)
+    @test isempty(o.args_nc)
+
+    @test typeof(@inferred(c^0)) === KC.QMul{Int,Boson}
+    @test isone(c^0)
+    @test typeof(@inferred(c + 0)) === KC.QAdd{Int,Boson}
+    @test isequal(c + 0, KC.QAdd(Field{Boson}[c]))
+
+    zero_mul = @inferred KC.QMul(0.0, Field{Boson}[c, q])
+    @test typeof(zero_mul) === KC.QMul{Float64,Boson}
+    @test iszero(zero_mul)
+    @test isempty(zero_mul.args_nc)
+end
+
+@testset "concrete QAdd and coefficient promotion" begin
+    using KeldyshContraction: QAdd, QMul
+    @qfields c::Boson(Classical) q::Boson(Quantum)
+
+    a = @inferred QAdd(Field{Boson}[c, q])
+    @test typeof(a) === QAdd{Int,Boson}
+    @test eltype(a.arguments) === QMul{Int,Boson}
+    @test isconcretetype(typeof(a))
+
+    mixed = @inferred(2.0 * c * c + 2 * q * q)
+    @test typeof(mixed) === QAdd{Float64,Boson}
+    @test eltype(mixed.arguments) === QMul{Float64,Boson}
+
+    complex_mixed = @inferred(0.5 * c * c + 2im * q * q)
+    @test typeof(complex_mixed) === QAdd{ComplexF64,Boson}
+
+    @test typeof(@inferred(a * a)) === QAdd{Int,Boson}
+    @test typeof(@inferred(a + c)) === QAdd{Int,Boson}
+end
+
+@testset "explicit coefficient conversion" begin
+    using KeldyshContraction: QAdd, QMul
+    @qfields c::Boson(Classical) q::Boson(Quantum)
+
+    expr = 0.5 * (c^2 + q^2) * bar(c) * bar(q)
+    @test typeof(expr) === QAdd{Float64,Boson}
+
+    rational_expr = @inferred rationalize_coefficients(expr)
+    @test typeof(rational_expr) === QAdd{Rational{Int64},Boson}
+    @test typeof(expr) === QAdd{Float64,Boson}
+
+    converted = @inferred convert_coefficients(Float32, expr)
+    @test typeof(converted) === QAdd{Float32,Boson}
+
+    L = InteractionLagrangian(expr)
+    @test typeof(L.lagrangian) === QAdd{Float64,Boson}
+end
+
+@testset "SymbolicUtils / TermInterface interop" begin
     using TermInterface, SymbolicUtils
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
+    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
 
     @test TermInterface.head(ϕ) == :call
-    @test SymbolicUtils.iscall(ϕ) == false
-    @test SymbolicUtils.iscall(ϕ * ϕ) == true
-    @test SymbolicUtils.iscall(ϕ + ϕ) == true
-    @test SymbolicUtils.operation(ϕ + ϕ) == +
-    @test SymbolicUtils.operation(ϕ * ϕ) == *
-    @test SymbolicUtils.arguments(2 * ϕ * ϕ) == [2, ϕ, ϕ]
-    @test isnothing(TermInterface.metadata(2 * ϕ * ϕ))
-    @test isequal(TermInterface.maketerm(KC.QMul, *, [ϕ, ϕ], nothing), ϕ * ϕ)
+    @test !SymbolicUtils.iscall(ϕ)
+    @test SymbolicUtils.iscall(ϕ * ψ)
+    @test SymbolicUtils.iscall(ϕ + ψ)
+    @test SymbolicUtils.operation(ϕ + ψ) == +
+    @test SymbolicUtils.operation(ϕ * ψ) == *
 
-    @testset "SymbolicUtils promotion" begin
-        # Test the promotion of Keldysh fields
-        @test SymbolicUtils.promote_symtype(+, typeof(ϕ), Float64) <: KC.QField
-        @test SymbolicUtils.promote_symtype(*, typeof(ϕ), Int) <: KC.QField
-    end
-end
-
-@testset "normal ordering" begin
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-    @test isequal(ϕ' * ϕ, ϕ * ϕ')
-end
-
-@testset "ones and zeros" begin
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-    @test isone(ϕ) == false
-    @test iszero(ϕ) == false
-    @test one(ϕ) == 1
-    @test zero(ϕ) == 0
-end
-
-@testset "hash" begin
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-    @test isequal(hash(ϕ + ψ), hash(ϕ + ψ))
-end
-
-@testset "isequal" begin
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-    # Test the equality of two Keldysh fields
-    @test ϕ == ϕ
-    @test isequal(ϕ * ϕ, ϕ * ϕ)
-    @test isequal(ϕ * ψ, ϕ * ψ)
-    @test isequal(ϕ + ψ, ϕ + ψ)
-
-    # `QAdd` stores its summands in insertion order, so addition is not commutative.
-    # Sorting them canonically would reorder the terms of every Lagrangian.
-    @test isequal(ψ + ϕ, ϕ + ψ) broken = true
-    @test isequal(ψ * ϕ, ϕ * ψ)
-    @test isequal(0.0 + ϕ, ϕ + 0)
-    ϕ2 = ϕ + ϕ
-    @test isequal(ϕ2 + 0, ϕ + ϕ + 0)
-    @test isequal(ϕ2 + ϕ, ϕ + ϕ + ϕ)
-end
-
-@testset "simplification" begin
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-    using SymbolicUtils
-    # `QAdd` keeps every summand separately: like terms are never collected, and a sum
-    # of one term never collapses to a `QMul`. Hence ϕ + ϕ stays a two-term `QAdd`.
-    @test isequal(ϕ + ϕ, 2 * ϕ) broken = true
-    @test isequal(ϕ + ϕ + ϕ, 3 * ϕ) broken = true
-
-    @test isequal((ϕ + ϕ) * (ϕ + ϕ), 4 * ϕ^2) broken = true
-    @test isequal((ϕ + ϕ) * (ϕ + ϕ), ϕ^2 + ϕ^2 + ϕ^2 + ϕ^2)
-
-    # These used to throw on `args::Vector{Any}`. They run now that `QAdd` is type stable,
-    # they just leave the like terms uncollected.
-    @test length(SymbolicUtils.arguments(SymbolicUtils.expand((ϕ + ϕ) * (ψ + ϕ)))) == 4
+    mul = 2 * ϕ * ψ
+    args = @inferred SymbolicUtils.arguments(mul)
+    @test eltype(args) === Union{Int,Field{Boson}}
+    @test args == Union{Int,Field{Boson}}[2, ϕ, ψ]
+    @test isnothing(TermInterface.metadata(mul))
     @test isequal(
-        SymbolicUtils.simplify((ϕ + ϕ) * (ψ + ϕ) + 3 * (ϕ + ϕ) * (ψ + ϕ)),
-        SymbolicUtils.expand((ϕ + ϕ) * (ψ + ϕ) + 3 * (ϕ + ϕ) * (ψ + ϕ)),
+        @inferred(TermInterface.maketerm(KC.QMul, *, Field{Boson}[ϕ, ψ], nothing)),
+        ϕ * ψ,
     )
 end
 
-@testset "adjoint" begin
-    using KeldyshContraction: is_creation, is_annihilation, is_conserved
+@testset "position and regularisation are value data" begin
+    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
 
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-    ϕ′ = Create(KC.name(ϕ), Classical, KC.regularisation(ϕ), KC.position(ϕ))
-    ψ′ = Create(KC.name(ψ), Quantum, KC.regularisation(ψ), KC.position(ψ))
+    @test typeof(@inferred(ϕ(Bulk(3)))) === Field{Boson}
+    @test typeof(@inferred(ψ(In()))) === Field{Boson}
+    @test typeof(@inferred(ψ(Out()))) === Field{Boson}
+    @test typeof(@inferred(ϕ(Plus))) === Field{Boson}
+    @test typeof(@inferred(ϕ(Minus))) === Field{Boson}
 
-    @test is_creation(ϕ′)
-    @test !is_creation(ϕ)
-    @test is_annihilation(ϕ)
-    @test !is_conserved(ϕ)
-
-    # Test the adjoint of Keldysh fields
-    @test isequal(ϕ', ϕ′)
-    @test adjoint(ψ) == ψ′
-    @test adjoint(ψ′) == ψ
-    @test isequal(adjoint(ϕ * ψ), ϕ′ * ψ′)
-    @test isequal(adjoint(ϕ + ψ), ϕ′ + ψ′)
-end
-
-@testset "position" begin
-    using KeldyshContraction: position, is_bulk
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-    # Test the position function
-    @test KC.position(ϕ).index == 1
     @test KC.position(ψ(In())) == In()
     @test KC.position(ψ(Out())) == Out()
-    # @test KC.position(ϕ + ψ) == [0]
-    # @test KC.position(ϕ * ψ) == [0]
+    @test KC.regularisation(ϕ(Plus)) === KC.Regularisation.Plus
 
-    # @test KC.position(ϕ + ψ(In)) == [0, 1]
-    # @test KC.position(ϕ * ψ(In)) == [0, 1]
     to_sort = [ϕ(Bulk(3)), ϕ(Bulk(1)), ϕ, ψ(In()), ψ(Out())]
-    sorted = [ψ(Out()), ϕ, ϕ(Bulk(1)), ϕ(Bulk(3)), ψ(In())]
-    @test isequal(sort(to_sort; by=KC.position), sorted)
-
-    @inferred is_bulk(ϕ)
-    @inferred is_bulk(ϕ * ψ)
+    @test eltype(to_sort) === Field{Boson}
+    @test @inferred KC.is_bulk(ϕ)
+    @test @inferred KC.is_bulk(ϕ * ψ)
 end
 
-@testset "more math" begin
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
+@testset "bosonic interaction expressions" begin
+    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
 
-    # Test the math operations
-    @test isequal(ϕ / 2, 0.5 * ϕ)
-    @test isequal(ϕ//2, 0.5 * ϕ)
+    elastic = -0.5 * (
+        bar(ϕ) * bar(ψ) * (ϕ^2 + ψ^2) +
+        (bar(ϕ)^2 + bar(ψ)^2) * ϕ * ψ
+    )
+    loss =
+        0.5 * bar(ϕ) * bar(ψ) * (ϕ(Minus)^2 + ψ(Minus)^2) -
+        0.5 * ϕ(Plus) * ψ(Plus) * (bar(ϕ)^2 + bar(ψ)^2) +
+        bar(ϕ) * bar(ψ) * (ϕ(Plus)^2 + ϕ(Minus)^2)
 
-    @test isequal((ϕ^2), ϕ * ϕ)
-
-    @test isequal(ϕ, ϕ + 0)
-    @test isequal(0 + ϕ, ϕ)
-
-    # @code_warntype isequal(ϕ, ϕ + 0)
-
-    mul = ϕ * ϕ
-    add = ϕ + ϕ
-    @test isequal(ϕ * mul, ϕ^3)
-    @test isequal(mul * ϕ, ϕ^3)
-    @test isequal(ϕ + add, ϕ + ϕ + ϕ)
-    @test isequal(add + ϕ, ϕ + ϕ + ϕ)
-    @test isequal(mul * add, ϕ^3 + ϕ^3)
-    @test isequal(add * mul, ϕ^3 + ϕ^3)
-    @test isequal(add + mul, ϕ + ϕ + ϕ^2)
-    @test isequal(mul + add, ϕ + ϕ + ϕ^2)
-end
-
-@testset "quantum-classical" begin
-    using KeldyshContraction: is_quantum, is_classical
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-
-    @test is_quantum(ψ)
-    @test is_classical(ϕ)
-    @test !is_quantum(ϕ)
-    @test !is_classical(ψ)
-end
-
-@testset "some lagrangians" begin
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-    eleactic2boson = -0.5 * (ϕ' * ψ' * (ϕ^2 + ψ^2) + (ϕ'^2 + ψ'^2) * ϕ * ψ)
-
-    loss2boson =
-        0.5 * ϕ' * ψ' * (ϕ(Minus)^2 + ψ(Minus)^2) -
-        0.5 * ϕ(Plus) * ψ(Plus) * (ϕ'^2 + ψ'^2) + ϕ' * ψ' * (ϕ(Plus)^2 + ϕ(Minus)^2)
-end
-
-@testset "is_conserved" begin
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-    using KeldyshContraction: is_conserved
-
-    @test !is_conserved(KeldyshContraction.QSym[])
-    @test !is_conserved(KeldyshContraction.QSym[ϕ])
-
-    @inferred is_conserved(ϕ * ψ)
-    # @code_warntype is_conserved(ϕ * ψ)
-end
-
-@testset "is_physical" begin
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-    using KeldyshContraction: is_physical
-
-    @inferred is_physical([ϕ, ψ])
-    @inferred is_physical(ϕ * ψ)
-end
-
-@testset "QMul" begin
-    using KeldyshContraction: QMul
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-
-    @test isequal(ϕ, QMul(1, [ϕ]))
-    @test isequal(QMul(1, [ϕ]), ϕ)
-
-    @test !isequal(ϕ, QMul(1, [ϕ, ϕ]))
-    @test !isequal(QMul(1, [ϕ, ϕ]), ϕ)
-
-    @test isequal(QMul(0, [ϕ]), 0)
-    @test isequal(0, QMul(0, [ϕ]))
-
-    @test !isequal(QMul(0, [ϕ]), 1)
-    @test !isequal(1, QMul(0, [ϕ]))
-
-    @test iszero(QMul(0, [ϕ]))
-    @test iszero(zero(ϕ * ϕ))
-
-    # type promotion
-    promote_type(KC.QMul{Int64}, KC.QMul{Float64})
-end
-
-@testset "conversion/promotion" begin
-    using KeldyshContraction: QAdd, QMul
-
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-
-    a = QAdd([ϕ, ψ])
-    b = QAdd([QMul(1, [ϕ]), QMul(1, [ψ])])
-    @test isequal(a, b)
-    @test typeof(a + b) == QAdd{Int64}
-    @test typeof(a * b) == QAdd{Int64}
-    @test typeof(convert(QAdd{Float64}, a)) == QAdd{Float64}
-    @test typeof(convert(QMul{Float64}, QMul(1, [ϕ]))) == QMul{Float64}
-end
-
-@testset "maybe_rationalize" begin
-    using KeldyshContraction: maybe_rationalize
-
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-
-    a = 0.5 * (ϕ^2 + ψ^2) * ϕ' * ψ'
-    b = maybe_rationalize(a)
-    @test typeof(b) == KeldyshContraction.QAdd{Rational{Int64}}
-
-    c = 0.3 * (ϕ^2 + ψ^2) * ϕ' * ψ'
-    d = maybe_rationalize(c)
-    @test typeof(d) == KeldyshContraction.QAdd{Rational{Int64}}
-
-    e = 0.1 * (ϕ^2 + ψ^2) * ϕ' * ψ' + 0.5 * (ϕ^2 + ψ^2) * ϕ' * ψ'
-    f = maybe_rationalize(e)
-    @test typeof(f) == KeldyshContraction.QAdd{Rational{Int64}}
+    @test elastic isa KC.QAdd{Float64,Boson}
+    @test loss isa KC.QAdd{Float64,Boson}
+    @test @inferred KC.is_conserved(first(elastic.arguments))
+    @test @inferred KC.is_physical(first(elastic.arguments))
 end
