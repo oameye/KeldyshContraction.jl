@@ -13,11 +13,11 @@ L_int = InteractionLagrangian(elasctic2boson)
 ````
 
 ````@example collision_integral
-GF = DressedPropagator(L_int, 2)
+GF = DressedPropagator(L_int, Val(2), Val(5))
 ````
 
 ````@example collision_integral
-Σ = SelfEnergy(GF, 2)
+Σ = SelfEnergy(GF, Val(2))
 ````
 
 ````@example collision_integral
@@ -32,4 +32,3 @@ ci.terms[[3]]
 ---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
-

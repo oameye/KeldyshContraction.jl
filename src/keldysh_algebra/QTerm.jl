@@ -14,19 +14,19 @@ struct QMul{T<:Number} <: QTerm
     arg_c::T
     "A vector containing all [`QSym`](@ref) types."
     args_nc::Vector{QSym}
-    function QMul(arg_c::T, args_nc::Vector{<:QSym}) where {T<:Number}
-        if isequal(arg_c, 0)
-            return new{T}(0, QSym[])
-        else
-            return new{T}(arg_c, args_nc)
-        end
-    end
-    QMul(args_nc::Vector{<:QSym}) = new{Int}(1, args_nc)
-    QMul(s) = new{Int64}(1, [s])
-    QMul{T}(s) where {T} = new{T}(T(1), [s])
-    QMul() = new{Int64}(0, QSym[])
-    QMul{T}() where {T} = new{T}(T(0), QSym[])
 end
+function QMul(arg_c::T, args_nc::Vector{<:QSym}) where {T<:Number}
+    if isequal(arg_c, 0)
+        return QMul{T}(zero(T), QSym[])
+    else
+        return QMul{T}(arg_c, args_nc)
+    end
+end
+QMul(args_nc::Vector{<:QSym}) = QMul(1, args_nc)
+QMul(s) = QMul(1, [s])
+QMul{T}(s) where {T} = QMul{T}(T(1), [s])
+QMul() = QMul(0, QSym[])
+QMul{T}() where {T} = QMul{T}(T(0), QSym[])
 
 Base.promote_rule(::Type{QMul{S}}, ::Type{QMul{T}}) where {S,T} = QMul{promote_rule(S, T)}
 function Base.convert(::Type{QMul{T}}, x::QMul{S}) where {T<:Number,S<:Number}
@@ -92,18 +92,13 @@ Represent an addition involving [`QField`](@ref) and other types.
 """
 struct QAdd{T<:Number} <: QTerm
     arguments::Vector{QMul{T}}
-    function QAdd(args::Vector{<:QMul})
-        vs = promote(args...)
-        return new{typeof(first(vs)).parameters[1]}(collect(vs))
-    end
-    function QAdd(args::Vector{QMul{T}}) where {T<:Number}
-        return new{T}(args)
-    end
-    function QAdd(args::Vector{<:QSym})
-        return new{Int64}([QMul(s) for s in args])
-    end
-    QAdd{T}() where {T} = new{T}([QMul{T}()])
 end
+@unstable function QAdd(args::Vector{<:QMul})
+    vs = promote(args...)
+    return QAdd(collect(vs))
+end
+QAdd(args::Vector{<:QSym}) = QAdd{Int64}([QMul(s) for s in args])
+QAdd{T}() where {T} = QAdd{T}([QMul{T}()])
 Base.length(a::QAdd) = length(a.arguments)
 SymbolicUtils.operation(::QAdd) = (+)
 """
@@ -203,12 +198,12 @@ end
 
 is_bulk(q::QAdd) = all(is_bulk(q) for q in arguments(q))
 
-function set_position_mul(a::QMul, p::Position)::QMul
+function set_position_mul(a::QMul{T}, p::Position)::QMul{T} where {T<:Number}
     args = QSym[arg(p) for arg in a.args_nc]
     return QMul(a.arg_c, args)
 end
 
-function set_position(a::QAdd, p::Position)::QAdd
-    args = QMul[set_position_mul(arg, p) for arg in arguments(a)]
+function set_position(a::QAdd{T}, p::Position)::QAdd{T} where {T<:Number}
+    args = QMul{T}[set_position_mul(arg, p) for arg in arguments(a)]
     return QAdd(args)
 end

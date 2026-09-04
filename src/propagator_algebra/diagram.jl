@@ -3,21 +3,26 @@ struct Diagram{E1,E2}
     topology::FixedVector{E2,Int}
 end
 
-function Diagram(contractions::Vector{T}) where {T<:Union{Contraction,Edge}}
-    @assert length(contractions) > 0 "Contraction vector must not be empty"
+function Diagram(
+    contractions::Vector{T}, ::Val{E}, ::Val{E2}
+) where {T<:Union{Contraction,Edge},E,E2}
+    @assert length(contractions) == E "The supplied Val{edges} must match the contraction count"
+    @assert E > 0 "Contraction vector must not be empty"
     sort!(contractions; by=sort_by_position_and_type)
 
-    edges = SmallCollections.FixedVector{length(contractions),Edge}(
+    edges = SmallCollections.FixedVector{E,Edge}(
         T <: Contraction ? Edge(c) : c for c in contractions
     )
-    # TODO this is type unstable move to FixedSizeArrays.jl when released
-    # https://github.com/JuliaArrays/FixedSizeArrays.jl/issues/115
-    return Diagram(edges)
+    return Diagram(edges, Val(E2))
 end
-function Diagram(edges::FixedVector{E,Edge}) where {E}
-    topology = bulk_multiplicity(edges)
-    return Diagram{E,length(topology)}(edges, topology)
+
+function Diagram(edges::FixedVector{E,Edge}, ::Val{E2}) where {E,E2}
+    topology = bulk_multiplicity(edges, Val(E2))
+    @assert length(topology) == E2 "The supplied Val{topology} must match the topology size"
+    topology = SmallCollections.FixedVector{E2,Int}(topology)
+    return Diagram{E,E2}(edges, topology)
 end
+
 function Diagram(d::Diagram{E1,E2}, momenta::FixedVector{E1,Momenta}) where {E1,E2}
     contractions = FixedVector{E1,Edge}(
         Edge(c, m) for (c, m) in zip(d.contractions, momenta)
@@ -58,21 +63,28 @@ function Diagrams(
     dict = Dict{Diagram{E1,E2},ComplexRationals}(d => prefactor for d in diagrams)
     return Diagrams{E1,E2}(dict)
 end
-function Diagrams(contractions::Vector{Vector{Contraction}}, prefactor::ComplexRationals)
+function Diagrams(
+    contractions::Vector{Vector{Contraction}},
+    prefactor::ComplexRationals,
+    ::Val{E},
+    ::Val{E2},
+) where {E,E2}
     @assert length(contractions) > 0 "Contraction vector must not be empty"
     c = first(contractions)
-    E = length(c)
+    @assert length(c) == E "The supplied Val{edges} must match the contraction count"
 
     imag_factor = im^E # Contraction becomes propagator
-    dict = Dict{Diagram{E,topology_length(E)},ComplexRationals}(
-        Diagram(c) => _simplify(imag_factor * prefactor) for c in contractions
+    dict = Dict{Diagram{E,E2},ComplexRationals}(
+        Diagram(c, Val(E), Val(E2)) => _simplify(imag_factor * prefactor) for
+        c in contractions
     )
-    return Diagrams{E,topology_length(E)}(dict)
+    return Diagrams{E,E2}(dict)
 end
 Base.isequal(d1::Diagrams, d2::Diagrams) = isequal(d1.diagrams, d2.diagrams)
 Base.hash(d::Diagrams, h::UInt) = hash(d.diagrams, h)
 Base.iszero(d::Diagrams) = isempty(d.diagrams)
 SmallCollections.default(::Type{Diagrams}) = Diagrams{0,0}()
+SmallCollections.default(::Type{Diagrams{E1,E2}}) where {E1,E2} = Diagrams{E1,E2}()
 
 number_of_propagators(a::QMul) = length(a) ÷ 2
 number_of_propagators(a::QAdd) = length(first(a.arguments)) ÷ 2
@@ -116,6 +128,7 @@ Base.iterate(collection::Diagrams) = iterate(collection.diagrams)
 Base.iterate(collection::Diagrams, state) = iterate(collection.diagrams, state)
 Base.length(collection::Diagrams) = length(collection.diagrams)
 Base.eltype(::Type{Diagrams}) = Pair{Diagram,Number}
+Base.eltype(::Type{Diagrams{E1,E2}}) where {E1,E2} = Pair{Diagram{E1,E2},ComplexRationals}
 
 function Base.adjoint(d::Diagrams)
     dict = Dict(adjoint_diagram(pair) for pair in d)
@@ -133,7 +146,7 @@ function adjoint_diagram(
     adjoint_edges = Edge[adjoint(e) for e in _contractions]
     sorted_adjoint_edges = sort(collect(adjoint_edges); by=sort_by_position_and_type)
     edges = SmallCollections.FixedVector{E1,Edge}(e for e in sorted_adjoint_edges)
-    return Diagram(edges) => _simplify(adjoint(prefactor′))
+    return Diagram(edges, Val(E2)) => _simplify(adjoint(prefactor′))
 end
 
 function set_reg_to_zero(d::Diagrams{E1,E2}) where {E1,E2}
@@ -154,19 +167,38 @@ function bulk_multiplicity(edges::AbstractArray{Tuple{Int8,Int8}})
     vert = vertices(edges)
     m = max_edges(length(vert))
 
-    if iszero(m)
+    mult = zeros(Int, m)
+    for edge in edges
+        idx = edge_to_index(edge[1], edge[2], length(vert))
+        mult[idx] += 1
+    end
+    return mult
+end
+function bulk_multiplicity(vs::AbstractArray{Edge})
+    return bulk_multiplicity(map(integer_positions, vs))
+end
+
+function bulk_multiplicity(edges::AbstractArray{Tuple{Int8,Int8}}, ::Val{E2}) where {E2}
+    edges = filter(is_not_equal_time_bulk_edge, edges)
+
+    vert = vertices(edges)
+    m = max_edges(length(vert))
+    @assert m == E2 "The supplied Val{topology} must match the topology size"
+
+    if iszero(E2)
         mult = SmallCollections.MutableFixedVector{0,Int}(undef)
     else
-        mult = SmallCollections.MutableFixedVector{m,Int}(0 for i in 1:m)
-    end # https://github.com/matthias314/SmallCollections.jl/issues/12
+        mult = SmallCollections.MutableFixedVector{E2,Int}(0 for _ in 1:E2)
+    end
     for edge in edges
         idx = edge_to_index(edge[1], edge[2], length(vert))
         mult[idx] += 1
     end
     return SmallCollections.FixedVector(mult)
 end
-function bulk_multiplicity(vs::AbstractArray{Edge})
-    return bulk_multiplicity(map(integer_positions, vs))
+
+function bulk_multiplicity(vs::AbstractArray{Edge}, ::Val{E2}) where {E2}
+    return bulk_multiplicity(map(integer_positions, vs), Val(E2))
 end
 
 max_edges(n::Integer)::Integer = n * (n - 1) ÷ 2
@@ -175,21 +207,21 @@ function is_not_equal_time_bulk_edge(edge)
     return !(typemin(Int8) ∈ edge) && !(typemax(Int8) ∈ edge) && !isequal(edge[1], edge[2])
 end
 
-function topologies(ds::Diagrams)
+function topologies(ds::Diagrams{E1,E2}) where {E1,E2}
     terms = collect(keys(ds.diagrams))
-    _bulk_multiplicity = map(terms) do diagram
-        vs = map(diagram.contractions) do c
-            ff = fields(c)
-            return integer_positions((ff[1], ff[2]))
-        end
-        return bulk_multiplicity(vs)
+    diagram_topologies = getfield.(terms, :topology)
+    _topologies = unique(diagram_topologies)
+    topologies = Dict{FixedVector{E2,Int},Vector{Diagram{E1,E2}}}()
+    for topology in _topologies
+        idxs = findall(
+            i ->
+                length(i) == length(topology) &&
+                all(j -> i[j] == topology[j], eachindex(i)),
+            diagram_topologies,
+        )
+        topologies[topology] = terms[idxs]
     end
-    _topologies = unique(_bulk_multiplicity)
-    pairs = map(_topologies) do t
-        idxs = findall(i -> i == t, _bulk_multiplicity)
-        return t => terms[idxs]
-    end
-    return Dict(pairs)
+    return topologies
 end
 
 function _simplify_prefactors!(g::Diagrams)

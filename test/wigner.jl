@@ -10,7 +10,7 @@ L_int = InteractionLagrangian(elasctic2boson)
     using KeldyshContraction: construct_momenta_from_gf
     @testset "Topology []" begin
         using KeldyshContraction: Momenta, FixedVector
-        GF = DressedPropagator(L_int, 1)
+        GF = DressedPropagator(L_int, Val(1), Val(3))
         diagram = first(first(GF.keldysh))
 
         d′ = construct_momenta_from_gf(diagram)
@@ -18,7 +18,7 @@ L_int = InteractionLagrangian(elasctic2boson)
         @test isequal(momenta(d′), FixedVector([Momenta(0), Momenta(1), Momenta(0)]))
     end
 
-    GF = DressedPropagator(L_int, 2)
+    GF = DressedPropagator(L_int, Val(2), Val(5))
 
     topologies = KeldyshContraction.topologies(GF.keldysh)
 
@@ -63,8 +63,9 @@ end
 
     @testset "Topology []" begin
         using KeldyshContraction: Momenta, FixedVector
-        GF = DressedPropagator(L_int, 1)
-        SE = SelfEnergy(GF)
+        GF = DressedPropagator(L_int, Val(1), Val(3))
+        SE = SelfEnergy(GF, Val(1))
+        @test @inferred(SelfEnergy(GF, Val(1))) isa SelfEnergy{1,0}
 
         diagram = first(first(SE.retarded))
 
@@ -72,8 +73,8 @@ end
         @test isequal(momenta(d′), FixedVector([Momenta(1)]))
     end
 
-    GF = DressedPropagator(L_int, 2)
-    SE = SelfEnergy(GF)
+    GF = DressedPropagator(L_int, Val(2), Val(5))
+    SE = SelfEnergy(GF, Val(2))
 
     topologies = KeldyshContraction.topologies(SE.retarded)
 
@@ -105,15 +106,15 @@ end
 
 @testset "Wigner transform" begin
     @testset "first order" begin
-        GF = DressedPropagator(L_int, 1)
-        SE = SelfEnergy(GF)
+        GF = DressedPropagator(L_int, Val(1), Val(3))
+        SE = SelfEnergy(GF, Val(1))
 
         wigner_transform(GF)
         wigner_transform(SE)
     end
     @testset "second order" begin
-        GF = DressedPropagator(L_int, 2)
-        SE = SelfEnergy(GF)
+        GF = DressedPropagator(L_int, Val(2), Val(5))
+        SE = SelfEnergy(GF, Val(2))
 
         wigner_transform(GF)
         wigner_transform(SE)

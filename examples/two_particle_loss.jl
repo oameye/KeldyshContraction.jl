@@ -33,7 +33,7 @@ loss2boson_unregular =
         c' * q' * (c * q + c * q)
     )
 
-KeldyshContraction._wick_contraction(loss2boson_unregular)
+KeldyshContraction._wick_contraction(loss2boson_unregular, Val(2))
 
 # To make the interaction Lagrangian physically meaningful, we must regularize it by properly
 # handling equal-space-time propagators. These equal-time arguments emerge from the continuum
@@ -60,25 +60,25 @@ L_int = InteractionLagrangian(loss2boson)
 
 # Indeed, the vacuum expectation value of the interaction Lagrangian is now zero:
 
-KeldyshContraction._wick_contraction(loss2boson)
+KeldyshContraction._wick_contraction(loss2boson, Val(2))
 
 # ## First order Green's function
 
-GF = DressedPropagator(L_int)
+GF = DressedPropagator(L_int, Val(1), Val(3))
 
 #
 
-Σ = SelfEnergy(GF)
+Σ = SelfEnergy(GF, Val(1))
 
 # The following indeed corresponds with what is reported in [(Gerbino et al, 2024)](https://arxiv.org/abs/2406.20028).
 
 # ## Second order Green's function
 
-GF = DressedPropagator(L_int, 2)
+GF = DressedPropagator(L_int, Val(2), Val(5))
 
 #
 
-Σ = SelfEnergy(GF, 2)
+Σ = SelfEnergy(GF, Val(2))
 
 #
 

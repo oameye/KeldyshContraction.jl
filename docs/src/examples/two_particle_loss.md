@@ -42,7 +42,7 @@ loss2boson_unregular =
         c' * q' * (c * q + c * q)
     )
 
-KeldyshContraction._wick_contraction(loss2boson_unregular; simplify=true)
+KeldyshContraction._wick_contraction(loss2boson_unregular, Val(2); simplify=true)
 ````
 
 To make the interaction Lagrangian physically meaningful, we must regularize it by properly
@@ -75,11 +75,11 @@ Indeed, the vacuum expectation value of the interaction Lagrangian is now zero:
 ## First order Green's function
 
 ````@example two_particle_loss
-GF = DressedPropagator(L_int)
+GF = DressedPropagator(L_int, Val(1), Val(3))
 ````
 
 ````@example two_particle_loss
-Σ = SelfEnergy(GF)
+Σ = SelfEnergy(GF, Val(1))
 ````
 
 The following indeed corresponds with what is reported in [(Gerbino et al, 2024)](https://arxiv.org/abs/2406.20028).
@@ -87,14 +87,13 @@ The following indeed corresponds with what is reported in [(Gerbino et al, 2024)
 ## Second order Green's function
 
 ````@example two_particle_loss
-GF = DressedPropagator(L_int, 2)
+GF = DressedPropagator(L_int, Val(2), Val(5))
 ````
 
 ````@example two_particle_loss
-Σ = SelfEnergy(GF, 2)
+Σ = SelfEnergy(GF, Val(2))
 ````
 
 ---
 
 *This page was generated using [Literate.jl](https://github.com/fredrikekre/Literate.jl).*
-

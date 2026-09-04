@@ -205,7 +205,7 @@ function kelysh_to_distribution(d::Diagram, coeff::ComplexRationals=ComplexRatio
         edgetype = propagator_type(edge)
         if is_keldysh(edgetype)
             push!(bds, edge.momenta)
-            coeff *= 0.5*im
+            coeff *= (1 // 2) * im
         end
     end
     return BosonicDistributionTerm(bds), coeff

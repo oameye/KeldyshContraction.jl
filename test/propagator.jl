@@ -30,7 +30,7 @@ end
     using KeldyshContraction: Diagram, Contraction
     contractions = Contraction[(q, c'(In())), (c, c'), (c(Out()), q')]
 
-    Diagram(contractions)
+    @inferred Diagram(contractions, Val(3), Val(0))
 end
 
 @testset "sort" begin

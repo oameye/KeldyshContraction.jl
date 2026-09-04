@@ -15,8 +15,8 @@ L_int =
     )
 
 @testset "vacuum bubble" begin
-    @test !iszero(_wick_contraction(L_int; regularise=false))
-    @test iszero(_wick_contraction(L_int; regularise=true))
+    @test !iszero(_wick_contraction(L_int, Val(2); regularise=false))
+    @test iszero(_wick_contraction(L_int, Val(2); regularise=true))
 end
 
 @testset "wick contractions first order" begin
@@ -33,11 +33,13 @@ end
             all(regular(c) for c in cs)
         end
         @test length(regularized_wick) == 2
-        @test length(unique(Diagram.(regularized_wick))) == 1
+        @test length(unique(map(c -> Diagram(c, Val(3), Val(0)), regularized_wick))) == 1
 
         @test isequal(
-            Diagram([Edge(c(Out()), q'), Edge(c, c'), Edge(c, c(In())')]),
-            set_reg_to_zero(first(keys(_wick_contraction(expr.arguments[1]).diagrams))),
+            Diagram([Edge(c(Out()), q'), Edge(c, c'), Edge(c, c(In())')], Val(3), Val(0)),
+            set_reg_to_zero(
+                first(keys(_wick_contraction(expr.arguments[1], Val(3)).diagrams))
+            ),
         )
 
         # ∨ I check these by hand
@@ -45,60 +47,62 @@ end
         # i (c*c⁻*c⁻*̄c*̄q*̄c)/2
         truth = Diagrams(
             Dict(
-                Diagram([(c(Out()), q'), (c, c'), (c, c'(In()))]) =>
+                Diagram([(c(Out()), q'), (c, c'), (c, c'(In()))], Val(3), Val(0)) =>
                     Complex{Rational{Int}}(1.0),
             ),
         )
         @test isequal(
-            set_reg_to_zero(_wick_contraction(expr.arguments[1]; simplify)), truth
+            set_reg_to_zero(_wick_contraction(expr.arguments[1], Val(3); simplify)), truth
         )
 
         # i (c*q⁻*q⁻*̄c*̄q*̄c)/2
         truth = Diagrams(
             Dict(
-                Diagram([(c(Out()), q'), (q, c'), (q, c'(In()))]) =>
+                Diagram([(c(Out()), q'), (q, c'), (q, c'(In()))], Val(3), Val(0)) =>
                     Complex{Rational{Int}}(1.0),
             ),
         )
         @test isequal(
-            set_reg_to_zero(_wick_contraction(expr.arguments[2]; simplify)), truth
+            set_reg_to_zero(_wick_contraction(expr.arguments[2], Val(3); simplify)), truth
         )
 
         # - i( c*c⁺*q⁺*̄c*̄c*̄c) /2
-        @test repr(set_reg_to_zero(_wick_contraction(expr.arguments[3]; simplify))) ==
-            "-1//1*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)"
+        @test repr(
+            set_reg_to_zero(_wick_contraction(expr.arguments[3], Val(3); simplify))
+        ) == "-1//1*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
         # - i(c*c⁺*q⁺*̄q*̄q*̄ϕ)/2
-        @test repr(set_reg_to_zero(_wick_contraction(expr.arguments[4]; simplify))) ==
-            "-1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,x₂)"
+        @test repr(
+            set_reg_to_zero(_wick_contraction(expr.arguments[4], Val(3); simplify))
+        ) == "-1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
         # c*c⁺*q⁺*̄c*̄q*̄c
         truth = Diagrams(
             Dict(
-                Diagram([(c(Out()), c'), (c, q'), (q, c'(In()))]) =>
+                Diagram([(c(Out()), c'), (c, q'), (q, c'(In()))], Val(3), Val(0)) =>
                     Complex{Rational{Int}}(1.0),
-                Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))]) =>
+                Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))], Val(3), Val(0)) =>
                     Complex{Rational{Int}}(1.0),
             ),
         )
         @test isequal(
-            set_reg_to_zero(_wick_contraction(expr.arguments[5]; simplify)), truth
+            set_reg_to_zero(_wick_contraction(expr.arguments[5], Val(3); simplify)), truth
         )
 
         # c*c⁻*q⁻*̄c*̄q*̄c
         truth = Diagrams(
             Dict(
-                Diagram([(c(Out()), q'), (q, c'), (c, c'(In()))]) =>
+                Diagram([(c(Out()), q'), (q, c'), (c, c'(In()))], Val(3), Val(0)) =>
                     Complex{Rational{Int}}(1.0),
-                Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))]) =>
+                Diagram([(c(Out()), q'), (c, c'), (q, c'(In()))], Val(3), Val(0)) =>
                     Complex{Rational{Int}}(1.0),
             ),
         )
         @test isequal(
-            set_reg_to_zero(_wick_contraction(expr.arguments[6]; simplify)), truth
+            set_reg_to_zero(_wick_contraction(expr.arguments[6], Val(3); simplify)), truth
         )
 
-        result = _wick_contraction.(expr.arguments; simplify, _set_reg_to_zero=true)
+        result = _wick_contraction.(expr.arguments, Val(3); simplify, _set_reg_to_zero=true)
 
         diagrams_result = result[1]
         for idx in 2:length(result)
@@ -109,7 +113,7 @@ end
         diagrams_result
 
         L = InteractionLagrangian(L_int)
-        GF = DressedPropagator(L; simplify=false, _set_reg_to_zero=true)
+        GF = DressedPropagator(L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true)
         @test isequal(GF.keldysh, diagrams_result)
     end
 
@@ -120,27 +124,27 @@ end
         @test is_physical(expr)
 
         # ∨ should this be zero?
-        @test !iszero(_wick_contraction(expr; regularise=false))
-        @test iszero(_wick_contraction(expr; regularise=true))
+        @test !iszero(_wick_contraction(expr, Val(3); regularise=false))
+        @test iszero(_wick_contraction(expr, Val(3); regularise=true))
     end
 
     @testset "R/A Green's function first order" begin
         L = InteractionLagrangian(L_int)
-        GF = DressedPropagator(L; simplify=false, _set_reg_to_zero=true)
+        GF = DressedPropagator(L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true)
 
         truth_retarded = Diagrams(
             Dict(
-                Diagram([(c(Out()), q'), (q, c'), (c, q'(In()))]) =>
+                Diagram([(c(Out()), q'), (q, c'), (c, q'(In()))], Val(3), Val(0)) =>
                     Complex{Rational{Int}}(1.0),
-                Diagram([(c(Out()), q'), (c, c'), (c, q'(In()))]) =>
+                Diagram([(c(Out()), q'), (c, c'), (c, q'(In()))], Val(3), Val(0)) =>
                     Complex{Rational{Int}}(1.0),
             ),
         )
         truth_advanced = Diagrams(
             Dict(
-                Diagram([(q(Out()), c'), (c, q'), (q, c'(In()))]) =>
+                Diagram([(q(Out()), c'), (c, q'), (q, c'(In()))], Val(3), Val(0)) =>
                     Complex{Rational{Int}}(1.0),
-                Diagram([(q(Out()), c'), (c, c'), (q, c'(In()))]) =>
+                Diagram([(q(Out()), c'), (c, c'), (q, c'(In()))], Val(3), Val(0)) =>
                     Complex{Rational{Int}}(-1.0),
             ),
         )
@@ -150,8 +154,12 @@ end
 
     @testset "simplification" begin
         L = InteractionLagrangian(L_int)
-        GF_not_simplified = DressedPropagator(L; simplify=false, _set_reg_to_zero=true)
-        GF_simplified = DressedPropagator(L; simplify=true, _set_reg_to_zero=true)
+        GF_not_simplified = DressedPropagator(
+            L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true
+        )
+        GF_simplified = DressedPropagator(
+            L, Val(1), Val(3); simplify=true, _set_reg_to_zero=true
+        )
         collect(keys(GF_simplified.keldysh.diagrams))
         collect(values(GF_simplified.keldysh.diagrams))
         collect(keys(GF_not_simplified.keldysh.diagrams))
@@ -165,12 +173,12 @@ end
 
     @testset "correctness check" begin
         @testset "first order" begin
-            GF = DressedPropagator(L; simplify=false, _set_reg_to_zero=true)
-            Σ = SelfEnergy(GF)
+            GF = DressedPropagator(L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true)
+            Σ = SelfEnergy(GF, Val(1))
 
-            kp = Diagram([(c, c')])
-            rp = Diagram([(c, q')])
-            ap = Diagram([(q, c')])
+            kp = Diagram([(c, c')], Val(1), Val(0))
+            rp = Diagram([(c, q')], Val(1), Val(0))
+            ap = Diagram([(q, c')], Val(1), Val(0))
             advanced_truth = Diagrams(
                 Dict(kp => Complex{Rational{Int}}(-1.0), rp => Complex{Rational{Int}}(1.0))
             )
@@ -198,8 +206,10 @@ end
             )
 
             @testset "simplified" begin
-                GF = DressedPropagator(L; simplify=true, _set_reg_to_zero=true)
-                Σ = SelfEnergy(GF)
+                GF = DressedPropagator(
+                    L, Val(1), Val(3); simplify=true, _set_reg_to_zero=true
+                )
+                Σ = SelfEnergy(GF, Val(1))
                 keldysh_truth = Diagrams(
                     Dict(
                         kp => Complex{Rational{Int}}(2.0),
@@ -231,11 +241,11 @@ end
         using KeldyshContraction: construct_self_energy!, PropagatorType, Diagrams
 
         L = InteractionLagrangian(L_int)
-        GF = DressedPropagator(L; simplify=false, _set_reg_to_zero=true)
-        Σ = SelfEnergy(GF)
+        GF = DressedPropagator(L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true)
+        Σ = SelfEnergy(GF, Val(1))
 
         expr_K = c(Out()) * c'(In()) * L_int
-        G_K1 = _wick_contraction(expr_K; simplify=false, _set_reg_to_zero=true)
+        G_K1 = _wick_contraction(expr_K, Val(3); simplify=false, _set_reg_to_zero=true)
 
         self_energy = SmallCollections.SmallDict{3,PropagatorType.T,Diagrams}((
             PropagatorType.Advanced => Diagrams{1,0}(),
@@ -250,7 +260,7 @@ end
 
 @testset "second order" begin
     L = InteractionLagrangian(L_int)
-    GF = DressedPropagator(L, 2, _set_reg_to_zero=true, simplify=true)
+    GF = DressedPropagator(L, Val(2), Val(5), _set_reg_to_zero=true, simplify=true)
 
     @testset " vacuum" begin
         using KeldyshContraction: filter_nonzero!
@@ -258,12 +268,12 @@ end
         L1 = L(1)
         L2 = L(2)
         vacuum = L1.lagrangian * L2.lagrangian
-        expr = _wick_contraction(vacuum; simplify=true, _set_reg_to_zero=true)
+        expr = _wick_contraction(vacuum, Val(4); simplify=true, _set_reg_to_zero=true)
         filter_nonzero!(expr)
         @test iszero(expr)
     end
 
-    Σ = SelfEnergy(GF, 2)
+    Σ = SelfEnergy(GF, Val(2))
 
     @test_broken isequal(adjoint(Σ.advanced), Σ.retarded)
     @test_broken isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)

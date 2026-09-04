@@ -12,14 +12,14 @@ struct Destroy <: QSym
     contour::KeldyshContour.T
     position::Position
     regularisation::Regularisation.T
-    function Destroy(
-        name::Symbol,
-        contour::KeldyshContour.T,
-        reg::Regularisation.T=Regularisation.Zero,
-        pos::Position=Bulk(),
-    )
-        return new(name, contour, pos, reg)
-    end
+end
+function Destroy(
+    name::Symbol,
+    contour::KeldyshContour.T,
+    reg::Regularisation.T=Regularisation.Zero,
+    pos::Position=Bulk(),
+)
+    return Destroy(name, contour, pos, reg)
 end
 
 """
@@ -32,14 +32,14 @@ struct Create <: QSym
     contour::KeldyshContour.T
     position::Position
     regularisation::Regularisation.T
-    function Create(
-        name::Symbol,
-        contour::KeldyshContour.T,
-        reg::Regularisation.T=Regularisation.Zero,
-        pos::Position=Bulk();
-    )
-        return new(name, contour, pos, reg)
-    end
+end
+function Create(
+    name::Symbol,
+    contour::KeldyshContour.T,
+    reg::Regularisation.T=Regularisation.Zero,
+    pos::Position=Bulk();
+)
+    return Create(name, contour, pos, reg)
 end
 
 for T in (:Create, :Destroy)

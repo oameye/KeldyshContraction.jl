@@ -24,18 +24,20 @@ edges is used.
     return (i - 1) * n - ((i - 1) * i) ÷ 2 + (j - i)
 end
 
-make_real(x::Number) = SymbolicUtils._isreal(x) ? real(x) : x
+make_real(x::Real) = x
+@unstable make_real(x::Number) = SymbolicUtils._isreal(x) ? real(x) : x
 
 bool_to_index(x::Bool) = 2 * x - 1
 
-_simplify(x::Complex) =
+function _simplify(x::Complex{T}) where {T}
     if iszero(x.im)
-        complex(x.re)
+        return complex(x.re)
     elseif iszero(x.re)
-        0.0+im*x.im
+        return complex(zero(x.re), x.im)
     else
-        x
+        return x
     end
+end
 
 """
     indices_from_counts(counts::Vector{Int})

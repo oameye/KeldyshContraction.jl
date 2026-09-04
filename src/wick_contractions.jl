@@ -3,9 +3,11 @@
 #################################
 
 """
-    wick_contraction(expr::QTerm)
+    wick_contraction(in_out::QMul, L::InteractionLagrangian, ::Val{order}, ::Val{edges}; kwargs...)
+    wick_contraction(in_out::QMul, Ls::LagrangianSum, ::Val{order}, ::Val{edges}; simplify, kwargs...)
 
-Compute all possible Wick contractions of quantum fields in the expression `expr`.
+Compute all possible Wick contractions of the interaction Lagrangian with the external
+fields in `in_out`.
 
 Wick contractions decompose products of quantum field operators into sums of products
 of propagators (two-point correlation functions). The rules of the contraction are:
@@ -13,24 +15,28 @@ of propagators (two-point correlation functions). The rules of the contraction a
   - Physicality (proper time ordering)
   - No quantum-quantum contractions
   - If the fields have a [`Regularisation`](@ref) applied, the contractions are
-    regularised. The [`Regularisation`](@ref) property is set to zero after the reguralisation.
+    regularised.
 
-The function handles two types of inputs:
-- `QAdd`: Distributes the contraction over sums
-- `QMul`: Contracts products of fields into propagators
-
-The function returns a new expression of propagators of type `SymbolicUtils.Symbol`.
-
+The function returns a new expression of propagators as `Diagrams`. For a
+`LagrangianSum`, one parameter/diagram pair is returned for each parameter monomial.
 """
-function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; kwargs...)
+function wick_contraction(
+    in_out::QMul, L::InteractionLagrangian, ::Val{O}, ::Val{E}; kwargs...
+) where {O,E}
+    @assert number_of_propagators(L) * O + 1 == E "The supplied Val{edges} must equal the interaction's propagator count times Val{order}, plus the external propagator"
+    return _wick_contraction(in_out, L, Val(E), Val(O); kwargs...)
+end
+
+@inline function _wick_contraction(
+    in_out::QMul, L::InteractionLagrangian, ::Val{E}, ::Val{O}; kwargs...
+) where {E,O}
     l = length(L.lagrangian)
 
-    E = number_of_propagators(L) * order + 1 # +1 for in_out
-    diagrams = Diagrams{E,max_edges(order)}()
-    prefactor = -1 * im * im^order // factorial(order)
+    diagrams = Diagrams{E,max_edges(O)}()
+    prefactor = -1 * im * im^O // factorial(O)
 
     regularise = should_regularise(L.lagrangian)
-    for coefficients in Combinatorics.multiexponents(l, order)
+    for coefficients in Combinatorics.multiexponents(l, O)
         # TODO: remove complex conjugate to go from 10 to only 6 terms
         idxs = indices_from_counts(coefficients) # will be of length order
         mult = Combinatorics.multinomial(coefficients...)
@@ -42,10 +48,11 @@ function wick_contraction(in_out::QMul, L::InteractionLagrangian, order::Int64; 
 end
 
 function wick_contraction(
-    in_out::QMul, Ls::LagrangianSum, order::Int64; simplify::Vector{Bool}, kwargs...
-)
+    in_out::QMul, Ls::LagrangianSum, ::Val{O}, ::Val{E}; simplify::Vector{Bool}, kwargs...
+) where {O,E}
+    @assert all(number_of_propagators(L) * O + 1 == E for L in arguments(Ls)) "All LagrangianSum terms must produce the supplied number of propagator edges"
     ps = parameters(Ls)
-    exponents = Combinatorics.multiexponents(length(Ls), order)
+    exponents = Combinatorics.multiexponents(length(Ls), O)
     L_args = arguments(Ls)
 
     pairs = map(exponents) do coefficients
@@ -53,36 +60,41 @@ function wick_contraction(
 
         diagrams = if allequal(idxs)
             idx = first(idxs)
-            wick_contraction(in_out, L_args[idx], order; simplify=simplify[idx], kwargs...)
+            wick_contraction(
+                in_out, L_args[idx], Val(O), Val(E); simplify=simplify[idx], kwargs...
+            )
         else
             mult = Combinatorics.multinomial(coefficients...)
             qadd = mult * prod(L_args[j](i).lagrangian for (i, j) in enumerate(idxs))
             _simplify = prod(simplify[i] for i in idxs)
 
-            E = number_of_propagators(qadd) + 1
-            diagrams = Diagrams{E,max_edges(order)}()
-            prefactor = -1 * im * im^order / factorial(order)
-
-            regularise = should_regularise(qadd)
-            for arg in arguments(qadd)
-                wick_contraction!(
-                    diagrams,
-                    prefactor * in_out * arg;
-                    simplify=_simplify,
-                    regularise,
-                    kwargs...,
-                )
-            end
-            diagrams
+            _wick_contraction(in_out, qadd, Val(E), Val(O); simplify=_simplify, kwargs...)
         end
         return (prod(ps[idx] for idx in idxs), diagrams)
     end
     return pairs
 end
 
+@inline function _wick_contraction(
+    in_out::QMul, a::QAdd, ::Val{E}, ::Val{O}; kwargs...
+) where {E,O}
+    diagrams = Diagrams{E,max_edges(O)}()
+    prefactor = -1 * im * im^O / factorial(O)
+
+    regularise = should_regularise(a)
+    for arg in arguments(a)
+        wick_contraction!(diagrams, prefactor * in_out * arg; regularise, kwargs...)
+    end
+    return diagrams
+end
+
 function wick_contraction!(
-    diagrams::Diagrams, a::QMul; regularise=true, simplify=false, _set_reg_to_zero=false
-)
+    diagrams::Diagrams{E1,E2},
+    a::QMul;
+    regularise=true,
+    simplify=false,
+    _set_reg_to_zero=false,
+) where {E1,E2}
     @assert is_conserved(a)
     @assert is_physical(a)
 
@@ -90,7 +102,10 @@ function wick_contraction!(
     make_diagram!(diagrams, contractions, a.arg_c, simplify)
     return nothing
 end
-function make_diagram!(diagrams::Diagrams, contractions, arg_c, simplify::Bool)
+
+function make_diagram!(
+    diagrams::Diagrams{E1,E2}, contractions, arg_c, simplify::Bool
+) where {E1,E2}
     if isempty(contractions)
         return nothing
     end
@@ -98,14 +113,21 @@ function make_diagram!(diagrams::Diagrams, contractions, arg_c, simplify::Bool)
     imag_factor = im^(number_of_contractions) # Contraction becomes propagator
     # foreach(contractions) do c
     for c in contractions
-        diagram, prefactor = make_diagram_pair(c, arg_c, imag_factor, simplify)
+        diagram, prefactor = make_diagram_pair(
+            c, arg_c, imag_factor, simplify, Val(E1), Val(E2)
+        )
         push!(diagrams, diagram, prefactor)
     end
     return nothing
 end
-function make_diagram_pair(c, arg_c, imag_factor, simplify::Bool)
+
+function make_diagram_pair(
+    c, arg_c, imag_factor, simplify::Bool, ::Val{E}, ::Val{E2}
+) where {E,E2}
     c′, prefactor = simplify ? advanced_to_retarded(c, arg_c) : (c, arg_c)
-    return Diagram(c′) => imag_factor * prefactor
+    sort!(c′; by=sort_by_position_and_type)
+    edges = FixedVector{E,Edge}(Edge(contraction) for contraction in c′)
+    return Diagram(edges, Val(E2)) => imag_factor * prefactor
 end
 
 """
@@ -184,15 +206,15 @@ end
 # Vacuum Contractions
 ######################
 
-function _wick_contraction(a::QAdd; kwargs...)::Diagrams
+@unstable function _wick_contraction(a::QAdd, ::Val{E}; kwargs...) where {E}
     args = SymbolicUtils.arguments(a)
-    E = number_of_propagators(first(args))
+    @assert all(number_of_propagators(arg) == E for arg in args)
     if is_bulk(a) # for vacuum calculations
         diagrams = Diagrams{E,topology_length(E + 1)}()
-    else # known type unstable
+    else
         @warn """
-        Directly using `wick_contraction` on a `QAdd` is only publicly supported for vacuum
-        calculations. Instead, use `wick_contraction` with InteractionLagrangian.
+        The private `_wick_contraction` helper is intended for vacuum calculations only.
+        Instead, use `wick_contraction` with InteractionLagrangian.
         """
         diagrams = Diagrams{E,topology_length(E)}()
     end
@@ -203,17 +225,17 @@ function _wick_contraction(a::QAdd; kwargs...)::Diagrams
     end
     return diagrams
 end # keep for vacuum calculations
-function _wick_contraction(a::QMul; kwargs...)::Diagrams
+@unstable function _wick_contraction(a::QMul, ::Val{E}; kwargs...) where {E}
     @assert is_conserved(a)
     @assert is_physical(a)
 
-    E = number_of_propagators(a)
+    @assert number_of_propagators(a) == E
     if is_bulk(a) # for vacuum calculations
         diagrams = Diagrams{E,topology_length(E + 1)}()
-    else # known type unstable
+    else
         @warn """
-        Directly using `wick_contraction` on a `QAdd` is only publicly supported for vacuum
-        calculations. Instead, use `wick_contraction` with InteractionLagrangian.
+        The private `_wick_contraction` helper is intended for vacuum calculations only.
+        Instead, use `wick_contraction` with InteractionLagrangian.
         """
         diagrams = Diagrams{E,topology_length(E)}()
     end

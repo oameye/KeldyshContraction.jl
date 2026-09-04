@@ -15,8 +15,8 @@ end
 
 "Construct the self-energy from diagrams and save in LittleDict self_energy."
 function construct_self_energy!(
-    self_energy::SmallCollections.SmallDict, diagrams::Diagrams{E}; order::Int=1
-) where {E}
+    self_energy::SmallCollections.SmallDict, diagrams::Diagrams{E,E2}
+) where {E,E2}
     for (diagram, prefactor) in diagrams
         _contractions = contractions(diagram)
 
@@ -30,10 +30,20 @@ function construct_self_energy!(
             p => t for (p, t) in zip(positions, types_p)
         )
 
+        # The classical-classical component is identically zero.
+        if is_keldysh(dict[:out]) && is_keldysh(dict[:in])
+            continue
+        end
+
         # Find all bulk propagators (edges where both fields are bulk)
-        bulk_idxs = findall(is_bulk, _contractions)
-        bulk_propagators = [_contractions[i] for i in bulk_idxs]
-        push!(self_energy[self_energy_type(dict)], Diagram(bulk_propagators), prefactor)
+        bulk_propagators = FixedVector{E - 2,Edge}(
+            edge for edge in _contractions if is_bulk(edge)
+        )
+        push!(
+            self_energy[self_energy_type(dict)],
+            Diagram(bulk_propagators, Val(E2)),
+            prefactor,
+        )
     end
     return self_energy
 end
@@ -68,13 +78,16 @@ struct SelfEnergy{E1,E2}
     "Parameters of the perturbation series"
     parameter::CSym
 end
-function SelfEnergy(G::DressedPropagator{E}, order=G.order) where {E}
-    self_energy = SmallCollections.SmallDict{3,PropagatorType.T,Diagrams}((
-        PropagatorType.Advanced => Diagrams{E - 2,max_edges(order)}(),
-        PropagatorType.Retarded => Diagrams{E - 2,max_edges(order)}(),
-        PropagatorType.Keldysh => Diagrams{E - 2,max_edges(order)}(),
+function _self_energy(G::DressedPropagator{E1,E2}, ::Val{O}) where {E1,E2,O}
+    @assert G.order == O "The supplied Val{order} must match the dressed propagator order"
+    self_energy = SmallCollections.SmallDict{
+        3,PropagatorType.T,Diagrams{E1 - 2,max_edges(O)}
+    }((
+        PropagatorType.Advanced => Diagrams{E1 - 2,max_edges(O)}(),
+        PropagatorType.Retarded => Diagrams{E1 - 2,max_edges(O)}(),
+        PropagatorType.Keldysh => Diagrams{E1 - 2,max_edges(O)}(),
     ))
-    construct_self_energy!(self_energy, G.keldysh; order)
+    construct_self_energy!(self_energy, G.keldysh)
     # ^ keldysh GF should contain everything
     # construct_self_energy!(self_energy, G.advanced)
     # construct_self_energy!(self_energy, G.retarded)
@@ -93,9 +106,13 @@ function SelfEnergy(G::DressedPropagator{E}, order=G.order) where {E}
         self_energy[PropagatorType.Keldysh],
         self_energy[PropagatorType.Retarded],
         self_energy[PropagatorType.Advanced],
-        order,
+        Int64(O),
         G.parameter,
     )
+end
+
+function SelfEnergy(G::DressedPropagator{E1,E2}, ::Val{O}) where {E1,E2,O}
+    return _self_energy(G, Val(O))
 end
 
 """
@@ -111,8 +128,13 @@ in the Retarded-Advanced-Keldysh basis.
 \\right)
 ```
 """
-function matrix(Σ::SelfEnergy{E}) where {E}
-    return Diagrams[Diagrams{E,E}() Σ.advanced; Σ.retarded Σ.keldysh]
+function matrix(Σ::SelfEnergy{E1,E2}) where {E1,E2}
+    result = Matrix{Diagrams{E1,E2}}(undef, 2, 2)
+    result[1, 1] = Diagrams{E1,E2}()
+    result[1, 2] = Σ.advanced
+    result[2, 1] = Σ.retarded
+    result[2, 2] = Σ.keldysh
+    return result
 end
 
 parameters(Σ::SelfEnergy) = Σ.parameter
@@ -138,7 +160,8 @@ SymbolicUtils.arguments(d::SelfEnergySum) = d.arguments
 order(d::SelfEnergySum) = d.order
 parameters(d::SelfEnergySum) = map(G -> G.parameter, arguments(d))
 
-function SelfEnergy(G::DressedPropagatorSum, order=order(G))
-    dict = Dict(key => SelfEnergy(val, order) for (key, val) in arguments(G))
-    return SelfEnergySum(dict, order)
+function SelfEnergy(G::DressedPropagatorSum, ::Val{O}) where {O}
+    @assert G.order == O "The supplied Val{order} must match the dressed propagator sum order"
+    dict = Dict(key => SelfEnergy(val, Val(O)) for (key, val) in arguments(G))
+    return SelfEnergySum(dict, Int64(O))
 end

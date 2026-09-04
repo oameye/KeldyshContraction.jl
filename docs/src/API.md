@@ -96,6 +96,9 @@ InteractionLagrangian
 ```
 
 ## Wick Contraction
+
+The perturbation order and propagator edge count are supplied as `Val` arguments because
+they determine the static diagram representation.
   
 ```@docs
 wick_contraction

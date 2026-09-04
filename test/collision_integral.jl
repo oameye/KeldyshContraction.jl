@@ -4,9 +4,9 @@ using KeldyshContraction, Test
 elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
 L_int = InteractionLagrangian(elasctic2boson)
 
-GF = DressedPropagator(L_int, 2)
+GF = DressedPropagator(L_int, Val(2), Val(5))
 
-Σ = SelfEnergy(GF, 2)
+Σ = SelfEnergy(GF, Val(2))
 
 Σk = wigner_transform(Σ)
 
@@ -19,7 +19,9 @@ end
 
 @testset "reduce to spectral without simplification" begin
     using KeldyshContraction: reduce_to_spectral, Bulk, Diagram, Diagrams, Edge
-    d = Diagram([Edge(c(Bulk(1)), c'(Bulk(2))), Edge(c(Bulk(3)), c'(Bulk(4)))])
+    d = Diagram(
+        [Edge(c(Bulk(1)), c'(Bulk(2))), Edge(c(Bulk(3)), c'(Bulk(4)))], Val(2), Val(6)
+    )
     ds = Diagrams([d], Complex{Rational{Int}}(1.0))
     @test isequal(reduce_to_spectral(ds), ds)
 end

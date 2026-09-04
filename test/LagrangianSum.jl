@@ -32,32 +32,32 @@ end
 end
 
 @testset "Correctness first order" begin
-    GF1 = DressedPropagator(L, 1; simplify=false)
+    GF1 = DressedPropagator(L, Val(1), Val(3); simplify=false)
     GF1_elastic = arguments(GF1)[g]
     GF1_inelastic = arguments(GF1)[Γ]
 
-    trued_elastic = DressedPropagator(L_elastic, 1; simplify=false)
+    trued_elastic = DressedPropagator(L_elastic, Val(1), Val(3); simplify=false)
     @test isequal(trued_elastic.keldysh, GF1_elastic.keldysh)
     @test isequal(trued_elastic.retarded, GF1_elastic.retarded)
     @test isequal(trued_elastic.advanced, GF1_elastic.advanced)
 
-    trued_inelastic = DressedPropagator(L_inelastic, 1; simplify=false)
+    trued_inelastic = DressedPropagator(L_inelastic, Val(1), Val(3); simplify=false)
     @test isequal(trued_inelastic.keldysh, GF1_inelastic.keldysh)
     @test isequal(trued_inelastic.retarded, GF1_inelastic.retarded)
     @test isequal(trued_inelastic.advanced, GF1_inelastic.advanced)
 end
 
 @testset "Correctness second order" begin
-    GF2 = DressedPropagator(L, 2; simplify=false)
+    GF2 = DressedPropagator(L, Val(2), Val(5); simplify=false)
     GF2_elastic = arguments(GF2)[g ^ 2]
     GF2_inelastic = arguments(GF2)[Γ ^ 2]
 
-    trued_elastic = DressedPropagator(L_elastic, 2; simplify=false)
+    trued_elastic = DressedPropagator(L_elastic, Val(2), Val(5); simplify=false)
     @test isequal(trued_elastic.keldysh, GF2_elastic.keldysh)
     @test isequal(trued_elastic.retarded, GF2_elastic.retarded)
     @test isequal(trued_elastic.advanced, GF2_elastic.advanced)
 
-    trued_inelastic = DressedPropagator(L_inelastic, 2; simplify=false)
+    trued_inelastic = DressedPropagator(L_inelastic, Val(2), Val(5); simplify=false)
     @test isequal(trued_inelastic.keldysh, GF2_inelastic.keldysh)
     @test isequal(trued_inelastic.retarded, GF2_inelastic.retarded)
     @test isequal(trued_inelastic.advanced, GF2_inelastic.advanced)
@@ -83,7 +83,8 @@ end
 end
 
 @testset "SelfEnergy" begin
-    GF2 = DressedPropagator(L, 2)
-    Σ2 = SelfEnergy(GF2)
+    GF2 = DressedPropagator(L, Val(2), Val(5))
+    Σ2 = @inferred SelfEnergy(GF2, Val(2))
+    @test Σ2 isa KC.SelfEnergySum{KC.SelfEnergy{3,1}}
     # arguments(GF2)[g*Γ] |> typeof
 end

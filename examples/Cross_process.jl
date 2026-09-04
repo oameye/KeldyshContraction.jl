@@ -22,7 +22,7 @@ L = L_inelastic + L_elastic
 
 #
 
-GF1 = DressedPropagator(L, 1; _set_reg_to_zero=true)
+GF1 = DressedPropagator(L, Val(1), Val(3); _set_reg_to_zero=true)
 
 #
 
@@ -34,7 +34,7 @@ GF1_inelastic = arguments(GF1)[Γ]
 
 #
 
-GF2 = DressedPropagator(L, 2; _set_reg_to_zero=true, simplify=true)
+GF2 = DressedPropagator(L, Val(2), Val(5); _set_reg_to_zero=true, simplify=true)
 topo = topologies(arguments(GF2)[g * Γ].keldysh)
 
 #
@@ -47,7 +47,7 @@ topo = topologies(arguments(GF2)[g * Γ].keldysh)
 
 #
 
-Σ2 = SelfEnergy(GF2)
+Σ2 = SelfEnergy(GF2, Val(2))
 arguments(Σ2)[g * Γ].keldysh
 
 #
