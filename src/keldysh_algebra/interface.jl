@@ -2,31 +2,113 @@
 #   Field Types
 ########################
 
-"""
-    QField
-
-Abstract type representing any expression involving Fields.
-"""
+"""Abstract type representing expressions involving Keldysh fields."""
 abstract type QField end
+
 const CSym = SymbolicUtils.BasicSymbolic{
     isdefined(SymbolicUtils, :SymReal) ? SymbolicUtils.SymReal : Number
 }
 const SNuN = Union{CSym,Number}
 const QSymbol = Union{QField,SNuN}
 
-"""
-    QSym <: QField
-
-Abstract type representing fundamental Field types.
-"""
+"""Abstract type representing a fundamental Keldysh field."""
 abstract type QSym <: QField end
 
-"""
-    QTerm <: QField
-
-Abstract type representing noncommutative expressions.
-"""
+"""Abstract type representing a noncommutative field expression."""
 abstract type QTerm <: QField end
+
+"""Statistics carried statically by every fundamental field."""
+abstract type Statistics end
+
+"""Bosonic field statistics."""
+struct Boson <: Statistics end
+
+"""Orientation of a path-integral field."""
+@enumx Orientation begin
+    Unbarred = 0
+    Barred = 1
+end
+
+"""
+Neutral two-valued Keldysh index stored by `Field`.
+
+Bosonic code exposes the semantic aliases `Quantum` and `Classical`. Fermionic
+`One`/`Two` aliases can be added later without changing the field representation.
+"""
+@enumx KeldyshIndex begin
+    First = 0
+    Second = 1
+end
+
+const Quantum = KeldyshIndex.First
+const Classical = KeldyshIndex.Second
+
+"""A concrete internal field index such as spin, flavor, band, or species."""
+struct FieldIndex
+    kind::Symbol
+    value::Int16
+end
+
+Base.isequal(a::FieldIndex, b::FieldIndex) =
+    isequal(a.kind, b.kind) && isequal(a.value, b.value)
+Base.hash(x::FieldIndex, h::UInt) = hash(FieldIndex, hash(x.kind, hash(x.value, h)))
+function Base.isless(a::FieldIndex, b::FieldIndex)
+    a.kind == b.kind || return isless(a.kind, b.kind)
+    return isless(a.value, b.value)
+end
+
+const MAX_FIELD_INDICES = 4
+const EMPTY_FIELD_INDEX = FieldIndex(Symbol(""), Int16(0))
+
+"""
+Immutable fixed-capacity storage for field indices.
+
+The number and values of indices are runtime data, while the Julia representation is
+fixed and hash-stable. Four slots are sufficient for the current spin/flavor/band/species
+use cases and can be increased without changing the field type hierarchy.
+"""
+struct FieldIndices
+    data::NTuple{MAX_FIELD_INDICES,FieldIndex}
+    n::UInt8
+end
+
+FieldIndices() = FieldIndices(ntuple(_ -> EMPTY_FIELD_INDEX, MAX_FIELD_INDICES), UInt8(0))
+function FieldIndices(indices::Vararg{FieldIndex,N}) where {N}
+    N <= MAX_FIELD_INDICES || throw(
+        ArgumentError("at most $MAX_FIELD_INDICES field indices are supported")
+    )
+    data = ntuple(i -> i <= N ? indices[i] : EMPTY_FIELD_INDEX, MAX_FIELD_INDICES)
+    return FieldIndices(data, UInt8(N))
+end
+
+Base.length(indices::FieldIndices) = Int(indices.n)
+Base.getindex(indices::FieldIndices, i::Int) = begin
+    1 <= i <= length(indices) || throw(BoundsError(indices, i))
+    indices.data[i]
+end
+function Base.iterate(indices::FieldIndices, state::Int=1)
+    state > length(indices) && return nothing
+    return indices.data[state], state + 1
+end
+function Base.isequal(a::FieldIndices, b::FieldIndices)
+    length(a) == length(b) || return false
+    return all(isequal(a[i], b[i]) for i in 1:length(a))
+end
+function Base.hash(indices::FieldIndices, h::UInt)
+    h = hash(FieldIndices, hash(indices.n, h))
+    for i in 1:length(indices)
+        h = hash(indices[i], h)
+    end
+    return h
+end
+function Base.isless(a::FieldIndices, b::FieldIndices)
+    n = min(length(a), length(b))
+    for i in 1:n
+        isequal(a[i], b[i]) && continue
+        return isless(a[i], b[i])
+    end
+    return length(a) < length(b)
+end
 
 ################################
 # Interface for SymbolicUtils
@@ -36,10 +118,9 @@ TermInterface.head(::QField) = :call
 SymbolicUtils.iscall(::QSym) = false
 SymbolicUtils.iscall(::QTerm) = true
 SymbolicUtils.iscall(::Type{T}) where {T<:QTerm} = true
-TermInterface.metadata(x::QSym) = nothing
+TermInterface.metadata(::QSym) = nothing
 
-# Symbolic type promotion
-for f in SymbolicUtils.basic_diadic # [+, -, *, /, //, \, ^]
+for f in SymbolicUtils.basic_diadic
     @eval SymbolicUtils.promote_symtype(::$(typeof(f)), Ts::Type{<:QField}...) =
         promote_type(Ts...)
     @eval SymbolicUtils.promote_symtype(::$(typeof(f)), T::Type{<:QField}, Ts...) = T
@@ -49,20 +130,14 @@ for f in SymbolicUtils.basic_diadic # [+, -, *, /, //, \, ^]
     @eval SymbolicUtils.promote_symtype(
         ::$(typeof(f)), T::Type{<:Number}, S::Type{<:QField}
     ) = S
-    @eval function SymbolicUtils.promote_symtype(
+    @eval SymbolicUtils.promote_symtype(
         ::$(typeof(f)), T::Type{<:QField}, S::Type{<:QField}
-    )
-        return promote_type(T, S)
-    end
+    ) = promote_type(T, S)
 end
 
 SymbolicUtils.symtype(x::T) where {T<:QField} = T
 
-Base.one(::T) where {T<:QField} = one(T)
-Base.one(::Type{<:QField}) = 1
 Base.isone(::QField) = false
-Base.zero(::T) where {T<:QField} = zero(T)
-Base.zero(::Type{<:QField}) = 0
 Base.iszero(::QField) = false
 
 #########################
@@ -71,69 +146,33 @@ Base.iszero(::QField) = false
 
 name(ϕ::QSym) = ϕ.name
 
-"""
-    Regularisation `Plus` `Zero` `Minus`
-
-Regularisation enum for the Keldysh quantum field. The regularisation is used to perform tadpole regularisation during the Wick contraction.
-"""
+"""Regularisation enum used for equal-time Keldysh contractions."""
 @enumx Regularisation begin
     Plus = 1
     Zero = 0
     Minus = -1
 end
+
 subtraction(x::NTuple{2,Regularisation.T}) = -(Int.(x)...)
 function subtraction(x::Vector{Regularisation.T})
-    @assert length(x) == 2
+    length(x) == 2 || throw(ArgumentError("regularisation subtraction expects two values"))
     return subtraction(Tuple(x))
 end
-
-"""
-    KeldyshContour `Quantum` `Classical`
-
-Keldysh contour enum for the Keldysh quantum field. The Keldysh contour is used to distinguish the field on quantum and classical contour.
-"""
-@enumx KeldyshContour begin
-    Quantum = 0
-    Classical = 1
-end
-is_quantum(x::QSym) = iszero(Int(contour(x)))
-is_classical(x::QSym) = isone(Int(contour(x)))
 
 #########################
 #       Position
 #########################
 
-"""
-$(DocStringExtensions.TYPEDEF)
-
-Position type for the Keldysh quantum field.
-The position is used to determine the coordinate of the field during the wick contraction.
-
-Position has thee cases:
-- [`In`](@ref): Position.index will be `typemax(Int8)`, which is used to represent the input field.Position
-- [`Out`](@ref): Position.index will be `typemin(Int8)`, which is used to represent the output field.Position
-- [`Bulk`](@ref): Position.index will be a positive integer
-"""
+"""Concrete position of a Keldysh field."""
 struct Position
     index::Int8
 end
-"""
-    Bulk(i::Int=1)
-Create a `Bulk` position with a positive integer index `i`.
-"""
+
 function Bulk(i::Integer=1)
-    @assert i > 0 "Bulk index must be positive"
-    return Position(i)
+    i > 0 || throw(ArgumentError("Bulk index must be positive"))
+    return Position(convert(Int8, i))
 end
-"""
-    In()
-Create a `Position` representing the input field.
-"""
 In() = Position(typemax(Int8))
-"""
-    Out()
-Create a `Position` representing the output field.
-"""
 Out() = Position(typemin(Int8))
 
 Base.isless(x::Position, y::Position) = x.index < y.index
