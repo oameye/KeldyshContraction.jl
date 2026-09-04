@@ -43,6 +43,10 @@ end
 const Quantum = KeldyshIndex.First
 const Classical = KeldyshIndex.Second
 
+# Transitional source-compatibility alias while tests/docs are migrated in this PR.
+# It is not exported and will be removed before the PR is marked ready.
+const KeldyshContour = KeldyshIndex
+
 """A concrete internal field index such as spin, flavor, band, or species."""
 struct FieldIndex
     kind::Symbol
