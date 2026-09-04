@@ -13,65 +13,78 @@ Depth = 2:3
 KeldyshContraction
 ```
 
-## Field Types
+## Field types
 
-### Individual Fields
+### Individual fields
 
 ```@example API
 using Term, KeldyshContraction # hide
 Term.typestree(KeldyshContraction.QSym) # hide
 ```
 
+The package uses one concrete field family, parameterized only by statistics. Bosonic
+fields therefore have type `Field{Boson}`; barred/unbarred orientation, Keldysh component,
+position, regularisation, and internal indices are concrete value data.
+
 ```@docs
 KeldyshContraction.QField
 KeldyshContraction.QSym
-KeldyshContraction.Create
-KeldyshContraction.Destroy
+KeldyshContraction.Field
+KeldyshContraction.Boson
+KeldyshContraction.bar
 ```
 
-#### Field Properties
+#### Field properties
 
-The field properties are determined by the Enum objects:
+Bosonic `Classical` and `Quantum` are semantic labels over the package's neutral two-valued
+Keldysh index. They do not create different Julia field types.
 
 ```@docs
-KeldyshContraction.KeldyshContour
 KeldyshContraction.Regularisation
-```
-
-And the position of the field is determined by the `AbstractPosition` object:
-
-```@docs
 KeldyshContraction.Position
 KeldyshContraction.In
 KeldyshContraction.Out
 KeldyshContraction.Bulk
 ```
 
-#### Field Constructors
+#### Field constructors
 
-It is expected to create the fields using the `Create` and `Destroy` constructors, together with the `@qfields` macro.
-
-```@docs
-KeldyshContraction.@qfields
-```
-
-The created fields are callable to change a property of the individual fields:
+Fields are normally created with `@qfields`:
 
 ```@example API
 using KeldyshContraction
 using KeldyshContraction: position
 
-@qfields ϕ::Destroy(Classical) 
+@qfields ϕ::Boson(Classical)
+barϕ = bar(ϕ)
 
-position(ϕ)
+(position(ϕ), typeof(ϕ), typeof(barϕ))
 ```
 
-### Field Algebra
+```@docs
+KeldyshContraction.@qfields
+```
+
+Calling a field with a `Position` or `Regularisation` value returns the same concrete field
+type with that value changed.
+
+### Field algebra
 
 ```@example API
 using Term, KeldyshContraction # hide
 Term.typestree(KeldyshContraction.QTerm) # hide
 ```
+
+Products and sums are homogeneous concrete containers:
+
+```text
+QMul{C,S} -> Vector{Field{S}}
+QAdd{C,S} -> Vector{QMul{C,S}}
+```
+
+where `C` is the coefficient representation and `S` the field statistics. Algebraic zero
+and one remain inside this symbolic representation instead of returning value-dependent
+raw scalars.
 
 ```@docs
 KeldyshContraction.QTerm
@@ -79,9 +92,15 @@ KeldyshContraction.QMul
 KeldyshContraction.QAdd
 arguments(::KeldyshContraction.QMul)
 arguments(::KeldyshContraction.QAdd)
+KeldyshContraction.convert_coefficients
+KeldyshContraction.rationalize_coefficients
 ```
 
-The properties of the expression can be checked using:
+Coefficient conversion is explicit. In particular, constructing an
+`InteractionLagrangian` does not rationalize floating-point coefficients according to their
+runtime values.
+
+The properties of an expression can be checked using:
 
 ```@docs
 KeldyshContraction.is_bulk
@@ -95,11 +114,11 @@ KeldyshContraction.is_physical
 InteractionLagrangian
 ```
 
-## Wick Contraction
+## Wick contraction
 
 The perturbation order and propagator edge count are supplied as `Val` arguments because
 they determine the static diagram representation.
-  
+
 ```@docs
 wick_contraction
 ```
@@ -112,7 +131,7 @@ DressedPropagator
 KeldyshContraction.matrix(::DressedPropagator)
 ```
 
-### Self-Energy
+### Self-energy
 
 ```@docs
 KeldyshContraction.SelfEnergy
