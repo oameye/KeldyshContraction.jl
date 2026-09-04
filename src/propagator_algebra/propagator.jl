@@ -4,21 +4,24 @@
 
 struct Momentum
     index::Int8
-    function Momentum(index)
-        index < 0 && error("Momentum index must be non-negative, got $index")
-        return new(index)
-    end
+end
+function Momentum(index::Number)
+    index < 0 && error("Momentum index must be non-negative, got $index")
+    return Momentum(convert(Int8, index))
 end
 Base.isequal(m1::Momentum, m2::Momentum) = m1.index == m2.index
 Base.hash(m::Momentum, h::UInt) = hash(Momenta, hash(m.index, h))
 struct Momenta
     prefactors::Vector{Int}
     momenta::Vector{Momentum}
-    function Momenta(prefactors::Vector{Int}, momenta::Vector{Momentum})
-        @assert length(prefactors) == length(momenta) "Length of prefactors and momenta must match"
-        idxs = findall(x -> !iszero(x), prefactors)
-        return new(prefactors[idxs], momenta[idxs])
+    function Momenta(prefactors::Vector{Int}, momenta::Vector{Momentum}, ::Val{:raw})
+        return new(prefactors, momenta)
     end
+end
+function Momenta(prefactors::Vector{Int}, momenta::Vector{Momentum})
+    @assert length(prefactors) == length(momenta) "Length of prefactors and momenta must match"
+    idxs = findall(x -> !iszero(x), prefactors)
+    return Momenta(prefactors[idxs], momenta[idxs], Val(:raw))
 end
 Momenta(idx::Int) = Momenta([1], [Momentum(idx)])
 Momenta() = Momenta(Int[], Momentum[])
@@ -214,6 +217,8 @@ function direction(edge::Edge)
     if ps[1] < ps[2]
         return true
     elseif ps[1] > ps[2]
+        return false
+    else
         return false
     end
 end

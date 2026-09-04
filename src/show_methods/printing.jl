@@ -63,7 +63,10 @@ function Base.show(io::IO, L::InteractionLagrangian)
 end
 
 const T_LATEX = Union{<:QField,Diagrams,Diagram,Edge}
-Base.show(io::IO, ::MIME"text/latex", x::T_LATEX) = write(io, latexify(x))
+function Base.show(io::IO, ::MIME"text/latex", x::T_LATEX)
+    write(io, latexify(x))
+    return nothing
+end
 function Base.show(io::IO, ::MIME"text/latex", L::InteractionLagrangian)
     # write(io, "Interaction Lagrangian with fields ")
     # write(io, latexify(L.cfield))
@@ -205,7 +208,8 @@ end
 
 function Base.show(io::IO, ms::Momenta)
     if length(ms.prefactors) == 1 && iszero(ms.prefactors[1])
-        return write(io, "0")
+        write(io, "0")
+        return nothing
     end
 
     for (i, (p, m)) in enumerate(zip(ms.prefactors, ms.momenta))

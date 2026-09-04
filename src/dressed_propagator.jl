@@ -44,10 +44,12 @@ G^A\\left(x_1, x_2\\right) & 0
 ```
 """
 function matrix(G::DressedPropagator{E1,E2}) where {E1,E2}
-    return Diagrams{E1,E2}[
-        G.retarded G.keldysh
-        G.advanced Diagrams{E1,E2}()
-    ]
+    result = Matrix{Diagrams{E1,E2}}(undef, 2, 2)
+    result[1, 1] = G.retarded
+    result[1, 2] = G.keldysh
+    result[2, 1] = G.advanced
+    result[2, 2] = Diagrams{E1,E2}()
+    return result
 end
 
 """

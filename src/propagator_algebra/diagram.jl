@@ -17,7 +17,7 @@ function Diagram(
 end
 
 function Diagram(edges::FixedVector{E,Edge}, ::Val{E2}) where {E,E2}
-    topology = bulk_multiplicity(edges)
+    topology = bulk_multiplicity(edges, Val(E2))
     @assert length(topology) == E2 "The supplied Val{topology} must match the topology size"
     topology = SmallCollections.FixedVector{E2,Int}(topology)
     return Diagram{E,E2}(edges, topology)
@@ -167,19 +167,38 @@ function bulk_multiplicity(edges::AbstractArray{Tuple{Int8,Int8}})
     vert = vertices(edges)
     m = max_edges(length(vert))
 
-    if iszero(m)
+    mult = zeros(Int, m)
+    for edge in edges
+        idx = edge_to_index(edge[1], edge[2], length(vert))
+        mult[idx] += 1
+    end
+    return mult
+end
+function bulk_multiplicity(vs::AbstractArray{Edge})
+    return bulk_multiplicity(map(integer_positions, vs))
+end
+
+function bulk_multiplicity(edges::AbstractArray{Tuple{Int8,Int8}}, ::Val{E2}) where {E2}
+    edges = filter(is_not_equal_time_bulk_edge, edges)
+
+    vert = vertices(edges)
+    m = max_edges(length(vert))
+    @assert m == E2 "The supplied Val{topology} must match the topology size"
+
+    if iszero(E2)
         mult = SmallCollections.MutableFixedVector{0,Int}(undef)
     else
-        mult = SmallCollections.MutableFixedVector{m,Int}(0 for i in 1:m)
-    end # https://github.com/matthias314/SmallCollections.jl/issues/12
+        mult = SmallCollections.MutableFixedVector{E2,Int}(0 for _ in 1:E2)
+    end
     for edge in edges
         idx = edge_to_index(edge[1], edge[2], length(vert))
         mult[idx] += 1
     end
     return SmallCollections.FixedVector(mult)
 end
-function bulk_multiplicity(vs::AbstractArray{Edge})
-    return bulk_multiplicity(map(integer_positions, vs))
+
+function bulk_multiplicity(vs::AbstractArray{Edge}, ::Val{E2}) where {E2}
+    return bulk_multiplicity(map(integer_positions, vs), Val(E2))
 end
 
 max_edges(n::Integer)::Integer = n * (n - 1) ÷ 2

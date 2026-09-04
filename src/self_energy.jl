@@ -129,10 +129,12 @@ in the Retarded-Advanced-Keldysh basis.
 ```
 """
 function matrix(Σ::SelfEnergy{E1,E2}) where {E1,E2}
-    return Diagrams{E1,E2}[
-        Diagrams{E1,E2}() Σ.advanced
-        Σ.retarded Σ.keldysh
-    ]
+    result = Matrix{Diagrams{E1,E2}}(undef, 2, 2)
+    result[1, 1] = Diagrams{E1,E2}()
+    result[1, 2] = Σ.advanced
+    result[2, 1] = Σ.retarded
+    result[2, 2] = Σ.keldysh
+    return result
 end
 
 parameters(Σ::SelfEnergy) = Σ.parameter

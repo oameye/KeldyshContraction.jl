@@ -42,25 +42,25 @@ struct InteractionLagrangian{T} <: Lagrangian
     position::Position
     "Parameters of the perturbation series"
     parameter::CSym
+end
+# The normalization can change the QTerm coefficient type based on its values.
+@unstable function InteractionLagrangian(expr::QTerm, parameter=DEFAULT_PARAMETER)
+    fields = _extract_unique_fields(expr)
+    contours = contour_integers(fields)
 
-    function InteractionLagrangian(expr::QTerm, parameter=DEFAULT_PARAMETER)
-        fields = _extract_unique_fields(expr)
-        contours = contour_integers(fields)
+    _assert_lagrangian(expr, fields, contours)
 
-        _assert_lagrangian(expr, fields, contours)
-
-        q_idx = findfirst(iszero, contours)
-        c_idx = findfirst(isone, contours)
-        maybe_rational_expr = maybe_rationalize(expr)
-        return new{typeof(maybe_rational_expr)}(
-            maybe_rational_expr,
-            fields[q_idx],
-            fields[c_idx],
-            position(fields[q_idx]),
-            parameter,
-        )
-    end
-end # Does not have to be type stable, as it is called only once
+    q_idx = findfirst(iszero, contours)
+    c_idx = findfirst(isone, contours)
+    maybe_rational_expr = maybe_rationalize(expr)
+    return InteractionLagrangian{typeof(maybe_rational_expr)}(
+        maybe_rational_expr,
+        fields[q_idx],
+        fields[c_idx],
+        position(fields[q_idx]),
+        parameter,
+    )
+end
 function _extract_unique_fields(expr)
     fields = allfields(expr)
     set_reg_to_zero!(fields)
@@ -152,18 +152,21 @@ $(DocStringExtensions.TYPEDSIGNATURES)
 """
 struct LagrangianSum{T} <: Lagrangian
     arguments::Vector{InteractionLagrangian{T}}
-    function LagrangianSum(args::Vector{<:InteractionLagrangian})
-        @assert allequal(getfield.(args, :qfield)) "All InteractionLagrangian must have the same quantum field"
-        @assert allequal(getfield.(args, :cfield)) "All InteractionLagrangian must have the same classical field"
-
-        vs = promote(args...)
-        return new{typeof(first(vs)).parameters[1]}(collect(vs))
-    end
-    function LagrangianSum(args::Vector{InteractionLagrangian{T}}) where {T}
-        @assert allequal(getfield.(args, :qfield)) "All InteractionLagrangian must have the same quantum field"
-        @assert allequal(getfield.(args, :cfield)) "All InteractionLagrangian must have the same classical field"
+    function LagrangianSum(args::Vector{InteractionLagrangian{T}}, ::Val{:raw}) where {T}
         return new{T}(args)
     end
+end
+@unstable function LagrangianSum(args::Vector{<:InteractionLagrangian})
+    @assert allequal(getfield.(args, :qfield)) "All InteractionLagrangian must have the same quantum field"
+    @assert allequal(getfield.(args, :cfield)) "All InteractionLagrangian must have the same classical field"
+
+    vs = promote(args...)
+    return LagrangianSum(collect(vs))
+end
+function LagrangianSum(args::Vector{InteractionLagrangian{T}}) where {T}
+    @assert allequal(getfield.(args, :qfield)) "All InteractionLagrangian must have the same quantum field"
+    @assert allequal(getfield.(args, :cfield)) "All InteractionLagrangian must have the same classical field"
+    return LagrangianSum(args, Val(:raw))
 end
 
 SymbolicUtils.arguments(Ls::LagrangianSum) = Ls.arguments
@@ -188,7 +191,9 @@ function Base.convert(
     return InteractionLagrangian(convert(T, L.lagrangian), parameters(L))
 end
 
-function maybe_rationalize(q::QAdd{T}) where {T<:Number}
+maybe_rationalize(q::QAdd{T}) where {T<:Rational} = q
+maybe_rationalize(q::QAdd{ComplexRationals}) = q
+@unstable function maybe_rationalize(q::QAdd{T}) where {T<:Number}
     if T <: Rational
         return q
     else
@@ -199,7 +204,9 @@ function maybe_rationalize(q::QAdd{T}) where {T<:Number}
     end
 end
 
-function maybe_rationalize(q::QMul{T}) where {T<:Number}
+maybe_rationalize(q::QMul{T}) where {T<:Rational} = q
+maybe_rationalize(q::QMul{ComplexRationals}) = q
+@unstable function maybe_rationalize(q::QMul{T}) where {T<:Number}
     if T <: Rational
         return q
     else
@@ -212,7 +219,7 @@ function maybe_rationalize(q::QMul{T}) where {T<:Number}
         end
     end
 end
-function maybe_rationalize(q::QMul{ComplexF64})
+@unstable function maybe_rationalize(q::QMul{ComplexF64})
     rational_re = rationalize(real(q.arg_c))
     rational_im = rationalize(imag(q.arg_c))
     check_re = float(rational_re)

@@ -206,7 +206,7 @@ end
 # Vacuum Contractions
 ######################
 
-function _wick_contraction(a::QAdd, ::Val{E}; kwargs...) where {E}
+@unstable function _wick_contraction(a::QAdd, ::Val{E}; kwargs...) where {E}
     args = SymbolicUtils.arguments(a)
     @assert all(number_of_propagators(arg) == E for arg in args)
     if is_bulk(a) # for vacuum calculations
@@ -225,7 +225,7 @@ function _wick_contraction(a::QAdd, ::Val{E}; kwargs...) where {E}
     end
     return diagrams
 end # keep for vacuum calculations
-function _wick_contraction(a::QMul, ::Val{E}; kwargs...) where {E}
+@unstable function _wick_contraction(a::QMul, ::Val{E}; kwargs...) where {E}
     @assert is_conserved(a)
     @assert is_physical(a)
 
