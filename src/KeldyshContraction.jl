@@ -51,18 +51,18 @@ const ComplexRationals = Complex{Rational{Int64}}
     @unstable include("show_methods/latexify_recipes.jl")
     include("show_methods/printing.jl")
 
-    const Quantum = KeldyshContour.Quantum
-    const Classical = KeldyshContour.Classical
-
     export @qfields,
-        Destroy,
-        Create,
+        Field,
+        Boson,
+        bar,
         wick_contraction,
         Quantum,
         Classical,
         DressedPropagator,
         SelfEnergy,
         InteractionLagrangian,
+        convert_coefficients,
+        rationalize_coefficients,
         @syms,
         arguments,
         topologies,
