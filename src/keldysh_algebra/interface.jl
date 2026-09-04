@@ -142,6 +142,19 @@ is_bulk(x::Position) = typemin(Int8) < index(x) < typemax(Int8)
 is_in(x::Position) = isequal(index(x), typemax(Int8))
 is_out(x::Position) = isequal(index(x), typemin(Int8))
 
+"""
+    swap_in_out(x::Position)
+
+Exchange the [`In`](@ref) and [`Out`](@ref) coordinates and leave a bulk coordinate alone.
+Taking the adjoint of a diagram reverses it, which turns its incoming leg into its
+outgoing one.
+"""
+function swap_in_out(x::Position)
+    is_in(x) && return Out()
+    is_out(x) && return In()
+    return x
+end
+
 index(p::Position) = p.index
 Base.Int(p::Position) = index(p)
 

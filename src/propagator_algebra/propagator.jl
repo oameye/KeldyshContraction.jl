@@ -168,9 +168,27 @@ contours(p::Edge) = contour.(fields(p))
 Gᴷ(x₁, x₂)† = -1*Gᴷ(x₁, x₂)
 Gᴬ(x₁, x₂)† = Gᴿ(x₁, x₂)
 Gᴿ(x₁, x₂)† = Gᴬ(x₁, x₂)
+
+Note the coordinates are kept in place, so the sign of the Keldysh propagator is dropped.
+[`reverse_edge`](@ref) is the coordinate-reversing version used to adjoin a whole diagram.
 """
 Base.adjoint(c::Contraction) = adjoint.((c[2](position(c[1])), c[1](position(c[2]))))
 Base.adjoint(c::Edge) = Edge(adjoint(fields(c)))
+
+"""
+    reverse_contraction(c::Contraction)
+
+Reverse a contraction: ``G^X(a, b) → G^{\\bar{X}}(b, a)``, exchanging the [`In`](@ref) and
+[`Out`](@ref) coordinates on the way ([`swap_in_out`](@ref)). Hence the outgoing field ends
+up at the incoming coordinate and vice versa, which is what taking the adjoint of a
+diagram does to each of its propagators.
+"""
+function reverse_contraction(c::Contraction)
+    _out, _in = c
+    out′, in′ = adjoint(c)
+    return (out′(swap_in_out(position(_in))), in′(swap_in_out(position(_out))))
+end
+reverse_edge(e::Edge) = Edge(Edge(reverse_contraction(fields(e))), momenta(e))
 
 #########################
 #       Position

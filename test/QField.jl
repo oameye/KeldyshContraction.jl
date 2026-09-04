@@ -68,9 +68,8 @@ end
 
     @testset "SymbolicUtils promotion" begin
         # Test the promotion of Keldysh fields
-        typeof(ϕ + 0.0)
-        @test SymbolicUtils.promote_symtype(+, ϕ, 0.0) isa KC.QField broken = true
-        @test SymbolicUtils.promote_symtype(*, ϕ, 1) isa KC.QField broken = true
+        @test SymbolicUtils.promote_symtype(+, typeof(ϕ), Float64) <: KC.QField
+        @test SymbolicUtils.promote_symtype(*, typeof(ϕ), Int) <: KC.QField
     end
 end
 
@@ -100,8 +99,10 @@ end
     @test isequal(ϕ * ψ, ϕ * ψ)
     @test isequal(ϕ + ψ, ϕ + ψ)
 
+    # `QAdd` stores its summands in insertion order, so addition is not commutative.
+    # Sorting them canonically would reorder the terms of every Lagrangian.
     @test isequal(ψ + ϕ, ϕ + ψ) broken = true
-    @test isequal(ψ * ϕ, ϕ * ψ) broken = true
+    @test isequal(ψ * ϕ, ϕ * ψ)
     @test isequal(0.0 + ϕ, ϕ + 0)
     ϕ2 = ϕ + ϕ
     @test isequal(ϕ2 + 0, ϕ + ϕ + 0)
@@ -111,15 +112,21 @@ end
 @testset "simplification" begin
     @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
     using SymbolicUtils
+    # `QAdd` keeps every summand separately: like terms are never collected, and a sum
+    # of one term never collapses to a `QMul`. Hence ϕ + ϕ stays a two-term `QAdd`.
     @test isequal(ϕ + ϕ, 2 * ϕ) broken = true
     @test isequal(ϕ + ϕ + ϕ, 3 * ϕ) broken = true
 
     @test isequal((ϕ + ϕ) * (ϕ + ϕ), 4 * ϕ^2) broken = true
     @test isequal((ϕ + ϕ) * (ϕ + ϕ), ϕ^2 + ϕ^2 + ϕ^2 + ϕ^2)
-    # SymbolicUtils.simplify((ϕ + ϕ) * (ψ + ϕ) + 3 * (ϕ + ϕ) * (ψ + ϕ))
-    # SymbolicUtils.expand((ϕ + ϕ) * (ψ + ϕ) + 3 * (ϕ + ϕ) * (ψ + ϕ))
-    # ^ broken due to giving args::Vector{Any}
-    # check if it is still happens after QAdd being type stable
+
+    # These used to throw on `args::Vector{Any}`. They run now that `QAdd` is type stable,
+    # they just leave the like terms uncollected.
+    @test length(SymbolicUtils.arguments(SymbolicUtils.expand((ϕ + ϕ) * (ψ + ϕ)))) == 4
+    @test isequal(
+        SymbolicUtils.simplify((ϕ + ϕ) * (ψ + ϕ) + 3 * (ϕ + ϕ) * (ψ + ϕ)),
+        SymbolicUtils.expand((ϕ + ϕ) * (ψ + ϕ) + 3 * (ϕ + ϕ) * (ψ + ϕ)),
+    )
 end
 
 @testset "adjoint" begin
@@ -167,7 +174,7 @@ end
 
     # Test the math operations
     @test isequal(ϕ / 2, 0.5 * ϕ)
-    @test isequal(ϕ//2, 0.5 * ϕ) skip = true
+    @test isequal(ϕ//2, 0.5 * ϕ)
 
     @test isequal((ϕ^2), ϕ * ϕ)
 

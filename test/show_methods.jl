@@ -58,9 +58,9 @@ end
     @qfields ϕᶜ::Destroy(Classical) ϕᴾ::Destroy(Quantum)
 
     L_int = im*(0.5 * ϕᶜ' * ϕᴾ' * (ϕᶜ * ϕᶜ))
-    @test repr(L_int) == "(0.0 + 0.5im)*(ϕᶜ*ϕᶜ*̄ϕᴾ*̄ϕᶜ)"
+    @test repr(L_int) == "(0.0 + 0.5im)*(ϕᶜ*ϕᶜ*̄ϕᶜ*̄ϕᴾ)"
     @test repr(MIME"text/latex"(), L_int) ==
-        "\$0.5 i \\phi^c \\phi^c \\bar{\\phi^P} \\bar{\\phi^c}\$"
+        "\$0.5 i \\phi^c \\phi^c \\bar{\\phi^c} \\bar{\\phi^P}\$"
 end
 
 @testset "Structs" begin
@@ -70,9 +70,9 @@ end
 
     L = InteractionLagrangian(ϕ * ψ * ϕ' * ψ')
     @test repr(MIME"text/plain"(), L) ==
-        "Interaction Lagrangian with fields ϕ and ψ:\n(ϕ*ψ*̄ψ*̄ϕ)"
+        "Interaction Lagrangian with fields ϕ and ψ:\n(ϕ*ψ*̄ϕ*̄ψ)"
 
-    @test repr(MIME"text/latex"(), L) == "\$\\phi \\psi \\bar{\\psi} \\bar{\\phi}\$"
+    @test repr(MIME"text/latex"(), L) == "\$\\phi \\psi \\bar{\\phi} \\bar{\\psi}\$"
 
     ds = Diagrams([Diagram([Edge(ϕ, ϕ')], Val(1), Val(0))], Complex{Rational{Int}}(1.0))
     DP = DressedPropagator(ds, ds, ds, 1, g)

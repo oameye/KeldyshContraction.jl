@@ -54,8 +54,7 @@ TermInterface.metadata(a::QMul) = nothing
 
 function Base.adjoint(q::QMul)
     args_nc = map(adjoint, q.args_nc)
-    sort!(args_nc; by=position)
-    sort!(args_nc; by=ladder)
+    sort_fields!(args_nc)
     return QMul(conj(q.arg_c), args_nc)
 end
 

@@ -187,6 +187,7 @@ A regular propagator is one that is:
 - or `p` is not of [`PropagatorType`](@ref) `Retarded` while also having a negative [`Regularisation`](@ref)
 - or `p` is not of [`PropagatorType`](@ref) `Advanced` while also having a positive [`Regularisation`](@ref)
 """
+regular(p::Edge) = regular(fields(p))
 function regular(qs::Contraction)
     positions = position.(qs)
     if !isequal(positions[1], positions[2]) # self-contraction
