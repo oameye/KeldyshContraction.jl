@@ -11,6 +11,7 @@ function Momentum(index::Number)
 end
 Base.isequal(m1::Momentum, m2::Momentum) = m1.index == m2.index
 Base.hash(m::Momentum, h::UInt) = hash(Momenta, hash(m.index, h))
+
 struct Momenta
     prefactors::Vector{Int}
     momenta::Vector{Momentum}
@@ -30,24 +31,14 @@ function Base.isequal(m1::Momenta, m2::Momenta)
     return isequal(m1.prefactors, m2.prefactors) && isequal(m1.momenta, m2.momenta)
 end
 Base.hash(m::Momenta, h::UInt) = hash(Momenta, hash(m.momenta, hash(m.prefactors, h)))
-# SmallCollections.default(::Type{Momenta}) = Momenta(Int[], Momentum[])
 
 #########################
 #         Edge
 #########################
 
-const Contraction = Tuple{<:Destroy,<:Create}
+# Transitional tuple representation retained until #241 replaces it with Contraction{S}.
+const Contraction = Tuple{Field{Boson},Field{Boson}}
 
-"""
-    PropagatorType `Keldysh`, `Advanced`, `Retarded`
-
-The type of propagator taken of two fields with the x-y Contour where `x` is the Contour of the [`Destroy`](@ref) field and `y` the contour of the [`Create`](@ref) field.
-- `Keldysh` propagator of a Classical-Classical contour
-- `Advanced` propagator of a Quantum-Classical contour
-- `Retarded` propagator of a Classical-Quantum contour
-
-The Quantum-Quantum propagator should always be zero.
-"""
 @enumx PropagatorType begin
     Keldysh
     Advanced
@@ -56,28 +47,27 @@ The Quantum-Quantum propagator should always be zero.
 end
 
 struct Edge
-    out::Destroy
-    in::Create
+    out::Field{Boson}
+    in::Field{Boson}
     edgetype::PropagatorType.T
     momenta::Momenta
 end
-function Edge(out::Destroy, in::Create, edgetype::PropagatorType.T)
+
+function Edge(
+    out::Field{Boson}, in::Field{Boson}, edgetype::PropagatorType.T
+)
     return Edge(out, in, edgetype, Momenta())
 end
 Edge(edge::Edge, momenta::Momenta) = Edge(edge.out, edge.in, edge.edgetype, momenta)
-function Edge(tt::Contraction)
-    _out, _in = tt[1], tt[2]
-    propagator_checks(_out, _in)
 
-    type = propagator_type(_out, _in)
-    P2 = position(_out)
-    P1 = position(_in)
-    return Edge(_out, _in, type)
+function Edge(tt::Contraction)
+    _out, _in = tt
+    propagator_checks(_out, _in)
+    return Edge(_out, _in, propagator_type(_out, _in))
 end
-Edge(out::QSym, in::QSym) = Edge((out, in))
+Edge(out::Field{Boson}, in::Field{Boson}) = Edge((out, in))
 
 momenta(e::Edge) = e.momenta
-
 has_momenta(edge::Edge) = !isempty(edge.momenta.prefactors)
 
 function Base.isequal(e1::Edge, e2::Edge)
@@ -87,29 +77,24 @@ function Base.isequal(e1::Edge, e2::Edge)
 end
 Base.hash(q::Edge, h::UInt) = hash(Edge, hash(q.in, hash(q.edgetype, hash(q.out, h))))
 
-"Collect and checks the rules for a physical propagator"
-function propagator_checks(out::QSym, in::QSym)::Nothing
-    @assert isa(in, Create) "The `in` field must be a Create operator"
-    @assert isa(out, Destroy) "The `out` field must be a Destroy operator"
-    v = (out, in)
+"Collect and check the rules for a physical bosonic propagator."
+function propagator_checks(out::Field{Boson}, in::Field{Boson})::Nothing
+    @assert is_barred(in) "The incoming field must be barred"
+    @assert is_unbarred(out) "The outgoing field must be unbarred"
 
-    positions = position.(v)
-    @assert !(is_in(first(positions))) "The outgoing field can't be the In<:Position` coordinate"
-    @assert !(is_out(last(positions))) "The incoming field can't be the Out<:Position` coordinate"
-    in_out = (has_in(positions) ? !(has_out(positions)) : true)
-    @assert in_out "Can't make a propagator with `In<:Position` and `Out<:Position` coordinate"
-    contours = Int.(contour.(v))
-    @assert !is_qq_contraction(v) "The quantum-quantum progator is zero"
+    v = (out, in)
+    ps = position.(v)
+    @assert !is_in(first(ps)) "The outgoing field cannot be at In()"
+    @assert !is_out(last(ps)) "The incoming field cannot be at Out()"
+    @assert !(has_in(ps) && has_out(ps)) "Cannot contract In() directly with Out()"
+    @assert !is_qq_contraction(v) "The quantum-quantum propagator is zero"
     return nothing
 end
 
-"""
-$(DocStringExtensions.TYPEDSIGNATURES)
-
-Determine the type of the propagator in the Retarded-Advance-Keldysh ([`PropagatorType`](@ref)) based on the contour of the output and input quantum field.
-"""
-function propagator_type(out::QSym, in::QSym)::PropagatorType.T
-    contours = Int.(contour.((out, in)))
+function propagator_type(
+    out::Field{Boson}, in::Field{Boson}
+)::PropagatorType.T
+    contours = Int.(keldysh_index.((out, in)))
     diff_contour = first(-(contours...))
     if iszero(diff_contour)
         return PropagatorType.Keldysh
@@ -119,6 +104,7 @@ function propagator_type(out::QSym, in::QSym)::PropagatorType.T
         return PropagatorType.Advanced
     end
 end
+
 propagator_type(e::Edge) = e.edgetype
 is_advanced(x::PropagatorType.T) = Int(x) == Int(PropagatorType.Advanced)
 is_retarded(x::PropagatorType.T) = Int(x) == Int(PropagatorType.Retarded)
@@ -135,44 +121,41 @@ is_keldysh(x::Contraction) = is_keldysh(propagator_type(x...))
 make_spectral(edge::Edge) = Edge(edge.out, edge.in, PropagatorType.Spectral, edge.momenta)
 function make_retarded(edge::Edge)
     return Edge(
-        edge.in'(position(edge.out)),
-        edge.out'(position(edge.in)),
+        bar(edge.in)(position(edge.out)),
+        bar(edge.out)(position(edge.in)),
         PropagatorType.Retarded,
         edge.momenta,
     )
 end
 function make_advanced(edge::Edge)
     return Edge(
-        edge.in'(position(edge.out)),
-        edge.out'(position(edge.in)),
+        bar(edge.in)(position(edge.out)),
+        bar(edge.out)(position(edge.in)),
         PropagatorType.Advanced,
         edge.momenta,
     )
 end
 
 fields(e::Edge) = (e.out, e.in)
-function regularisations(p::Edge)
-    return regularisation.(fields(p))
-end
-function regularisations(p::Contraction)
-    return regularisation.(p)
-end
+regularisations(p::Edge) = regularisation.(fields(p))
+regularisations(p::Contraction) = regularisation.(p)
 
 function set_reg_to_zero(p::Edge)
     new_fields = map(set_reg_to_zero, fields(p))
     return Edge(new_fields..., p.edgetype, p.momenta)
 end
-contours(p::Edge) = contour.(fields(p))
+contours(p::Edge) = keldysh_index.(fields(p))
 
 """
-Gᴷ(x₁, x₂)† = -1*Gᴷ(x₁, x₂)
-Gᴬ(x₁, x₂)† = Gᴿ(x₁, x₂)
-Gᴿ(x₁, x₂)† = Gᴬ(x₁, x₂)
-
-Note the coordinates are kept in place, so the sign of the Keldysh propagator is dropped.
-[`reverse_edge`](@ref) is the coordinate-reversing version used to adjoin a whole diagram.
+Adjoint of a propagator/contraction is meaningful at the two-point-object level: exchange
+endpoints and toggle their path-integral orientation.
 """
-Base.adjoint(c::Contraction) = adjoint.((c[2](position(c[1])), c[1](position(c[2]))))
+function Base.adjoint(c::Contraction)
+    return (
+        bar(c[2](position(c[1]))),
+        bar(c[1](position(c[2]))),
+    )
+end
 Base.adjoint(c::Edge) = Edge(adjoint(fields(c)))
 
 """
@@ -194,36 +177,28 @@ reverse_edge(e::Edge) = Edge(Edge(reverse_contraction(fields(e))), momenta(e))
 #       Position
 #########################
 
-is_bulk(p::Edge) = all(is_bulk.(fields(p)))
-is_bulk(qs::Contraction) = all(is_bulk.(qs))
-is_in(qs::Contraction) = any(is_in.(qs))
-is_out(qs::Contraction) = any(is_out.(qs))
+is_bulk(p::Edge) = all(is_bulk, fields(p))
+is_bulk(qs::Contraction) = all(is_bulk, qs)
+is_in(qs::Contraction) = any(is_in, qs)
+is_out(qs::Contraction) = any(is_out, qs)
 
-function positions(p::Edge)
-    return position.(fields(p))
-end
-function positions(p::Contraction)
-    return position.(p)
-end
+positions(p::Edge) = position.(fields(p))
+positions(p::Contraction) = position.(p)
+integer_positions(p::Contraction) = index.(positions(p))
+integer_positions(p::Edge) = index.(positions(p))
 
-function integer_positions(p::Contraction)
-    return index.(positions(p))
-end
-function integer_positions(p::Edge)
-    return index.(positions(p))
-end
 function same_position(p::Contraction)
-    _positions = positions(p)
-    return isequal(_positions...)
+    ps = positions(p)
+    return isequal(ps...)
 end
 
 function position_category(p::Edge)::Symbol
-    _positions = positions(p)
-    if length(findall(is_in, _positions)) == 1
+    ps = positions(p)
+    if count(is_in, ps) == 1
         return :in
-    elseif length(findall(is_out, _positions)) == 1
+    elseif count(is_out, ps) == 1
         return :out
-    elseif all(is_bulk, _positions)
+    elseif all(is_bulk, ps)
         return :bulk
     else
         throw(ArgumentError("Not a valid propagator."))
@@ -232,11 +207,5 @@ end
 
 function direction(edge::Edge)
     ps = integer_positions(edge)
-    if ps[1] < ps[2]
-        return true
-    elseif ps[1] > ps[2]
-        return false
-    else
-        return false
-    end
+    return ps[1] < ps[2]
 end
