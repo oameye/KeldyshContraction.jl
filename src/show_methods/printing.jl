@@ -1,43 +1,37 @@
-# Base.show(io::IO, x::QSym) = write(io, name(x))
-function Base.show(io::IO, x::Create)
+function Base.show(io::IO, x::Field)
     reg = Int(regularisation(x))
-    if iszero(reg)
-        s = string("̄", name(x))
-    elseif reg == 1
-        s = string("̄", name(x), "⁺")
-    else
-        s = string("̄", name(x), "⁻")
+    if is_barred(x)
+        write(io, "̄")
     end
-    write(io, s)
-    return nothing
-end
-function Base.show(io::IO, x::Destroy)
-    reg = Int(regularisation(x))
-    if iszero(reg)
-        s = string(name(x))
-    elseif reg == 1
-        s = string(name(x), "⁺")
-    else
-        s = string(name(x), "⁻")
+    write(io, string(name(x)))
+    if reg == 1
+        write(io, "⁺")
+    elseif reg == -1
+        write(io, "⁻")
     end
-    write(io, s)
     return nothing
 end
 
 const show_brackets = Ref(true)
 function Base.show(io::IO, x::QTerm)
+    args = arguments(x)
+    isempty(args) && return nothing
     show_brackets[]::Bool && write(io, "(")
-    show(io, arguments(x)[1])
+    show(io, args[1])
     f = SymbolicUtils.operation(x)
-    for i in 2:length(arguments(x))
+    for i in 2:length(args)
         show(io, f)
-        show(io, arguments(x)[i])
+        show(io, args[i])
     end
     show_brackets[]::Bool && write(io, ")")
     return nothing
 end
 
 function Base.show(io::IO, x::QMul)
+    if isempty(x.args_nc)
+        show(io, x.arg_c)
+        return nothing
+    end
     if !SymbolicUtils._isone(x.arg_c)
         print_number(io, x.arg_c)
         show(io, *)
@@ -68,17 +62,9 @@ function Base.show(io::IO, ::MIME"text/latex", x::T_LATEX)
     return nothing
 end
 function Base.show(io::IO, ::MIME"text/latex", L::InteractionLagrangian)
-    # write(io, "Interaction Lagrangian with fields ")
-    # write(io, latexify(L.cfield))
-    # write(io, " and ")
-    # write(io, latexify(L.qfield))
-    # println(io, ": \\newline")
     write(io, latexify(L.lagrangian))
     return nothing
 end
-# function Base.show(io::IO, ::MIME"text/latex", L::DressedPropagator)
-#     return write(io,latexify([L.retarded,L.advanced, L.keldysh]))
-# end
 
 const prop_type = Dict(
     PropagatorType.Retarded => "ᴿ",
@@ -118,7 +104,6 @@ end
 function construct_momentum_basis(x::Edge)
     type = propagator_type(x)
     m = repr(x.momenta)
-    (r2, r1) = regularisations(x)
     return string(is_spectral(type) ? "A" : "G", prop_type[type], "(", m, ")")
 end
 
