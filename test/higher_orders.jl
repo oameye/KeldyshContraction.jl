@@ -19,8 +19,11 @@ function has_valid_self_energy_diagrams(component)
 end
 
 @testset "number of topologies" begin
-    @qfields c::Destroy(Classical) q::Destroy(Quantum)
-    elasctic2boson = -(1//2 * (c^2 + q^2) * c' * q' + 1//2 * c * q * ((c')^2 + (q')^2))
+    @qfields c::Boson(Classical) q::Boson(Quantum)
+    elasctic2boson = -(
+        1//2 * (c^2 + q^2) * bar(c) * bar(q) +
+        1//2 * c * q * (bar(c)^2 + bar(q)^2)
+    )
     L_int = InteractionLagrangian(elasctic2boson)
 
     GF1 = DressedPropagator(L_int, Val(1), Val(3))
@@ -48,7 +51,7 @@ end
 
     GF4 = DressedPropagator(L_int, Val(4), Val(9))
     @test length(keys(topologies(GF4.keldysh))) == 59
-    @test length(unique(sort.(keys(topologies(GF4.keldysh))))) == 17 # checked with mathematica (see test/All_graph_topologies.nb)
+    @test length(unique(sort.(keys(topologies(GF4.keldysh))))) == 17
 
     irreduciable_topology = []
     for (key, value) in topologies(GF4.keldysh)
@@ -57,7 +60,7 @@ end
             push!(irreduciable_topology, key)
         end
     end
-    @test length(unique(sort.(irreduciable_topology))) == 11 # checked with mathematica (see test/All_graph_topologies.nb)
+    @test length(unique(sort.(irreduciable_topology))) == 11
 
     @testset "zero-loop filtering" begin
         @test all(has_no_zero_loops, (GF4.keldysh, GF4.retarded, GF4.advanced))
@@ -65,8 +68,11 @@ end
 end
 
 @testset "third order run's" begin
-    @qfields c::Destroy(Classical) q::Destroy(Quantum)
-    elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
+    @qfields c::Boson(Classical) q::Boson(Quantum)
+    elasctic2boson = -(
+        0.5 * (c^2 + q^2) * bar(c) * bar(q) +
+        0.5 * c * q * (bar(c)^2 + bar(q)^2)
+    )
     L_int = InteractionLagrangian(elasctic2boson)
     GF3 = DressedPropagator(L_int, Val(3), Val(7))
     Σ = SelfEnergy(GF3, Val(3))
