@@ -46,7 +46,7 @@ end
 coefficient(q::QMul) = q.arg_c
 fields(q::QMul) = q.args_nc
 terms(q::QMul) = (q,)
-allfields(q::QMul) = q.args_nc
+allfields(q::QMul) = copy(q.args_nc)
 
 SymbolicUtils.operation(::QMul) = (*)
 function SymbolicUtils.arguments(a::QMul{C,S}) where {C,S}
