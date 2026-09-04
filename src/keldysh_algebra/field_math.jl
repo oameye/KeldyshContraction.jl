@@ -86,20 +86,14 @@ Base.:-(a::QField, b::QField) = a + (-b)
 
 function Base.:+(a::Field{S}, b::D) where {S<:Statistics,D<:Number}
     C = promote_type(Int, D)
-    terms = QMul{C,S}[
-        QMul(convert(C, 1), Field{S}[a]),
-        QMul(convert(C, b), Field{S}[]),
-    ]
+    terms = QMul{C,S}[QMul(convert(C, 1), Field{S}[a]), QMul(convert(C, b), Field{S}[])]
     return _normalized_add(terms)
 end
 Base.:+(b::Number, a::Field) = a + b
 
 function Base.:+(a::QMul{C,S}, b::D) where {C<:Number,D<:Number,S<:Statistics}
     P = promote_type(C, D)
-    terms = QMul{P,S}[
-        _converted_mul(P, a),
-        QMul(convert(P, b), Field{S}[]),
-    ]
+    terms = QMul{P,S}[_converted_mul(P, a), QMul(convert(P, b), Field{S}[])]
     return _normalized_add(terms)
 end
 Base.:+(b::Number, a::QMul) = a + b
@@ -118,9 +112,7 @@ end
 
 function Base.:+(a::QMul{C1,S}, b::QMul{C2,S}) where {C1,C2,S<:Statistics}
     P = promote_type(C1, C2)
-    return _normalized_add(
-        QMul{P,S}[_converted_mul(P, a), _converted_mul(P, b)]
-    )
+    return _normalized_add(QMul{P,S}[_converted_mul(P, a), _converted_mul(P, b)])
 end
 
 function Base.:+(a::QMul{C,S}, b::Field{S}) where {C<:Number,S<:Statistics}
@@ -184,6 +176,6 @@ end
 
 """Remove zero terms while preserving the concrete element type."""
 function flatten_adds!(args::Vector{QMul{C,S}}) where {C,S}
-    filter!(!iszero, args)
+    filter!(x -> !iszero(x), args)
     return args
 end
