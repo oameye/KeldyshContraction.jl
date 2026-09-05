@@ -54,8 +54,8 @@ end
 """
 A compact concrete internal field index such as spin, flavor, band, or species.
 
-The `Symbol` constructor is provided as a convenient value-level API while the stored
-representation uses the one-byte [`IndexKind`](@ref) enum.
+The `Symbol` constructor is a convenient value-level API while the stored representation
+uses a one-byte index-kind enum.
 """
 struct FieldIndex
     kind::IndexKind.T
@@ -82,63 +82,99 @@ function Base.isequal(a::FieldIndex, b::FieldIndex)
 end
 Base.hash(x::FieldIndex, h::UInt) = hash(x.kind, hash(x.value, h))
 function Base.isless(a::FieldIndex, b::FieldIndex)
-    a.kind === b.kind || return Integer(a.kind) < Integer(b.kind)
+    a.kind === b.kind || return Int(a.kind) < Int(b.kind)
     return a.value < b.value
 end
 
 const MAX_FIELD_INDICES = 4
-const EMPTY_FIELD_INDEX = FieldIndex(IndexKind.Spin, Int16(0))
+const NO_FIELD_INDEX = typemin(Int16)
 
 """
-Immutable fixed-capacity storage for field indices.
+Compact value-level storage for the supported field-index kinds.
 
-The number and values of indices are runtime data, while the Julia representation is
-fixed and hash-stable. Each slot is compact and isbits; four slots cover the current
-spin/flavor/band/species use cases without introducing field-type proliferation.
+Each kind has one `Int16` slot; `typemin(Int16)` denotes absence. This keeps every
+`Field{S}` concrete and compact without making index values or index presence type
+parameters. Iteration yields present [`FieldIndex`](@ref) values in canonical
+spin/flavor/band/species order.
 """
 struct FieldIndices
-    data::NTuple{MAX_FIELD_INDICES,FieldIndex}
-    n::UInt8
+    spin::Int16
+    flavor::Int16
+    band::Int16
+    species::Int16
 end
 
-FieldIndices() = FieldIndices(ntuple(_ -> EMPTY_FIELD_INDEX, MAX_FIELD_INDICES), UInt8(0))
+FieldIndices() = FieldIndices(NO_FIELD_INDEX, NO_FIELD_INDEX, NO_FIELD_INDEX, NO_FIELD_INDEX)
 function FieldIndices(indices::Vararg{FieldIndex,N}) where {N}
     N <= MAX_FIELD_INDICES ||
         throw(ArgumentError("at most $MAX_FIELD_INDICES field indices are supported"))
-    data = ntuple(i -> i <= N ? indices[i] : EMPTY_FIELD_INDEX, MAX_FIELD_INDICES)
-    return FieldIndices(data, UInt8(N))
+
+    spin = NO_FIELD_INDEX
+    flavor = NO_FIELD_INDEX
+    band = NO_FIELD_INDEX
+    species = NO_FIELD_INDEX
+
+    for idx in indices
+        idx.value == NO_FIELD_INDEX &&
+            throw(ArgumentError("$(NO_FIELD_INDEX) is reserved as the absent-index sentinel"))
+        if idx.kind === IndexKind.Spin
+            spin == NO_FIELD_INDEX || throw(ArgumentError("duplicate spin index"))
+            spin = idx.value
+        elseif idx.kind === IndexKind.Flavor
+            flavor == NO_FIELD_INDEX || throw(ArgumentError("duplicate flavor index"))
+            flavor = idx.value
+        elseif idx.kind === IndexKind.Band
+            band == NO_FIELD_INDEX || throw(ArgumentError("duplicate band index"))
+            band = idx.value
+        else
+            species == NO_FIELD_INDEX || throw(ArgumentError("duplicate species index"))
+            species = idx.value
+        end
+    end
+
+    return FieldIndices(spin, flavor, band, species)
 end
 
-Base.length(indices::FieldIndices) = Int(indices.n)
+@inline _has_index(value::Int16) = value != NO_FIELD_INDEX
+function Base.length(indices::FieldIndices)
+    return Int(_has_index(indices.spin)) +
+           Int(_has_index(indices.flavor)) +
+           Int(_has_index(indices.band)) +
+           Int(_has_index(indices.species))
+end
+
 function Base.getindex(indices::FieldIndices, i::Int)
     1 <= i <= length(indices) || throw(BoundsError(indices, i))
-    return indices.data[i]
+    n = 0
+    if _has_index(indices.spin)
+        n += 1
+        n == i && return FieldIndex(IndexKind.Spin, indices.spin)
+    end
+    if _has_index(indices.flavor)
+        n += 1
+        n == i && return FieldIndex(IndexKind.Flavor, indices.flavor)
+    end
+    if _has_index(indices.band)
+        n += 1
+        n == i && return FieldIndex(IndexKind.Band, indices.band)
+    end
+    return FieldIndex(IndexKind.Species, indices.species)
 end
 function Base.iterate(indices::FieldIndices, state::Int=1)
     state > length(indices) && return nothing
-    return indices.data[state], state + 1
+    return indices[state], state + 1
 end
+
 function Base.isequal(a::FieldIndices, b::FieldIndices)
-    length(a) == length(b) || return false
-    @inbounds for i in 1:length(a)
-        isequal(a.data[i], b.data[i]) || return false
-    end
-    return true
+    return a.spin == b.spin &&
+           a.flavor == b.flavor &&
+           a.band == b.band &&
+           a.species == b.species
 end
-function Base.hash(indices::FieldIndices, h::UInt)
-    h = hash(FieldIndices, hash(indices.n, h))
-    @inbounds for i in 1:length(indices)
-        h = hash(indices.data[i], h)
-    end
-    return h
-end
+Base.hash(indices::FieldIndices, h::UInt) =
+    hash(indices.species, hash(indices.band, hash(indices.flavor, hash(indices.spin, h))))
 function Base.isless(a::FieldIndices, b::FieldIndices)
-    n = min(length(a), length(b))
-    @inbounds for i in 1:n
-        isequal(a.data[i], b.data[i]) && continue
-        return isless(a.data[i], b.data[i])
-    end
-    return length(a) < length(b)
+    return (a.spin, a.flavor, a.band, a.species) < (b.spin, b.flavor, b.band, b.species)
 end
 
 ################################
