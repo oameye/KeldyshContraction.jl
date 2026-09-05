@@ -4,7 +4,8 @@ using KeldyshContraction: is_connected, is_irreducible
 @testset "Irreducibility for Vector{Contraction}" begin
     using KeldyshContraction: Contraction, In, Out, Bulk
 
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields ϕ::Boson
+    c, q = ϕ[Classical], ϕ[Quantum]
 
     @testset "Basic contraction irreducibility" begin
         @test is_irreducible(Contraction[]) == true
