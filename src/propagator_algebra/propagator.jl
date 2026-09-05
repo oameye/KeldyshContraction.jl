@@ -89,7 +89,7 @@ end
 #         Edge
 #########################
 
-"""Bosonic propagator type in the retarded-advanced-Keldysh basis."""
+"""Propagator type in the retarded-advanced-Keldysh basis."""
 @enumx PropagatorType begin
     Keldysh
     Advanced
@@ -97,38 +97,46 @@ end
     Spectral
 end
 
-struct Edge
-    out::Field{Boson}
-    in::Field{Boson}
+"""Two-point propagator edge with statistics `S`."""
+struct Edge{S<:Statistics}
+    out::Field{S}
+    in::Field{S}
     edgetype::PropagatorType.T
     momenta::Momenta
 end
 
-function Edge(out::Field{Boson}, in::Field{Boson}, edgetype::PropagatorType.T)
-    return Edge(out, in, edgetype, Momenta())
+function Edge(
+    out::Field{S}, in::Field{S}, edgetype::PropagatorType.T
+) where {S<:Statistics}
+    return Edge{S}(out, in, edgetype, Momenta())
 end
-Edge(edge::Edge, momenta::Momenta) = Edge(edge.out, edge.in, edge.edgetype, momenta)
+function Edge(edge::Edge{S}, momenta::Momenta) where {S<:Statistics}
+    return Edge{S}(edge.out, edge.in, edge.edgetype, momenta)
+end
 
-function Edge(contraction::Contraction{Boson})
+function Edge(contraction::Contraction{S}) where {S<:Statistics}
     _out, _in = contraction
-    propagator_checks(_out, _in)
-    return Edge(_out, _in, propagator_type(_out, _in))
+    propagator_checks(S, _out, _in)
+    return Edge{S}(_out, _in, propagator_type(S, _out, _in), Momenta())
 end
-Edge(fields::Tuple{Field{Boson},Field{Boson}}) = Edge(Contraction(fields))
-Edge(out::Field{Boson}, in::Field{Boson}) = Edge(Contraction(out, in))
+Edge(fields::Tuple{Field{S},Field{S}}) where {S<:Statistics} = Edge(Contraction(fields))
+Edge(out::Field{S}, in::Field{S}) where {S<:Statistics} = Edge(Contraction(out, in))
 
 momenta(e::Edge) = e.momenta
 has_momenta(edge::Edge) = !isempty(edge.momenta.prefactors)
 
-function Base.isequal(e1::Edge, e2::Edge)
+function Base.isequal(e1::Edge{S}, e2::Edge{S}) where {S<:Statistics}
     return isequal(e1.out, e2.out) &&
            isequal(e1.in, e2.in) &&
            isequal(e1.edgetype, e2.edgetype)
 end
+Base.:(==)(e1::Edge{S}, e2::Edge{S}) where {S<:Statistics} = isequal(e1, e2)
 Base.hash(q::Edge, h::UInt) = hash(Edge, hash(q.in, hash(q.edgetype, hash(q.out, h))))
 
-"""Check the rules for a physical bosonic propagator."""
-function propagator_checks(out::Field{Boson}, in::Field{Boson})::Nothing
+"""Check the rules for a physical propagator with statistics `S`."""
+function propagator_checks(
+    ::Type{Boson}, out::Field{Boson}, in::Field{Boson}
+)::Nothing
     @assert is_barred(in) "The incoming field must be barred"
     @assert is_unbarred(out) "The outgoing field must be unbarred"
     @assert contraction_compatible(Boson, out, in) "Contracted fields must belong to the same field family"
@@ -141,9 +149,12 @@ function propagator_checks(out::Field{Boson}, in::Field{Boson})::Nothing
     @assert !is_qq_contraction(v) "The quantum-quantum propagator is zero"
     return nothing
 end
+propagator_checks(out::Field{Boson}, in::Field{Boson}) = propagator_checks(Boson, out, in)
 
-"""Determine the propagator type from the Keldysh indices of two fields."""
-function propagator_type(out::Field{Boson}, in::Field{Boson})::PropagatorType.T
+"""Determine the bosonic propagator type from the Keldysh indices of two fields."""
+function propagator_type(
+    ::Type{Boson}, out::Field{Boson}, in::Field{Boson}
+)::PropagatorType.T
     contours = Int.(keldysh_index.((out, in)))
     diff_contour = first(-(contours...))
     if iszero(diff_contour)
@@ -154,9 +165,8 @@ function propagator_type(out::Field{Boson}, in::Field{Boson})::PropagatorType.T
         return PropagatorType.Advanced
     end
 end
-function propagator_type(::Type{Boson}, out::Field{Boson}, in::Field{Boson})
-    return propagator_type(out, in)
-end
+propagator_type(out::Field{Boson}, in::Field{Boson}) = propagator_type(Boson, out, in)
+propagator_type(c::Contraction{S}) where {S<:Statistics} = propagator_type(S, c.out, c.in)
 
 propagator_type(e::Edge) = e.edgetype
 is_advanced(x::PropagatorType.T) = Int(x) == Int(PropagatorType.Advanced)
@@ -167,21 +177,22 @@ is_advanced(x::Edge) = is_advanced(propagator_type(x))
 is_retarded(x::Edge) = is_retarded(propagator_type(x))
 is_keldysh(x::Edge) = is_keldysh(propagator_type(x))
 is_spectral(x::Edge) = is_spectral(propagator_type(x))
-is_advanced(x::Contraction) = is_advanced(propagator_type(x...))
-is_retarded(x::Contraction) = is_retarded(propagator_type(x...))
-is_keldysh(x::Contraction) = is_keldysh(propagator_type(x...))
+is_advanced(x::Contraction) = is_advanced(propagator_type(x))
+is_retarded(x::Contraction) = is_retarded(propagator_type(x))
+is_keldysh(x::Contraction) = is_keldysh(propagator_type(x))
 
-make_spectral(edge::Edge) = Edge(edge.out, edge.in, PropagatorType.Spectral, edge.momenta)
-function make_retarded(edge::Edge)
-    return Edge(
+make_spectral(edge::Edge{S}) where {S<:Statistics} =
+    Edge{S}(edge.out, edge.in, PropagatorType.Spectral, edge.momenta)
+function make_retarded(edge::Edge{S}) where {S<:Statistics}
+    return Edge{S}(
         bar(edge.in)(position(edge.out)),
         bar(edge.out)(position(edge.in)),
         PropagatorType.Retarded,
         edge.momenta,
     )
 end
-function make_advanced(edge::Edge)
-    return Edge(
+function make_advanced(edge::Edge{S}) where {S<:Statistics}
+    return Edge{S}(
         bar(edge.in)(position(edge.out)),
         bar(edge.out)(position(edge.in)),
         PropagatorType.Advanced,
@@ -193,9 +204,9 @@ fields(e::Edge) = (e.out, e.in)
 regularisations(p::Edge) = regularisation.(fields(p))
 regularisations(p::Contraction) = regularisation.(p)
 
-function set_reg_to_zero(p::Edge)
+function set_reg_to_zero(p::Edge{S}) where {S<:Statistics}
     new_fields = map(set_reg_to_zero, fields(p))
-    return Edge(new_fields..., p.edgetype, p.momenta)
+    return Edge{S}(new_fields..., p.edgetype, p.momenta)
 end
 contours(p::Edge) = keldysh_index.(fields(p))
 
@@ -203,16 +214,20 @@ contours(p::Edge) = keldysh_index.(fields(p))
 function Base.adjoint(c::Contraction{S}) where {S<:Statistics}
     return Contraction(bar(c.in(position(c.out))), bar(c.out(position(c.in))))
 end
-Base.adjoint(e::Edge) = Edge(adjoint(Contraction(e.out, e.in)))
+function Base.adjoint(e::Edge{S}) where {S<:Statistics}
+    c = adjoint(Contraction(e.out, e.in))
+    return Edge{S}(c.out, c.in, propagator_type(S, c.out, c.in), e.momenta)
+end
 
 """Reverse a contraction and exchange external coordinates."""
-function reverse_contraction(c::Contraction)
+function reverse_contraction(c::Contraction{S}) where {S<:Statistics}
     _out, _in = c
     out′, in′ = adjoint(c)
     return Contraction(out′(swap_in_out(position(_in))), in′(swap_in_out(position(_out))))
 end
-function reverse_edge(e::Edge)
-    return Edge(Edge(reverse_contraction(Contraction(e.out, e.in))), momenta(e))
+function reverse_edge(e::Edge{S}) where {S<:Statistics}
+    c = reverse_contraction(Contraction(e.out, e.in))
+    return Edge{S}(c.out, c.in, propagator_type(S, c.out, c.in), momenta(e))
 end
 
 #########################
