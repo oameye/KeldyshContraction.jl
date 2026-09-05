@@ -148,6 +148,12 @@ end
 # Explicit coefficient APIs
 #############################
 
+"""
+    convert_coefficients(C, q)
+
+Convert every numeric coefficient in a symbolic field expression `q` to the numeric type
+`C`, while preserving its fields and statistics.
+"""
 function convert_coefficients(
     ::Type{C}, q::QMul{D,S}
 ) where {C<:Number,D<:Number,S<:Statistics}
@@ -159,6 +165,12 @@ function convert_coefficients(
     return QAdd(QMul{C,S}[convert_coefficients(C, term) for term in q.arguments])
 end
 
+"""
+    rationalize_coefficients(q)
+
+Explicitly replace floating-point coefficients in `q` by their `rationalize`d exact
+representations. Exact integer and rational coefficients are returned unchanged.
+"""
 rationalize_coefficients(q::QMul{C,S}) where {C<:Integer,S<:Statistics} = q
 rationalize_coefficients(q::QMul{C,S}) where {C<:Rational,S<:Statistics} = q
 rationalize_coefficients(q::QMul{Complex{C},S}) where {C<:Rational,S<:Statistics} = q
