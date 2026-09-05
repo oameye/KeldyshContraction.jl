@@ -1,6 +1,7 @@
 using KeldyshContraction, Test
 using KeldyshContraction: FieldIndex, FieldIndices, In, Out
 using KeldyshContraction: Regularisation.Plus as Plus
+import KeldyshContraction as KC
 
 @testset "FieldFamily identity" begin
     indices = FieldIndices(FieldIndex(:spin, 1), FieldIndex(:species, 2))
@@ -23,6 +24,16 @@ using KeldyshContraction: Regularisation.Plus as Plus
     @test c != q
     @test FieldFamily{Boson}(:χ, indices) != family
     @test FieldFamily{Boson}(:ψ, FieldIndices(FieldIndex(:spin, 2))) != family
+end
+
+@testset "qfield declaration inference" begin
+    family = @inferred KC.parse_qfield_declaration(:(ϕ::Boson))
+    component = @inferred KC.parse_qfield_declaration(:(c::Boson(Classical)))
+
+    @test isconcretetype(typeof(family))
+    @test isconcretetype(typeof(component))
+    @test all(isconcretetype, fieldtypes(typeof(family)))
+    @test all(isconcretetype, fieldtypes(typeof(component)))
 end
 
 @testset "field-family declaration" begin
