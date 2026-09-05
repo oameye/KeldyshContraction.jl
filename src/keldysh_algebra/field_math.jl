@@ -18,8 +18,7 @@ function Base.:*(a::Field{S}, b::Field{S}) where {S<:Statistics}
     return _qmul_owned(1, Field{S}[a, b])
 end
 
-Base.:*(a::Field{S}, b::C) where {S<:Statistics,C<:Number} =
-    _qmul_owned(b, Field{S}[a])
+Base.:*(a::Field{S}, b::C) where {S<:Statistics,C<:Number} = _qmul_owned(b, Field{S}[a])
 Base.:*(b::Number, a::Field) = a * b
 
 function Base.:*(a::QMul{C,S}, b::D) where {C<:Number,D<:Number,S<:Statistics}
@@ -91,8 +90,7 @@ Base.:-(a::QField, b::QField) = a + (-b)
 function Base.:+(a::Field{S}, b::D) where {S<:Statistics,D<:Number}
     C = promote_type(Int, D)
     terms = QMul{C,S}[
-        _qmul_owned(convert(C, 1), Field{S}[a]),
-        _qmul_owned(convert(C, b), Field{S}[]),
+        _qmul_owned(convert(C, 1), Field{S}[a]), _qmul_owned(convert(C, b), Field{S}[])
     ]
     return _normalized_add(terms)
 end
