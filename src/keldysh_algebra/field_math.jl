@@ -7,7 +7,7 @@ end
 function _normalized_add(args::Vector{QMul{C,S}}) where {C<:Number,S<:Statistics}
     out = QMul{C,S}[term for term in args if !iszero(term)]
     isempty(out) && push!(out, _qmul_sorting(zero(C), Field{S}[]))
-    return QAdd{C,S}(out)
+    return _qadd_owned(out)
 end
 
 ########################
