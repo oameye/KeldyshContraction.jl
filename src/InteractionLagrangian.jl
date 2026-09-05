@@ -24,7 +24,7 @@ Constructs an `InteractionLagrangian` from a [`QTerm`](@ref) expression.
 
 # Requirements
 The expression must:
-- be a bulk term ([`is_bulk`](@ref));
+- be a bulk term (`is_bulk`);
 - be conserved ([`is_conserved`](@ref));
 - be physical ([`is_physical`](@ref));
 - contain at most two different fields;
