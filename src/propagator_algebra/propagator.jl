@@ -51,7 +51,7 @@ Base.lastindex(::Contraction) = 2
 function Base.getindex(c::Contraction, i::Int)
     i == 1 && return c.out
     i == 2 && return c.in
-    throw(BoundsError(c, i))
+    return throw(BoundsError(c, i))
 end
 Base.iterate(c::Contraction) = (c.out, 2)
 Base.iterate(c::Contraction, state::Int) = state == 2 ? (c.in, 3) : nothing
@@ -61,8 +61,9 @@ Base.broadcastable(c::Contraction) = fields(c)
 Base.map(f, c::Contraction) = Contraction(f(c.out), f(c.in))
 Base.Tuple(c::Contraction) = fields(c)
 
-Base.isequal(a::Contraction{S}, b::Contraction{S}) where {S<:Statistics} =
-    isequal(a.out, b.out) && isequal(a.in, b.in)
+function Base.isequal(a::Contraction{S}, b::Contraction{S}) where {S<:Statistics}
+    return isequal(a.out, b.out) && isequal(a.in, b.in)
+end
 Base.:(==)(a::Contraction{S}, b::Contraction{S}) where {S<:Statistics} = isequal(a, b)
 Base.hash(c::Contraction, h::UInt) = hash(Contraction, hash(c.in, hash(c.out, h)))
 
@@ -71,14 +72,18 @@ function Base.convert(
 ) where {S<:Statistics}
     return Contraction(fields)
 end
-function Base.convert(::Type{Contraction}, fields::Tuple{Field{S},Field{S}}) where {S<:Statistics}
+function Base.convert(
+    ::Type{Contraction}, fields::Tuple{Field{S},Field{S}}
+) where {S<:Statistics}
     return Contraction(fields)
 end
 
-same_field_family(a::Field{S}, b::Field{S}) where {S<:Statistics} =
-    isequal(field_family(a), field_family(b))
-contraction_compatible(::Type{Boson}, out::Field{Boson}, in::Field{Boson}) =
-    same_field_family(out, in)
+function same_field_family(a::Field{S}, b::Field{S}) where {S<:Statistics}
+    return isequal(field_family(a), field_family(b))
+end
+function contraction_compatible(::Type{Boson}, out::Field{Boson}, in::Field{Boson})
+    return same_field_family(out, in)
+end
 
 #########################
 #         Edge
@@ -149,7 +154,9 @@ function propagator_type(out::Field{Boson}, in::Field{Boson})::PropagatorType.T
         return PropagatorType.Advanced
     end
 end
-propagator_type(::Type{Boson}, out::Field{Boson}, in::Field{Boson}) = propagator_type(out, in)
+function propagator_type(::Type{Boson}, out::Field{Boson}, in::Field{Boson})
+    return propagator_type(out, in)
+end
 
 propagator_type(e::Edge) = e.edgetype
 is_advanced(x::PropagatorType.T) = Int(x) == Int(PropagatorType.Advanced)
@@ -204,7 +211,9 @@ function reverse_contraction(c::Contraction)
     out′, in′ = adjoint(c)
     return Contraction(out′(swap_in_out(position(_in))), in′(swap_in_out(position(_out))))
 end
-reverse_edge(e::Edge) = Edge(Edge(reverse_contraction(Contraction(e.out, e.in))), momenta(e))
+function reverse_edge(e::Edge)
+    return Edge(Edge(reverse_contraction(Contraction(e.out, e.in))), momenta(e))
+end
 
 #########################
 #       Position
