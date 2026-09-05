@@ -42,9 +42,7 @@ function InteractionLagrangian(
     )
 end
 
-function _extract_unique_fields(
-    expr::Union{QMul{C,Boson},QAdd{C,Boson}}
-) where {C<:Number}
+function _extract_unique_fields(expr::Union{QMul{C,Boson},QAdd{C,Boson}}) where {C<:Number}
     fs = allfields(expr)
     set_reg_to_zero!(fs)
     unique_fields = unique(fs)
