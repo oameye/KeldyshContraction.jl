@@ -120,21 +120,14 @@ end
 exchange_sign(::Type{Boson}, ::Field{Boson}, ::Field{Boson}) = Int8(1)
 
 """
-Canonicalize a concrete field vector in place and return the accumulated exchange sign.
-The insertion-sort implementation is intentional: future fermionic ordering can account
-for every actual exchange without changing the storage or ordering algorithm.
+Canonicalize a concrete bosonic field vector in place.
+
+Bosons have no exchange sign, so use Julia's optimized sort directly. Fermionic support can
+provide a statistics-specific method that tracks actual exchanges without changing storage.
 """
-function canonicalize_fields!(args::Vector{Field{S}}) where {S<:Statistics}
-    sign = Int8(1)
-    for i in 2:length(args)
-        j = i
-        while j > 1 && isless(args[j], args[j - 1])
-            sign *= exchange_sign(S, args[j - 1], args[j])
-            args[j - 1], args[j] = args[j], args[j - 1]
-            j -= 1
-        end
-    end
-    return sign
+function canonicalize_fields!(args::Vector{Field{Boson}})
+    sort!(args)
+    return Int8(1)
 end
 
 Base.one(f::Field{S}) where {S<:Statistics} = QMul{Int,S}(1, Field{S}[])
