@@ -20,7 +20,7 @@ function contraction_filter(v::Contraction{S}) where {S<:Statistics}
     out, in = v
     if !contraction_compatible(S, out, in)
         return false
-    elseif !is_conserved(v)
+    elseif !balanced_orientation(v)
         return false
     elseif !is_physical_propagator(v)
         return false
