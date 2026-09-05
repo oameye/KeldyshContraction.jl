@@ -14,7 +14,7 @@ end
 
 const show_brackets = Ref(true)
 function Base.show(io::IO, x::QTerm)
-    args = arguments(x)
+    args = terms(x)
     isempty(args) && return nothing
     show_brackets[]::Bool && write(io, "(")
     show(io, args[1])

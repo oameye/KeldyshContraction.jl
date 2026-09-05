@@ -1,6 +1,6 @@
 using KeldyshContraction, Test
 using KeldyshContraction: In, Out, Classical, Quantum, is_in
-using KeldyshContraction: Edge, position, contour
+using KeldyshContraction: Edge, position, keldysh_index
 using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus
 

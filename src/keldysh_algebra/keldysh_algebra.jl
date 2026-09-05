@@ -18,6 +18,14 @@ struct Field{S<:Statistics} <: QSym
     indices::FieldIndices
 end
 
+"""
+$(DocStringExtensions.SIGNATURES)
+
+Construct a field from its Keldysh index, with every other property defaulted. Argument
+order here differs from the struct's field order, so prefer keywords past `keldysh`; to
+derive one field from another use [`reconstruct`](@ref) rather than restating all six
+properties positionally.
+"""
 function Field{S}(
     name::Symbol,
     keldysh::KeldyshIndex.T,
@@ -29,10 +37,28 @@ function Field{S}(
     return Field{S}(name, orientation, keldysh, pos, reg, indices)
 end
 
+"""
+$(DocStringExtensions.SIGNATURES)
+
+Copy a field, replacing only the named properties and preserving statistics. Every
+orientation, position, and regularisation update goes through here, so the six-property
+argument clump is written once.
+"""
+function reconstruct(
+    f::Field{S};
+    name::Symbol=name(f),
+    orientation::Orientation.T=orientation(f),
+    keldysh::KeldyshIndex.T=keldysh_index(f),
+    position::Position=position(f),
+    regularisation::Regularisation.T=regularisation(f),
+    indices::FieldIndices=field_indices(f),
+) where {S<:Statistics}
+    return Field{S}(name, orientation, keldysh, position, regularisation, indices)
+end
+
 statistics(::Field{S}) where {S<:Statistics} = S
 orientation(f::Field) = f.orientation
 keldysh_index(f::Field) = f.keldysh
-contour(f::Field) = keldysh_index(f)
 regularisation(f::Field) = f.regularisation
 position(f::Field) = f.position
 field_indices(f::Field) = f.indices
@@ -49,27 +75,10 @@ is_bulk(f::Field) = is_bulk(position(f))
 is_in(f::Field) = is_in(position(f))
 is_out(f::Field) = is_out(position(f))
 
-function (f::Field{S})(pos::Position) where {S}
-    return Field{S}(
-        name(f), orientation(f), keldysh_index(f), pos, regularisation(f), field_indices(f)
-    )
-end
-function (f::Field{S})(reg::Regularisation.T) where {S}
-    return Field{S}(
-        name(f), orientation(f), keldysh_index(f), position(f), reg, field_indices(f)
-    )
-end
+(f::Field)(pos::Position) = reconstruct(f; position=pos)
+(f::Field)(reg::Regularisation.T) = reconstruct(f; regularisation=reg)
 
-function set_reg_to_zero(f::Field{S}) where {S}
-    return Field{S}(
-        name(f),
-        orientation(f),
-        keldysh_index(f),
-        position(f),
-        Regularisation.Zero,
-        field_indices(f),
-    )
-end
+set_reg_to_zero(f::Field) = reconstruct(f; regularisation=Regularisation.Zero)
 function set_reg_to_zero!(v::Vector{Field{S}}) where {S}
     for i in eachindex(v)
         v[i] = set_reg_to_zero(v[i])
@@ -86,11 +95,9 @@ Toggle the independent path-integral orientation of a field. `bar` is deliberate
 separate from `adjoint`: a barred integration variable is not represented as a field-level
 Hermitian adjoint operation.
 """
-function bar(f::Field{S}) where {S}
+function bar(f::Field)
     o = is_unbarred(f) ? Orientation.Barred : Orientation.Unbarred
-    return Field{S}(
-        name(f), o, keldysh_index(f), position(f), regularisation(f), field_indices(f)
-    )
+    return reconstruct(f; orientation=o)
 end
 
 function Base.isequal(a::Field{S}, b::Field{S}) where {S}
@@ -116,18 +123,58 @@ function Base.isless(a::Field{S}, b::Field{S}) where {S}
     return isless(field_indices(a), field_indices(b))
 end
 
-"""Statistics-dependent sign for exchanging two fields during canonical ordering."""
-exchange_sign(::Type{Boson}, ::Field{Boson}, ::Field{Boson}) = Int8(1)
+"""
+    exchange_sign(::Type{S}) -> Int8
+
+Sign picked up when two adjacent fields of statistics `S` are exchanged. Bosonic exchange is
+sign-free. Adding fermions means adding `exchange_sign(::Type{Fermion}) = Int8(-1)` and
+nothing else: canonical ordering, the sign-free fast path, and product construction all read
+this one method.
+"""
+exchange_sign(::Type{Boson}) = Int8(1)
 
 """
-Canonicalize a concrete bosonic field vector in place.
+    exchange_sign(::Type{S}, a::Field{S}, b::Field{S}) -> Int8
 
-Bosons have no exchange sign, so use Julia's optimized sort directly. Fermionic support can
-provide a statistics-specific method that tracks actual exchanges without changing storage.
+Sign for exchanging two specific fields. Defers to the statistics-level
+[`exchange_sign`](@ref); a statistics needing a pair-dependent rule overrides this method.
 """
-function canonicalize_fields!(args::Vector{Field{Boson}})
-    sort!(args)
-    return Int8(1)
+function exchange_sign(::Type{S}, ::Field{S}, ::Field{S}) where {S<:Statistics}
+    return exchange_sign(S)
+end
+
+"""
+    is_exchange_sign_free(::Type{S}) -> Bool
+
+Whether every exchange under `S` carries sign `+1`. Derived from [`exchange_sign`](@ref) so
+the two can never disagree, and constant-folded at compile time.
+"""
+is_exchange_sign_free(::Type{S}) where {S<:Statistics} = isone(exchange_sign(S))
+
+"""
+    canonicalize_fields!(args::Vector{Field{S}}) -> Int8
+
+Sort a concrete field vector in place and return the accumulated exchange sign.
+
+Sign-free statistics take Julia's optimized `sort!` directly. Otherwise ordering is an
+insertion sort over adjacent transpositions, so every exchange is routed through
+[`exchange_sign`](@ref) and the signs multiply out.
+"""
+function canonicalize_fields!(args::Vector{Field{S}}) where {S<:Statistics}
+    if is_exchange_sign_free(S)
+        sort!(args)
+        return exchange_sign(S)
+    end
+    sign = Int8(1)
+    @inbounds for i in 2:length(args)
+        j = i
+        while j > 1 && isless(args[j], args[j - 1])
+            sign *= exchange_sign(S, args[j - 1], args[j])
+            args[j - 1], args[j] = args[j], args[j - 1]
+            j -= 1
+        end
+    end
+    return sign
 end
 
 Base.one(f::Field{S}) where {S<:Statistics} = QMul{Int,S}(1, Field{S}[])

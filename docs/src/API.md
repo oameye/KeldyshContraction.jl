@@ -45,6 +45,11 @@ KeldyshContraction.KeldyshIndex
 KeldyshContraction.Orientation
 KeldyshContraction.Regularisation
 KeldyshContraction.Position
+KeldyshContraction.IndexKind
+KeldyshContraction.Bulk
+KeldyshContraction.In
+KeldyshContraction.Out
+KeldyshContraction.reconstruct
 ```
 
 The constructors `Bulk(i)`, `In()`, and `Out()` create `Position` values. Calling a field
@@ -91,8 +96,12 @@ raw scalars.
 KeldyshContraction.QTerm
 KeldyshContraction.QMul
 KeldyshContraction.QAdd
+KeldyshContraction.coefficient
+KeldyshContraction.fields
+KeldyshContraction.terms
 KeldyshContraction.convert_coefficients
 KeldyshContraction.rationalize_coefficients
+KeldyshContraction.exchange_sign
 ```
 
 `SymbolicUtils.arguments` remains available for symbolic-tree interoperability. For package
@@ -130,6 +139,7 @@ value data.
 
 ```@docs
 DressedPropagator
+KeldyshContraction.PropagatorType
 KeldyshContraction.matrix(::DressedPropagator)
 ```
 

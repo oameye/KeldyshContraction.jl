@@ -10,17 +10,28 @@ abstract type Lagrangian end
 ###########################
 
 """
+$(DocStringExtensions.TYPEDEF)
+
 Represents a bosonic interaction Lagrangian.
 
 The representation is migrated to `Field{Boson}` here; the field-family-neutral storage
 redesign belongs to #241. Construction preserves the coefficient representation of the
-input expression. Exact/rational conversion is always explicit.
+input expression: exact/rational conversion is always explicit, via
+[`rationalize_coefficients`](@ref) or [`convert_coefficients`](@ref).
+
+# Fields
+$(DocStringExtensions.FIELDS)
 """
 struct InteractionLagrangian{T} <: Lagrangian
+    "The symbolic interaction expression"
     lagrangian::T
+    "The quantum field of the interaction"
     qfield::Field{Boson}
+    "The classical field of the interaction"
     cfield::Field{Boson}
+    "Bulk coordinate at which the interaction sits"
     position::Position
+    "Symbolic coupling parameter"
     parameter::CSym
 end
 
@@ -55,29 +66,43 @@ function _extract_unique_fields(expr::Union{QMul{C,Boson},QAdd{C,Boson}}) where 
 end
 
 function _assert_lagrangian(expr, fields, contours)
-    @assert is_bulk(expr) "An interaction Lagrangian only accepts bulk terms"
-    @assert is_conserved(expr) "An interaction Lagrangian only accepts conserved terms"
-    @assert is_physical(expr) "An interaction Lagrangian only accepts physical terms"
-    @assert length(fields) <= 2 "An interaction Lagrangian only accepts up to two different fields"
-    @assert unique(contours) == contours "An interaction Lagrangian only accepts fields with opposite contours"
+    is_bulk(expr) ||
+        throw(ArgumentError("an interaction Lagrangian only accepts bulk terms"))
+    is_conserved(expr) ||
+        throw(ArgumentError("an interaction Lagrangian only accepts conserved terms"))
+    is_physical(expr) ||
+        throw(ArgumentError("an interaction Lagrangian only accepts physical terms"))
+    length(fields) <= 2 || throw(
+        ArgumentError("an interaction Lagrangian only accepts up to two different fields"),
+    )
+    unique(contours) == contours || throw(
+        ArgumentError(
+            "an interaction Lagrangian only accepts fields with opposite contours"
+        ),
+    )
     return nothing
 end
 
 position(L::InteractionLagrangian) = L.position
 parameters(L::InteractionLagrangian) = L.parameter
 
-"""Return whether a field product contains equal barred and unbarred counts."""
-function is_conserved(args::Vector{Field{S}}) where {S<:Statistics}
-    isempty(args) && return false
+# Shared body. The public methods below stay separate rather than uniting behind one
+# `Union`, so that `S` stays bound: an empty `Tuple{Vararg{Field{S}}}` satisfies any `S`
+# and would trip `Aqua.test_unbound_args`.
+function _is_conserved(args)
     n_unbarred = count(is_unbarred, args)
-    n_barred = count(is_barred, args)
-    return n_unbarred > 0 && n_unbarred == n_barred
+    return n_unbarred > 0 && n_unbarred == count(is_barred, args)
 end
+
+"""
+Return whether a collection of fields contains equal, nonzero counts of barred and unbarred
+fields. An empty collection is not conserved: there is nothing to conserve, and a single
+field is never conserved on its own.
+"""
+is_conserved(args::Vector{Field{S}}) where {S<:Statistics} = _is_conserved(args)
 is_conserved(::Tuple{}) = false
 function is_conserved(args::Tuple{Field{S},Vararg{Field{S}}}) where {S<:Statistics}
-    n_unbarred = count(is_unbarred, args)
-    n_barred = count(is_barred, args)
-    return n_unbarred == n_barred
+    return _is_conserved(args)
 end
 is_conserved(a::QMul) = is_conserved(a.args_nc)
 is_conserved(a::QAdd) = all(is_conserved, a.arguments)
@@ -106,7 +131,16 @@ end
 #      LagrangianSum
 ###########################
 
+"""
+$(DocStringExtensions.TYPEDEF)
+
+A sum of [`InteractionLagrangian`](@ref)s sharing one quantum and one classical field.
+
+# Fields
+$(DocStringExtensions.FIELDS)
+"""
 struct LagrangianSum{T} <: Lagrangian
+    "The summed interaction Lagrangians"
     arguments::Vector{InteractionLagrangian{T}}
     function LagrangianSum(args::Vector{InteractionLagrangian{T}}, ::Val{:raw}) where {T}
         return new{T}(args)
@@ -116,15 +150,22 @@ end
 # This constructor is migrated fully in #241. It remains isolated from the symbolic IR
 # and is one of the pre-existing package-wide instability sites tracked by #238.
 @unstable function LagrangianSum(args::Vector{<:InteractionLagrangian})
-    @assert allequal(getfield.(args, :qfield)) "All InteractionLagrangian must have the same quantum field"
-    @assert allequal(getfield.(args, :cfield)) "All InteractionLagrangian must have the same classical field"
+    _assert_common_fields(args)
     vs = promote(args...)
     return LagrangianSum(collect(vs))
 end
 function LagrangianSum(args::Vector{InteractionLagrangian{T}}) where {T}
-    @assert allequal(getfield.(args, :qfield)) "All InteractionLagrangian must have the same quantum field"
-    @assert allequal(getfield.(args, :cfield)) "All InteractionLagrangian must have the same classical field"
+    _assert_common_fields(args)
     return LagrangianSum(args, Val(:raw))
+end
+
+"""Every summand must share one quantum and one classical field."""
+function _assert_common_fields(args::AbstractVector{<:InteractionLagrangian})
+    allequal(getfield.(args, :qfield)) ||
+        throw(ArgumentError("all InteractionLagrangian must have the same quantum field"))
+    allequal(getfield.(args, :cfield)) ||
+        throw(ArgumentError("all InteractionLagrangian must have the same classical field"))
+    return nothing
 end
 
 SymbolicUtils.arguments(Ls::LagrangianSum) = Ls.arguments
@@ -199,6 +240,3 @@ function rationalize_coefficients(q::QAdd{C,S}) where {C<:Number,S<:Statistics}
     converted = map(rationalize_coefficients, q.arguments)
     return QAdd(converted)
 end
-
-# Explicit legacy helper; no constructor invokes it implicitly anymore.
-maybe_rationalize(q::QTerm) = rationalize_coefficients(q)
