@@ -2,13 +2,7 @@
 #       Field{S}
 #########################
 
-"""
-    Field{S} <: QSym
-
-Fundamental path-integral field with statistics `S`. Statistics is encoded in the type;
-orientation, Keldysh index, position, regularisation, and internal indices are concrete
-runtime values.
-"""
+"""Fundamental Keldysh path-integral field with statistics `S`."""
 struct Field{S<:Statistics} <: QSym
     name::Symbol
     orientation::Orientation.T
@@ -18,14 +12,7 @@ struct Field{S<:Statistics} <: QSym
     indices::FieldIndices
 end
 
-"""
-$(DocStringExtensions.SIGNATURES)
-
-Construct a field from its Keldysh index, with every other property defaulted. Argument
-order here differs from the struct's field order, so prefer keywords past `keldysh`; to
-derive one field from another use [`reconstruct`](@ref) rather than restating all six
-properties positionally.
-"""
+"""Construct a Keldysh field with the remaining properties defaulted."""
 function Field{S}(
     name::Symbol,
     keldysh::KeldyshIndex.T,
@@ -37,13 +24,7 @@ function Field{S}(
     return Field{S}(name, orientation, keldysh, pos, reg, indices)
 end
 
-"""
-$(DocStringExtensions.SIGNATURES)
-
-Copy a field, replacing only the named properties and preserving statistics. Every
-orientation, position, and regularisation update goes through here, so the six-property
-argument clump is written once.
-"""
+"""Copy a field, replacing the specified properties."""
 function reconstruct(
     f::Field{S};
     name::Symbol=name(f),
@@ -88,13 +69,7 @@ end
 
 contour_integers(v::Vector{Field{S}}) where {S} = Int[Int(keldysh_index(x)) for x in v]
 
-"""
-    bar(field)
-
-Toggle the independent path-integral orientation of a field. `bar` is deliberately
-separate from `adjoint`: a barred integration variable is not represented as a field-level
-Hermitian adjoint operation.
-"""
+"""Toggle the path-integral orientation of a field."""
 function bar(f::Field)
     o = is_unbarred(f) ? Orientation.Barred : Orientation.Unbarred
     return reconstruct(f; orientation=o)
@@ -123,43 +98,18 @@ function Base.isless(a::Field{S}, b::Field{S}) where {S}
     return isless(field_indices(a), field_indices(b))
 end
 
-"""
-    exchange_sign(::Type{S}) -> Int8
-
-Sign picked up when two adjacent fields of statistics `S` are exchanged. Bosonic exchange is
-sign-free. Adding fermions means adding `exchange_sign(::Type{Fermion}) = Int8(-1)` and
-nothing else: canonical ordering, the sign-free fast path, and product construction all read
-this one method.
-"""
+"""Exchange sign for statistics `S`."""
 exchange_sign(::Type{Boson}) = Int8(1)
 
-"""
-    exchange_sign(::Type{S}, a::Field{S}, b::Field{S}) -> Int8
-
-Sign for exchanging two specific fields. Defers to the statistics-level
-[`exchange_sign`](@ref); a statistics needing a pair-dependent rule overrides this method.
-"""
+"""Exchange sign for two fields with statistics `S`."""
 function exchange_sign(::Type{S}, ::Field{S}, ::Field{S}) where {S<:Statistics}
     return exchange_sign(S)
 end
 
-"""
-    is_exchange_sign_free(::Type{S}) -> Bool
-
-Whether every exchange under `S` carries sign `+1`. Derived from [`exchange_sign`](@ref) so
-the two can never disagree, and constant-folded at compile time.
-"""
+"""Return whether all field exchanges have sign `+1`."""
 is_exchange_sign_free(::Type{S}) where {S<:Statistics} = isone(exchange_sign(S))
 
-"""
-    canonicalize_fields!(args::Vector{Field{S}}) -> Int8
-
-Sort a concrete field vector in place and return the accumulated exchange sign.
-
-Sign-free statistics take Julia's optimized `sort!` directly. Otherwise ordering is an
-insertion sort over adjacent transpositions, so every exchange is routed through
-[`exchange_sign`](@ref) and the signs multiply out.
-"""
+"""Sort fields in place and return the accumulated exchange sign."""
 function canonicalize_fields!(args::Vector{Field{S}}) where {S<:Statistics}
     if is_exchange_sign_free(S)
         sort!(args)
@@ -182,17 +132,7 @@ Base.zero(f::Field{S}) where {S<:Statistics} = QMul{Int,S}(0, Field{S}[])
 Base.one(::Type{Field{S}}) where {S<:Statistics} = QMul{Int,S}(1, Field{S}[])
 Base.zero(::Type{Field{S}}) where {S<:Statistics} = QMul{Int,S}(0, Field{S}[])
 
-"""
-    @qfields
-
-Construct path-integral fields. The statistics type is supplied before the semantic
-Keldysh label:
-
-```julia
-@qfields c::Boson(Classical) q::Boson(Quantum)
-bar(c)
-```
-"""
+"""Construct Keldysh fields from a statistics type and Keldysh label."""
 macro qfields(qs...)
     defs = map(qs) do q
         nf = _name_field(q)
