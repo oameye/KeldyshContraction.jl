@@ -144,7 +144,8 @@ contours(p::Edge) = keldysh_index.(fields(p))
 
 """
 Adjoint of a propagator/contraction is meaningful at the two-point-object level: exchange
-endpoints and toggle their path-integral orientation.
+endpoints and toggle their path-integral orientation. Coordinates are kept in place here;
+`reverse_contraction` additionally reverses the coordinates for diagram adjoints.
 """
 function Base.adjoint(c::Contraction)
     return (bar(c[2](position(c[1]))), bar(c[1](position(c[2]))))
@@ -154,10 +155,8 @@ Base.adjoint(c::Edge) = Edge(adjoint(fields(c)))
 """
     reverse_contraction(c::Contraction)
 
-Reverse a contraction: ``G^X(a, b) → G^{\\bar{X}}(b, a)``, exchanging the [`In`](@ref) and
-[`Out`](@ref) coordinates on the way ([`swap_in_out`](@ref)). Hence the outgoing field ends
-up at the incoming coordinate and vice versa, which is what taking the adjoint of a
-diagram does to each of its propagators.
+Reverse a contraction while exchanging `In()` and `Out()` coordinates. This is the
+coordinate-reversing operation used when taking the adjoint of a whole diagram.
 """
 function reverse_contraction(c::Contraction)
     _out, _in = c
