@@ -53,9 +53,7 @@ struct Edge
     momenta::Momenta
 end
 
-function Edge(
-    out::Field{Boson}, in::Field{Boson}, edgetype::PropagatorType.T
-)
+function Edge(out::Field{Boson}, in::Field{Boson}, edgetype::PropagatorType.T)
     return Edge(out, in, edgetype, Momenta())
 end
 Edge(edge::Edge, momenta::Momenta) = Edge(edge.out, edge.in, edge.edgetype, momenta)
@@ -91,9 +89,7 @@ function propagator_checks(out::Field{Boson}, in::Field{Boson})::Nothing
     return nothing
 end
 
-function propagator_type(
-    out::Field{Boson}, in::Field{Boson}
-)::PropagatorType.T
+function propagator_type(out::Field{Boson}, in::Field{Boson})::PropagatorType.T
     contours = Int.(keldysh_index.((out, in)))
     diff_contour = first(-(contours...))
     if iszero(diff_contour)
@@ -151,10 +147,7 @@ Adjoint of a propagator/contraction is meaningful at the two-point-object level:
 endpoints and toggle their path-integral orientation.
 """
 function Base.adjoint(c::Contraction)
-    return (
-        bar(c[2](position(c[1]))),
-        bar(c[1](position(c[2]))),
-    )
+    return (bar(c[2](position(c[1]))), bar(c[1](position(c[2]))))
 end
 Base.adjoint(c::Edge) = Edge(adjoint(fields(c)))
 
