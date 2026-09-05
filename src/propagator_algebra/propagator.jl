@@ -33,11 +33,56 @@ end
 Base.hash(m::Momenta, h::UInt) = hash(Momenta, hash(m.momenta, hash(m.prefactors, h)))
 
 #########################
-#         Edge
+#      Contraction
 #########################
 
-# Transitional representation until #241 introduces Contraction{S}.
-const Contraction = Tuple{Field{Boson},Field{Boson}}
+"""Ordered pair of fields forming a two-point contraction."""
+struct Contraction{S<:Statistics}
+    out::Field{S}
+    in::Field{S}
+end
+
+Contraction(fields::Tuple{Field{S},Field{S}}) where {S<:Statistics} = Contraction(fields...)
+fields(c::Contraction) = (c.out, c.in)
+
+Base.length(::Contraction) = 2
+Base.firstindex(::Contraction) = 1
+Base.lastindex(::Contraction) = 2
+function Base.getindex(c::Contraction, i::Int)
+    i == 1 && return c.out
+    i == 2 && return c.in
+    throw(BoundsError(c, i))
+end
+Base.iterate(c::Contraction) = (c.out, 2)
+Base.iterate(c::Contraction, state::Int) = state == 2 ? (c.in, 3) : nothing
+Base.eltype(::Type{Contraction{S}}) where {S<:Statistics} = Field{S}
+Base.IteratorSize(::Type{<:Contraction}) = Base.HasLength()
+Base.broadcastable(c::Contraction) = fields(c)
+Base.map(f, c::Contraction) = Contraction(f(c.out), f(c.in))
+Base.Tuple(c::Contraction) = fields(c)
+
+Base.isequal(a::Contraction{S}, b::Contraction{S}) where {S<:Statistics} =
+    isequal(a.out, b.out) && isequal(a.in, b.in)
+Base.:(==)(a::Contraction{S}, b::Contraction{S}) where {S<:Statistics} = isequal(a, b)
+Base.hash(c::Contraction, h::UInt) = hash(Contraction, hash(c.in, hash(c.out, h)))
+
+function Base.convert(
+    ::Type{Contraction{S}}, fields::Tuple{Field{S},Field{S}}
+) where {S<:Statistics}
+    return Contraction(fields)
+end
+function Base.convert(::Type{Contraction}, fields::Tuple{Field{S},Field{S}}) where {S<:Statistics}
+    return Contraction(fields)
+end
+
+same_field_family(a::Field{S}, b::Field{S}) where {S<:Statistics} =
+    isequal(field_family(a), field_family(b))
+contraction_compatible(::Type{Boson}, out::Field{Boson}, in::Field{Boson}) =
+    same_field_family(out, in)
+
+#########################
+#         Edge
+#########################
 
 """Bosonic propagator type in the retarded-advanced-Keldysh basis."""
 @enumx PropagatorType begin
@@ -59,12 +104,13 @@ function Edge(out::Field{Boson}, in::Field{Boson}, edgetype::PropagatorType.T)
 end
 Edge(edge::Edge, momenta::Momenta) = Edge(edge.out, edge.in, edge.edgetype, momenta)
 
-function Edge(tt::Contraction)
-    _out, _in = tt
+function Edge(contraction::Contraction{Boson})
+    _out, _in = contraction
     propagator_checks(_out, _in)
     return Edge(_out, _in, propagator_type(_out, _in))
 end
-Edge(out::Field{Boson}, in::Field{Boson}) = Edge((out, in))
+Edge(fields::Tuple{Field{Boson},Field{Boson}}) = Edge(Contraction(fields))
+Edge(out::Field{Boson}, in::Field{Boson}) = Edge(Contraction(out, in))
 
 momenta(e::Edge) = e.momenta
 has_momenta(edge::Edge) = !isempty(edge.momenta.prefactors)
@@ -80,8 +126,9 @@ Base.hash(q::Edge, h::UInt) = hash(Edge, hash(q.in, hash(q.edgetype, hash(q.out,
 function propagator_checks(out::Field{Boson}, in::Field{Boson})::Nothing
     @assert is_barred(in) "The incoming field must be barred"
     @assert is_unbarred(out) "The outgoing field must be unbarred"
+    @assert contraction_compatible(Boson, out, in) "Contracted fields must belong to the same field family"
 
-    v = (out, in)
+    v = Contraction(out, in)
     ps = position.(v)
     @assert !is_in(first(ps)) "The outgoing field cannot be at In()"
     @assert !is_out(last(ps)) "The incoming field cannot be at Out()"
@@ -102,6 +149,7 @@ function propagator_type(out::Field{Boson}, in::Field{Boson})::PropagatorType.T
         return PropagatorType.Advanced
     end
 end
+propagator_type(::Type{Boson}, out::Field{Boson}, in::Field{Boson}) = propagator_type(out, in)
 
 propagator_type(e::Edge) = e.edgetype
 is_advanced(x::PropagatorType.T) = Int(x) == Int(PropagatorType.Advanced)
@@ -145,18 +193,18 @@ end
 contours(p::Edge) = keldysh_index.(fields(p))
 
 """Adjoint of a two-point contraction or edge."""
-function Base.adjoint(c::Contraction)
-    return (bar(c[2](position(c[1]))), bar(c[1](position(c[2]))))
+function Base.adjoint(c::Contraction{S}) where {S<:Statistics}
+    return Contraction(bar(c.in(position(c.out))), bar(c.out(position(c.in))))
 end
-Base.adjoint(c::Edge) = Edge(adjoint(fields(c)))
+Base.adjoint(e::Edge) = Edge(adjoint(Contraction(e.out, e.in)))
 
 """Reverse a contraction and exchange external coordinates."""
 function reverse_contraction(c::Contraction)
     _out, _in = c
     out′, in′ = adjoint(c)
-    return (out′(swap_in_out(position(_in))), in′(swap_in_out(position(_out))))
+    return Contraction(out′(swap_in_out(position(_in))), in′(swap_in_out(position(_out))))
 end
-reverse_edge(e::Edge) = Edge(Edge(reverse_contraction(fields(e))), momenta(e))
+reverse_edge(e::Edge) = Edge(Edge(reverse_contraction(Contraction(e.out, e.in))), momenta(e))
 
 #########################
 #       Position
