@@ -53,14 +53,13 @@ function InteractionLagrangian(
     assert_lagrangian(expression, fields)
 
     return InteractionLagrangian{C,S}(
-        expression,
-        interaction_families(expression),
-        position(first(fields)),
-        parameter,
+        expression, interaction_families(expression), position(first(fields)), parameter
     )
 end
 
-function interaction_families(expr::Union{QMul{C,S},QAdd{C,S}}) where {C<:Number,S<:Statistics}
+function interaction_families(
+    expr::Union{QMul{C,S},QAdd{C,S}}
+) where {C<:Number,S<:Statistics}
     families = unique(field_family.(allfields(expr)))
     sort!(families)
     return families
@@ -86,13 +85,16 @@ field_families(L::InteractionLagrangian) = copy(L.families)
 
 function target_family(L::InteractionLagrangian)
     length(L.families) == 1 || throw(
-        ArgumentError("an interaction with multiple field families requires an explicit target")
+        ArgumentError(
+            "an interaction with multiple field families requires an explicit target"
+        ),
     )
     return only(L.families)
 end
 
 function target_family(L::InteractionLagrangian{C,S}, target::FieldFamily{S}) where {C,S}
-    target in L.families || throw(ArgumentError("target field family is not in the interaction"))
+    target in L.families ||
+        throw(ArgumentError("target field family is not in the interaction"))
     return target
 end
 
@@ -174,7 +176,9 @@ end
 
 function check_common_fields(args::AbstractVector{<:InteractionLagrangian})
     allequal(getfield.(args, :families)) || throw(
-        ArgumentError("all InteractionLagrangian must have the same physical field families")
+        ArgumentError(
+            "all InteractionLagrangian must have the same physical field families"
+        ),
     )
     return nothing
 end
@@ -196,9 +200,8 @@ function Base.:+(
     C = promote_type(C1, C2)
     return LagrangianSum(
         InteractionLagrangian{C,S}[
-            convert(InteractionLagrangian{C,S}, a),
-            convert(InteractionLagrangian{C,S}, b),
-        ]
+            convert(InteractionLagrangian{C,S}, a), convert(InteractionLagrangian{C,S}, b)
+        ],
     )
 end
 
