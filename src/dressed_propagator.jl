@@ -114,12 +114,7 @@ parameters(d::DressedPropagatorSum) = map(G -> G.parameter, arguments(d))
     DressedPropagator(Ls::LagrangianSum, ::Val{order}, ::Val{edges}; kwargs...)
 """
 function DressedPropagator(
-    Ls::LagrangianSum,
-    ::Val{O},
-    ::Val{E};
-    simplify=true,
-    _set_reg_to_zero=true,
-    kwargs...,
+    Ls::LagrangianSum, ::Val{O}, ::Val{E}; simplify=true, _set_reg_to_zero=true, kwargs...
 ) where {O,E}
     @assert all(number_of_propagators(L) * O + 1 == E for L in arguments(Ls)) "All LagrangianSum terms must produce the supplied number of propagator edges"
     ϕ = first(arguments(Ls)).qfield
