@@ -57,4 +57,8 @@ end
     @test @inferred(target_family(Lϕχ, ϕ)) === ϕ
     @test @inferred(target_family(Lϕχ, χ)) === χ
     @test_throws ArgumentError target_family(Lϕχ, FieldFamily{Boson}(:η))
+
+    # Family discovery must not depend on which orientation a species carries.
+    conversion = InteractionLagrangian(bar(c) * χq + bar(χq) * c)
+    @test Set(@inferred(field_families(conversion))) == Set([ϕ, χ])
 end
