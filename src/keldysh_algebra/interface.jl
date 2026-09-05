@@ -104,7 +104,9 @@ struct FieldIndices
     species::Int16
 end
 
-FieldIndices() = FieldIndices(NO_FIELD_INDEX, NO_FIELD_INDEX, NO_FIELD_INDEX, NO_FIELD_INDEX)
+function FieldIndices()
+    return FieldIndices(NO_FIELD_INDEX, NO_FIELD_INDEX, NO_FIELD_INDEX, NO_FIELD_INDEX)
+end
 function FieldIndices(indices::Vararg{FieldIndex,N}) where {N}
     N <= MAX_FIELD_INDICES ||
         throw(ArgumentError("at most $MAX_FIELD_INDICES field indices are supported"))
@@ -115,8 +117,9 @@ function FieldIndices(indices::Vararg{FieldIndex,N}) where {N}
     species = NO_FIELD_INDEX
 
     for idx in indices
-        idx.value == NO_FIELD_INDEX &&
-            throw(ArgumentError("$(NO_FIELD_INDEX) is reserved as the absent-index sentinel"))
+        idx.value == NO_FIELD_INDEX && throw(
+            ArgumentError("$(NO_FIELD_INDEX) is reserved as the absent-index sentinel")
+        )
         if idx.kind === IndexKind.Spin
             spin == NO_FIELD_INDEX || throw(ArgumentError("duplicate spin index"))
             spin = idx.value
@@ -171,8 +174,11 @@ function Base.isequal(a::FieldIndices, b::FieldIndices)
            a.band == b.band &&
            a.species == b.species
 end
-Base.hash(indices::FieldIndices, h::UInt) =
-    hash(indices.species, hash(indices.band, hash(indices.flavor, hash(indices.spin, h))))
+function Base.hash(indices::FieldIndices, h::UInt)
+    return hash(
+        indices.species, hash(indices.band, hash(indices.flavor, hash(indices.spin, h)))
+    )
+end
 function Base.isless(a::FieldIndices, b::FieldIndices)
     return (a.spin, a.flavor, a.band, a.species) < (b.spin, b.flavor, b.band, b.species)
 end
