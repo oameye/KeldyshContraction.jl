@@ -22,7 +22,9 @@ end
 @inline _apply_exchange_sign(c::C, sign::Int8) where {C<:Number} = sign == 1 ? c : -c
 
 """Construct a `QMul` from an internally owned field vector without copying it."""
-@inline function _qmul_owned(arg_c::C, args_nc::Vector{Field{S}}) where {C<:Number,S<:Statistics}
+@inline function _qmul_owned(
+    arg_c::C, args_nc::Vector{Field{S}}
+) where {C<:Number,S<:Statistics}
     return QMul{C,S}(arg_c, args_nc, Val(:owned))
 end
 
