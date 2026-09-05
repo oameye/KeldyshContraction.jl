@@ -174,7 +174,8 @@ Base.zero(::Type{Field{S}}) where {S<:Statistics} = QMul{Int,S}(0, Field{S}[])
 struct QFieldDeclaration
     name::Symbol
     statistics::Symbol
-    component_args::Vector{Any}
+    component::Symbol
+    has_component::Bool
 end
 
 """Declare field families or individual Keldysh components."""
@@ -183,13 +184,13 @@ macro qfields(qs...)
     defs = map(declarations) do declaration
         fname = declaration.name
         statistics_expr = declaration.statistics
-        if isempty(declaration.component_args)
-            construction = :(FieldFamily{$(esc(statistics_expr))}($(QuoteNode(fname))))
-        else
-            field_args = declaration.component_args
+        if declaration.has_component
+            component = declaration.component
             construction = :(Field{$(esc(statistics_expr))}(
-                $(QuoteNode(fname)), $(map(esc, field_args)...), Orientation.Unbarred
+                $(QuoteNode(fname)), $(esc(component)), Orientation.Unbarred
             ))
+        else
+            construction = :(FieldFamily{$(esc(statistics_expr))}($(QuoteNode(fname))))
         end
         return :($(esc(fname)) = $construction)
     end
@@ -200,15 +201,16 @@ end
 
 function parse_qfield_declaration(expr::Expr)::QFieldDeclaration
     @assert expr.head == :(::) "Expected expression of form name::Statistics"
-    name = expr.args[1]
-    @assert name isa Symbol "Left side of :: must be a symbol"
+    name = expr.args[1]::Symbol
 
     rhs = expr.args[2]
-    if rhs isa Expr && rhs.head == :call
-        statistics = rhs.args[1]
-        @assert statistics isa Symbol "Statistics must be a type name"
-        return QFieldDeclaration(name, statistics, rhs.args[2:end])
+    if rhs isa Expr
+        @assert rhs.head == :call && length(rhs.args) == 2 "Expected Statistics(component)"
+        statistics = rhs.args[1]::Symbol
+        component = rhs.args[2]::Symbol
+        return QFieldDeclaration(name, statistics, component, true)
     end
-    @assert rhs isa Symbol "Statistics must be a type name"
-    return QFieldDeclaration(name, rhs, Any[])
+
+    statistics = rhs::Symbol
+    return QFieldDeclaration(name, statistics, :none, false)
 end
