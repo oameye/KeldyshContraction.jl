@@ -3,7 +3,8 @@ using KeldyshContraction
 using KeldyshContraction: canonicalize, Bulk, In, Out
 
 function benchmark_canonicalize!(suite::BenchmarkGroup)
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields ϕ::Boson
+    c, q = ϕ[Classical], ϕ[Quantum]
 
     # 2-node linear graph
     vs_2node = [
