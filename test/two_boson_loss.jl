@@ -7,11 +7,12 @@ using KeldyshContraction: Regularisation.Minus as Minus
 import KeldyshContraction as KC
 @qfields c::Boson(Classical) q::Boson(Quantum)
 
-L_int = im * (
-    0.5 * bar(c) * bar(q) * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
-    0.5 * c(Plus) * q(Plus) * (bar(c) * bar(c) + bar(q) * bar(q)) +
-    bar(c) * bar(q) * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
-)
+L_int =
+    im * (
+        0.5 * bar(c) * bar(q) * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
+        0.5 * c(Plus) * q(Plus) * (bar(c) * bar(c) + bar(q) * bar(q)) +
+        bar(c) * bar(q) * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
+    )
 
 @testset "vacuum bubble" begin
     @test !iszero(_wick_contraction(L_int, Val(2); regularise=false))
@@ -49,9 +50,7 @@ end
         truth = Diagrams(
             Dict(
                 Diagram(
-                    [(c(Out()), bar(q)), (c, bar(c)), (c, bar(c)(In()))],
-                    Val(3),
-                    Val(0),
+                    [(c(Out()), bar(q)), (c, bar(c)), (c, bar(c)(In()))], Val(3), Val(0)
                 ) => Complex{Rational{Int}}(1.0),
             ),
         )
@@ -62,9 +61,7 @@ end
         truth = Diagrams(
             Dict(
                 Diagram(
-                    [(c(Out()), bar(q)), (q, bar(c)), (q, bar(c)(In()))],
-                    Val(3),
-                    Val(0),
+                    [(c(Out()), bar(q)), (q, bar(c)), (q, bar(c)(In()))], Val(3), Val(0)
                 ) => Complex{Rational{Int}}(1.0),
             ),
         )
@@ -83,14 +80,10 @@ end
         truth = Diagrams(
             Dict(
                 Diagram(
-                    [(c(Out()), bar(c)), (c, bar(q)), (q, bar(c)(In()))],
-                    Val(3),
-                    Val(0),
+                    [(c(Out()), bar(c)), (c, bar(q)), (q, bar(c)(In()))], Val(3), Val(0)
                 ) => Complex{Rational{Int}}(1.0),
                 Diagram(
-                    [(c(Out()), bar(q)), (c, bar(c)), (q, bar(c)(In()))],
-                    Val(3),
-                    Val(0),
+                    [(c(Out()), bar(q)), (c, bar(c)), (q, bar(c)(In()))], Val(3), Val(0)
                 ) => Complex{Rational{Int}}(1.0),
             ),
         )
@@ -101,14 +94,10 @@ end
         truth = Diagrams(
             Dict(
                 Diagram(
-                    [(c(Out()), bar(q)), (q, bar(c)), (c, bar(c)(In()))],
-                    Val(3),
-                    Val(0),
+                    [(c(Out()), bar(q)), (q, bar(c)), (c, bar(c)(In()))], Val(3), Val(0)
                 ) => Complex{Rational{Int}}(1.0),
                 Diagram(
-                    [(c(Out()), bar(q)), (c, bar(c)), (q, bar(c)(In()))],
-                    Val(3),
-                    Val(0),
+                    [(c(Out()), bar(q)), (c, bar(c)), (q, bar(c)(In()))], Val(3), Val(0)
                 ) => Complex{Rational{Int}}(1.0),
             ),
         )
@@ -147,28 +136,20 @@ end
         truth_retarded = Diagrams(
             Dict(
                 Diagram(
-                    [(c(Out()), bar(q)), (q, bar(c)), (c, bar(q)(In()))],
-                    Val(3),
-                    Val(0),
+                    [(c(Out()), bar(q)), (q, bar(c)), (c, bar(q)(In()))], Val(3), Val(0)
                 ) => Complex{Rational{Int}}(1.0),
                 Diagram(
-                    [(c(Out()), bar(q)), (c, bar(c)), (c, bar(q)(In()))],
-                    Val(3),
-                    Val(0),
+                    [(c(Out()), bar(q)), (c, bar(c)), (c, bar(q)(In()))], Val(3), Val(0)
                 ) => Complex{Rational{Int}}(1.0),
             ),
         )
         truth_advanced = Diagrams(
             Dict(
                 Diagram(
-                    [(q(Out()), bar(c)), (c, bar(q)), (q, bar(c)(In()))],
-                    Val(3),
-                    Val(0),
+                    [(q(Out()), bar(c)), (c, bar(q)), (q, bar(c)(In()))], Val(3), Val(0)
                 ) => Complex{Rational{Int}}(1.0),
                 Diagram(
-                    [(q(Out()), bar(c)), (c, bar(c)), (q, bar(c)(In()))],
-                    Val(3),
-                    Val(0),
+                    [(q(Out()), bar(c)), (c, bar(c)), (q, bar(c)(In()))], Val(3), Val(0)
                 ) => Complex{Rational{Int}}(-1.0),
             ),
         )
