@@ -25,6 +25,7 @@ end
         KeldyshContraction.PropagatorType,
         KeldyshContraction.KeldyshIndex,
         KeldyshContraction.Orientation,
+        KeldyshContraction.IndexKind,
     )
 
     @test check_no_implicit_imports(KeldyshContraction; allow_unanalyzable) == nothing
