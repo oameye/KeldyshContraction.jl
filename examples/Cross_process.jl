@@ -4,16 +4,18 @@ using KeldyshContraction: Regularisation.Minus as Minus
 
 #
 
-@qfields c::Destroy(Classical) q::Destroy(Quantum)
+@qfields c::Boson(Classical) q::Boson(Quantum)
 @syms Γ g
 
 inelastic_terms =
     im * (
-        0.5 * c' * q' * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
-        0.5 * c(Plus) * q(Plus) * (c' * c' + q' * q') +
-        c' * q' * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
+        0.5 * bar(c) * bar(q) * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
+        0.5 * c(Plus) * q(Plus) * (bar(c) * bar(c) + bar(q) * bar(q)) +
+        bar(c) * bar(q) * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
     )
-elastic_terms = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
+elastic_terms = -(
+    0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
+)
 
 L_inelastic = InteractionLagrangian(inelastic_terms, Γ)
 L_elastic = InteractionLagrangian(elastic_terms, g)
