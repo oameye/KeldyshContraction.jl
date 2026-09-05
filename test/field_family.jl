@@ -49,9 +49,7 @@ end
     @test @inferred(field_families(Lϕ)) == [ϕ]
     @test @inferred(target_family(Lϕ)) === ϕ
 
-    Lϕχ = InteractionLagrangian(
-        bar(c) * q + bar(q) * c + bar(χc) * χq + bar(χq) * χc
-    )
+    Lϕχ = InteractionLagrangian(bar(c) * q + bar(q) * c + bar(χc) * χq + bar(χq) * χc)
     @test Set(@inferred(field_families(Lϕχ))) == Set([ϕ, χ])
     @test_throws ArgumentError target_family(Lϕχ)
     @test @inferred(target_family(Lϕχ, ϕ)) === ϕ
