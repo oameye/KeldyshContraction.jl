@@ -145,8 +145,7 @@ function Base.adjoint(d::Diagrams)
 end
 
 """Return whether a diagram carries external `In` and `Out` legs."""
-has_external_legs(d::Diagram) =
-    any(e -> is_in(Contraction(fields(e))), contractions(d))
+has_external_legs(d::Diagram) = any(e -> is_in(Contraction(fields(e))), contractions(d))
 
 """Infer the bulk attachment vertices of an amputated diagram."""
 function amputated_leg_indices(d::Diagram)
