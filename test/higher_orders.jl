@@ -21,8 +21,7 @@ end
 @testset "number of topologies" begin
     @qfields c::Boson(Classical) q::Boson(Quantum)
     elasctic2boson = -(
-        1//2 * (c^2 + q^2) * bar(c) * bar(q) +
-        1//2 * c * q * (bar(c)^2 + bar(q)^2)
+        1//2 * (c^2 + q^2) * bar(c) * bar(q) + 1//2 * c * q * (bar(c)^2 + bar(q)^2)
     )
     L_int = InteractionLagrangian(elasctic2boson)
 
@@ -70,8 +69,7 @@ end
 @testset "third order run's" begin
     @qfields c::Boson(Classical) q::Boson(Quantum)
     elasctic2boson = -(
-        0.5 * (c^2 + q^2) * bar(c) * bar(q) +
-        0.5 * c * q * (bar(c)^2 + bar(q)^2)
+        0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
     )
     L_int = InteractionLagrangian(elasctic2boson)
     GF3 = DressedPropagator(L_int, Val(3), Val(7))
