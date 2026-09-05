@@ -1,11 +1,12 @@
-# Making symbolic quantum field algebra
+# Symbolic Keldysh field algebra
 
-The implemented Computer Algebra System (CAS) for the quantum fields is build using [SymbolicUtils.jl](https://github.com/JuliaSymbolics/SymbolicUtils.jl) and [TermInterface.jl](https://github.com/JuliaSymbolics/TermInterface.jl/):
+The symbolic field algebra is implemented on top of
+[SymbolicUtils.jl](https://github.com/JuliaSymbolics/SymbolicUtils.jl) and
+[TermInterface.jl](https://github.com/JuliaSymbolics/TermInterface.jl/). The package keeps
+its own concrete intermediate representation and implements the interfaces required for
+symbolic-tree interoperability.
 
-- [SymbolicUtils.jl](https://github.com/JuliaSymbolics/SymbolicUtils.jl) is a utility library for symbolic computation in Julia. It provides a set of tools for manipulating and transforming symbolic expressions, including support for rule-base algebraic operations, simplification, and pattern matching.
-- [TermInterface.jl](https://github.com/JuliaSymbolics/TermInterface.jl/) is the package that defines the common interface for defining symbolic expressions. It allows users to define their own types and "define" them as symbols of an algebra.
-
-Using these packages, we can define the algebra of quantum fields in a symbolic way. For this we proposed the type hierarchy:
+The central distinction is between fundamental fields and composite expressions:
 
 ```@example interface
 using GraphRecipes, Plots, KeldyshContraction, Random
@@ -13,50 +14,109 @@ Random.seed!(1) # hide
 theme(:dracula) # hide
 plot(
   KeldyshContraction.QField;
-  method=:tree, fontsize=10, markersize = 0.12, nodeshape=:ellipse
+  method=:tree, fontsize=10, markersize=0.12, nodeshape=:ellipse
 )
 ```
 
-[`KeldyshContraction.QSym`](@ref) will be abstract type representing the individual field of type [`Destroy`](@ref) and [`Create`](@ref). [`KeldyshContraction.QTerm`](@ref) will represent the terms of the algebra, which are the *products* and *sum* of the fields. The type naming and hierarchy is heavily inspired by the implementation in `QuantumCumulants.jl`.
-
-QSym can then have additional properties to make it Keldsysh-specific type fields. In the package this is done by adding fields to `Create` and `Destroys` using *Enum* objects:
-
-- [`KeldyshContraction.KeldyshContour`](@ref) - the Keldysh contour of the field, which can be either `KeldyshContour.Quantum` or `KeldyshContour.Classical`.
-- [`KeldyshContraction.Regularisation`](@ref) - the tadpole regularisation of the field, which can be either `Regularisation.Zero`, `Regularisation.Plus` or `Regularisation.Minus`.
-- [`KeldyshContraction.Position`](@ref) - the position of the field, which can be either `Position.In`, `Position.Out` or `Position.Bulk`.
-
-To make our quantum field types work with the symbolic algebra system, we need to implement several interface functions from SymbolicUtils.jl and TermInterface.jl:
+`QSym` is the abstract interface for a fundamental field and `QTerm` is the abstract
+interface for composite field expressions. Fundamental fields use the single representation
 
 ```julia
+Field{S} <: QSym
+```
+
+where `S <: Statistics` is static because statistics changes the algebraic exchange law.
+For example, a bosonic field has the concrete type `Field{Boson}`.
+
+All other field properties are value data rather than type parameters. A `Field{S}` stores:
+
+- an `Orientation` (`Unbarred` or `Barred`),
+- a neutral `KeldyshIndex`,
+- a `Position`,
+- a `Regularisation`, and
+- concrete fixed-capacity `FieldIndices` metadata.
+
+For bosons, the public names `Quantum` and `Classical` are semantic aliases for the two
+neutral Keldysh-index values. Consequently, changing a position, regularisation, or Keldysh
+component does not create another Julia field family.
+
+Barred path-integral fields are represented explicitly with `bar`:
+
+```@example interface
+using KeldyshContraction
+
+@qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+
+(typeof(ϕ), typeof(bar(ϕ)), bar(bar(ϕ)) == ϕ)
+```
+
+`bar` is intentionally distinct from Hermitian adjoint. At the fundamental path-integral
+field level, barred and unbarred variables are independent integration variables. Physical
+adjoint operations remain meaningful for higher-level objects such as propagators and
+self-energies.
+
+## Concrete expression storage
+
+Products and sums preserve statistics and coefficient representation in their types:
+
+```julia
+struct QMul{C<:Number,S<:Statistics} <: QTerm
+    arg_c::C
+    args_nc::Vector{Field{S}}
+end
+
+struct QAdd{C<:Number,S<:Statistics} <: QTerm
+    arguments::Vector{QMul{C,S}}
+end
+```
+
+This avoids abstract-element containers such as `Vector{QSym}` in the symbolic IR. A
+homogeneous bosonic expression therefore has a concrete element type all the way down from
+`QAdd` to its fields.
+
+Algebraic zero and one are also represented inside this IR. They are `QMul` values with an
+empty field vector and respectively zero or unit coefficient. This makes operations such as
+`x^0`, `x + 0`, and coefficient promotion return structurally predictable types.
+
+Coefficient conversion is explicit. Arithmetic promotes the coefficient type according to
+Julia's normal numeric promotion rules, while `convert_coefficients` and
+`rationalize_coefficients` perform requested representation changes. Constructing an
+`InteractionLagrangian` does not inspect floating-point values and silently rationalize
+them.
+
+## Canonical field ordering
+
+Every `QMul` is canonicalized on construction. The ordering is defined from concrete field
+metadata, while the sign associated with exchanging two fields is statistics-dependent.
+For bosons, every exchange contributes `+1`. This separation is the extension point used by
+the fermionic implementation without changing the expression storage.
+
+Canonical ordering is part of the package IR: code should not assume that
+`SymbolicUtils.arguments(product)` preserves the order in which a mathematically commuting
+bosonic product was written.
+
+## SymbolicUtils and TermInterface
+
+The package implements the standard symbolic interfaces so its concrete terms can
+participate in the surrounding Julia symbolic ecosystem:
+
+```@example interface
+using KeldyshContraction
 using KeldyshContraction: SymbolicUtils, TermInterface
 
-@qfields ϕ::Destroy(Classical)
+@qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+expr = 2 * ϕ * ψ
 
-TermInterface.head(ϕ) = :call
-SymbolicUtils.iscall(ϕ) = false
-SymbolicUtils.iscall(ϕ*ϕ) = true
-TermInterface.metadata(ϕ) = nothing
-SymbolicUtils.symtype(ϕ) = Destroy{Classical, KeldyshContraction.Zero, Nothing} 
-(one(ϕ), zero(ϕ)) = (1, 0)
+(
+    TermInterface.head(ϕ),
+    SymbolicUtils.iscall(ϕ),
+    SymbolicUtils.iscall(expr),
+    SymbolicUtils.operation(expr),
+    SymbolicUtils.arguments(expr),
+)
 ```
 
-The key interfaces are:
-
-- `head`: Defines how the expression should be interpreted (`:call` indicates function application)
-- `iscall`: Specifies which types represent function calls (`QTerm` types) vs atomic symbols (`QSym` types)
-- `metadata`: Allows attaching additional information to terms in this package is not used and set to nothing
-
-For type promotion during operations, we implement:
-
-```julia
-# Type promotion rules for operations like +, -, *, /, //, \, ^
-SymbolicUtils.promote_symtype(::typeof(+), T::Type{<:QField}, S::Type{<:QField}) = promote_type(T, S)
-SymbolicUtils.promote_symtype(::typeof(*), T::Type{<:QField}, S::Type{<:Number}) = T
-```
-
-These implementations allow our quantum field types to:
-
-1. Be recognized as symbolic terms
-2. Participate in algebraic operations
-3. Follow proper type promotion rules
-4. Handle basic mathematical concepts like identities and zeros
+`SymbolicUtils.arguments` is an interoperability view and may contain the coefficient and
+fields in a mixed vector. Package-internal algorithms use semantic accessors such as
+`coefficient`, `fields`, `terms`, and `allfields` instead. This keeps symbolic-tree
+compatibility separate from the concrete storage contract.
