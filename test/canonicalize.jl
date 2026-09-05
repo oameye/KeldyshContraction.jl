@@ -1,7 +1,8 @@
 using KeldyshContraction, Test
 using KeldyshContraction: canonicalize, Bulk, In, Out, sort_by_position_and_type, positions
 
-@qfields c::Boson(Classical) q::Boson(Quantum)
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]
 
 @testset "canonicalize" begin
     # Basic isomorphic graphs
