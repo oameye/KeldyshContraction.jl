@@ -171,6 +171,12 @@ Base.zero(f::Field{S}) where {S<:Statistics} = QMul{Int,S}(0, Field{S}[])
 Base.one(::Type{Field{S}}) where {S<:Statistics} = QMul{Int,S}(1, Field{S}[])
 Base.zero(::Type{Field{S}}) where {S<:Statistics} = QMul{Int,S}(0, Field{S}[])
 
+struct QFieldDeclaration
+    name::Symbol
+    statistics::Symbol
+    component_args::Vector{Any}
+end
+
 """Declare field families or individual Keldysh components."""
 macro qfields(qs...)
     declarations = map(parse_qfield_declaration, qs)
@@ -192,14 +198,17 @@ macro qfields(qs...)
     return Expr(:block, defs..., :(tuple($(names...))))
 end
 
-function parse_qfield_declaration(expr)
-    @assert expr isa Expr && expr.head == :(::) "Expected expression of form name::Statistics"
+function parse_qfield_declaration(expr::Expr)::QFieldDeclaration
+    @assert expr.head == :(::) "Expected expression of form name::Statistics"
     name = expr.args[1]
     @assert name isa Symbol "Left side of :: must be a symbol"
 
     rhs = expr.args[2]
     if rhs isa Expr && rhs.head == :call
-        return (name=name, statistics=rhs.args[1], component_args=rhs.args[2:end])
+        statistics = rhs.args[1]
+        @assert statistics isa Symbol "Statistics must be a type name"
+        return QFieldDeclaration(name, statistics, rhs.args[2:end])
     end
-    return (name=name, statistics=rhs, component_args=Any[])
+    @assert rhs isa Symbol "Statistics must be a type name"
+    return QFieldDeclaration(name, rhs, Any[])
 end
