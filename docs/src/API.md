@@ -22,23 +22,27 @@ using Term, KeldyshContraction # hide
 Term.typestree(KeldyshContraction.QSym) # hide
 ```
 
-The package uses one concrete field family, parameterized only by statistics. Bosonic
-fields therefore have type `Field{Boson}`; barred/unbarred orientation, Keldysh component,
-position, regularisation, and internal indices are concrete value data.
+The package uses one concrete field representation, parameterized only by statistics.
+Bosonic fields therefore have type `Field{Boson}`. Physical field identity is stored in a
+`FieldFamily{Boson}`, while barred/unbarred orientation, Keldysh component, position, and
+regularisation are concrete value data on each field component.
 
 ```@docs
 KeldyshContraction.QField
 KeldyshContraction.QSym
 KeldyshContraction.Statistics
 KeldyshContraction.Boson
+KeldyshContraction.FieldFamily
 KeldyshContraction.Field
+KeldyshContraction.field_family
 KeldyshContraction.bar
 ```
 
 #### Field properties
 
 Bosonic `Classical` and `Quantum` are semantic aliases over the package's neutral two-valued
-Keldysh index. They do not create different Julia field types.
+Keldysh index. They are components of one physical field family and do not create different
+Julia field types.
 
 ```@docs
 KeldyshContraction.KeldyshIndex
@@ -54,20 +58,22 @@ KeldyshContraction.reconstruct
 
 The constructors `Bulk(i)`, `In()`, and `Out()` create `Position` values. Calling a field
 with a `Position` or `Regularisation` value returns the same concrete field type with that
-value changed.
+value changed and preserves its field family.
 
 #### Field constructors
 
-Fields are normally created with `@qfields`:
+Declare physical field families with `@qfields`, then obtain their Keldysh components by
+indexing the family:
 
 ```@example API
 using KeldyshContraction
 using KeldyshContraction: position
 
-@qfields ϕ::Boson(Classical)
-barϕ = bar(ϕ)
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]
+barc = bar(c)
 
-(position(ϕ), typeof(ϕ), typeof(barϕ))
+(field_family(c) == field_family(q), position(c), typeof(c), typeof(barc))
 ```
 
 ```@docs
