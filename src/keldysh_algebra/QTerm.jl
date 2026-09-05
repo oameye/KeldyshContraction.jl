@@ -69,10 +69,7 @@ function TermInterface.maketerm(
     return QMul{C,S}(one(C), args)
 end
 function TermInterface.maketerm(
-    ::Type{QMul{C,S}},
-    ::typeof(*),
-    args::Vector{Union{C,Field{S}}},
-    metadata,
+    ::Type{QMul{C,S}}, ::typeof(*), args::Vector{Union{C,Field{S}}}, metadata
 ) where {C<:Number,S<:Statistics}
     coeff = one(C)
     fs = Field{S}[]
@@ -107,18 +104,19 @@ end
 function QAdd(args::Vector{Field{S}}) where {S<:Statistics}
     return QAdd{Int,S}(QMul{Int,S}[QMul(1, Field{S}[f]) for f in args])
 end
-QAdd{C,S}() where {C<:Number,S<:Statistics} =
-    QAdd{C,S}(QMul{C,S}[QMul{C,S}(zero(C), Field{S}[])])
+function QAdd{C,S}() where {C<:Number,S<:Statistics}
+    return QAdd{C,S}(QMul{C,S}[QMul{C,S}(zero(C), Field{S}[])])
+end
 
 Base.length(a::QAdd) = length(a.arguments)
 Base.iszero(a::QAdd) = all(iszero, a.arguments)
 Base.isone(a::QAdd) = length(a.arguments) == 1 && isone(first(a.arguments))
 Base.zero(a::QAdd{C,S}) where {C,S} = QAdd{C,S}()
-Base.one(a::QAdd{C,S}) where {C,S} =
-    QAdd{C,S}(QMul{C,S}[QMul{C,S}(one(C), Field{S}[])])
+Base.one(a::QAdd{C,S}) where {C,S} = QAdd{C,S}(QMul{C,S}[QMul{C,S}(one(C), Field{S}[])])
 Base.zero(::Type{QAdd{C,S}}) where {C,S} = QAdd{C,S}()
-Base.one(::Type{QAdd{C,S}}) where {C,S} =
-    QAdd{C,S}(QMul{C,S}[QMul{C,S}(one(C), Field{S}[])])
+function Base.one(::Type{QAdd{C,S}}) where {C,S}
+    return QAdd{C,S}(QMul{C,S}[QMul{C,S}(one(C), Field{S}[])])
+end
 
 SymbolicUtils.operation(::QAdd) = (+)
 SymbolicUtils.arguments(a::QAdd) = a.arguments
