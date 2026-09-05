@@ -64,7 +64,11 @@ end
 
 function set_reg_to_zero(f::Field{S}) where {S}
     return Field{S}(
-        name(f), orientation(f), keldysh_index(f), position(f), Regularisation.Zero,
+        name(f),
+        orientation(f),
+        keldysh_index(f),
+        position(f),
+        Regularisation.Zero,
         field_indices(f),
     )
 end
@@ -91,35 +95,14 @@ function bar(f::Field{S}) where {S}
     )
 end
 
-# Transitional source/test compatibility shims. These are not exported and are removed
-# once the repository has been migrated to `Boson` / `bar` syntax.
-"""Transitional constructor for an unbarred bosonic field."""
-function Destroy(
-    name::Symbol,
-    keldysh::KeldyshIndex.T,
-    reg::Regularisation.T=Regularisation.Zero,
-    pos::Position=Bulk(),
-)
-    return Field{Boson}(name, keldysh, Orientation.Unbarred, reg, pos)
+function Base.isequal(a::Field{S}, b::Field{S}) where {S}
+    return isequal(name(a), name(b)) &&
+           isequal(orientation(a), orientation(b)) &&
+           isequal(keldysh_index(a), keldysh_index(b)) &&
+           isequal(position(a), position(b)) &&
+           isequal(regularisation(a), regularisation(b)) &&
+           isequal(field_indices(a), field_indices(b))
 end
-"""Transitional constructor for a barred bosonic field."""
-function Create(
-    name::Symbol,
-    keldysh::KeldyshIndex.T,
-    reg::Regularisation.T=Regularisation.Zero,
-    pos::Position=Bulk(),
-)
-    return Field{Boson}(name, keldysh, Orientation.Barred, reg, pos)
-end
-Base.adjoint(f::Field{Boson}) = bar(f)
-
-Base.isequal(a::Field{S}, b::Field{S}) where {S} =
-    isequal(name(a), name(b)) &&
-    isequal(orientation(a), orientation(b)) &&
-    isequal(keldysh_index(a), keldysh_index(b)) &&
-    isequal(position(a), position(b)) &&
-    isequal(regularisation(a), regularisation(b)) &&
-    isequal(field_indices(a), field_indices(b))
 Base.:(==)(a::Field{S}, b::Field{S}) where {S} = isequal(a, b)
 
 function Base.isless(a::Field{S}, b::Field{S}) where {S}
@@ -176,20 +159,12 @@ macro qfields(qs...)
     defs = map(qs) do q
         nf = _name_field(q)
         fname, field_expr = nf.name, nf.field_expr
-        field_kind = field_expr.args[1]
+        statistics_expr = field_expr.args[1]
         field_args = field_expr.args[2:end]
 
-        # Temporary parser compatibility while examples are migrated in this PR.
-        statistics_expr = field_kind === :Destroy || field_kind === :Create ? :Boson : field_kind
-        orientation_expr = field_kind === :Create ? :(Orientation.Barred) : :(Orientation.Unbarred)
-
-        construction = :(
-            Field{$(esc(statistics_expr))}(
-                $(QuoteNode(fname)),
-                $(map(esc, field_args)...),
-                $orientation_expr,
-            )
-        )
+        construction = :(Field{$(esc(statistics_expr))}(
+            $(QuoteNode(fname)), $(map(esc, field_args)...), Orientation.Unbarred
+        ))
         return :($(esc(fname)) = $construction)
     end
 
