@@ -16,10 +16,11 @@ using KeldyshContraction
 # +(\bar{\phi}_c\bar{\phi}_q\phi_q\phi_q) + c.c.]
 # ```
 
-# Let us represent this quantum and classical field inside the `KeldyshContraction` package
-# and define the interaction Lagrangian:
+# Let us represent the physical bosonic field family inside `KeldyshContraction`, then obtain
+# its classical and quantum Keldysh components and define the interaction Lagrangian:
 
-@qfields c::Boson(Classical) q::Boson(Quantum)
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]
 elasctic2boson = -(
     0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
 )
