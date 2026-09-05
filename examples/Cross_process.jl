@@ -4,7 +4,8 @@ using KeldyshContraction: Regularisation.Minus as Minus
 
 #
 
-@qfields c::Boson(Classical) q::Boson(Quantum)
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]
 @syms Γ g
 
 inelastic_terms =
