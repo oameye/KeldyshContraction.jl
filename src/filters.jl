@@ -3,8 +3,9 @@
 #################################
 
 is_qq_contraction(v::Contraction) = iszero(sum(Int.(keldysh_index.(v))))
-is_qq_contraction(v::Tuple{Field{S},Field{S}}) where {S<:Statistics} =
-    is_qq_contraction(Contraction(v))
+function is_qq_contraction(v::Tuple{Field{S},Field{S}}) where {S<:Statistics}
+    return is_qq_contraction(Contraction(v))
+end
 
 function is_physical_propagator(a::Contraction)
     positions = position.(a)
