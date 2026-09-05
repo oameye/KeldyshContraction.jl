@@ -39,3 +39,17 @@ end
     @test field_family(χc) === χ
     @test field_family(c) != field_family(χc)
 end
+
+@testset "interaction field families" begin
+    @qfields ϕ::Boson χ::Boson
+    c, q = ϕ[Classical], ϕ[Quantum]
+    χc, χq = χ[Classical], χ[Quantum]
+
+    Lϕ = InteractionLagrangian(bar(c) * q + bar(q) * c)
+    @test @inferred(field_families(Lϕ)) == [ϕ]
+
+    Lϕχ = InteractionLagrangian(
+        bar(c) * q + bar(q) * c + bar(χc) * χq + bar(χq) * χc
+    )
+    @test Set(@inferred(field_families(Lϕχ))) == Set([ϕ, χ])
+end
