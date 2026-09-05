@@ -132,12 +132,7 @@ function make_diagram!(
 end
 
 function make_diagram_pair(
-    pairing::WickPairing{Boson,E},
-    arg_c,
-    imag_factor,
-    simplify::Bool,
-    ::Val{E},
-    ::Val{E2},
+    pairing::WickPairing{Boson,E}, arg_c, imag_factor, simplify::Bool, ::Val{E}, ::Val{E2}
 ) where {E,E2}
     contractions = collect(pairing.contractions)
     contractions′, prefactor =
