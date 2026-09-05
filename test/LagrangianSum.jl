@@ -4,7 +4,8 @@ using KeldyshContraction: is_physical, is_conserved, _wick_contraction
 using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus
 import KeldyshContraction as KC
-@qfields c::Boson(Classical) q::Boson(Quantum)
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]
 @syms Γ g
 
 inelastic_terms =
@@ -26,6 +27,8 @@ end
 
 @testset "Accessing" begin
     @test isequal(parameters(L), [Γ, g])
+    @test field_families(L_inelastic) == [ϕ]
+    @test field_families(L_elastic) == [ϕ]
 end
 
 @testset "Correctness first order" begin
