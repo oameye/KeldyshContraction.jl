@@ -275,6 +275,11 @@ end
 
     Σ = SelfEnergy(GF, Val(2))
 
+    # 9 of the 11 diagrams line up. The two that do not differ only in which leg carries
+    # the regularisation of an equal-time tadpole: Gᴿ(y⁺,y) against Gᴿ(y,y⁻), which have
+    # the same `subtraction` and so are the same propagator written two ways. Wick
+    # contraction emits both spellings, so closing this needs a canonical form for the
+    # regularisation of an equal-position edge, not a change to the adjoint.
     @test_broken isequal(adjoint(Σ.advanced), Σ.retarded)
     @test_broken isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)
 

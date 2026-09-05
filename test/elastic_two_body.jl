@@ -45,18 +45,14 @@ L_int = InteractionLagrangian(elasctic2boson, g)
     end
 
     @testset "green's function" begin
-        # using KeldyshContraction: _conj
         L = InteractionLagrangian(elasctic2boson)
         GF = DressedPropagator(L, Val(1), Val(3))
 
-        @test_broken iszero(_conj(GF.advanced) - GF.retarded)
-        @test_broken isequal(KeldyshContraction._conj(GF.keldysh), -1 * GF.keldysh)
-        # TODO this is not equal to do G^R and G^A being at different coordinates
-        # switch in and out coordinate when adjoint(::DressedPropagator)
+        @test isequal(adjoint(GF.advanced), GF.retarded)
+        @test isequal(adjoint(GF.keldysh), -1 * GF.keldysh)
     end
 
     @testset "self-energy" begin
-        # using KeldyshContraction: _conj
         L = InteractionLagrangian(elasctic2boson)
         GF = DressedPropagator(L, Val(1), Val(3))
         Σ = SelfEnergy(GF, Val(1))
@@ -342,6 +338,6 @@ end
 
     Σ = SelfEnergy(GF, Val(2))
 
-    @test_broken isequal(adjoint(Σ.advanced), Σ.retarded) # up to some swap
+    @test isequal(adjoint(Σ.advanced), Σ.retarded)
     @test isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)
 end

@@ -1,9 +1,19 @@
 # *,+,/,- math of the QField and QSym types
 
+"""
+    field_order(ϕ::QSym)
+
+Sorting key putting the noncommutative factors of a [`QMul`](@ref) in canonical order:
+ladder type first, then coordinate, then contour (classical before quantum), then name.
+The last two keys make the product commutative for fields that only differ in contour or
+name.
+"""
+field_order(ϕ::QSym) = (ladder(ϕ), index(ϕ), -Int(contour(ϕ)), name(ϕ))
+sort_fields!(args) = sort!(args; by=field_order)
+
 function Base.:*(a::QSym, b::QSym)
     args = QSym[a, b]
-    sort!(args; by=position)
-    sort!(args; by=ladder)
+    sort_fields!(args)
     return QMul(1, args)
 end
 
@@ -23,21 +33,20 @@ end
 
 function Base.:*(a::QSym, b::QMul)
     args_nc = vcat(a, b.args_nc)
-    sort!(args_nc; by=position)
-    sort!(args_nc; by=ladder)
+    sort_fields!(args_nc)
     return QMul(b.arg_c, args_nc)
 end
 Base.:*(a::QMul, b::QSym) = b * a
 
 function Base.:*(a::QMul, b::QMul)
     args_nc = vcat(a.args_nc, b.args_nc)
-    sort!(args_nc; by=position)
-    sort!(args_nc; by=ladder)
+    sort_fields!(args_nc)
     arg_c = a.arg_c * b.arg_c
     return QMul(arg_c, args_nc)
 end
 
 Base.:/(a::QField, b::Number) = (1 // b) * a ## TODO: maybe rationalize?
+Base.://(a::QField, b::Number) = (1 // b) * a
 
 ## Powers
 function Base.:^(a::QField, n::Integer)

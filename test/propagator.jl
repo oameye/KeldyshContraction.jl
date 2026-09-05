@@ -20,9 +20,9 @@ end
     using KeldyshContraction: PropagatorType, Regularisation
     p = Edge(q, c'(In()))
     @test KeldyshContraction.position_category(p) == :in
-    @test_broken KeldyshContraction.contours(p) == [Quantum, Classical] # not needed
+    @test KeldyshContraction.contours(p) == (Quantum, Classical)
     @test !KeldyshContraction.is_bulk(p)
-    @test_broken KeldyshContraction.regularisations(p) == fill(Regularisation.Zero, 2) # not needed
+    @test KeldyshContraction.regularisations(p) == ntuple(_ -> Regularisation.Zero, 2)
     @test KeldyshContraction.propagator_type(p) == PropagatorType.Advanced
 end
 
@@ -67,16 +67,19 @@ end
 
     @test isequal(p1', p2) # (G^R)† = G^A
 
+    # (G^K)† = -G^K, but an `Edge` carries no prefactor, so the sign has nowhere to go:
+    # adjoining a Keldysh edge leaves it untouched. `adjoint_diagram` carries the sign
+    # instead, as (-1)^(number of Keldysh edges).
     p = Edge(c, c'(In()))
-    @test_broken isequal(p', -1 * p) # (G^K)† = -G^K
+    @test isequal(p', p)
 end
 
 @testset "regularisation" begin
     p = Edge(q(Plus), c')
-    @test_broken KeldyshContraction.regular(p) == false
+    @test KeldyshContraction.regular(p) == false
 
     p = Edge(c(Minus), c'(In()))
-    @test_broken KeldyshContraction.regular(p) == true
+    @test KeldyshContraction.regular(p) == true
 end
 
 @testset "propagator type" begin
