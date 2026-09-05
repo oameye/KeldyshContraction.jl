@@ -21,11 +21,16 @@ Base.iterate(p::WickPairing) = iterate(p.contractions)
 Base.iterate(p::WickPairing, state) = iterate(p.contractions, state)
 Base.eltype(::Type{WickPairing{S,E}}) where {S,E} = Contraction{S}
 
-function Diagram(pairing::WickPairing{Boson,E}, ::Val{E}, ::Val{E2}) where {E,E2}
+function Diagram(pairing::WickPairing{S,E}, ::Val{E}, ::Val{E2}) where {S<:Statistics,E,E2}
     return Diagram(collect(pairing.contractions), Val(E), Val(E2))
 end
 
 pairing_sign(::Type{Boson}, perm) = Int8(1)
+
+function wick_prefactor(::Type{C}, ::Val{O}) where {C<:Number,O}
+    exact = convert(ComplexRationals, -im * im^O) / factorial(O)
+    return convert(C, exact)
+end
 
 """
     wick_contraction(in_out, L, ::Val{order}, ::Val{edges}; kwargs...)
@@ -33,19 +38,27 @@ pairing_sign(::Type{Boson}, perm) = Int8(1)
 Compute Wick-contracted diagrams of an interaction with the supplied external fields.
 """
 function wick_contraction(
-    in_out::QMul, L::InteractionLagrangian, ::Val{O}, ::Val{E}; kwargs...
-) where {O,E}
+    in_out::QMul{CI,S},
+    L::InteractionLagrangian{CL,S},
+    ::Val{O},
+    ::Val{E};
+    kwargs...,
+) where {CI<:Number,CL<:Number,S<:Statistics,O,E}
     @assert number_of_propagators(L) * O + 1 == E "The supplied Val{edges} must equal the interaction's propagator count times Val{order}, plus the external propagator"
     return _wick_contraction(in_out, L, Val(E), Val(O); kwargs...)
 end
 
 @inline function _wick_contraction(
-    in_out::QMul, L::InteractionLagrangian, ::Val{E}, ::Val{O}; kwargs...
-) where {E,O}
+    in_out::QMul{CI,S},
+    L::InteractionLagrangian{CL,S},
+    ::Val{E},
+    ::Val{O};
+    kwargs...,
+) where {CI<:Number,CL<:Number,S<:Statistics,E,O}
     l = length(L.lagrangian)
-
-    diagrams = Diagrams{E,max_edges(O)}()
-    prefactor = -1 * im * im^O // factorial(O)
+    C = diagram_coefficient_type(CI, CL)
+    diagrams = Diagrams{C,S,E,max_edges(O)}()
+    prefactor = wick_prefactor(C, Val(O))
 
     regularise = should_regularise(L.lagrangian)
     for coefficients in Combinatorics.multiexponents(l, O)
@@ -59,8 +72,13 @@ end
 end
 
 function wick_contraction(
-    in_out::QMul, Ls::LagrangianSum, ::Val{O}, ::Val{E}; simplify::Vector{Bool}, kwargs...
-) where {O,E}
+    in_out::QMul{CI,S},
+    Ls::LagrangianSum{CL,S},
+    ::Val{O},
+    ::Val{E};
+    simplify::Vector{Bool},
+    kwargs...,
+) where {CI<:Number,CL<:Number,S<:Statistics,O,E}
     @assert all(number_of_propagators(L) * O + 1 == E for L in arguments(Ls)) "All LagrangianSum terms must produce the supplied number of propagator edges"
     ps = parameters(Ls)
     exponents = Combinatorics.multiexponents(length(Ls), O)
@@ -87,10 +105,15 @@ function wick_contraction(
 end
 
 @inline function _wick_contraction(
-    in_out::QMul, a::QAdd, ::Val{E}, ::Val{O}; kwargs...
-) where {E,O}
-    diagrams = Diagrams{E,max_edges(O)}()
-    prefactor = -1 * im * im^O / factorial(O)
+    in_out::QMul{CI,S},
+    a::QAdd{CA,S},
+    ::Val{E},
+    ::Val{O};
+    kwargs...,
+) where {CI<:Number,CA<:Number,S<:Statistics,E,O}
+    C = diagram_coefficient_type(CI, CA)
+    diagrams = Diagrams{C,S,E,max_edges(O)}()
+    prefactor = wick_prefactor(C, Val(O))
 
     regularise = should_regularise(a)
     for arg in terms(a)
@@ -100,12 +123,12 @@ end
 end
 
 function wick_contraction!(
-    diagrams::Diagrams{E1,E2},
-    a::QMul;
+    diagrams::Diagrams{C,S,E1,E2},
+    a::QMul{A,S};
     regularise=true,
     simplify=false,
     _set_reg_to_zero=false,
-) where {E1,E2}
+) where {C<:Number,A<:Number,S<:Statistics,E1,E2}
     @assert is_conserved(a)
     @assert is_physical(a)
 
@@ -115,13 +138,13 @@ function wick_contraction!(
 end
 
 function make_diagram!(
-    diagrams::Diagrams{E1,E2},
-    pairings::Vector{WickPairing{Boson,E1}},
+    diagrams::Diagrams{C,S,E1,E2},
+    pairings::Vector{WickPairing{S,E1}},
     arg_c,
     simplify::Bool,
-) where {E1,E2}
+) where {C<:Number,S<:Statistics,E1,E2}
     isempty(pairings) && return nothing
-    imag_factor = im^E1
+    imag_factor = convert(C, im^E1)
     for pairing in pairings
         diagram, prefactor = make_diagram_pair(
             pairing, arg_c, imag_factor, simplify, Val(E1), Val(E2)
@@ -132,14 +155,19 @@ function make_diagram!(
 end
 
 function make_diagram_pair(
-    pairing::WickPairing{Boson,E}, arg_c, imag_factor, simplify::Bool, ::Val{E}, ::Val{E2}
-) where {E,E2}
+    pairing::WickPairing{S,E},
+    arg_c,
+    imag_factor,
+    simplify::Bool,
+    ::Val{E},
+    ::Val{E2},
+) where {S<:Statistics,E,E2}
     contractions = collect(pairing.contractions)
     contractions′, prefactor =
         simplify ? advanced_to_retarded(contractions, arg_c) : (contractions, arg_c)
     prefactor *= pairing.sign
     sort!(contractions′; by=sort_by_position_and_type)
-    edges = FixedVector{E,Edge}(Edge(contraction) for contraction in contractions′)
+    edges = FixedVector{E,Edge{S}}(Edge(contraction) for contraction in contractions′)
     return Diagram(edges, Val(E2)) => imag_factor * prefactor
 end
 
@@ -219,12 +247,13 @@ end
 # Vacuum Contractions
 ######################
 
-function _wick_contraction(a::QAdd, ::Val{E}; kwargs...) where {E}
+function _wick_contraction(a::QAdd{C,S}, ::Val{E}; kwargs...) where {C<:Number,S<:Statistics,E}
     args = terms(a)
     @assert all(number_of_propagators(arg) == E for arg in args)
     @assert is_bulk(a) "The private two-argument _wick_contraction entry point is for vacuum terms"
 
-    diagrams = Diagrams{E,topology_length(E + 1)}()
+    D = diagram_coefficient_type(C)
+    diagrams = Diagrams{D,S,E,topology_length(E + 1)}()
     regularise = should_regularise(a)
     for arg in args
         wick_contraction!(diagrams, arg; regularise, kwargs...)
@@ -232,13 +261,14 @@ function _wick_contraction(a::QAdd, ::Val{E}; kwargs...) where {E}
     return diagrams
 end
 
-function _wick_contraction(a::QMul, ::Val{E}; kwargs...) where {E}
+function _wick_contraction(a::QMul{C,S}, ::Val{E}; kwargs...) where {C<:Number,S<:Statistics,E}
     @assert is_conserved(a)
     @assert is_physical(a)
     @assert number_of_propagators(a) == E
     @assert is_bulk(a) "The private two-argument _wick_contraction entry point is for vacuum terms"
 
-    diagrams = Diagrams{E,topology_length(E + 1)}()
+    D = diagram_coefficient_type(C)
+    diagrams = Diagrams{D,S,E,topology_length(E + 1)}()
     regularise = should_regularise(a)
     wick_contraction!(diagrams, a; regularise, kwargs...)
     return diagrams
