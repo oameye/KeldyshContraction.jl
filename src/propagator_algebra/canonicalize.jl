@@ -30,7 +30,8 @@ function sort_by_position_and_type(p::Contraction)::Float64
         return float(pairing(i, j) * 3 + type)
     end
 end
-sort_by_position_and_type(p::Edge)::Float64 = sort_by_position_and_type(Contraction(fields(p)))
+sort_by_position_and_type(p::Edge)::Float64 =
+    sort_by_position_and_type(Contraction(fields(p)))
 
 function make_NautyDiGraph(vs)
     ps_int = map(integer_positions, vs)
