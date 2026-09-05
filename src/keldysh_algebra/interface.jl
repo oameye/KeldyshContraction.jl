@@ -43,18 +43,15 @@ end
 const Quantum = KeldyshIndex.First
 const Classical = KeldyshIndex.Second
 
-# Transitional source-compatibility alias while tests/docs are migrated in this PR.
-# It is not exported and will be removed before the PR is marked ready.
-const KeldyshContour = KeldyshIndex
-
 """A concrete internal field index such as spin, flavor, band, or species."""
 struct FieldIndex
     kind::Symbol
     value::Int16
 end
 
-Base.isequal(a::FieldIndex, b::FieldIndex) =
-    isequal(a.kind, b.kind) && isequal(a.value, b.value)
+function Base.isequal(a::FieldIndex, b::FieldIndex)
+    return isequal(a.kind, b.kind) && isequal(a.value, b.value)
+end
 Base.hash(x::FieldIndex, h::UInt) = hash(FieldIndex, hash(x.kind, hash(x.value, h)))
 function Base.isless(a::FieldIndex, b::FieldIndex)
     a.kind == b.kind || return isless(a.kind, b.kind)
@@ -78,17 +75,16 @@ end
 
 FieldIndices() = FieldIndices(ntuple(_ -> EMPTY_FIELD_INDEX, MAX_FIELD_INDICES), UInt8(0))
 function FieldIndices(indices::Vararg{FieldIndex,N}) where {N}
-    N <= MAX_FIELD_INDICES || throw(
-        ArgumentError("at most $MAX_FIELD_INDICES field indices are supported")
-    )
+    N <= MAX_FIELD_INDICES ||
+        throw(ArgumentError("at most $MAX_FIELD_INDICES field indices are supported"))
     data = ntuple(i -> i <= N ? indices[i] : EMPTY_FIELD_INDEX, MAX_FIELD_INDICES)
     return FieldIndices(data, UInt8(N))
 end
 
 Base.length(indices::FieldIndices) = Int(indices.n)
-Base.getindex(indices::FieldIndices, i::Int) = begin
+function Base.getindex(indices::FieldIndices, i::Int)
     1 <= i <= length(indices) || throw(BoundsError(indices, i))
-    indices.data[i]
+    return indices.data[i]
 end
 function Base.iterate(indices::FieldIndices, state::Int=1)
     state > length(indices) && return nothing
