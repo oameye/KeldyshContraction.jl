@@ -6,18 +6,22 @@
 struct QMul{C<:Number,S<:Statistics} <: QTerm
     arg_c::C
     args_nc::Vector{Field{S}}
+
+    function QMul{C,S}(arg_c::C, args_nc::Vector{Field{S}}) where {C<:Number,S<:Statistics}
+        if iszero(arg_c)
+            return new{C,S}(zero(C), Field{S}[])
+        end
+        args = copy(args_nc)
+        sign = canonicalize_fields!(args)
+        coeff = _apply_exchange_sign(arg_c, sign)
+        return new{C,S}(coeff, args)
+    end
 end
 
 @inline _apply_exchange_sign(c::C, sign::Int8) where {C<:Number} = sign == 1 ? c : -c
 
 function QMul(arg_c::C, args_nc::Vector{Field{S}}) where {C<:Number,S<:Statistics}
-    if iszero(arg_c)
-        return QMul{C,S}(zero(C), Field{S}[])
-    end
-    args = copy(args_nc)
-    sign = canonicalize_fields!(args)
-    coeff = _apply_exchange_sign(arg_c, sign)
-    return QMul{C,S}(coeff, args)
+    return QMul{C,S}(arg_c, args_nc)
 end
 
 QMul(args_nc::Vector{Field{S}}) where {S<:Statistics} = QMul(1, args_nc)
@@ -60,12 +64,12 @@ end
 TermInterface.metadata(::QMul) = nothing
 
 function TermInterface.maketerm(
-    ::Type{<:QMul}, ::typeof(*), args::Vector{Field{S}}, metadata
-) where {S<:Statistics}
-    return QMul(1, args)
+    ::Type{QMul{C,S}}, ::typeof(*), args::Vector{Field{S}}, metadata
+) where {C<:Number,S<:Statistics}
+    return QMul{C,S}(one(C), args)
 end
 function TermInterface.maketerm(
-    ::Type{<:QMul},
+    ::Type{QMul{C,S}},
     ::typeof(*),
     args::Vector{Union{C,Field{S}}},
     metadata,
@@ -79,7 +83,7 @@ function TermInterface.maketerm(
             coeff *= arg
         end
     end
-    return QMul(coeff, fs)
+    return QMul{C,S}(coeff, fs)
 end
 
 function bar(q::QMul{C,S}) where {C,S}
@@ -100,7 +104,6 @@ struct QAdd{C<:Number,S<:Statistics} <: QTerm
     arguments::Vector{QMul{C,S}}
 end
 
-QAdd(args::Vector{QMul{C,S}}) where {C<:Number,S<:Statistics} = QAdd{C,S}(args)
 function QAdd(args::Vector{Field{S}}) where {S<:Statistics}
     return QAdd{Int,S}(QMul{Int,S}[QMul(1, Field{S}[f]) for f in args])
 end
@@ -121,9 +124,9 @@ SymbolicUtils.operation(::QAdd) = (+)
 SymbolicUtils.arguments(a::QAdd) = a.arguments
 TermInterface.metadata(::QAdd) = nothing
 function TermInterface.maketerm(
-    ::Type{<:QAdd}, ::typeof(+), args::Vector{QMul{C,S}}, metadata
+    ::Type{QAdd{C,S}}, ::typeof(+), args::Vector{QMul{C,S}}, metadata
 ) where {C<:Number,S<:Statistics}
-    return QAdd(args)
+    return QAdd{C,S}(args)
 end
 
 coefficient(q::QAdd) = map(coefficient, q.arguments)
