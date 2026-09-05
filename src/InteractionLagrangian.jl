@@ -57,12 +57,20 @@ function InteractionLagrangian(
     q_idx === nothing && throw(ArgumentError("interaction has no quantum field"))
     c_idx === nothing && throw(ArgumentError("interaction has no classical field"))
 
-    families = unique(field_family.(fields))
-    sort!(families)
-
     return InteractionLagrangian{typeof(expr)}(
-        expr, families, fields[q_idx], fields[c_idx], position(fields[q_idx]), parameter
+        expr,
+        interaction_families(expr),
+        fields[q_idx],
+        fields[c_idx],
+        position(fields[q_idx]),
+        parameter,
     )
+end
+
+function interaction_families(expr::Union{QMul{C,S},QAdd{C,S}}) where {C<:Number,S<:Statistics}
+    families = unique(field_family.(allfields(expr)))
+    sort!(families)
+    return families
 end
 
 function _extract_unique_fields(expr::Union{QMul{C,Boson},QAdd{C,Boson}}) where {C<:Number}
