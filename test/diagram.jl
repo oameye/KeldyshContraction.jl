@@ -8,11 +8,7 @@ using KeldyshContraction: Bulk, In, Out, Edge
     @inferred Diagrams{3,0}()
 
     @qfields c::Boson(Classical) q::Boson(Quantum)
-    vs = KeldyshContraction.Contraction[
-        (c(Out()), bar(q)),
-        (c, bar(q)),
-        (c, bar(q)(In())),
-    ]
+    vs = KeldyshContraction.Contraction[(c(Out()), bar(q)), (c, bar(q)), (c, bar(q)(In()))]
     @inferred Diagram(vs, Val(3), Val(0))
     @test_throws MethodError Diagram(vs)
 end
@@ -62,11 +58,7 @@ end
     using KeldyshContraction: Diagram, Diagrams, Contraction
 
     @qfields c::Boson(Classical) q::Boson(Quantum)
-    vs = KeldyshContraction.Contraction[
-        (c(Out()), bar(q)),
-        (c, bar(q)),
-        (c, bar(q)(In())),
-    ]
+    vs = KeldyshContraction.Contraction[(c(Out()), bar(q)), (c, bar(q)), (c, bar(q)(In()))]
     d = Diagram(vs, Val(3), Val(0))
     ds = Diagrams(Dict(d => Complex{Rational{Int64}}(1.0)))
     ds2 = ds * 2.0
@@ -77,11 +69,7 @@ end
 @testset "is_connected" begin
     @qfields c::Boson(Classical) q::Boson(Quantum)
 
-    vs = KeldyshContraction.Contraction[
-        (c(Out()), bar(q)),
-        (c, bar(q)),
-        (c, bar(q)(In())),
-    ]
+    vs = KeldyshContraction.Contraction[(c(Out()), bar(q)), (c, bar(q)), (c, bar(q)(In()))]
     @test KeldyshContraction.is_connected(vs)
 
     vs2 = KeldyshContraction.Contraction[(c, bar(q))]
