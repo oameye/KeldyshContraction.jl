@@ -5,50 +5,63 @@
 $(DocStringExtensions.TYPEDEF)
 
 A structure representing a dressed propagator in the Retarded-Advanced-Keldysh basis.
-Its components are classified by `PropagatorType`.
+Its coefficient representation, statistics, perturbation order, and diagram shape are
+encoded in the type.
 
 # Fields
 $(DocStringExtensions.FIELDS)
-
-# Constructor
-$(DocStringExtensions.TYPEDSIGNATURES)
-
-Constructs a `DressedPropagator` with the given Keldysh, retarded, and advanced components.
 """
-struct DressedPropagator{E1,E2}
+struct DressedPropagator{C<:Number,S<:Statistics,O,E1,E2}
     "The Keldysh component of the propagator"
-    keldysh::Diagrams{E1,E2}
+    keldysh::Diagrams{C,S,E1,E2}
     "The retarded component of the propagator"
-    retarded::Diagrams{E1,E2}
+    retarded::Diagrams{C,S,E1,E2}
     "The advanced component of the propagator"
-    advanced::Diagrams{E1,E2}
-    "The order of the dressed propagator in the perturbation series"
-    order::Int64
-    "Parameters of the perturbation series of the `order`, i.e., ``g^2`` means `order=2`."
+    advanced::Diagrams{C,S,E1,E2}
+    "Parameters of the perturbation series"
     parameter::CSym
+end
+
+function DressedPropagator(
+    keldysh::Diagrams{C,S,E1,E2},
+    retarded::Diagrams{C,S,E1,E2},
+    advanced::Diagrams{C,S,E1,E2},
+    ::Val{O},
+    parameter::CSym,
+) where {C<:Number,S<:Statistics,O,E1,E2}
+    return DressedPropagator{C,S,O,E1,E2}(keldysh, retarded, advanced, parameter)
+end
+
+order(::DressedPropagator{C,S,O}) where {C,S,O} = O
+statistics(::DressedPropagator{C,S}) where {C,S} = S
+parameters(d::DressedPropagator) = d.parameter
+
+function structural_zero(
+    ::Type{Boson}, ::Type{Diagrams{C,Boson,E1,E2}}
+) where {C<:Number,E1,E2}
+    return Diagrams{C,Boson,E1,E2}()
 end
 
 """
     matrix(G::DressedPropagator)
 
-Returns the matrix representation of the dressed propagator `G`
-in the Retarded-Advanced-Keldysh basis.
+Return the bosonic Retarded-Advanced-Keldysh matrix
 ```math
-\\hat{G}\\left(x_1, x_2\\right)
-=\\left(
-\\begin{array}{cc}
-G^K\\left(x_1, x_2\\right) & G^R\\left(x_1, x_2\\right) \\\\
-G^A\\left(x_1, x_2\\right) & 0
-\\end{array}
-\\right)
+\\hat{G}=\\begin{pmatrix}G^K&G^R\\\\G^A&0\\end{pmatrix}.
 ```
 """
-function matrix(G::DressedPropagator{E1,E2}) where {E1,E2}
-    result = Matrix{Diagrams{E1,E2}}(undef, 2, 2)
-    result[1, 1] = G.retarded
-    result[1, 2] = G.keldysh
+function matrix(G::DressedPropagator{C,Boson,O,E1,E2}) where {C<:Number,O,E1,E2}
+    return matrix(Boson, G)
+end
+function matrix(
+    ::Type{Boson}, G::DressedPropagator{C,Boson,O,E1,E2}
+) where {C<:Number,O,E1,E2}
+    D = Diagrams{C,Boson,E1,E2}
+    result = Matrix{D}(undef, 2, 2)
+    result[1, 1] = G.keldysh
+    result[1, 2] = G.retarded
     result[2, 1] = G.advanced
-    result[2, 2] = Diagrams{E1,E2}()
+    result[2, 2] = structural_zero(Boson, D)
     return result
 end
 
@@ -116,31 +129,17 @@ function DressedPropagator(
         filter_nonzero!(component)
     end
 
-    return DressedPropagator(keldysh, retarded, advanced, Int64(O), parameters(L)^O)
+    return DressedPropagator(keldysh, retarded, advanced, Val(O), parameters(L)^O)
 end
 
-parameters(d::DressedPropagator) = d.parameter
-
-"""
-$(DocStringExtensions.TYPEDEF)
-
-A structure representing a collection of dressed propagator each involving a
-different parameter of the expansion.
-
-# Fields
-$(DocStringExtensions.FIELDS)
-
-"""
-struct DressedPropagatorSum{GS}
-    "The arguments of the dressed propagator sum. Each involving a different parameter."
-    arguments::Dict{CSym,GS}
-    "The order of the dressed propagator in the perturbation series"
-    order::Int64
+"""Collection of dressed propagators with distinct perturbation-parameter monomials."""
+struct DressedPropagatorSum{K,GS,O}
+    arguments::Dict{K,GS}
 end
 
 SymbolicUtils.arguments(d::DressedPropagatorSum) = d.arguments
-order(d::DressedPropagatorSum) = d.order
-parameters(d::DressedPropagatorSum) = map(G -> G.parameter, arguments(d))
+order(::DressedPropagatorSum{K,GS,O}) where {K,GS,O} = O
+parameters(d::DressedPropagatorSum) = map(G -> G.parameter, values(arguments(d)))
 
 """
     DressedPropagator(Ls::LagrangianSum, ::Val{order}, ::Val{edges}; target, kwargs...)
@@ -187,20 +186,18 @@ function DressedPropagator(
         kwargs...,
     )
 
-    dict = Dict(
-        begin
-            for component in
-                last.((keldysh_pairs[idx], retarded_pairs[idx], advanced_pairs[idx]))
-                filter_nonzero!(component)
-                _simplify_prefactors!(component)
-            end
-            first(keldysh_pairs[idx]) => DressedPropagator(
-                last.((keldysh_pairs[idx], retarded_pairs[idx], advanced_pairs[idx]))...,
-                Int64(O),
-                first(keldysh_pairs[idx]),
-            )
-        end for idx in eachindex(keldysh_pairs)
-    )
+    D = diagram_coefficient_type(C)
+    GS = DressedPropagator{D,Boson,O,E,max_edges(O)}
+    dict = Dict{CSym,GS}()
+    for idx in eachindex(keldysh_pairs)
+        components = last.((keldysh_pairs[idx], retarded_pairs[idx], advanced_pairs[idx]))
+        for component in components
+            filter_nonzero!(component)
+            _simplify_prefactors!(component)
+        end
+        parameter = first(keldysh_pairs[idx])
+        dict[parameter] = DressedPropagator(components..., Val(O), parameter)
+    end
 
-    return DressedPropagatorSum(dict, Int64(O))
+    return DressedPropagatorSum{CSym,GS,O}(dict)
 end
