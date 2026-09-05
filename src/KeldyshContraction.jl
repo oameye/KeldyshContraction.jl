@@ -56,6 +56,7 @@ const ComplexRationals = Complex{Rational{Int64}}
         Field,
         field_family,
         field_families,
+        target_family,
         Boson,
         bar,
         wick_contraction,
