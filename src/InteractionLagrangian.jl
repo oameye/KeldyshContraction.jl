@@ -27,12 +27,13 @@ The expression must:
 - be a bulk term (`is_bulk`);
 - be conserved ([`is_conserved`](@ref));
 - be physical ([`is_physical`](@ref));
-- contain at most two different fields;
-- use opposite Keldysh components for those fields.
+- contain both Keldysh components.
 """
 struct InteractionLagrangian{T} <: Lagrangian
     "The Lagrangian expression as a [`QTerm`](@ref)"
     lagrangian::T
+    "Physical field families appearing in the interaction"
+    families::Vector{FieldFamily{Boson}}
     "The quantum field"
     qfield::Field{Boson}
     "The classical field"
@@ -49,15 +50,18 @@ function InteractionLagrangian(
     fields = _extract_unique_fields(expr)
     contours = contour_integers(fields)
 
-    _assert_lagrangian(expr, fields, contours)
+    _assert_lagrangian(expr, contours)
 
     q_idx = findfirst(iszero, contours)
     c_idx = findfirst(isone, contours)
     q_idx === nothing && throw(ArgumentError("interaction has no quantum field"))
     c_idx === nothing && throw(ArgumentError("interaction has no classical field"))
 
+    families = unique(field_family.(fields))
+    sort!(families)
+
     return InteractionLagrangian{typeof(expr)}(
-        expr, fields[q_idx], fields[c_idx], position(fields[q_idx]), parameter
+        expr, families, fields[q_idx], fields[c_idx], position(fields[q_idx]), parameter
     )
 end
 
@@ -73,26 +77,22 @@ function _extract_unique_fields(expr::Union{QMul{C,Boson},QAdd{C,Boson}}) where 
     return result
 end
 
-function _assert_lagrangian(expr, fields, contours)
+function _assert_lagrangian(expr, contours)
     is_bulk(expr) ||
         throw(ArgumentError("an interaction Lagrangian only accepts bulk terms"))
     is_conserved(expr) ||
         throw(ArgumentError("an interaction Lagrangian only accepts conserved terms"))
     is_physical(expr) ||
         throw(ArgumentError("an interaction Lagrangian only accepts physical terms"))
-    length(fields) <= 2 || throw(
-        ArgumentError("an interaction Lagrangian only accepts up to two different fields"),
-    )
-    unique(contours) == contours || throw(
-        ArgumentError(
-            "an interaction Lagrangian only accepts fields with opposite contours"
-        ),
+    any(iszero, contours) && any(isone, contours) || throw(
+        ArgumentError("an interaction Lagrangian must contain both Keldysh components")
     )
     return nothing
 end
 
 position(L::InteractionLagrangian) = L.position
 parameters(L::InteractionLagrangian) = L.parameter
+field_families(L::InteractionLagrangian) = copy(L.families)
 
 # Keep tuple/vector methods separate so the statistics parameter remains bound.
 function balanced_orientation(args)
@@ -149,7 +149,7 @@ end
 $(DocStringExtensions.TYPEDEF)
 
 Represents a sum of interaction Lagrangians, each describing a different process.
-All terms must use the same quantum and classical fields.
+All terms must use the same physical field families.
 
 # Fields
 $(DocStringExtensions.FIELDS)
@@ -176,10 +176,9 @@ function LagrangianSum(args::Vector{InteractionLagrangian{T}}) where {T}
 end
 
 function check_common_fields(args::AbstractVector{<:InteractionLagrangian})
-    allequal(getfield.(args, :qfield)) ||
-        throw(ArgumentError("all InteractionLagrangian must have the same quantum field"))
-    allequal(getfield.(args, :cfield)) ||
-        throw(ArgumentError("all InteractionLagrangian must have the same classical field"))
+    allequal(getfield.(args, :families)) || throw(
+        ArgumentError("all InteractionLagrangian must have the same physical field families")
+    )
     return nothing
 end
 
