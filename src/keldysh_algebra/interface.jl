@@ -24,7 +24,7 @@ abstract type Statistics end
 struct Boson <: Statistics end
 
 """Orientation of a path-integral field."""
-@enumx Orientation begin
+@enumx Orientation::UInt8 begin
     Unbarred = 0
     Barred = 1
 end
@@ -35,7 +35,7 @@ Neutral two-valued Keldysh index stored by `Field`.
 Bosonic code exposes the semantic aliases `Quantum` and `Classical`. Fermionic
 `One`/`Two` aliases can be added later without changing the field representation.
 """
-@enumx KeldyshIndex begin
+@enumx KeldyshIndex::UInt8 begin
     First = 0
     Second = 1
 end
@@ -43,30 +43,58 @@ end
 const Quantum = KeldyshIndex.First
 const Classical = KeldyshIndex.Second
 
-"""A concrete internal field index such as spin, flavor, band, or species."""
+"""Kind of concrete internal field index."""
+@enumx IndexKind::UInt8 begin
+    Spin = 0
+    Flavor = 1
+    Band = 2
+    Species = 3
+end
+
+"""
+A compact concrete internal field index such as spin, flavor, band, or species.
+
+The `Symbol` constructor is provided as a convenient value-level API while the stored
+representation uses the one-byte [`IndexKind`](@ref) enum.
+"""
 struct FieldIndex
-    kind::Symbol
+    kind::IndexKind.T
     value::Int16
 end
 
-function Base.isequal(a::FieldIndex, b::FieldIndex)
-    return isequal(a.kind, b.kind) && isequal(a.value, b.value)
+function FieldIndex(kind::Symbol, value::Integer)
+    k = if kind === :spin
+        IndexKind.Spin
+    elseif kind === :flavor
+        IndexKind.Flavor
+    elseif kind === :band
+        IndexKind.Band
+    elseif kind === :species
+        IndexKind.Species
+    else
+        throw(ArgumentError("unknown field-index kind: $kind"))
+    end
+    return FieldIndex(k, convert(Int16, value))
 end
-Base.hash(x::FieldIndex, h::UInt) = hash(FieldIndex, hash(x.kind, hash(x.value, h)))
+
+function Base.isequal(a::FieldIndex, b::FieldIndex)
+    return a.kind === b.kind && a.value == b.value
+end
+Base.hash(x::FieldIndex, h::UInt) = hash(x.kind, hash(x.value, h))
 function Base.isless(a::FieldIndex, b::FieldIndex)
-    a.kind == b.kind || return isless(a.kind, b.kind)
-    return isless(a.value, b.value)
+    a.kind === b.kind || return Integer(a.kind) < Integer(b.kind)
+    return a.value < b.value
 end
 
 const MAX_FIELD_INDICES = 4
-const EMPTY_FIELD_INDEX = FieldIndex(Symbol(""), Int16(0))
+const EMPTY_FIELD_INDEX = FieldIndex(IndexKind.Spin, Int16(0))
 
 """
 Immutable fixed-capacity storage for field indices.
 
 The number and values of indices are runtime data, while the Julia representation is
-fixed and hash-stable. Four slots are sufficient for the current spin/flavor/band/species
-use cases and can be increased without changing the field type hierarchy.
+fixed and hash-stable. Each slot is compact and isbits; four slots cover the current
+spin/flavor/band/species use cases without introducing field-type proliferation.
 """
 struct FieldIndices
     data::NTuple{MAX_FIELD_INDICES,FieldIndex}
@@ -92,20 +120,23 @@ function Base.iterate(indices::FieldIndices, state::Int=1)
 end
 function Base.isequal(a::FieldIndices, b::FieldIndices)
     length(a) == length(b) || return false
-    return all(isequal(a[i], b[i]) for i in 1:length(a))
+    @inbounds for i in 1:length(a)
+        isequal(a.data[i], b.data[i]) || return false
+    end
+    return true
 end
 function Base.hash(indices::FieldIndices, h::UInt)
     h = hash(FieldIndices, hash(indices.n, h))
-    for i in 1:length(indices)
-        h = hash(indices[i], h)
+    @inbounds for i in 1:length(indices)
+        h = hash(indices.data[i], h)
     end
     return h
 end
 function Base.isless(a::FieldIndices, b::FieldIndices)
     n = min(length(a), length(b))
-    for i in 1:n
-        isequal(a[i], b[i]) && continue
-        return isless(a[i], b[i])
+    @inbounds for i in 1:n
+        isequal(a.data[i], b.data[i]) && continue
+        return isless(a.data[i], b.data[i])
     end
     return length(a) < length(b)
 end
@@ -147,7 +178,7 @@ Base.iszero(::QField) = false
 name(ϕ::QSym) = ϕ.name
 
 """Regularisation enum used for equal-time Keldysh contractions."""
-@enumx Regularisation begin
+@enumx Regularisation::Int8 begin
     Plus = 1
     Zero = 0
     Minus = -1
