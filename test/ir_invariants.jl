@@ -12,12 +12,8 @@ const KC = KeldyshContraction
     single_field_mul = KC.QMul(1, Field{Boson}[ϕ])
     single_field_add = KC.QAdd(KC.QMul{Int,Boson}[single_field_mul])
 
-    for (a, b) in (
-        (scalar_one, 1),
-        (scalar_zero, 0),
-        (single_field_mul, ϕ),
-        (single_field_add, ϕ),
-    )
+    for (a, b) in
+        ((scalar_one, 1), (scalar_zero, 0), (single_field_mul, ϕ), (single_field_add, ϕ))
         @test isequal(a, b)
         @test isequal(b, a)
         @test hash(a) == hash(b)
@@ -33,8 +29,7 @@ end
     @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
 
     caller_owned = KC.QMul{Int,Boson}[
-        KC.QMul(1, Field{Boson}[ϕ]),
-        KC.QMul(1, Field{Boson}[ψ]),
+        KC.QMul(1, Field{Boson}[ϕ]), KC.QMul(1, Field{Boson}[ψ])
     ]
     q = KC.QAdd(caller_owned)
 
