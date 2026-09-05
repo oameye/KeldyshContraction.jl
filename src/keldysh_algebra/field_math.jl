@@ -40,6 +40,9 @@ end
 Base.:/(a::Field, b::Number) = a * inv(b)
 Base.:/(a::QMul, b::Number) = a * inv(b)
 Base.:/(a::QAdd, b::Number) = a * inv(b)
+Base.://(a::Field, b::Number) = (1 // b) * a
+Base.://(a::QMul, b::Number) = (1 // b) * a
+Base.://(a::QAdd, b::Number) = (1 // b) * a
 
 ########################
 # Powers
