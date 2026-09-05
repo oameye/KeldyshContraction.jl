@@ -21,6 +21,10 @@ Base.iterate(p::WickPairing) = iterate(p.contractions)
 Base.iterate(p::WickPairing, state) = iterate(p.contractions, state)
 Base.eltype(::Type{WickPairing{S,E}}) where {S,E} = Contraction{S}
 
+function Diagram(pairing::WickPairing{Boson,E}, ::Val{E}, ::Val{E2}) where {E,E2}
+    return Diagram(collect(pairing.contractions), Val(E), Val(E2))
+end
+
 pairing_sign(::Type{Boson}, perm) = Int8(1)
 
 """
