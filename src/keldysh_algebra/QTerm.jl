@@ -209,8 +209,9 @@ Base.length(a::QAdd) = length(a.arguments)
 Base.iszero(a::QAdd) = all(iszero, a.arguments)
 Base.isone(a::QAdd) = length(a.arguments) == 1 && isone(first(a.arguments))
 Base.zero(a::QAdd{C,S}) where {C,S} = QAdd{C,S}()
-Base.one(a::QAdd{C,S}) where {C,S} =
-    _qadd_owned(QMul{C,S}[_qmul_sorting(one(C), Field{S}[])])
+function Base.one(a::QAdd{C,S}) where {C,S}
+    return _qadd_owned(QMul{C,S}[_qmul_sorting(one(C), Field{S}[])])
+end
 Base.zero(::Type{QAdd{C,S}}) where {C,S} = QAdd{C,S}()
 function Base.one(::Type{QAdd{C,S}}) where {C,S}
     return _qadd_owned(QMul{C,S}[_qmul_sorting(one(C), Field{S}[])])
