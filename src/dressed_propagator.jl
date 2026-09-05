@@ -52,15 +52,13 @@ function matrix(G::DressedPropagator{E1,E2}) where {E1,E2}
     return result
 end
 
-# Transitional fallback for component declarations that have not yet migrated to families.
-function propagator_fields(L::InteractionLagrangian, ::Nothing)
-    if length(L.families) == 1
-        family = target_family(L)
-        return family[Quantum], family[Classical]
-    end
-    return L.qfield, L.cfield
+function propagator_fields(L::InteractionLagrangian{C,Boson}, ::Nothing) where {C<:Number}
+    family = target_family(L)
+    return family[Quantum], family[Classical]
 end
-function propagator_fields(L::InteractionLagrangian, target::FieldFamily{Boson})
+function propagator_fields(
+    L::InteractionLagrangian{C,Boson}, target::FieldFamily{Boson}
+) where {C<:Number}
     family = target_family(L, target)
     return family[Quantum], family[Classical]
 end
@@ -75,14 +73,14 @@ All the same-coordinate advanced propagators are converted to retarded propagato
 `simplify=true`.
 """
 function DressedPropagator(
-    L::InteractionLagrangian,
+    L::InteractionLagrangian{C,Boson},
     ::Val{O},
     ::Val{E};
     target=nothing,
     simplify=true,
     _set_reg_to_zero=true,
     kwargs...,
-) where {O,E}
+) where {C<:Number,O,E}
     @assert number_of_propagators(L) * O + 1 == E "The supplied Val{edges} must equal the interaction's propagator count times Val{order}, plus the external propagator"
     qfield, cfield = propagator_fields(L, target)
 
@@ -148,14 +146,14 @@ parameters(d::DressedPropagatorSum) = map(G -> G.parameter, arguments(d))
     DressedPropagator(Ls::LagrangianSum, ::Val{order}, ::Val{edges}; target, kwargs...)
 """
 function DressedPropagator(
-    Ls::LagrangianSum,
+    Ls::LagrangianSum{C,Boson},
     ::Val{O},
     ::Val{E};
     target=nothing,
     simplify=true,
     _set_reg_to_zero=true,
     kwargs...,
-) where {O,E}
+) where {C<:Number,O,E}
     @assert all(number_of_propagators(L) * O + 1 == E for L in arguments(Ls)) "All LagrangianSum terms must produce the supplied number of propagator edges"
     qfield, cfield = propagator_fields(first(arguments(Ls)), target)
 
