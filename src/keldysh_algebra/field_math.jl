@@ -6,7 +6,7 @@ end
 
 function _normalized_add(args::Vector{QMul{C,S}}) where {C<:Number,S<:Statistics}
     out = QMul{C,S}[term for term in args if !iszero(term)]
-    isempty(out) && push!(out, QMul{C,S}(zero(C), Field{S}[]))
+    isempty(out) && push!(out, _qmul_owned(zero(C), Field{S}[]))
     return QAdd{C,S}(out)
 end
 
@@ -15,26 +15,27 @@ end
 ########################
 
 function Base.:*(a::Field{S}, b::Field{S}) where {S<:Statistics}
-    return QMul(1, Field{S}[a, b])
+    return _qmul_owned(1, Field{S}[a, b])
 end
 
-Base.:*(a::Field{S}, b::C) where {S<:Statistics,C<:Number} = QMul(b, Field{S}[a])
+Base.:*(a::Field{S}, b::C) where {S<:Statistics,C<:Number} =
+    _qmul_owned(b, Field{S}[a])
 Base.:*(b::Number, a::Field) = a * b
 
 function Base.:*(a::QMul{C,S}, b::D) where {C<:Number,D<:Number,S<:Statistics}
     coeff = a.arg_c * b
-    return QMul(coeff, copy(a.args_nc))
+    return _qmul_owned(coeff, copy(a.args_nc))
 end
 Base.:*(b::Number, a::QMul) = a * b
 
 function Base.:*(a::Field{S}, b::QMul{C,S}) where {C<:Number,S<:Statistics}
-    return QMul(b.arg_c, vcat(Field{S}[a], b.args_nc))
+    return _qmul_owned(b.arg_c, vcat(Field{S}[a], b.args_nc))
 end
 Base.:*(a::QMul{C,S}, b::Field{S}) where {C<:Number,S<:Statistics} = b * a
 
 function Base.:*(a::QMul{C1,S}, b::QMul{C2,S}) where {C1,C2,S<:Statistics}
     coeff = a.arg_c * b.arg_c
-    return QMul(coeff, vcat(a.args_nc, b.args_nc))
+    return _qmul_owned(coeff, vcat(a.args_nc, b.args_nc))
 end
 
 Base.:/(a::Field, b::Number) = a * inv(b)
@@ -50,7 +51,7 @@ Base.://(a::QAdd, b::Number) = (1 // b) * a
 
 function Base.:^(a::Field{S}, n::Integer) where {S<:Statistics}
     n < 0 && throw(DomainError(n, "negative field powers are not supported"))
-    result = QMul(1, Field{S}[])
+    result = _qmul_owned(1, Field{S}[])
     for _ in 1:n
         result *= a
     end
@@ -59,7 +60,7 @@ end
 
 function Base.:^(a::QMul{C,S}, n::Integer) where {C<:Number,S<:Statistics}
     n < 0 && throw(DomainError(n, "negative field powers are not supported"))
-    result = QMul{C,S}(one(C), Field{S}[])
+    result = _qmul_owned(one(C), Field{S}[])
     for _ in 1:n
         result *= a
     end
@@ -89,14 +90,17 @@ Base.:-(a::QField, b::QField) = a + (-b)
 
 function Base.:+(a::Field{S}, b::D) where {S<:Statistics,D<:Number}
     C = promote_type(Int, D)
-    terms = QMul{C,S}[QMul(convert(C, 1), Field{S}[a]), QMul(convert(C, b), Field{S}[])]
+    terms = QMul{C,S}[
+        _qmul_owned(convert(C, 1), Field{S}[a]),
+        _qmul_owned(convert(C, b), Field{S}[]),
+    ]
     return _normalized_add(terms)
 end
 Base.:+(b::Number, a::Field) = a + b
 
 function Base.:+(a::QMul{C,S}, b::D) where {C<:Number,D<:Number,S<:Statistics}
     P = promote_type(C, D)
-    terms = QMul{P,S}[_converted_mul(P, a), QMul(convert(P, b), Field{S}[])]
+    terms = QMul{P,S}[_converted_mul(P, a), _qmul_owned(convert(P, b), Field{S}[])]
     return _normalized_add(terms)
 end
 Base.:+(b::Number, a::QMul) = a + b
@@ -104,13 +108,15 @@ Base.:+(b::Number, a::QMul) = a + b
 function Base.:+(a::QAdd{C,S}, b::D) where {C<:Number,D<:Number,S<:Statistics}
     P = promote_type(C, D)
     args = QMul{P,S}[_converted_mul(P, term) for term in a.arguments]
-    push!(args, QMul(convert(P, b), Field{S}[]))
+    push!(args, _qmul_owned(convert(P, b), Field{S}[]))
     return _normalized_add(args)
 end
 Base.:+(b::Number, a::QAdd) = a + b
 
 function Base.:+(a::Field{S}, b::Field{S}) where {S<:Statistics}
-    return _normalized_add(QMul{Int,S}[QMul(a), QMul(b)])
+    return _normalized_add(
+        QMul{Int,S}[_qmul_owned(1, Field{S}[a]), _qmul_owned(1, Field{S}[b])]
+    )
 end
 
 function Base.:+(a::QMul{C1,S}, b::QMul{C2,S}) where {C1,C2,S<:Statistics}
@@ -119,13 +125,13 @@ function Base.:+(a::QMul{C1,S}, b::QMul{C2,S}) where {C1,C2,S<:Statistics}
 end
 
 function Base.:+(a::QMul{C,S}, b::Field{S}) where {C<:Number,S<:Statistics}
-    return _normalized_add(QMul{C,S}[a, QMul(convert(C, 1), Field{S}[b])])
+    return _normalized_add(QMul{C,S}[a, _qmul_owned(one(C), Field{S}[b])])
 end
 Base.:+(b::Field{S}, a::QMul{C,S}) where {C<:Number,S<:Statistics} = a + b
 
 function Base.:+(a::QAdd{C,S}, b::Field{S}) where {C<:Number,S<:Statistics}
     args = copy(a.arguments)
-    push!(args, QMul(convert(C, 1), Field{S}[b]))
+    push!(args, _qmul_owned(one(C), Field{S}[b]))
     return _normalized_add(args)
 end
 Base.:+(b::Field{S}, a::QAdd{C,S}) where {C<:Number,S<:Statistics} = a + b
