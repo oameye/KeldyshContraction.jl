@@ -4,8 +4,8 @@
 """
 $(DocStringExtensions.TYPEDEF)
 
-A structure representing dressed propagator in the Retarded-Advanced-Keldysh basis
-([`PropagatorType`](@ref)).
+A structure representing a dressed propagator in the Retarded-Advanced-Keldysh basis.
+Its components are classified by `PropagatorType`.
 
 # Fields
 $(DocStringExtensions.FIELDS)
