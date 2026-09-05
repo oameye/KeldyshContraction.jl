@@ -1,8 +1,9 @@
 using KeldyshContraction, Test
 
 @qfields c::Boson(Classical) q::Boson(Quantum)
-elasctic2boson =
-    -(0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2))
+elasctic2boson = -(
+    0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
+)
 L_int = InteractionLagrangian(elasctic2boson)
 
 GF = DressedPropagator(L_int, Val(2), Val(5))
