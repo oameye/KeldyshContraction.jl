@@ -36,12 +36,7 @@ end
     flavor = FieldIndex(:flavor, 2)
     indices = @inferred FieldIndices(spin, flavor)
     f = @inferred Field{Boson}(
-        :ψ,
-        Classical,
-        KC.Orientation.Unbarred,
-        KC.Regularisation.Zero,
-        Bulk(),
-        indices,
+        :ψ, Classical, KC.Orientation.Unbarred, KC.Regularisation.Zero, Bulk(), indices
     )
 
     @test isconcretetype(typeof(indices))
@@ -145,10 +140,7 @@ end
     @test first(args) == 2
     @test args[2:end] == KC.fields(mul)
     @test isnothing(TermInterface.metadata(mul))
-    @test isequal(
-        @inferred(TermInterface.maketerm(typeof(mul), *, args, nothing)),
-        mul,
-    )
+    @test isequal(@inferred(TermInterface.maketerm(typeof(mul), *, args, nothing)), mul)
 
     unit_mul = ϕ * ψ
     @test isequal(
@@ -179,10 +171,7 @@ end
 @testset "bosonic interaction expressions" begin
     @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
 
-    elastic = -0.5 * (
-        bar(ϕ) * bar(ψ) * (ϕ^2 + ψ^2) +
-        (bar(ϕ)^2 + bar(ψ)^2) * ϕ * ψ
-    )
+    elastic = -0.5 * (bar(ϕ) * bar(ψ) * (ϕ^2 + ψ^2) + (bar(ϕ)^2 + bar(ψ)^2) * ϕ * ψ)
     loss =
         0.5 * bar(ϕ) * bar(ψ) * (ϕ(Minus)^2 + ψ(Minus)^2) -
         0.5 * ϕ(Plus) * ψ(Plus) * (bar(ϕ)^2 + bar(ψ)^2) +
