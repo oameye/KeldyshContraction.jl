@@ -1,13 +1,15 @@
 using KeldyshContraction, Test
 using KeldyshContraction: Bulk, In, Out, Edge
 
-@qfields ϕᶜ::Boson(Classical) ϕᴾ::Boson(Quantum)
+@qfields ϕ::Boson
+ϕᶜ, ϕᴾ = ϕ[Classical], ϕ[Quantum]
 
 @testset "construction" begin
     using KeldyshContraction: Diagram, Diagrams, Contraction, wick_contraction
     @inferred Diagrams{3,0}()
 
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields field::Boson
+    c, q = field[Classical], field[Quantum]
     vs = KeldyshContraction.Contraction[(c(Out()), bar(q)), (c, bar(q)), (c, bar(q)(In()))]
     @inferred Diagram(vs, Val(3), Val(0))
     @test_throws MethodError Diagram(vs)
@@ -17,7 +19,8 @@ end
     using KeldyshContraction:
         In, Out, DressedPropagator, SelfEnergy, Diagram, FixedVector, matrix
 
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields field::Boson
+    c, q = field[Classical], field[Quantum]
     L = InteractionLagrangian(
         -(1//2 * (c^2 + q^2) * bar(c) * bar(q) + 1//2 * c * q * (bar(c)^2 + bar(q)^2))
     )
@@ -57,7 +60,8 @@ end
 @testset "prefactor multiplication" begin
     using KeldyshContraction: Diagram, Diagrams, Contraction
 
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields field::Boson
+    c, q = field[Classical], field[Quantum]
     vs = KeldyshContraction.Contraction[(c(Out()), bar(q)), (c, bar(q)), (c, bar(q)(In()))]
     d = Diagram(vs, Val(3), Val(0))
     ds = Diagrams(Dict(d => Complex{Rational{Int64}}(1.0)))
@@ -67,7 +71,8 @@ end
 end
 
 @testset "is_connected" begin
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields field::Boson
+    c, q = field[Classical], field[Quantum]
 
     vs = KeldyshContraction.Contraction[(c(Out()), bar(q)), (c, bar(q)), (c, bar(q)(In()))]
     @test KeldyshContraction.is_connected(vs)
@@ -151,7 +156,7 @@ end
     vertices3 = KeldyshContraction.vertices(edges3)
     comps3 = KeldyshContraction.connected_components(vertices3, edges3)
     @test length(comps3) == 1
-    @test comps3[1] == Set([1, 2, 3, 4])
+    @test Set([1, 2, 3, 4]) ∈ comps3
 
     edges4 = [(1, 2), (3, 4), (5, 6)]
     vertices4 = KeldyshContraction.vertices(edges4)
