@@ -142,11 +142,18 @@ end
     mul = 2 * ϕ * ψ
     args = @inferred SymbolicUtils.arguments(mul)
     @test eltype(args) === Union{Int,Field{Boson}}
-    @test args == Union{Int,Field{Boson}}[2, ϕ, ψ]
+    @test first(args) == 2
+    @test args[2:end] == KC.fields(mul)
     @test isnothing(TermInterface.metadata(mul))
     @test isequal(
-        @inferred(TermInterface.maketerm(KC.QMul, *, Field{Boson}[ϕ, ψ], nothing)),
-        ϕ * ψ,
+        @inferred(TermInterface.maketerm(typeof(mul), *, args, nothing)),
+        mul,
+    )
+
+    unit_mul = ϕ * ψ
+    @test isequal(
+        @inferred(TermInterface.maketerm(typeof(unit_mul), *, Field{Boson}[ϕ, ψ], nothing)),
+        unit_mul,
     )
 end
 
