@@ -3,7 +3,7 @@ CI = get(ENV, "CI", nothing) == "true" || get(ENV, "GITHUB_TOKEN", nothing) !== 
 using KeldyshContraction
 using Documenter
 
-import Plots
+using Plots: Plots
 Plots.default(; fmt=:png)
 # Gotta set this environment variable when using the GR run-time on CI machines.
 # This happens as examples will use Plots.jl to make plots and movies.
