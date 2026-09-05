@@ -3,20 +3,22 @@ using Combinatorics
 using KeldyshContraction: In, Out, Classical, Quantum, Plus, Minus, arguments
 import KeldyshContraction as KC
 
-@qfields ϕᶜ::Destroy(Classical) ϕᴾ::Destroy(Quantum)
+@qfields ϕᶜ::Boson(Classical) ϕᴾ::Boson(Quantum)
 
 L_int =
-    im*(
-        0.5 * ϕᶜ' * ϕᴾ' * (ϕᶜ(Minus) * ϕᶜ(Minus) + ϕᴾ(Minus) * ϕᴾ(Minus)) -
-        0.5 * ϕᶜ(Plus) * ϕᴾ(Plus) * (ϕᶜ' * ϕᶜ' + ϕᴾ' * ϕᴾ') +
-        ϕᶜ' * ϕᴾ' * (ϕᶜ(Plus) * ϕᴾ(Plus) + ϕᶜ(Minus) * ϕᴾ(Minus))
+    im * (
+        0.5 * bar(ϕᶜ) * bar(ϕᴾ) * (ϕᶜ(Minus) * ϕᶜ(Minus) + ϕᴾ(Minus) * ϕᴾ(Minus)) -
+        0.5 * ϕᶜ(Plus) * ϕᴾ(Plus) * (bar(ϕᶜ) * bar(ϕᶜ) + bar(ϕᴾ) * bar(ϕᴾ)) +
+        bar(ϕᶜ) * bar(ϕᴾ) * (ϕᶜ(Plus) * ϕᴾ(Plus) + ϕᶜ(Minus) * ϕᴾ(Minus))
     )
 
-expr = ϕᶜ(Out()) * ϕᶜ'(In()) * L_int
+expr = ϕᶜ(Out()) * bar(ϕᶜ)(In()) * L_int
 
-function _wick_contraction(args_nc::Vector{KC.QField})::Vector{Vector{Vector{KC.QField}}}
+function _wick_contraction(
+    args_nc::Vector{Field{Boson}}
+)::Vector{Vector{Vector{Field{Boson}}}}
     _partitions = Combinatorics.partitions(args_nc, length(args_nc) ÷ 2)
-    wick_contractions = Vector{Vector{KC.QField}}[]
+    wick_contractions = Vector{Vector{Field{Boson}}}[]
     for v in _partitions
         if _contraction_filter(v)
             push!(wick_contractions, v)
@@ -29,7 +31,7 @@ function _contraction_filter(v)
     istwo = all(length.(v) .== 2) # only two-point contractions
     if !istwo
         return false
-    elseif !all(KC.is_conserved.(v)) # contractions with creation/annihilation
+    elseif !all(KC.is_conserved.(v)) # contractions with barred/unbarred fields
         return false
     elseif !all(KC.is_physical_propagator.(v)) # propagators are physical
         return false

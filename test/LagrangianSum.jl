@@ -4,16 +4,16 @@ using KeldyshContraction: is_physical, is_conserved, _wick_contraction
 using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus
 import KeldyshContraction as KC
-@qfields c::Destroy(Classical) q::Destroy(Quantum)
+@qfields c::Boson(Classical) q::Boson(Quantum)
 @syms Γ g
 
 inelastic_terms =
     im * (
-        0.5 * c' * q' * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
-        0.5 * c(Plus) * q(Plus) * (c' * c' + q' * q') +
-        c' * q' * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
+        0.5 * bar(c) * bar(q) * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
+        0.5 * c(Plus) * q(Plus) * (bar(c) * bar(c) + bar(q) * bar(q)) +
+        bar(c) * bar(q) * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
     )
-elastic_terms = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
+elastic_terms = -(0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2))
 
 L_inelastic = InteractionLagrangian(inelastic_terms, Γ)
 L_elastic = InteractionLagrangian(elastic_terms, g)
@@ -21,14 +21,11 @@ L_elastic = InteractionLagrangian(elastic_terms, g)
 L = L_inelastic + L_elastic
 
 @testset "Conversion" begin
-    @test typeof(L) == KeldyshContraction.LagrangianSum{
-        KeldyshContraction.QAdd{Complex{Rational{Int64}}}
-    }
+    @test typeof(L) == KC.LagrangianSum{KC.QAdd{ComplexF64,Boson}}
 end
 
 @testset "Accessing" begin
     @test isequal(parameters(L), [Γ, g])
-    # @test isequal(first(arguments(L)), L_inelastic)
 end
 
 @testset "Correctness first order" begin
@@ -70,12 +67,12 @@ end
         diagrams21 = Diagrams{5,1}()
         for arg in arguments(term12)
             KeldyshContraction.wick_contraction!(
-                diagrams12, c(Out()) * c'(In()) * arg; simplify=false, regularise
+                diagrams12, c(Out()) * bar(c)(In()) * arg; simplify=false, regularise
             )
         end
         for arg in arguments(term21)
             KeldyshContraction.wick_contraction!(
-                diagrams21, c(Out()) * c'(In()) * arg; simplify=false, regularise
+                diagrams21, c(Out()) * bar(c)(In()) * arg; simplify=false, regularise
             )
         end
         @test isequal(diagrams21, diagrams12)
@@ -86,5 +83,4 @@ end
     GF2 = DressedPropagator(L, Val(2), Val(5))
     Σ2 = @inferred SelfEnergy(GF2, Val(2))
     @test Σ2 isa KC.SelfEnergySum{KC.SelfEnergy{3,1}}
-    # arguments(GF2)[g*Γ] |> typeof
 end

@@ -3,12 +3,12 @@ using KeldyshContraction: KeldyshContraction.Regularisation.Plus as Plus
 using KeldyshContraction: KeldyshContraction.Regularisation.Minus as Minus
 
 function benchmark_two_body_loss!(SUITE)
-    @qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
+    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
 
     loss2boson =
-        0.5 * ϕ' * ψ' * (ϕ(Minus) * ϕ(Minus) + ψ(Minus) * ψ(Minus)) -
-        0.5 * ϕ(Plus) * ψ(Plus) * (ϕ' * ϕ' + ψ' * ψ') +
-        ϕ' * ψ' * (ϕ(Plus) * ψ(Plus) + ϕ(Minus) * ψ(Minus))
+        0.5 * bar(ϕ) * bar(ψ) * (ϕ(Minus) * ϕ(Minus) + ψ(Minus) * ψ(Minus)) -
+        0.5 * ϕ(Plus) * ψ(Plus) * (bar(ϕ) * bar(ϕ) + bar(ψ) * bar(ψ)) +
+        bar(ϕ) * bar(ψ) * (ϕ(Plus) * ψ(Plus) + ϕ(Minus) * ψ(Minus))
     L_int = InteractionLagrangian(loss2boson)
 
     GF = DressedPropagator(L_int, Val(1), Val(3); simplify=true, _set_reg_to_zero=true)

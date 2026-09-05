@@ -25,12 +25,12 @@ using KeldyshContraction: Regularisation.Minus as Minus
 # of the two-point correlators of the linear part of the system. However, in this case we
 # don't find that the vacuum expectation value of the interaction Lagrangian is zero:
 
-@qfields c::Destroy(Classical) q::Destroy(Quantum)
+@qfields c::Boson(Classical) q::Boson(Quantum)
 
 loss2boson_unregular =
     im * (
-        0.5 * c' * q' * (c^2 + q^2) - 0.5 * c * q * ((c')^2 + (q')^2) +
-        c' * q' * (c * q + c * q)
+        0.5 * bar(c) * bar(q) * (c^2 + q^2) - 0.5 * c * q * (bar(c)^2 + bar(q)^2) +
+        bar(c) * bar(q) * (c * q + c * q)
     )
 
 KeldyshContraction._wick_contraction(loss2boson_unregular, Val(2))
@@ -52,9 +52,9 @@ KeldyshContraction._wick_contraction(loss2boson_unregular, Val(2))
 
 loss2boson =
     im * (
-        0.5 * c' * q' * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
-        0.5 * c(Plus) * q(Plus) * (c' * c' + q' * q') +
-        c' * q' * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
+        0.5 * bar(c) * bar(q) * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
+        0.5 * c(Plus) * q(Plus) * (bar(c) * bar(c) + bar(q) * bar(q)) +
+        bar(c) * bar(q) * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
     )
 L_int = InteractionLagrangian(loss2boson)
 

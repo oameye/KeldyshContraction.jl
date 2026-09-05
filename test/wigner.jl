@@ -2,8 +2,10 @@ using KeldyshContraction, Test
 using KeldyshContraction:
     construct_linear_system, solve_linear_system, construct_momenta, momenta
 
-@qfields c::Destroy(Classical) q::Destroy(Quantum)
-elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
+@qfields c::Boson(Classical) q::Boson(Quantum)
+elasctic2boson = -(
+    0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
+)
 L_int = InteractionLagrangian(elasctic2boson)
 
 @testset "Green's function" begin
@@ -96,11 +98,7 @@ end
         using KeldyshContraction: Momenta, FixedVector, Momentum
         diagram2 = first(topologies[[2]])
         d′ = construct_momenta_from_self_energy(diagram2)
-        @test isequal(momenta(d′), FixedVector([
-            Momenta(1),
-            Momenta(1),
-            Momenta(3), # rather have seen it to be Momenta(2)
-        ]))
+        @test isequal(momenta(d′), FixedVector([Momenta(1), Momenta(1), Momenta(3)]))
     end
 end
 
