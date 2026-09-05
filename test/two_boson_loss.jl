@@ -5,7 +5,8 @@ using KeldyshContraction: is_physical, is_conserved, _wick_contraction
 using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus
 import KeldyshContraction as KC
-@qfields c::Boson(Classical) q::Boson(Quantum)
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]
 
 L_int =
     im * (
