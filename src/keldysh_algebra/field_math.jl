@@ -23,7 +23,7 @@ Base.:*(b::Number, a::Field) = a * b
 
 function Base.:*(a::QMul{C,S}, b::D) where {C<:Number,D<:Number,S<:Statistics}
     coeff = a.arg_c * b
-    return _qmul_owned(coeff, copy(a.args_nc))
+    return _qmul_canonical(coeff, a.args_nc)
 end
 Base.:*(b::Number, a::QMul) = a * b
 
