@@ -17,6 +17,15 @@ struct QMul{C<:Number,S<:Statistics} <: QTerm
         coeff = _apply_exchange_sign(arg_c, sign)
         return new{C,S}(coeff, args_nc)
     end
+
+    function QMul{C,S}(
+        arg_c::C, args_nc::Vector{Field{S}}, ::Val{:canonical}
+    ) where {C<:Number,S<:Statistics}
+        if iszero(arg_c)
+            return new{C,S}(zero(C), Field{S}[])
+        end
+        return new{C,S}(arg_c, args_nc)
+    end
 end
 
 @inline _apply_exchange_sign(c::C, sign::Int8) where {C<:Number} = sign == 1 ? c : -c
@@ -26,6 +35,13 @@ end
     arg_c::C, args_nc::Vector{Field{S}}
 ) where {C<:Number,S<:Statistics}
     return QMul{C,S}(arg_c, args_nc, Val(:owned))
+end
+
+"""Construct a `QMul` reusing an already-canonical field vector."""
+@inline function _qmul_canonical(
+    arg_c::C, args_nc::Vector{Field{S}}
+) where {C<:Number,S<:Statistics}
+    return QMul{C,S}(arg_c, args_nc, Val(:canonical))
 end
 
 # Public vector construction is defensive: callers keep ownership of `args_nc`.
@@ -53,10 +69,11 @@ function Base.promote_rule(
 ) where {C1<:Number,C2<:Number,S<:Statistics}
     return QMul{promote_type(C1, C2),S}
 end
+Base.convert(::Type{QMul{C,S}}, q::QMul{C,S}) where {C<:Number,S<:Statistics} = q
 function Base.convert(
     ::Type{QMul{C,S}}, q::QMul{D,S}
 ) where {C<:Number,D<:Number,S<:Statistics}
-    return _qmul_owned(convert(C, q.arg_c), copy(q.args_nc))
+    return _qmul_canonical(convert(C, q.arg_c), q.args_nc)
 end
 
 coefficient(q::QMul) = q.arg_c
@@ -157,6 +174,7 @@ function Base.promote_rule(
 ) where {C1<:Number,C2<:Number,S<:Statistics}
     return QAdd{promote_type(C1, C2),S}
 end
+Base.convert(::Type{QAdd{C,S}}, q::QAdd{C,S}) where {C<:Number,S<:Statistics} = q
 function Base.convert(
     ::Type{QAdd{C,S}}, q::QAdd{D,S}
 ) where {C<:Number,D<:Number,S<:Statistics}
