@@ -3,50 +3,41 @@
 #################################
 
 is_qq_contraction(v::Contraction) = iszero(sum(Int.(keldysh_index.(v))))
-# has_qq_contraction(vv::Vector{Vector{<:QField}}) = any(is_qq_contraction.(vv))
+is_qq_contraction(v::Tuple{Field{S},Field{S}}) where {S<:Statistics} =
+    is_qq_contraction(Contraction(v))
 
 function is_physical_propagator(a::Contraction)
-    len = length(a) == 2 # propagator has length 2
     positions = position.(a)
-    # ∨ Can't make a propagator with In and Out coordinate
     in_out = has_in(positions) ? !has_out(positions) : true
-    physical = all(is_physical.(a))
-    return len && in_out && physical
+    physical = all(is_physical, a)
+    return in_out && physical
+end
+function is_physical_propagator(a::Tuple{Field{S},Field{S}}) where {S<:Statistics}
+    return is_physical_propagator(Contraction(a))
 end
 
-function contraction_filter(v)
-    # istwo = all(length.(v) .== 2) # only two-point contractions
-    # if !istwo
-    #     return false
-    if !is_conserved(v) # contractions with creation/annihilation
+function contraction_filter(v::Contraction{S}) where {S<:Statistics}
+    out, in = v
+    if !contraction_compatible(S, out, in)
         return false
-    elseif !is_physical_propagator(v) # propagators are physical
+    elseif !is_conserved(v)
         return false
-    else # there should be no quantum-quantum contractions
+    elseif !is_physical_propagator(v)
+        return false
+    else
         return !is_qq_contraction(v)
     end
+end
+function contraction_filter(v::Tuple{Field{S},Field{S}}) where {S<:Statistics}
+    return contraction_filter(Contraction(v))
 end
 
 """
     has_two_propagator_zero_loop(vs)
 
 Return whether `vs` contains a zero loop formed by two propagators.
-
-In particular, this detects the pairwise causal identities
-
-```math
-G^R(1,2)G^R(2,1) = 0,
-\\qquad
-G^A(1,2)G^A(2,1) = 0,
-\\qquad
-G^R(1,2)G^A(1,2) = 0.
-```
-
-For a two-propagator input, [`has_zero_loop`](@ref) checks this fast path
-before checking arbitrary-order causal cycles. The helper is also useful on
-its own for detecting pairwise zero loops inside a larger contraction list.
 """
-function has_two_propagator_zero_loop(vs::Vector{Contraction})
+function has_two_propagator_zero_loop(vs::AbstractVector{<:Contraction})
     for i in 1:(length(vs) - 1)
         p1 = positions(vs[i])
         T1 = propagator_type(vs[i]...)
@@ -86,7 +77,7 @@ end
 end
 
 function visit_causal_position(
-    vs::Vector{Contraction}, current::Int8, visited::UInt128, active::UInt128
+    vs::AbstractVector{<:Contraction}, current::Int8, visited::UInt128, active::UInt128
 )::Tuple{Bool,UInt128}
     current_bit = causal_position_bit(current)
     visited |= current_bit
@@ -114,14 +105,8 @@ end
     has_zero_loop(vs)
 
 Return whether `vs` contains a causal zero loop.
-
-The retarded and advanced propagators impose directed time-ordering constraints.
-Their product is zero when those constraints contain a directed cycle. Keldysh
-propagators do not impose a causal constraint and are therefore ignored. The
-cycle search is independent of the number of propagators; the `UInt128` state
-covers all valid values of the package's current `Position` representation.
 """
-function has_zero_loop(vs::Vector{Contraction})
+function has_zero_loop(vs::AbstractVector{<:Contraction})
     if length(vs) == 2 && has_two_propagator_zero_loop(vs)
         return true
     end
@@ -178,19 +163,12 @@ end
 #     regularise
 ######################
 
-"""
-    regular(p::Average)
-
-Checks if the propagator `p` is regular.
-A regular propagator is one that is:
-- not at equal time points (tadpole)
-- or `p` is not of [`PropagatorType`](@ref) `Retarded` while also having a negative [`Regularisation`](@ref)
-- or `p` is not of [`PropagatorType`](@ref) `Advanced` while also having a positive [`Regularisation`](@ref)
-"""
-regular(p::Edge) = regular(fields(p))
+"""Check whether a propagator satisfies the regularisation convention."""
+regular(p::Edge) = regular(Contraction(fields(p)))
+regular(p::Tuple{Field{S},Field{S}}) where {S<:Statistics} = regular(Contraction(p))
 function regular(qs::Contraction)
     positions = position.(qs)
-    if !isequal(positions[1], positions[2]) # self-contraction
+    if !isequal(positions[1], positions[2])
         return true
     end
     _isbulk = is_bulk(qs)
@@ -228,7 +206,7 @@ function should_regularise(qadd::QAdd)::Bool
     return reguralise
 end
 
-function is_connected(vs::Vector{Contraction})
+function is_connected(vs::AbstractVector{<:Contraction})
     ps = integer_positions.(vs)
     in_or_out = findfirst(p -> 1 ∈ p || 2 ∈ p, ps) # in case it a vacuum diagram
     edges = isnothing(in_or_out) ? map(p -> p .- 2, ps) : ps
@@ -236,25 +214,13 @@ function is_connected(vs::Vector{Contraction})
 end
 
 function is_connected(edges::Union{Vector{Tuple{Int,Int}},Vector{Tuple{Int8,Int8}}})
-    # Find all unique vertices
     all_vertices = vertices(edges)
     if isempty(all_vertices)
-        return true  # Empty graph is considered connected
+        return true
     end
 
-    # Find connected components using BFS
     components = connected_components(all_vertices, edges)
-
-    is_single_component = length(components) == 1
-
-    # if !is_single_component
-    #     # @info "Contraction is not connected. Found $(length(components)) components:"
-    #     for (i, comp) in enumerate(components)
-    #         # @info "Component $i: $comp"
-    #     end
-    # end
-
-    return is_single_component
+    return length(components) == 1
 end
 
 function vertices(ps)
@@ -267,7 +233,6 @@ function vertices(ps)
 end
 
 function connected_components(vertices, edges)
-    # Find connected components using BFS
     components = Vector{Set{Int}}()
     remaining = Set(vertices)
 
@@ -280,7 +245,6 @@ function connected_components(vertices, edges)
         while !isempty(queue)
             current = popfirst!(queue)
 
-            # Find neighbors
             for edge in edges
                 neighbor = nothing
                 if edge[1] == current
@@ -302,45 +266,20 @@ function connected_components(vertices, edges)
     return components
 end
 
-"""
-    is_irreducible(vs::Vector{Contraction}) -> Bool
-
-Check if a set of contractions forms an irreducible graph.
-A graph is irreducible if removing any single contraction does not disconnect it.
-
-# Arguments
-- `vs`: Vector of contractions representing edges in the graph
-
-# Returns
-- `true` if the graph is irreducible (cannot be disconnected by removing one contraction)
-- `false` if the graph is reducible (can be disconnected by removing one contraction)
-
-# Algorithm
-1. Check if the original graph is connected
-2. For each contraction, temporarily remove it from the vector
-3. Check if the resulting graph is still connected
-4. If any removal disconnects the graph, return false (reducible)
-5. If all removals keep the graph connected, return true (irreducible)
-"""
+"""Check whether removing any one bulk contraction disconnects the graph."""
 function is_irreducible(vs::AbstractVector)
-    # If we have fewer than 2 contractions, it's trivially irreducible
     if length(vs) < 2
         return true
     end
 
-    ps = [integer_positions(edge) for edge in vs if is_bulk(edge)] # TODO Keep FixedVector
+    ps = [integer_positions(edge) for edge in vs if is_bulk(edge)]
 
-    # Test removing each contraction
     for i in 1:length(ps)
-        # Create a copy without the i-th contraction
-        test_contractions = ps[setdiff(begin:end, i)] # TODO SmallCollections.deleteat
-
-        # If removing this contraction disconnects the graph, it's reducible
+        test_contractions = ps[setdiff(begin:end, i)]
         if !is_connected(test_contractions)
             return false
         end
     end
 
-    # If we reach here, removing any single contraction keeps the graph connected
     return true
 end
