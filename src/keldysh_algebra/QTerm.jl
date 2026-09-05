@@ -175,7 +175,9 @@ struct QAdd{C<:Number,S<:Statistics} <: QTerm
     "Summands, at least one"
     arguments::Vector{QMul{C,S}}
 
-    function QAdd{C,S}(arguments::Vector{QMul{C,S}}) where {C<:Number,S<:Statistics}
+    function QAdd{C,S}(
+        arguments::Vector{QMul{C,S}}, ::Val{:owned}
+    ) where {C<:Number,S<:Statistics}
         isempty(arguments) && throw(
             ArgumentError(
                 "a QAdd needs at least one term; algebraic zero is zero(QAdd{$C,$S})"
@@ -184,27 +186,38 @@ struct QAdd{C<:Number,S<:Statistics} <: QTerm
         return new{C,S}(arguments)
     end
 end
+
+"""Construct a `QAdd` from an internally owned term vector without copying it."""
+@inline function _qadd_owned(arguments::Vector{QMul{C,S}}) where {C<:Number,S<:Statistics}
+    return QAdd{C,S}(arguments, Val(:owned))
+end
+
+# Public vector construction is defensive: callers retain ownership of `arguments`.
+function QAdd{C,S}(arguments::Vector{QMul{C,S}}) where {C<:Number,S<:Statistics}
+    return _qadd_owned(copy(arguments))
+end
 QAdd(arguments::Vector{QMul{C,S}}) where {C<:Number,S<:Statistics} = QAdd{C,S}(arguments)
 
 function QAdd(args::Vector{Field{S}}) where {S<:Statistics}
-    return QAdd{Int,S}(QMul{Int,S}[_qmul_sorting(1, Field{S}[f]) for f in args])
+    return _qadd_owned(QMul{Int,S}[_qmul_sorting(1, Field{S}[f]) for f in args])
 end
 function QAdd{C,S}() where {C<:Number,S<:Statistics}
-    return QAdd{C,S}(QMul{C,S}[_qmul_sorting(zero(C), Field{S}[])])
+    return _qadd_owned(QMul{C,S}[_qmul_sorting(zero(C), Field{S}[])])
 end
 
 Base.length(a::QAdd) = length(a.arguments)
 Base.iszero(a::QAdd) = all(iszero, a.arguments)
 Base.isone(a::QAdd) = length(a.arguments) == 1 && isone(first(a.arguments))
 Base.zero(a::QAdd{C,S}) where {C,S} = QAdd{C,S}()
-Base.one(a::QAdd{C,S}) where {C,S} = QAdd{C,S}(QMul{C,S}[_qmul_sorting(one(C), Field{S}[])])
+Base.one(a::QAdd{C,S}) where {C,S} =
+    _qadd_owned(QMul{C,S}[_qmul_sorting(one(C), Field{S}[])])
 Base.zero(::Type{QAdd{C,S}}) where {C,S} = QAdd{C,S}()
 function Base.one(::Type{QAdd{C,S}}) where {C,S}
-    return QAdd{C,S}(QMul{C,S}[_qmul_sorting(one(C), Field{S}[])])
+    return _qadd_owned(QMul{C,S}[_qmul_sorting(one(C), Field{S}[])])
 end
 
 SymbolicUtils.operation(::QAdd) = (+)
-SymbolicUtils.arguments(a::QAdd) = a.arguments
+SymbolicUtils.arguments(a::QAdd) = copy(a.arguments)
 TermInterface.metadata(::QAdd) = nothing
 function TermInterface.maketerm(
     ::Type{QAdd{C,S}}, ::typeof(+), args::Vector{QMul{C,S}}, metadata
@@ -215,8 +228,8 @@ end
 """Coefficients of every term of a sum."""
 coefficient(q::QAdd) = map(coefficient, q.arguments)
 
-"""Products making up a sum."""
-terms(q::QAdd) = q.arguments
+"""Products making up a sum, as a copy the caller may mutate freely."""
+terms(q::QAdd) = copy(q.arguments)
 
 """Fields appearing anywhere in a sum, in term order, as a fresh vector."""
 fields(q::QAdd) = allfields(q)
@@ -228,7 +241,7 @@ function allfields(q::QAdd{C,S}) where {C,S}
     return out
 end
 function bar(q::QAdd{C,S}) where {C,S}
-    return QAdd(QMul{C,S}[bar(term) for term in q.arguments])
+    return _qadd_owned(QMul{C,S}[bar(term) for term in q.arguments])
 end
 
 function Base.promote_rule(
@@ -240,7 +253,7 @@ Base.convert(::Type{QAdd{C,S}}, q::QAdd{C,S}) where {C<:Number,S<:Statistics} = 
 function Base.convert(
     ::Type{QAdd{C,S}}, q::QAdd{D,S}
 ) where {C<:Number,D<:Number,S<:Statistics}
-    return QAdd(QMul{C,S}[convert(QMul{C,S}, term) for term in q.arguments])
+    return _qadd_owned(QMul{C,S}[convert(QMul{C,S}, term) for term in q.arguments])
 end
 
 #########################
@@ -296,5 +309,5 @@ function set_position_mul(a::QMul{C,S}, p::Position) where {C<:Number,S<:Statist
     return _qmul_sorting(a.arg_c, args)
 end
 function set_position(a::QAdd{C,S}, p::Position) where {C<:Number,S<:Statistics}
-    return QAdd(QMul{C,S}[set_position_mul(arg, p) for arg in a.arguments])
+    return _qadd_owned(QMul{C,S}[set_position_mul(arg, p) for arg in a.arguments])
 end
