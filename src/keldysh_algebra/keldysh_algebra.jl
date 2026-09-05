@@ -40,8 +40,6 @@ index(f::Field) = index(position(f))
 
 is_unbarred(f::Field) = orientation(f) === Orientation.Unbarred
 is_barred(f::Field) = orientation(f) === Orientation.Barred
-is_annihilation(f::Field) = is_unbarred(f)
-is_creation(f::Field) = is_barred(f)
 ladder(f::Field) = Int(is_barred(f))
 
 is_quantum(f::Field{Boson}) = keldysh_index(f) === Quantum
