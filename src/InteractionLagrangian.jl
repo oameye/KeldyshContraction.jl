@@ -94,6 +94,18 @@ position(L::InteractionLagrangian) = L.position
 parameters(L::InteractionLagrangian) = L.parameter
 field_families(L::InteractionLagrangian) = copy(L.families)
 
+function target_family(L::InteractionLagrangian)
+    length(L.families) == 1 || throw(
+        ArgumentError("an interaction with multiple field families requires an explicit target")
+    )
+    return only(L.families)
+end
+
+function target_family(L::InteractionLagrangian, target::FieldFamily{Boson})
+    target in L.families || throw(ArgumentError("target field family is not in the interaction"))
+    return target
+end
+
 # Keep tuple/vector methods separate so the statistics parameter remains bound.
 function balanced_orientation(args)
     n_unbarred = count(is_unbarred, args)
@@ -180,6 +192,12 @@ function check_common_fields(args::AbstractVector{<:InteractionLagrangian})
         ArgumentError("all InteractionLagrangian must have the same physical field families")
     )
     return nothing
+end
+
+field_families(Ls::LagrangianSum) = field_families(first(arguments(Ls)))
+target_family(Ls::LagrangianSum) = target_family(first(arguments(Ls)))
+function target_family(Ls::LagrangianSum, target::FieldFamily{Boson})
+    return target_family(first(arguments(Ls)), target)
 end
 
 SymbolicUtils.arguments(Ls::LagrangianSum) = Ls.arguments
