@@ -48,9 +48,6 @@ function _to_expression(op::Field)
     end
 end
 
-# Built from the package-native accessors, not `SymbolicUtils.arguments`: the latter
-# returns a heterogeneous `Vector{Union{C,Field{S}}}` for interop, which has no place in
-# package-owned computation.
 function _to_expression(t::QMul)
     fs = fields(t)
     isempty(fs) && return _to_expression(coefficient(t))
