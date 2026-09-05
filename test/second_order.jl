@@ -6,11 +6,12 @@ using KeldyshContraction: Bulk, position
 
 @qfields ϕᶜ::Boson(Classical) ϕᴾ::Boson(Quantum)
 
-L_int = im * (
-    0.5 * bar(ϕᶜ) * bar(ϕᴾ) * (ϕᶜ(Minus) * ϕᶜ(Minus) + ϕᴾ(Minus) * ϕᴾ(Minus)) -
-    0.5 * ϕᶜ(Plus) * ϕᴾ(Plus) * (bar(ϕᶜ) * bar(ϕᶜ) + bar(ϕᴾ) * bar(ϕᴾ)) +
-    bar(ϕᶜ) * bar(ϕᴾ) * (ϕᶜ(Plus) * ϕᴾ(Plus) + ϕᶜ(Minus) * ϕᴾ(Minus))
-)
+L_int =
+    im * (
+        0.5 * bar(ϕᶜ) * bar(ϕᴾ) * (ϕᶜ(Minus) * ϕᶜ(Minus) + ϕᴾ(Minus) * ϕᴾ(Minus)) -
+        0.5 * ϕᶜ(Plus) * ϕᴾ(Plus) * (bar(ϕᶜ) * bar(ϕᶜ) + bar(ϕᴾ) * bar(ϕᴾ)) +
+        bar(ϕᶜ) * bar(ϕᴾ) * (ϕᶜ(Plus) * ϕᴾ(Plus) + ϕᶜ(Minus) * ϕᴾ(Minus))
+    )
 L = InteractionLagrangian(L_int)
 
 @testset "set_position" begin
@@ -24,34 +25,24 @@ end
     expr = L1.lagrangian * L2.lagrangian
     for arg in expr.arguments
         sorted = sort(arg.args_nc; by=KeldyshContraction.ladder)
-        @test all(KeldyshContraction.ladder.(arg.args_nc) .== KeldyshContraction.ladder.(sorted))
+        @test all(
+            KeldyshContraction.ladder.(arg.args_nc) .== KeldyshContraction.ladder.(sorted)
+        )
     end
 end
 
 @testset "zero loop filter" begin
     using KeldyshContraction: has_zero_loop, Contraction
-    vs = Contraction[
-        (ϕᶜ(Bulk(1)), bar(ϕᴾ)(Bulk(2))),
-        (ϕᶜ(Bulk(2)), bar(ϕᴾ)(Bulk(1))),
-    ]
+    vs = Contraction[(ϕᶜ(Bulk(1)), bar(ϕᴾ)(Bulk(2))), (ϕᶜ(Bulk(2)), bar(ϕᴾ)(Bulk(1)))]
     @test has_zero_loop(vs)
 
-    vs = Contraction[
-        (ϕᴾ(Bulk(1)), bar(ϕᶜ)(Bulk(2))),
-        (ϕᴾ(Bulk(2)), bar(ϕᶜ)(Bulk(1))),
-    ]
+    vs = Contraction[(ϕᴾ(Bulk(1)), bar(ϕᶜ)(Bulk(2))), (ϕᴾ(Bulk(2)), bar(ϕᶜ)(Bulk(1)))]
     @test has_zero_loop(vs)
 
-    vs = Contraction[
-        (ϕᶜ(Bulk(1)), bar(ϕᴾ)(Bulk(2))),
-        (ϕᴾ(Bulk(1)), bar(ϕᶜ)(Bulk(2))),
-    ]
+    vs = Contraction[(ϕᶜ(Bulk(1)), bar(ϕᴾ)(Bulk(2))), (ϕᴾ(Bulk(1)), bar(ϕᶜ)(Bulk(2)))]
     @test has_zero_loop(vs)
 
-    vs = Contraction[
-        (ϕᶜ(Bulk(1)), bar(ϕᴾ)(Bulk(2))),
-        (ϕᶜ(Bulk(1)), bar(ϕᴾ)(Bulk(2))),
-    ]
+    vs = Contraction[(ϕᶜ(Bulk(1)), bar(ϕᴾ)(Bulk(2))), (ϕᶜ(Bulk(1)), bar(ϕᴾ)(Bulk(2)))]
     @test !has_zero_loop(vs)
 
     vs = Contraction[

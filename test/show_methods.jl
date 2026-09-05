@@ -73,9 +73,7 @@ end
 
     @test repr(MIME"text/latex"(), L) == "\$\\psi \\phi \\bar{\\psi} \\bar{\\phi}\$"
 
-    ds = Diagrams(
-        [Diagram([Edge(ϕ, bar(ϕ))], Val(1), Val(0))], Complex{Rational{Int}}(1.0)
-    )
+    ds = Diagrams([Diagram([Edge(ϕ, bar(ϕ))], Val(1), Val(0))], Complex{Rational{Int}}(1.0))
     DP = DressedPropagator(ds, ds, ds, 1, g)
     @test repr(MIME"text/plain"(), DP) ==
         "Dressed Propagator:\nkeldysh:  Gᴷ(y₁,y₁)\nretarded: Gᴷ(y₁,y₁)\nadvanced: Gᴷ(y₁,y₁)"

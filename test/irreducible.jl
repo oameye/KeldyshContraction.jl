@@ -12,11 +12,7 @@ using KeldyshContraction: is_connected, is_irreducible
         vs_single = Contraction[(c, bar(q))]
         @test is_irreducible(vs_single) == true
 
-        vs_connected = Contraction[
-            (c(Out()), bar(q)),
-            (c, bar(q)),
-            (c, bar(q)(In())),
-        ]
+        vs_connected = Contraction[(c(Out()), bar(q)), (c, bar(q)), (c, bar(q)(In()))]
         @test is_connected(vs_connected)
         @test is_irreducible(vs_connected) == true
     end
