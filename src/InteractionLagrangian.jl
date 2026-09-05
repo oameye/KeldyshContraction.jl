@@ -9,12 +9,37 @@ abstract type Lagrangian end
 #  Interaction Lagrangian
 ###########################
 
-"""Represents a bosonic interaction Lagrangian."""
+"""
+$(DocStringExtensions.TYPEDEF)
+
+Represents an interaction Lagrangian.
+
+# Fields
+$(DocStringExtensions.FIELDS)
+
+# Constructor
+$(DocStringExtensions.TYPEDSIGNATURES)
+
+Constructs an `InteractionLagrangian` from a [`QTerm`](@ref) expression.
+
+# Requirements
+The expression must:
+- be a bulk term ([`is_bulk`](@ref));
+- be conserved ([`is_conserved`](@ref));
+- be physical ([`is_physical`](@ref));
+- contain at most two different fields;
+- use opposite Keldysh components for those fields.
+"""
 struct InteractionLagrangian{T} <: Lagrangian
+    "The Lagrangian expression as a [`QTerm`](@ref)"
     lagrangian::T
+    "The quantum field"
     qfield::Field{Boson}
+    "The classical field"
     cfield::Field{Boson}
+    "The position of the interaction Lagrangian"
     position::Position
+    "Parameter of the perturbation series"
     parameter::CSym
 end
 
@@ -75,7 +100,14 @@ function balanced_orientation(args)
     return n_unbarred > 0 && n_unbarred == count(is_barred, args)
 end
 
-"""Check whether fields contain equal, nonzero barred and unbarred counts."""
+"""
+    is_conserved(a)
+
+Checks whether a field expression is conserved. A conserved expression contains equal,
+nonzero numbers of barred and unbarred fields.
+
+See also: [`is_physical`](@ref)
+"""
 is_conserved(args::Vector{Field{S}}) where {S<:Statistics} = balanced_orientation(args)
 is_conserved(::Tuple{}) = false
 function is_conserved(args::Tuple{Field{S},Vararg{Field{S}}}) where {S<:Statistics}
@@ -85,7 +117,15 @@ is_conserved(a::QMul) = is_conserved(a.args_nc)
 is_conserved(a::QAdd) = all(is_conserved, a.arguments)
 is_conserved(::Field) = false
 
-"""Check whether fields satisfy the external endpoint convention."""
+"""
+    is_physical(a)
+
+Checks whether a field expression is physical. If an expression contains an [`In`](@ref)
+field, it must also contain an [`Out`](@ref) field and vice versa. An `In` field must be
+barred, while an `Out` field must be unbarred.
+
+See also: [`is_conserved`](@ref)
+"""
 function is_physical(args::Vector{Field{S}}) where {S<:Statistics}
     positions = Position[position(f) for f in args]
     in_out = !has_in(positions) || has_out(positions)
@@ -105,8 +145,20 @@ end
 #      LagrangianSum
 ###########################
 
-"""Sum of interaction Lagrangians with common fields."""
+"""
+$(DocStringExtensions.TYPEDEF)
+
+Represents a sum of interaction Lagrangians, each describing a different process.
+All terms must use the same quantum and classical fields.
+
+# Fields
+$(DocStringExtensions.FIELDS)
+
+# Constructor
+$(DocStringExtensions.TYPEDSIGNATURES)
+"""
 struct LagrangianSum{T} <: Lagrangian
+    "Interaction Lagrangians in the sum"
     arguments::Vector{InteractionLagrangian{T}}
     function LagrangianSum(args::Vector{InteractionLagrangian{T}}, ::Val{:raw}) where {T}
         return new{T}(args)
