@@ -36,11 +36,7 @@ function InteractionLagrangian(expr::QTerm, parameter=DEFAULT_PARAMETER)
     c_idx === nothing && throw(ArgumentError("interaction has no classical field"))
 
     return InteractionLagrangian{typeof(expr)}(
-        expr,
-        fields[q_idx],
-        fields[c_idx],
-        position(fields[q_idx]),
-        parameter,
+        expr, fields[q_idx], fields[c_idx], position(fields[q_idx]), parameter
     )
 end
 
@@ -69,11 +65,13 @@ function is_conserved(args::Vector{Field{S}}) where {S<:Statistics}
     n_barred = count(is_barred, args)
     return n_unbarred > 0 && n_unbarred == n_barred
 end
-function is_conserved(args::Tuple{Vararg{Field{S}}}) where {S<:Statistics}
-    isempty(args) && return false
+is_conserved(::Tuple{}) = false
+function is_conserved(
+    args::Tuple{Field{S},Vararg{Field{S}}}
+) where {S<:Statistics}
     n_unbarred = count(is_unbarred, args)
     n_barred = count(is_barred, args)
-    return n_unbarred > 0 && n_unbarred == n_barred
+    return n_unbarred == n_barred
 end
 is_conserved(a::QMul) = is_conserved(a.args_nc)
 is_conserved(a::QAdd) = all(is_conserved, a.arguments)
@@ -161,21 +159,25 @@ function convert_coefficients(
     return QAdd(QMul{C,S}[convert_coefficients(C, term) for term in q.arguments])
 end
 
-rationalize_coefficients(q::QMul{C,S}) where {C<:Integer,S} = q
-rationalize_coefficients(q::QMul{C,S}) where {C<:Rational,S} = q
-rationalize_coefficients(q::QMul{Complex{C},S}) where {C<:Rational,S} = q
+rationalize_coefficients(q::QMul{C,S}) where {C<:Integer,S<:Statistics} = q
+rationalize_coefficients(q::QMul{C,S}) where {C<:Rational,S<:Statistics} = q
+rationalize_coefficients(q::QMul{Complex{C},S}) where {C<:Rational,S<:Statistics} = q
 
-function rationalize_coefficients(q::QMul{C,S}) where {C<:AbstractFloat,S}
+function rationalize_coefficients(
+    q::QMul{C,S}
+) where {C<:AbstractFloat,S<:Statistics}
     R = typeof(rationalize(zero(C)))
     return QMul{R,S}(rationalize(q.arg_c), copy(q.args_nc))
 end
-function rationalize_coefficients(q::QMul{Complex{C},S}) where {C<:AbstractFloat,S}
+function rationalize_coefficients(
+    q::QMul{Complex{C},S}
+) where {C<:AbstractFloat,S<:Statistics}
     R = typeof(rationalize(zero(C)))
     CR = Complex{R}
     c = complex(rationalize(real(q.arg_c)), rationalize(imag(q.arg_c)))
     return QMul{CR,S}(convert(CR, c), copy(q.args_nc))
 end
-rationalize_coefficients(q::QMul) = q
+rationalize_coefficients(q::QMul{C,S}) where {C<:Number,S<:Statistics} = q
 
 function rationalize_coefficients(q::QAdd{C,S}) where {C<:Number,S<:Statistics}
     converted = map(rationalize_coefficients, q.arguments)
