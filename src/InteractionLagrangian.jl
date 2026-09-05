@@ -24,7 +24,9 @@ struct InteractionLagrangian{T} <: Lagrangian
     parameter::CSym
 end
 
-function InteractionLagrangian(expr::QTerm, parameter=DEFAULT_PARAMETER)
+function InteractionLagrangian(
+    expr::Union{QMul{C,Boson},QAdd{C,Boson}}, parameter=DEFAULT_PARAMETER
+) where {C<:Number}
     fields = _extract_unique_fields(expr)
     contours = contour_integers(fields)
 
@@ -40,10 +42,18 @@ function InteractionLagrangian(expr::QTerm, parameter=DEFAULT_PARAMETER)
     )
 end
 
-function _extract_unique_fields(expr::QTerm)
+function _extract_unique_fields(
+    expr::Union{QMul{C,Boson},QAdd{C,Boson}}
+) where {C<:Number}
     fs = allfields(expr)
     set_reg_to_zero!(fs)
-    return filter(is_unbarred, unique(fs))
+    unique_fields = unique(fs)
+    result = Field{Boson}[]
+    sizehint!(result, length(unique_fields))
+    for field in unique_fields
+        is_unbarred(field) && push!(result, field)
+    end
+    return result
 end
 
 function _assert_lagrangian(expr, fields, contours)
@@ -66,9 +76,7 @@ function is_conserved(args::Vector{Field{S}}) where {S<:Statistics}
     return n_unbarred > 0 && n_unbarred == n_barred
 end
 is_conserved(::Tuple{}) = false
-function is_conserved(
-    args::Tuple{Field{S},Vararg{Field{S}}}
-) where {S<:Statistics}
+function is_conserved(args::Tuple{Field{S},Vararg{Field{S}}}) where {S<:Statistics}
     n_unbarred = count(is_unbarred, args)
     n_barred = count(is_barred, args)
     return n_unbarred == n_barred
@@ -175,9 +183,7 @@ rationalize_coefficients(q::QMul{C,S}) where {C<:Integer,S<:Statistics} = q
 rationalize_coefficients(q::QMul{C,S}) where {C<:Rational,S<:Statistics} = q
 rationalize_coefficients(q::QMul{Complex{C},S}) where {C<:Rational,S<:Statistics} = q
 
-function rationalize_coefficients(
-    q::QMul{C,S}
-) where {C<:AbstractFloat,S<:Statistics}
+function rationalize_coefficients(q::QMul{C,S}) where {C<:AbstractFloat,S<:Statistics}
     R = typeof(rationalize(zero(C)))
     return QMul{R,S}(rationalize(q.arg_c), copy(q.args_nc))
 end
