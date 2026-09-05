@@ -134,27 +134,18 @@ function Base.adjoint(d::Diagrams)
     dict = Dict(adjoint_diagram(pair) for pair in d)
     return Diagrams(dict)
 end
-"""
-    has_external_legs(d::Diagram)
 
-Whether the diagram carries [`In`](@ref) and [`Out`](@ref) coordinates. A
-[`DressedPropagator`](@ref) diagram does; an amputated [`SelfEnergy`](@ref) diagram does
-not, so there is no way to tell which of its bulk coordinates the external legs attach to.
-"""
+"""Return whether a diagram explicitly carries external `In()` and `Out()` legs."""
 has_external_legs(d::Diagram) = any(e -> is_in(fields(e)), contractions(d))
 
 """
-    amputated_leg_indices(d::Diagram)
-
-The bulk coordinates an amputated [`SelfEnergy`](@ref) diagram lost its external legs to,
-as `(out_leg, in_leg)`, or `(0, 0)` when there are none to find. Every interaction vertex
-of an [`InteractionLagrangian`](@ref) has the same valence, so the vertex one [`Create`](@ref)
-short is where the outgoing leg was cut and the vertex one [`Destroy`](@ref) short is where
-the incoming one was. Both legs may hang off the same vertex.
+Infer the bulk vertices at which an amputated diagram lost its outgoing and incoming
+external legs. Returns `(0, 0)` if the attachment points cannot be inferred uniquely.
 """
 function amputated_leg_indices(d::Diagram)
     _contractions = contractions(d)
     verts = sort!(unique(Int(index(f)) for e in _contractions for f in fields(e)))
+    isempty(verts) && return (0, 0)
     valence, remainder = divrem(length(_contractions) + 1, length(verts))
     iszero(remainder) || return (0, 0)
     outgoing = zeros(Int, length(verts))
@@ -170,11 +161,9 @@ function amputated_leg_indices(d::Diagram)
 end
 
 """
-    with_external_legs(d::Diagram)
-
-The contractions of `d` together with the external legs it is missing, and how many were
-added. Reversing a diagram exchanges its incoming and outgoing coordinate, so an amputated
-diagram has to get its legs back before it can be reversed at all.
+Restore the external contractions of an amputated diagram when their attachment vertices
+can be inferred. The second return value is the number of added contractions, or `-1` if
+reconstruction is not possible.
 """
 function with_external_legs(d::Diagram)
     _contractions = Contraction[fields(e) for e in contractions(d)]
@@ -190,24 +179,21 @@ end
 function adjoint_diagram(
     pair::Pair{Diagram{E1,E2},ComplexRationals}
 )::Pair{Diagram{E1,E2},ComplexRationals} where {E1,E2}
-    # G^R = G^A
-    # G^K = -G^K
     d, prefactor = pair
     _contractions = contractions(d)
     minus_signs = count(is_keldysh, _contractions)
     prefactor′ = prefactor * (-1)^minus_signs
+
     legged, added = with_external_legs(d)
     adjoint_edges = if added < 0
-        # Nothing to reverse around: fall back to swapping the contours in place.
         Edge[adjoint(e) for e in _contractions]
     else
-        # Reversing every edge exchanges the two external coordinates, so relabel the bulk
-        # coordinates back into canonical form, then drop the legs again.
         reversed = Contraction[reverse_contraction(c) for c in legged]
         canonical = canonicalize(reversed)
         kept = Contraction[canonical[i] for i in 1:(length(canonical) - added)]
         Edge[Edge(c) for c in kept]
     end
+
     sorted_adjoint_edges = sort(collect(adjoint_edges); by=sort_by_position_and_type)
     edges = SmallCollections.FixedVector{E1,Edge}(e for e in sorted_adjoint_edges)
     return Diagram(edges, Val(E2)) => _simplify(adjoint(prefactor′))
