@@ -2,8 +2,19 @@
 # dictionary keys during canonicalization.
 _hashvec(xs, h::UInt) = foldr(hash, xs; init=h)
 
-Base.hash(q::QMul, h::UInt) = hash(QMul, hash(q.arg_c, _hashvec(q.args_nc, h)))
-Base.hash(q::QAdd, h::UInt) = hash(QAdd, _hashvec(q.arguments, h))
+function Base.hash(q::QMul, h::UInt)
+    isempty(q.args_nc) && return hash(q.arg_c, h)
+    length(q.args_nc) == 1 && isone(q.arg_c) && return hash(first(q.args_nc), h)
+    return hash(QMul, hash(q.arg_c, _hashvec(q.args_nc, h)))
+end
+
+function Base.hash(q::QAdd, h::UInt)
+    if length(q.arguments) == 1
+        term = first(q.arguments)
+        length(term.args_nc) == 1 && isone(term.arg_c) && return hash(term, h)
+    end
+    return hash(QAdd, _hashvec(q.arguments, h))
+end
 
 function Base.hash(h::Union{KeldyshIndex.T,Orientation.T,Regularisation.T}, i::UInt)
     return hash(Int(h), i)
