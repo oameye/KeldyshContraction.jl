@@ -52,8 +52,24 @@ function matrix(G::DressedPropagator{E1,E2}) where {E1,E2}
     return result
 end
 
+# Transitional fallback for component declarations that have not yet migrated to families.
+function propagator_fields(L::InteractionLagrangian, ::Nothing)
+    if length(L.families) == 1
+        family = target_family(L)
+        return family[Quantum], family[Classical]
+    end
+    return L.qfield, L.cfield
+end
+function propagator_fields(L::InteractionLagrangian, target::FieldFamily{Boson})
+    family = target_family(L, target)
+    return family[Quantum], family[Classical]
+end
+
 """
-    DressedPropagator(L::InteractionLagrangian, ::Val{order}, ::Val{edges}; kwargs...)
+    DressedPropagator(L::InteractionLagrangian, ::Val{order}, ::Val{edges}; target, kwargs...)
+
+For a single field family, the target propagator is inferred. Multi-family interactions
+require `target` to select the physical field family.
 
 All the same-coordinate advanced propagators are converted to retarded propagators when
 `simplify=true`.
@@ -62,22 +78,40 @@ function DressedPropagator(
     L::InteractionLagrangian,
     ::Val{O},
     ::Val{E};
+    target=nothing,
     simplify=true,
     _set_reg_to_zero=true,
     kwargs...,
 ) where {O,E}
     @assert number_of_propagators(L) * O + 1 == E "The supplied Val{edges} must equal the interaction's propagator count times Val{order}, plus the external propagator"
-    ϕ = L.qfield
-    ψ = L.cfield
+    qfield, cfield = propagator_fields(L, target)
 
     keldysh = wick_contraction(
-        ψ(Out()) * bar(ψ)(In()), L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
+        cfield(Out()) * bar(cfield)(In()),
+        L,
+        Val(O),
+        Val(E);
+        simplify,
+        _set_reg_to_zero,
+        kwargs...,
     )
     retarded = wick_contraction(
-        ψ(Out()) * bar(ϕ)(In()), L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
+        cfield(Out()) * bar(qfield)(In()),
+        L,
+        Val(O),
+        Val(E);
+        simplify,
+        _set_reg_to_zero,
+        kwargs...,
     )
     advanced = wick_contraction(
-        ϕ(Out()) * bar(ψ)(In()), L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
+        qfield(Out()) * bar(cfield)(In()),
+        L,
+        Val(O),
+        Val(E);
+        simplify,
+        _set_reg_to_zero,
+        kwargs...,
     )
 
     for component in (keldysh, retarded, advanced)
@@ -111,25 +145,48 @@ order(d::DressedPropagatorSum) = d.order
 parameters(d::DressedPropagatorSum) = map(G -> G.parameter, arguments(d))
 
 """
-    DressedPropagator(Ls::LagrangianSum, ::Val{order}, ::Val{edges}; kwargs...)
+    DressedPropagator(Ls::LagrangianSum, ::Val{order}, ::Val{edges}; target, kwargs...)
 """
 function DressedPropagator(
-    Ls::LagrangianSum, ::Val{O}, ::Val{E}; simplify=true, _set_reg_to_zero=true, kwargs...
+    Ls::LagrangianSum,
+    ::Val{O},
+    ::Val{E};
+    target=nothing,
+    simplify=true,
+    _set_reg_to_zero=true,
+    kwargs...,
 ) where {O,E}
     @assert all(number_of_propagators(L) * O + 1 == E for L in arguments(Ls)) "All LagrangianSum terms must produce the supplied number of propagator edges"
-    ϕ = first(arguments(Ls)).qfield
-    ψ = first(arguments(Ls)).cfield
+    qfield, cfield = propagator_fields(first(arguments(Ls)), target)
 
     simplify = isa(simplify, Bool) ? fill(simplify, length(Ls)) : simplify
 
     keldysh_pairs = wick_contraction(
-        ψ(Out()) * bar(ψ)(In()), Ls, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
+        cfield(Out()) * bar(cfield)(In()),
+        Ls,
+        Val(O),
+        Val(E);
+        simplify,
+        _set_reg_to_zero,
+        kwargs...,
     )
     retarded_pairs = wick_contraction(
-        ψ(Out()) * bar(ϕ)(In()), Ls, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
+        cfield(Out()) * bar(qfield)(In()),
+        Ls,
+        Val(O),
+        Val(E);
+        simplify,
+        _set_reg_to_zero,
+        kwargs...,
     )
     advanced_pairs = wick_contraction(
-        ϕ(Out()) * bar(ψ)(In()), Ls, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
+        qfield(Out()) * bar(cfield)(In()),
+        Ls,
+        Val(O),
+        Val(E);
+        simplify,
+        _set_reg_to_zero,
+        kwargs...,
     )
 
     dict = Dict(
