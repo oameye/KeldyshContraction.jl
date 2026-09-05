@@ -52,7 +52,11 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("show_methods/printing.jl")
 
     export @qfields,
+        FieldFamily,
         Field,
+        field_family,
+        field_families,
+        target_family,
         Boson,
         bar,
         wick_contraction,

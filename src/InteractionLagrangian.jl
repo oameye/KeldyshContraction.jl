@@ -27,72 +27,76 @@ The expression must:
 - be a bulk term (`is_bulk`);
 - be conserved ([`is_conserved`](@ref));
 - be physical ([`is_physical`](@ref));
-- contain at most two different fields;
-- use opposite Keldysh components for those fields.
+- contain both Keldysh components.
 """
-struct InteractionLagrangian{T} <: Lagrangian
-    "The Lagrangian expression as a [`QTerm`](@ref)"
-    lagrangian::T
-    "The quantum field"
-    qfield::Field{Boson}
-    "The classical field"
-    cfield::Field{Boson}
+struct InteractionLagrangian{C<:Number,S<:Statistics} <: Lagrangian
+    "The Lagrangian expression"
+    lagrangian::QAdd{C,S}
+    "Physical field families appearing in the interaction"
+    families::Vector{FieldFamily{S}}
     "The position of the interaction Lagrangian"
     position::Position
     "Parameter of the perturbation series"
     parameter::CSym
 end
 
+normalize_interaction(expr::QAdd) = expr
+function normalize_interaction(expr::QMul{C,S}) where {C<:Number,S<:Statistics}
+    return QAdd(QMul{C,S}[expr])
+end
+
 function InteractionLagrangian(
-    expr::Union{QMul{C,Boson},QAdd{C,Boson}}, parameter=DEFAULT_PARAMETER
-) where {C<:Number}
-    fields = _extract_unique_fields(expr)
-    contours = contour_integers(fields)
+    expr::Union{QMul{C,S},QAdd{C,S}}, parameter=DEFAULT_PARAMETER
+) where {C<:Number,S<:Statistics}
+    expression = normalize_interaction(expr)
+    fields = allfields(expression)
+    assert_lagrangian(expression, fields)
 
-    _assert_lagrangian(expr, fields, contours)
-
-    q_idx = findfirst(iszero, contours)
-    c_idx = findfirst(isone, contours)
-    q_idx === nothing && throw(ArgumentError("interaction has no quantum field"))
-    c_idx === nothing && throw(ArgumentError("interaction has no classical field"))
-
-    return InteractionLagrangian{typeof(expr)}(
-        expr, fields[q_idx], fields[c_idx], position(fields[q_idx]), parameter
+    return InteractionLagrangian{C,S}(
+        expression, interaction_families(expression), position(first(fields)), parameter
     )
 end
 
-function _extract_unique_fields(expr::Union{QMul{C,Boson},QAdd{C,Boson}}) where {C<:Number}
-    fs = allfields(expr)
-    set_reg_to_zero!(fs)
-    unique_fields = unique(fs)
-    result = Field{Boson}[]
-    sizehint!(result, length(unique_fields))
-    for field in unique_fields
-        is_unbarred(field) && push!(result, field)
-    end
-    return result
+function interaction_families(
+    expr::Union{QMul{C,S},QAdd{C,S}}
+) where {C<:Number,S<:Statistics}
+    families = unique(field_family.(allfields(expr)))
+    sort!(families)
+    return families
 end
 
-function _assert_lagrangian(expr, fields, contours)
+function assert_lagrangian(expr, fields)
     is_bulk(expr) ||
         throw(ArgumentError("an interaction Lagrangian only accepts bulk terms"))
     is_conserved(expr) ||
         throw(ArgumentError("an interaction Lagrangian only accepts conserved terms"))
     is_physical(expr) ||
         throw(ArgumentError("an interaction Lagrangian only accepts physical terms"))
-    length(fields) <= 2 || throw(
-        ArgumentError("an interaction Lagrangian only accepts up to two different fields"),
-    )
-    unique(contours) == contours || throw(
-        ArgumentError(
-            "an interaction Lagrangian only accepts fields with opposite contours"
-        ),
+    contours = contour_integers(fields)
+    any(iszero, contours) && any(isone, contours) || throw(
+        ArgumentError("an interaction Lagrangian must contain both Keldysh components")
     )
     return nothing
 end
 
 position(L::InteractionLagrangian) = L.position
 parameters(L::InteractionLagrangian) = L.parameter
+field_families(L::InteractionLagrangian) = copy(L.families)
+
+function target_family(L::InteractionLagrangian)
+    length(L.families) == 1 || throw(
+        ArgumentError(
+            "an interaction with multiple field families requires an explicit target"
+        ),
+    )
+    return only(L.families)
+end
+
+function target_family(L::InteractionLagrangian{C,S}, target::FieldFamily{S}) where {C,S}
+    target in L.families ||
+        throw(ArgumentError("target field family is not in the interaction"))
+    return target
+end
 
 # Keep tuple/vector methods separate so the statistics parameter remains bound.
 function balanced_orientation(args)
@@ -149,7 +153,7 @@ end
 $(DocStringExtensions.TYPEDEF)
 
 Represents a sum of interaction Lagrangians, each describing a different process.
-All terms must use the same quantum and classical fields.
+All terms must use the same physical field families.
 
 # Fields
 $(DocStringExtensions.FIELDS)
@@ -157,30 +161,32 @@ $(DocStringExtensions.FIELDS)
 # Constructor
 $(DocStringExtensions.TYPEDSIGNATURES)
 """
-struct LagrangianSum{T} <: Lagrangian
+struct LagrangianSum{C<:Number,S<:Statistics} <: Lagrangian
     "Interaction Lagrangians in the sum"
-    arguments::Vector{InteractionLagrangian{T}}
-    function LagrangianSum(args::Vector{InteractionLagrangian{T}}, ::Val{:raw}) where {T}
-        return new{T}(args)
+    arguments::Vector{InteractionLagrangian{C,S}}
+
+    function LagrangianSum(
+        arguments::Vector{InteractionLagrangian{C,S}}
+    ) where {C<:Number,S<:Statistics}
+        isempty(arguments) && throw(ArgumentError("a LagrangianSum cannot be empty"))
+        check_common_fields(arguments)
+        return new{C,S}(arguments)
     end
 end
 
-@unstable function LagrangianSum(args::Vector{<:InteractionLagrangian})
-    check_common_fields(args)
-    vs = promote(args...)
-    return LagrangianSum(collect(vs))
-end
-function LagrangianSum(args::Vector{InteractionLagrangian{T}}) where {T}
-    check_common_fields(args)
-    return LagrangianSum(args, Val(:raw))
+function check_common_fields(args::AbstractVector{<:InteractionLagrangian})
+    allequal(getfield.(args, :families)) || throw(
+        ArgumentError(
+            "all InteractionLagrangian must have the same physical field families"
+        ),
+    )
+    return nothing
 end
 
-function check_common_fields(args::AbstractVector{<:InteractionLagrangian})
-    allequal(getfield.(args, :qfield)) ||
-        throw(ArgumentError("all InteractionLagrangian must have the same quantum field"))
-    allequal(getfield.(args, :cfield)) ||
-        throw(ArgumentError("all InteractionLagrangian must have the same classical field"))
-    return nothing
+field_families(Ls::LagrangianSum) = field_families(first(arguments(Ls)))
+target_family(Ls::LagrangianSum) = target_family(first(arguments(Ls)))
+function target_family(Ls::LagrangianSum{C,S}, target::FieldFamily{S}) where {C,S}
+    return target_family(first(arguments(Ls)), target)
 end
 
 SymbolicUtils.arguments(Ls::LagrangianSum) = Ls.arguments
@@ -188,22 +194,34 @@ parameters(Ls::LagrangianSum) = [L.parameter for L in arguments(Ls)]
 Base.length(a::LagrangianSum) = length(arguments(a))
 SymbolicUtils.operation(::LagrangianSum) = (+)
 
-function Base.:+(a::InteractionLagrangian{T}, b::InteractionLagrangian{S}) where {T,S}
-    P = promote_type(T, S)
-    args = InteractionLagrangian{P}[convert(InteractionLagrangian{P}, a)]
-    push!(args, convert(InteractionLagrangian{P}, b))
-    return LagrangianSum(args)
+function Base.:+(
+    a::InteractionLagrangian{C1,S}, b::InteractionLagrangian{C2,S}
+) where {C1<:Number,C2<:Number,S<:Statistics}
+    C = promote_type(C1, C2)
+    return LagrangianSum(
+        InteractionLagrangian{C,S}[
+            convert(InteractionLagrangian{C,S}, a), convert(InteractionLagrangian{C,S}, b)
+        ],
+    )
 end
 
 function Base.promote_rule(
-    ::Type{InteractionLagrangian{S}}, ::Type{InteractionLagrangian{T}}
-) where {S,T}
-    return InteractionLagrangian{promote_type(S, T)}
+    ::Type{InteractionLagrangian{C1,S}}, ::Type{InteractionLagrangian{C2,S}}
+) where {C1<:Number,C2<:Number,S<:Statistics}
+    return InteractionLagrangian{promote_type(C1, C2),S}
+end
+
+function Base.convert(
+    ::Type{InteractionLagrangian{C,S}}, L::InteractionLagrangian{C,S}
+) where {C<:Number,S<:Statistics}
+    return L
 end
 function Base.convert(
-    ::Type{InteractionLagrangian{T}}, L::InteractionLagrangian{S}
-) where {T,S}
-    return InteractionLagrangian(convert(T, L.lagrangian), parameters(L))
+    ::Type{InteractionLagrangian{C,S}}, L::InteractionLagrangian{D,S}
+) where {C<:Number,D<:Number,S<:Statistics}
+    return InteractionLagrangian{C,S}(
+        convert(QAdd{C,S}, L.lagrangian), copy(L.families), L.position, L.parameter
+    )
 end
 
 #############################

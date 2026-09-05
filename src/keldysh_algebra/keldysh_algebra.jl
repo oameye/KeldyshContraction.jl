@@ -1,40 +1,69 @@
 #########################
+#      FieldFamily
+#########################
+
+"""Physical field identity shared by all Keldysh components."""
+struct FieldFamily{S<:Statistics}
+    name::Symbol
+    indices::FieldIndices
+end
+
+FieldFamily{S}(name::Symbol) where {S<:Statistics} = FieldFamily{S}(name, FieldIndices())
+
+name(f::FieldFamily) = f.name
+statistics(::FieldFamily{S}) where {S<:Statistics} = S
+field_indices(f::FieldFamily) = f.indices
+
+function Base.isequal(a::FieldFamily{S}, b::FieldFamily{S}) where {S<:Statistics}
+    return isequal(name(a), name(b)) && isequal(field_indices(a), field_indices(b))
+end
+Base.:(==)(a::FieldFamily{S}, b::FieldFamily{S}) where {S<:Statistics} = isequal(a, b)
+function Base.isless(a::FieldFamily{S}, b::FieldFamily{S}) where {S<:Statistics}
+    name(a) == name(b) || return isless(name(a), name(b))
+    return isless(field_indices(a), field_indices(b))
+end
+
+#########################
 #       Field{S}
 #########################
 
 """Fundamental Keldysh path-integral field with statistics `S`."""
 struct Field{S<:Statistics} <: QSym
-    name::Symbol
+    family::FieldFamily{S}
     orientation::Orientation.T
     keldysh::KeldyshIndex.T
     position::Position
     regularisation::Regularisation.T
-    indices::FieldIndices
 end
 
-"""Construct a Keldysh field with the remaining properties defaulted."""
-function Field{S}(
-    name::Symbol,
+"""Construct a Keldysh component of a field family."""
+function Field(
+    family::FieldFamily{S},
     keldysh::KeldyshIndex.T,
     orientation::Orientation.T=Orientation.Unbarred,
     reg::Regularisation.T=Regularisation.Zero,
     pos::Position=Bulk(),
-    indices::FieldIndices=FieldIndices(),
 ) where {S<:Statistics}
-    return Field{S}(name, orientation, keldysh, pos, reg, indices)
+    return Field{S}(family, orientation, keldysh, pos, reg)
 end
+
+Base.getindex(family::FieldFamily, keldysh::KeldyshIndex.T) = Field(family, keldysh)
+
+FieldFamily(f::Field) = f.family
+field_family(f::Field) = f.family
+name(f::Field) = name(field_family(f))
+field_indices(f::Field) = field_indices(field_family(f))
 
 """Copy a field, replacing the specified properties."""
 function reconstruct(
     f::Field{S};
-    name::Symbol=name(f),
+    family::FieldFamily{S}=field_family(f),
     orientation::Orientation.T=orientation(f),
     keldysh::KeldyshIndex.T=keldysh_index(f),
     position::Position=position(f),
     regularisation::Regularisation.T=regularisation(f),
-    indices::FieldIndices=field_indices(f),
 ) where {S<:Statistics}
-    return Field{S}(name, orientation, keldysh, position, regularisation, indices)
+    return Field(family, keldysh, orientation, regularisation, position)
 end
 
 statistics(::Field{S}) where {S<:Statistics} = S
@@ -42,7 +71,6 @@ orientation(f::Field) = f.orientation
 keldysh_index(f::Field) = f.keldysh
 regularisation(f::Field) = f.regularisation
 position(f::Field) = f.position
-field_indices(f::Field) = f.indices
 index(f::Field) = index(position(f))
 
 is_unbarred(f::Field) = orientation(f) === Orientation.Unbarred
@@ -76,12 +104,11 @@ function bar(f::Field)
 end
 
 function Base.isequal(a::Field{S}, b::Field{S}) where {S}
-    return isequal(name(a), name(b)) &&
+    return isequal(field_family(a), field_family(b)) &&
            isequal(orientation(a), orientation(b)) &&
            isequal(keldysh_index(a), keldysh_index(b)) &&
            isequal(position(a), position(b)) &&
-           isequal(regularisation(a), regularisation(b)) &&
-           isequal(field_indices(a), field_indices(b))
+           isequal(regularisation(a), regularisation(b))
 end
 Base.:(==)(a::Field{S}, b::Field{S}) where {S} = isequal(a, b)
 
@@ -132,31 +159,23 @@ Base.zero(f::Field{S}) where {S<:Statistics} = QMul{Int,S}(0, Field{S}[])
 Base.one(::Type{Field{S}}) where {S<:Statistics} = QMul{Int,S}(1, Field{S}[])
 Base.zero(::Type{Field{S}}) where {S<:Statistics} = QMul{Int,S}(0, Field{S}[])
 
-"""Construct Keldysh fields from a statistics type and Keldysh label."""
+"""Declare physical field families."""
 macro qfields(qs...)
     defs = map(qs) do q
-        nf = _name_field(q)
-        fname, field_expr = nf.name, nf.field_expr
-        statistics_expr = field_expr.args[1]
-        field_args = field_expr.args[2:end]
+        q isa Expr && q.head == :(::) && length(q.args) == 2 ||
+            throw(ArgumentError("expected field declaration of the form name::Statistics"))
 
-        construction = :(Field{$(esc(statistics_expr))}(
-            $(QuoteNode(fname)), $(map(esc, field_args)...), Orientation.Unbarred
-        ))
-        return :($(esc(fname)) = $construction)
+        fname, statistics_expr = q.args
+        fname isa Symbol || throw(ArgumentError("field family name must be a symbol"))
+        statistics_expr isa Symbol || throw(
+            ArgumentError(
+                "@qfields declares families only; construct components with family[Classical] or family[Quantum]"
+            ),
+        )
+
+        return :($(esc(fname)) = FieldFamily{$(esc(statistics_expr))}($(QuoteNode(fname))))
     end
 
-    names = map(q -> esc(_name_field(q).name), qs)
+    names = map(q -> esc(q.args[1]), qs)
     return Expr(:block, defs..., :(tuple($(names...))))
-end
-
-function _name_field(expr)
-    @assert expr isa Expr && expr.head == :(::) "Expected expression of form name::Statistics(args...)"
-    name = expr.args[1]
-    @assert name isa Symbol "Left side of :: must be a symbol"
-
-    field_expr = expr.args[2]
-    @assert field_expr isa Expr && field_expr.head == :call "Right side of :: must be a field constructor call"
-
-    return (name=name, field_expr=field_expr)
 end

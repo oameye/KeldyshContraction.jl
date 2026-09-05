@@ -1,23 +1,17 @@
 """
-    advanced_to_retarded(x::T) where {T<:SymbolicUtils.BasicSymbolic}
+    advanced_to_retarded(x, prefactor)
 
-Apply the transformation to change the advanced propagator to retarded:
-
-``G^A(y, y)=-G^R(y, y)``
-
-with ``y =(\\vec{y},t)``.
-Note the expression is only valid for equal space-time coordinates.
+Apply the transformation ``G^A(y,y)=-G^R(y,y)`` to equal-position contractions.
 """
 function advanced_to_retarded(
-    x::Vector{Contraction}, prefactor::Number
-)::Tuple{Vector{Contraction},Number}
-    ff(x::Contraction) = is_advanced(x) && same_position(x)
+    x::Vector{Contraction{S}}, prefactor::Number
+) where {S<:Statistics}
+    ff(c::Contraction{S}) = is_advanced(c) && same_position(c)
     adv_idx = findall(ff, x)
     if isempty(adv_idx)
         return x, prefactor
     end
-    x′ = deepcopy(x)
-    # TODO or make x immutable or change in place
+    x′ = copy(x)
     for i in adv_idx
         prefactor *= -1
         x′[i] = adjoint(x[i])
@@ -36,7 +30,8 @@ function sort_by_position_and_type(p::Contraction)::Float64
         return float(pairing(i, j) * 3 + type)
     end
 end
-sort_by_position_and_type(p::Edge)::Float64 = sort_by_position_and_type(fields(p))
+sort_by_position_and_type(p::Edge)::Float64 =
+    sort_by_position_and_type(Contraction(fields(p)))
 
 function make_NautyDiGraph(vs)
     ps_int = map(integer_positions, vs)

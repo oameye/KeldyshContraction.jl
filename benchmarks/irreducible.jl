@@ -3,7 +3,8 @@ using KeldyshContraction
 using KeldyshContraction: is_irreducible, Bulk, In, Out
 
 function benchmark_irreducible!(suite::BenchmarkGroup)
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields ϕ::Boson
+    c, q = ϕ[Classical], ϕ[Quantum]
 
     # Dumbbell graph (6 vertices) - reducible with bridge
     vs_dumbbell = [

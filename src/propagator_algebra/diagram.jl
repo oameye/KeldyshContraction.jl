@@ -1,104 +1,142 @@
-struct Diagram{E1,E2}
-    contractions::FixedVector{E1,Edge}
+struct Diagram{S<:Statistics,E1,E2}
+    contractions::FixedVector{E1,Edge{S}}
     topology::FixedVector{E2,Int}
 end
 
 function Diagram(
-    contractions::Vector{T}, ::Val{E}, ::Val{E2}
-) where {T<:Union{Contraction,Edge},E,E2}
+    contractions::Vector{Contraction{S}}, ::Val{E}, ::Val{E2}
+) where {S<:Statistics,E,E2}
     @assert length(contractions) == E "The supplied Val{edges} must match the contraction count"
     @assert E > 0 "Contraction vector must not be empty"
     sort!(contractions; by=sort_by_position_and_type)
 
-    edges = SmallCollections.FixedVector{E,Edge}(
-        T <: Contraction ? Edge(c) : c for c in contractions
-    )
+    edges = SmallCollections.FixedVector{E,Edge{S}}(Edge(c) for c in contractions)
     return Diagram(edges, Val(E2))
 end
 
-function Diagram(edges::FixedVector{E,Edge}, ::Val{E2}) where {E,E2}
+function Diagram(
+    contractions::Vector{Tuple{Field{S},Field{S}}}, ::Val{E}, ::Val{E2}
+) where {S<:Statistics,E,E2}
+    converted = Contraction{S}[Contraction(c) for c in contractions]
+    return Diagram(converted, Val(E), Val(E2))
+end
+
+function Diagram(edges::Vector{Edge{S}}, ::Val{E}, ::Val{E2}) where {S<:Statistics,E,E2}
+    @assert length(edges) == E "The supplied Val{edges} must match the contraction count"
+    @assert E > 0 "Edge vector must not be empty"
+    sort!(edges; by=sort_by_position_and_type)
+    return Diagram(FixedVector{E,Edge{S}}(edges), Val(E2))
+end
+
+function Diagram(
+    edges::FixedVector{E,Edge{S}}, ::Val{E2}
+) where {S<:Statistics,E,E2}
     topology = bulk_multiplicity(edges, Val(E2))
     @assert length(topology) == E2 "The supplied Val{topology} must match the topology size"
-    topology = SmallCollections.FixedVector{E2,Int}(topology)
-    return Diagram{E,E2}(edges, topology)
+    fixed_topology = SmallCollections.FixedVector{E2,Int}(topology)
+    return Diagram{S,E,E2}(edges, fixed_topology)
 end
 
-function Diagram(d::Diagram{E1,E2}, momenta::FixedVector{E1,Momenta}) where {E1,E2}
-    contractions = FixedVector{E1,Edge}(
+function Diagram(
+    d::Diagram{S,E1,E2}, momenta::FixedVector{E1,Momenta}
+) where {S<:Statistics,E1,E2}
+    contractions = FixedVector{E1,Edge{S}}(
         Edge(c, m) for (c, m) in zip(d.contractions, momenta)
     )
-    return Diagram{E1,E2}(contractions, d.topology)
+    return Diagram{S,E1,E2}(contractions, d.topology)
 end
 
-Base.isequal(d1::Diagram, d2::Diagram) = isequal(contractions(d1), contractions(d2))
+function Base.isequal(d1::Diagram{S,E1,E2}, d2::Diagram{S,E1,E2}) where {S,E1,E2}
+    return isequal(contractions(d1), contractions(d2))
+end
+Base.:(==)(d1::Diagram{S,E1,E2}, d2::Diagram{S,E1,E2}) where {S,E1,E2} =
+    isequal(d1, d2)
 Base.hash(d::Diagram, h::UInt) = hash(contractions(d), h)
 contractions(d::Diagram) = d.contractions
 topology(d::Diagram) = d.topology
-function momenta(d::Diagram)
-    return map(momenta, d.contractions)
-end
+momenta(d::Diagram) = map(momenta, d.contractions)
 topology_length(x::Int) = max(0, x - 4) # TODO review this
 
 Base.isempty(d::Diagram) = isempty(d.contractions)
 
-function set_reg_to_zero(d::Diagram{E1,E2}) where {E1,E2}
+function set_reg_to_zero(d::Diagram{S,E1,E2}) where {S<:Statistics,E1,E2}
     new_contractions = map(set_reg_to_zero, d.contractions)
-    return Diagram{E1,E2}(new_contractions, d.topology)
+    return Diagram{S,E1,E2}(new_contractions, d.topology)
 end
 
 ################
 #   Diagrams
 ###############
 
-struct Diagrams{E1,E2}
-    diagrams::Dict{Diagram{E1,E2},ComplexRationals}
-end # TODO try SwissDict or RobinDict from DataStructures.jl.
-function Diagrams{E1,E2}() where {E1,E2}
-    dict = Dict{Diagram{E1,E2},ComplexRationals}()
-    return Diagrams(dict)
+"""Coefficient representation used after Wick factors are applied."""
+diagram_coefficient_type(::Type{C}) where {C<:Number} = promote_type(C, ComplexRationals)
+diagram_coefficient_type(::Type{C}, ::Type{D}) where {C<:Number,D<:Number} =
+    diagram_coefficient_type(promote_type(C, D))
+
+struct Diagrams{C<:Number,S<:Statistics,E1,E2}
+    diagrams::Dict{Diagram{S,E1,E2},C}
 end
-function Diagrams(
-    diagrams::Vector{Diagram{E1,E2}}, prefactor::ComplexRationals
-) where {E1,E2}
-    dict = Dict{Diagram{E1,E2},ComplexRationals}(d => prefactor for d in diagrams)
-    return Diagrams{E1,E2}(dict)
+
+function Diagrams{C,S,E1,E2}() where {C<:Number,S<:Statistics,E1,E2}
+    return Diagrams{C,S,E1,E2}(Dict{Diagram{S,E1,E2},C}())
 end
+
 function Diagrams(
-    contractions::Vector{Vector{Contraction}},
-    prefactor::ComplexRationals,
+    diagrams::Vector{Diagram{S,E1,E2}}, prefactor::C
+) where {C<:Number,S<:Statistics,E1,E2}
+    dict = Dict{Diagram{S,E1,E2},C}(d => prefactor for d in diagrams)
+    return Diagrams{C,S,E1,E2}(dict)
+end
+
+function Diagrams(
+    contractions::Vector{Vector{Contraction{S}}},
+    prefactor::C,
     ::Val{E},
     ::Val{E2},
-) where {E,E2}
-    @assert length(contractions) > 0 "Contraction vector must not be empty"
+) where {C<:Number,S<:Statistics,E,E2}
+    @assert !isempty(contractions) "Contraction vector must not be empty"
     c = first(contractions)
     @assert length(c) == E "The supplied Val{edges} must match the contraction count"
 
-    imag_factor = im^E # Contraction becomes propagator
-    dict = Dict{Diagram{E,E2},ComplexRationals}(
-        Diagram(c, Val(E), Val(E2)) => _simplify(imag_factor * prefactor) for
-        c in contractions
+    D = diagram_coefficient_type(C)
+    imag_factor = convert(D, im^E)
+    value = convert(D, prefactor)
+    dict = Dict{Diagram{S,E,E2},D}(
+        Diagram(cn, Val(E), Val(E2)) => _simplify(imag_factor * value) for
+        cn in contractions
     )
-    return Diagrams{E,E2}(dict)
+    return Diagrams{D,S,E,E2}(dict)
 end
-Base.isequal(d1::Diagrams, d2::Diagrams) = isequal(d1.diagrams, d2.diagrams)
+
+function Base.isequal(
+    d1::Diagrams{C,S,E1,E2}, d2::Diagrams{C,S,E1,E2}
+) where {C,S,E1,E2}
+    return isequal(d1.diagrams, d2.diagrams)
+end
+Base.:(==)(d1::Diagrams{C,S,E1,E2}, d2::Diagrams{C,S,E1,E2}) where {C,S,E1,E2} =
+    isequal(d1, d2)
 Base.hash(d::Diagrams, h::UInt) = hash(d.diagrams, h)
 Base.iszero(d::Diagrams) = isempty(d.diagrams)
-SmallCollections.default(::Type{Diagrams}) = Diagrams{0,0}()
-SmallCollections.default(::Type{Diagrams{E1,E2}}) where {E1,E2} = Diagrams{E1,E2}()
+SmallCollections.default(::Type{Diagrams{C,S,E1,E2}}) where {C,S,E1,E2} =
+    Diagrams{C,S,E1,E2}()
 
 number_of_propagators(a::QMul) = length(a) ÷ 2
 number_of_propagators(a::QAdd) = length(first(a.arguments)) ÷ 2
 number_of_propagators(L::InteractionLagrangian) = length(first(L.lagrangian.arguments)) ÷ 2
 
-# Add a single diagram, summing prefactors if it already exists
-function Base.push!(collection::Diagrams, diagram::Diagram, prefactor::Number)
+function Base.push!(
+    collection::Diagrams{C,S,E1,E2},
+    diagram::Diagram{S,E1,E2},
+    prefactor::Number,
+) where {C<:Number,S<:Statistics,E1,E2}
+    value = convert(C, prefactor)
     if haskey(collection.diagrams, diagram)
-        collection.diagrams[diagram] += prefactor
+        collection.diagrams[diagram] += value
         if iszero(collection.diagrams[diagram])
             delete!(collection.diagrams, diagram)
         end
     else
-        collection.diagrams[diagram] = prefactor
+        collection.diagrams[diagram] = value
     end
     return collection
 end
@@ -108,46 +146,35 @@ function filter_nonzero!(collection::Diagrams)
     return collection
 end
 
-# Convert to vector of diagrams (ignoring prefactors)
-function Base.collect(collection::Diagrams)
-    return collect(keys(collection.diagrams))
-end
+Base.collect(collection::Diagrams) = collect(keys(collection.diagrams))
 
-function Base.:*(prefactor::Number, collection::Diagrams)
-    collection = deepcopy(collection) # needed so that -1 * Σ.keldysh does not change Σ
-    foreach(collection) do (diagram, _)
-        collection.diagrams[diagram] *= prefactor
-        return collection.diagrams[diagram] = _simplify(collection.diagrams[diagram])
-    end
-    return collection
+function Base.:*(
+    prefactor::P, collection::Diagrams{C,S,E1,E2}
+) where {P<:Number,C<:Number,S<:Statistics,E1,E2}
+    D = promote_type(P, C)
+    p = convert(D, prefactor)
+    dict = Dict{Diagram{S,E1,E2},D}(
+        diagram => _simplify(p * convert(D, value)) for (diagram, value) in collection
+    )
+    return Diagrams{D,S,E1,E2}(dict)
 end
 Base.:*(diagrams::Diagrams, prefactor::Number) = prefactor * diagrams
 
-# Make the collection iterable (iterate over pairs)
 Base.iterate(collection::Diagrams) = iterate(collection.diagrams)
 Base.iterate(collection::Diagrams, state) = iterate(collection.diagrams, state)
 Base.length(collection::Diagrams) = length(collection.diagrams)
-Base.eltype(::Type{Diagrams}) = Pair{Diagram,Number}
-Base.eltype(::Type{Diagrams{E1,E2}}) where {E1,E2} = Pair{Diagram{E1,E2},ComplexRationals}
+Base.eltype(::Type{Diagrams{C,S,E1,E2}}) where {C,S,E1,E2} =
+    Pair{Diagram{S,E1,E2},C}
 
-function Base.adjoint(d::Diagrams)
-    dict = Dict(adjoint_diagram(pair) for pair in d)
-    return Diagrams(dict)
+function Base.adjoint(d::Diagrams{C,S,E1,E2}) where {C<:Number,S<:Statistics,E1,E2}
+    dict = Dict{Diagram{S,E1,E2},C}(adjoint_diagram(pair) for pair in d)
+    return Diagrams{C,S,E1,E2}(dict)
 end
 
-"""
-$(DocStringExtensions.SIGNATURES)
+"""Return whether a diagram carries external `In` and `Out` legs."""
+has_external_legs(d::Diagram) = any(e -> is_in(Contraction(fields(e))), contractions(d))
 
-Whether the diagram carries [`In`](@ref) and [`Out`](@ref) coordinates. A
-`DressedPropagator` diagram does; an amputated `SelfEnergy` diagram does not, so there is no
-way to tell which of its bulk coordinates the external legs attach to.
-"""
-has_external_legs(d::Diagram) = any(e -> is_in(fields(e)), contractions(d))
-
-"""
-Infer the bulk vertices at which an amputated diagram lost its outgoing and incoming
-external legs. Returns `(0, 0)` if the attachment points cannot be inferred uniquely.
-"""
+"""Infer the bulk attachment vertices of an amputated diagram."""
 function amputated_leg_indices(d::Diagram)
     _contractions = contractions(d)
     verts = sort!(unique(Int(index(f)) for e in _contractions for f in fields(e)))
@@ -166,25 +193,21 @@ function amputated_leg_indices(d::Diagram)
     return (out_leg, in_leg)
 end
 
-"""
-Restore the external contractions of an amputated diagram when their attachment vertices
-can be inferred. The second return value is the number of added contractions, or `-1` if
-reconstruction is not possible.
-"""
-function with_external_legs(d::Diagram)
-    _contractions = Contraction[fields(e) for e in contractions(d)]
+"""Restore inferable external contractions of an amputated diagram."""
+function with_external_legs(d::Diagram{S}) where {S<:Statistics}
+    _contractions = Contraction{S}[Contraction(fields(e)) for e in contractions(d)]
     has_external_legs(d) && return (_contractions, 0)
     out_leg, in_leg = amputated_leg_indices(d)
     (iszero(out_leg) || iszero(in_leg)) && return (_contractions, -1)
     _out, _in = first(_contractions)
-    push!(_contractions, (_out(Out()), _in(Bulk(out_leg))))
-    push!(_contractions, (_out(Bulk(in_leg)), _in(In())))
+    push!(_contractions, Contraction(_out(Out()), _in(Bulk(out_leg))))
+    push!(_contractions, Contraction(_out(Bulk(in_leg)), _in(In())))
     return (_contractions, 2)
 end
 
 function adjoint_diagram(
-    pair::Pair{Diagram{E1,E2},ComplexRationals}
-)::Pair{Diagram{E1,E2},ComplexRationals} where {E1,E2}
+    pair::Pair{Diagram{S,E1,E2},C}
+)::Pair{Diagram{S,E1,E2},C} where {C<:Number,S<:Statistics,E1,E2}
     d, prefactor = pair
     _contractions = contractions(d)
     minus_signs = count(is_keldysh, _contractions)
@@ -192,21 +215,24 @@ function adjoint_diagram(
 
     legged, added = with_external_legs(d)
     adjoint_edges = if added < 0
-        Edge[adjoint(e) for e in _contractions]
+        Edge{S}[adjoint(e) for e in _contractions]
     else
-        reversed = Contraction[reverse_contraction(c) for c in legged]
+        reversed = Contraction{S}[reverse_contraction(c) for c in legged]
         canonical = canonicalize(reversed)
-        kept = Contraction[canonical[i] for i in 1:(length(canonical) - added)]
-        Edge[Edge(c) for c in kept]
+        kept = Contraction{S}[canonical[i] for i in 1:(length(canonical) - added)]
+        Edge{S}[Edge(c) for c in kept]
     end
 
     sorted_adjoint_edges = sort(collect(adjoint_edges); by=sort_by_position_and_type)
-    edges = SmallCollections.FixedVector{E1,Edge}(e for e in sorted_adjoint_edges)
-    return Diagram(edges, Val(E2)) => _simplify(adjoint(prefactor′))
+    edges = SmallCollections.FixedVector{E1,Edge{S}}(e for e in sorted_adjoint_edges)
+    diagram = Diagram(edges, Val(E2))
+    return diagram => convert(C, _simplify(adjoint(prefactor′)))
 end
 
-function set_reg_to_zero(d::Diagrams{E1,E2}) where {E1,E2}
-    diagrams = Diagrams{E1,E2}()
+function set_reg_to_zero(
+    d::Diagrams{C,S,E1,E2}
+) where {C<:Number,S<:Statistics,E1,E2}
+    diagrams = Diagrams{C,S,E1,E2}()
     for (diagram, value) in d
         push!(diagrams, set_reg_to_zero(diagram), value)
     end
@@ -230,7 +256,7 @@ function bulk_multiplicity(edges::AbstractArray{Tuple{Int8,Int8}})
     end
     return mult
 end
-function bulk_multiplicity(vs::AbstractArray{Edge})
+function bulk_multiplicity(vs::AbstractArray{<:Edge})
     return bulk_multiplicity(map(integer_positions, vs))
 end
 
@@ -253,7 +279,7 @@ function bulk_multiplicity(edges::AbstractArray{Tuple{Int8,Int8}}, ::Val{E2}) wh
     return SmallCollections.FixedVector(mult)
 end
 
-function bulk_multiplicity(vs::AbstractArray{Edge}, ::Val{E2}) where {E2}
+function bulk_multiplicity(vs::AbstractArray{<:Edge}, ::Val{E2}) where {E2}
     return bulk_multiplicity(map(integer_positions, vs), Val(E2))
 end
 
@@ -263,11 +289,13 @@ function is_not_equal_time_bulk_edge(edge)
     return !(typemin(Int8) ∈ edge) && !(typemax(Int8) ∈ edge) && !isequal(edge[1], edge[2])
 end
 
-function topologies(ds::Diagrams{E1,E2}) where {E1,E2}
+function topologies(
+    ds::Diagrams{C,S,E1,E2}
+) where {C<:Number,S<:Statistics,E1,E2}
     terms = collect(keys(ds.diagrams))
     diagram_topologies = getfield.(terms, :topology)
     _topologies = unique(diagram_topologies)
-    topologies = Dict{FixedVector{E2,Int},Vector{Diagram{E1,E2}}}()
+    result = Dict{FixedVector{E2,Int},Vector{Diagram{S,E1,E2}}}()
     for topology in _topologies
         idxs = findall(
             i ->
@@ -275,9 +303,9 @@ function topologies(ds::Diagrams{E1,E2}) where {E1,E2}
                 all(j -> i[j] == topology[j], eachindex(i)),
             diagram_topologies,
         )
-        topologies[topology] = terms[idxs]
+        result[topology] = terms[idxs]
     end
-    return topologies
+    return result
 end
 
 function _simplify_prefactors!(g::Diagrams)

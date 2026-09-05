@@ -19,7 +19,8 @@ function has_valid_self_energy_diagrams(component)
 end
 
 @testset "number of topologies" begin
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields ϕ::Boson
+    c, q = ϕ[Classical], ϕ[Quantum]
     elasctic2boson = -(
         1//2 * (c^2 + q^2) * bar(c) * bar(q) + 1//2 * c * q * (bar(c)^2 + bar(q)^2)
     )
@@ -67,7 +68,8 @@ end
 end
 
 @testset "third order run's" begin
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields ϕ::Boson
+    c, q = ϕ[Classical], ϕ[Quantum]
     elasctic2boson = -(
         0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
     )

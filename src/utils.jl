@@ -29,6 +29,7 @@ make_real(x::Real) = x
 
 bool_to_index(x::Bool) = 2 * x - 1
 
+_simplify(x::Number) = x
 function _simplify(x::Complex{T}) where {T}
     if iszero(x.im)
         return complex(x.re)
