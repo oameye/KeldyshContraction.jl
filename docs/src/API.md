@@ -29,23 +29,27 @@ position, regularisation, and internal indices are concrete value data.
 ```@docs
 KeldyshContraction.QField
 KeldyshContraction.QSym
-KeldyshContraction.Field
+KeldyshContraction.Statistics
 KeldyshContraction.Boson
+KeldyshContraction.Field
 KeldyshContraction.bar
 ```
 
 #### Field properties
 
-Bosonic `Classical` and `Quantum` are semantic labels over the package's neutral two-valued
+Bosonic `Classical` and `Quantum` are semantic aliases over the package's neutral two-valued
 Keldysh index. They do not create different Julia field types.
 
 ```@docs
+KeldyshContraction.KeldyshIndex
+KeldyshContraction.Orientation
 KeldyshContraction.Regularisation
 KeldyshContraction.Position
-KeldyshContraction.In
-KeldyshContraction.Out
-KeldyshContraction.Bulk
 ```
+
+The constructors `Bulk(i)`, `In()`, and `Out()` create `Position` values. Calling a field
+with a `Position` or `Regularisation` value returns the same concrete field type with that
+value changed.
 
 #### Field constructors
 
@@ -64,9 +68,6 @@ barϕ = bar(ϕ)
 ```@docs
 KeldyshContraction.@qfields
 ```
-
-Calling a field with a `Position` or `Regularisation` value returns the same concrete field
-type with that value changed.
 
 ### Field algebra
 
@@ -90,20 +91,19 @@ raw scalars.
 KeldyshContraction.QTerm
 KeldyshContraction.QMul
 KeldyshContraction.QAdd
-arguments(::KeldyshContraction.QMul)
-arguments(::KeldyshContraction.QAdd)
 KeldyshContraction.convert_coefficients
 KeldyshContraction.rationalize_coefficients
 ```
+
+`SymbolicUtils.arguments` remains available for symbolic-tree interoperability. For package
+code, use the semantic accessors `coefficient`, `fields`, and `terms` instead of depending
+on the mixed SymbolicUtils argument vector.
 
 Coefficient conversion is explicit. In particular, constructing an
 `InteractionLagrangian` does not rationalize floating-point coefficients according to their
 runtime values.
 
-The properties of an expression can be checked using:
-
 ```@docs
-KeldyshContraction.is_bulk
 KeldyshContraction.is_conserved
 KeldyshContraction.is_physical
 ```
@@ -125,8 +125,10 @@ wick_contraction
 
 ### Propagator
 
+Propagator edges carry their retarded, advanced, Keldysh, or spectral component as concrete
+value data.
+
 ```@docs
-KeldyshContraction.PropagatorType
 DressedPropagator
 KeldyshContraction.matrix(::DressedPropagator)
 ```
