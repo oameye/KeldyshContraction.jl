@@ -1,5 +1,6 @@
 function benchmark_two_body_scattering!(SUITE)
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields ϕ::Boson
+    c, q = ϕ[Classical], ϕ[Quantum]
     elasctic2boson = -(
         0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
     )
