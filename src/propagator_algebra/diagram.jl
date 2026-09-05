@@ -4,16 +4,28 @@ struct Diagram{E1,E2}
 end
 
 function Diagram(
-    contractions::Vector{T}, ::Val{E}, ::Val{E2}
-) where {T<:Union{Contraction,Edge},E,E2}
+    contractions::Vector{Contraction{S}}, ::Val{E}, ::Val{E2}
+) where {S<:Statistics,E,E2}
     @assert length(contractions) == E "The supplied Val{edges} must match the contraction count"
     @assert E > 0 "Contraction vector must not be empty"
     sort!(contractions; by=sort_by_position_and_type)
 
-    edges = SmallCollections.FixedVector{E,Edge}(
-        T <: Contraction ? Edge(c) : c for c in contractions
-    )
+    edges = SmallCollections.FixedVector{E,Edge}(Edge(c) for c in contractions)
     return Diagram(edges, Val(E2))
+end
+
+function Diagram(
+    contractions::Vector{Tuple{Field{S},Field{S}}}, ::Val{E}, ::Val{E2}
+) where {S<:Statistics,E,E2}
+    converted = Contraction{S}[Contraction(c) for c in contractions]
+    return Diagram(converted, Val(E), Val(E2))
+end
+
+function Diagram(edges::Vector{Edge}, ::Val{E}, ::Val{E2}) where {E,E2}
+    @assert length(edges) == E "The supplied Val{edges} must match the contraction count"
+    @assert E > 0 "Edge vector must not be empty"
+    sort!(edges; by=sort_by_position_and_type)
+    return Diagram(FixedVector{E,Edge}(edges), Val(E2))
 end
 
 function Diagram(edges::FixedVector{E,Edge}, ::Val{E2}) where {E,E2}
@@ -64,16 +76,16 @@ function Diagrams(
     return Diagrams{E1,E2}(dict)
 end
 function Diagrams(
-    contractions::Vector{Vector{Contraction}},
+    contractions::Vector{Vector{Contraction{S}}},
     prefactor::ComplexRationals,
     ::Val{E},
     ::Val{E2},
-) where {E,E2}
+) where {S<:Statistics,E,E2}
     @assert length(contractions) > 0 "Contraction vector must not be empty"
     c = first(contractions)
     @assert length(c) == E "The supplied Val{edges} must match the contraction count"
 
-    imag_factor = im^E # Contraction becomes propagator
+    imag_factor = im^E
     dict = Dict{Diagram{E,E2},ComplexRationals}(
         Diagram(c, Val(E), Val(E2)) => _simplify(imag_factor * prefactor) for
         c in contractions
@@ -90,7 +102,6 @@ number_of_propagators(a::QMul) = length(a) ÷ 2
 number_of_propagators(a::QAdd) = length(first(a.arguments)) ÷ 2
 number_of_propagators(L::InteractionLagrangian) = length(first(L.lagrangian.arguments)) ÷ 2
 
-# Add a single diagram, summing prefactors if it already exists
 function Base.push!(collection::Diagrams, diagram::Diagram, prefactor::Number)
     if haskey(collection.diagrams, diagram)
         collection.diagrams[diagram] += prefactor
@@ -108,13 +119,12 @@ function filter_nonzero!(collection::Diagrams)
     return collection
 end
 
-# Convert to vector of diagrams (ignoring prefactors)
 function Base.collect(collection::Diagrams)
     return collect(keys(collection.diagrams))
 end
 
 function Base.:*(prefactor::Number, collection::Diagrams)
-    collection = deepcopy(collection) # needed so that -1 * Σ.keldysh does not change Σ
+    collection = deepcopy(collection)
     foreach(collection) do (diagram, _)
         collection.diagrams[diagram] *= prefactor
         return collection.diagrams[diagram] = _simplify(collection.diagrams[diagram])
@@ -123,7 +133,6 @@ function Base.:*(prefactor::Number, collection::Diagrams)
 end
 Base.:*(diagrams::Diagrams, prefactor::Number) = prefactor * diagrams
 
-# Make the collection iterable (iterate over pairs)
 Base.iterate(collection::Diagrams) = iterate(collection.diagrams)
 Base.iterate(collection::Diagrams, state) = iterate(collection.diagrams, state)
 Base.length(collection::Diagrams) = length(collection.diagrams)
@@ -135,19 +144,10 @@ function Base.adjoint(d::Diagrams)
     return Diagrams(dict)
 end
 
-"""
-$(DocStringExtensions.SIGNATURES)
-
-Whether the diagram carries [`In`](@ref) and [`Out`](@ref) coordinates. A
-`DressedPropagator` diagram does; an amputated `SelfEnergy` diagram does not, so there is no
-way to tell which of its bulk coordinates the external legs attach to.
-"""
+"""Return whether a diagram carries external `In` and `Out` legs."""
 has_external_legs(d::Diagram) = any(e -> is_in(fields(e)), contractions(d))
 
-"""
-Infer the bulk vertices at which an amputated diagram lost its outgoing and incoming
-external legs. Returns `(0, 0)` if the attachment points cannot be inferred uniquely.
-"""
+"""Infer the bulk attachment vertices of an amputated diagram."""
 function amputated_leg_indices(d::Diagram)
     _contractions = contractions(d)
     verts = sort!(unique(Int(index(f)) for e in _contractions for f in fields(e)))
@@ -166,19 +166,15 @@ function amputated_leg_indices(d::Diagram)
     return (out_leg, in_leg)
 end
 
-"""
-Restore the external contractions of an amputated diagram when their attachment vertices
-can be inferred. The second return value is the number of added contractions, or `-1` if
-reconstruction is not possible.
-"""
+"""Restore inferable external contractions of an amputated diagram."""
 function with_external_legs(d::Diagram)
-    _contractions = Contraction[fields(e) for e in contractions(d)]
+    _contractions = Contraction{Boson}[Contraction(fields(e)) for e in contractions(d)]
     has_external_legs(d) && return (_contractions, 0)
     out_leg, in_leg = amputated_leg_indices(d)
     (iszero(out_leg) || iszero(in_leg)) && return (_contractions, -1)
     _out, _in = first(_contractions)
-    push!(_contractions, (_out(Out()), _in(Bulk(out_leg))))
-    push!(_contractions, (_out(Bulk(in_leg)), _in(In())))
+    push!(_contractions, Contraction(_out(Out()), _in(Bulk(out_leg))))
+    push!(_contractions, Contraction(_out(Bulk(in_leg)), _in(In())))
     return (_contractions, 2)
 end
 
@@ -194,9 +190,9 @@ function adjoint_diagram(
     adjoint_edges = if added < 0
         Edge[adjoint(e) for e in _contractions]
     else
-        reversed = Contraction[reverse_contraction(c) for c in legged]
+        reversed = Contraction{Boson}[reverse_contraction(c) for c in legged]
         canonical = canonicalize(reversed)
-        kept = Contraction[canonical[i] for i in 1:(length(canonical) - added)]
+        kept = Contraction{Boson}[canonical[i] for i in 1:(length(canonical) - added)]
         Edge[Edge(c) for c in kept]
     end
 
