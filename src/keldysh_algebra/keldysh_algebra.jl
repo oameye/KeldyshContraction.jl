@@ -1,4 +1,27 @@
 #########################
+#      FieldFamily
+#########################
+
+"""Physical field identity shared by all Keldysh components."""
+struct FieldFamily{S<:Statistics}
+    name::Symbol
+    indices::FieldIndices
+end
+
+name(f::FieldFamily) = f.name
+statistics(::FieldFamily{S}) where {S<:Statistics} = S
+field_indices(f::FieldFamily) = f.indices
+
+function Base.isequal(a::FieldFamily{S}, b::FieldFamily{S}) where {S<:Statistics}
+    return isequal(name(a), name(b)) && isequal(field_indices(a), field_indices(b))
+end
+Base.:(==)(a::FieldFamily{S}, b::FieldFamily{S}) where {S<:Statistics} = isequal(a, b)
+function Base.isless(a::FieldFamily{S}, b::FieldFamily{S}) where {S<:Statistics}
+    name(a) == name(b) || return isless(name(a), name(b))
+    return isless(field_indices(a), field_indices(b))
+end
+
+#########################
 #       Field{S}
 #########################
 
@@ -23,6 +46,20 @@ function Field{S}(
 ) where {S<:Statistics}
     return Field{S}(name, orientation, keldysh, pos, reg, indices)
 end
+
+"""Construct a Keldysh component of a field family."""
+function Field(
+    family::FieldFamily{S},
+    keldysh::KeldyshIndex.T,
+    orientation::Orientation.T=Orientation.Unbarred,
+    reg::Regularisation.T=Regularisation.Zero,
+    pos::Position=Bulk(),
+) where {S<:Statistics}
+    return Field{S}(name(family), keldysh, orientation, reg, pos, field_indices(family))
+end
+
+FieldFamily(f::Field{S}) where {S<:Statistics} = FieldFamily{S}(name(f), field_indices(f))
+field_family(f::Field) = FieldFamily(f)
 
 """Copy a field, replacing the specified properties."""
 function reconstruct(
