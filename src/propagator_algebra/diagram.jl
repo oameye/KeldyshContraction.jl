@@ -135,7 +135,13 @@ function Base.adjoint(d::Diagrams)
     return Diagrams(dict)
 end
 
-"""Return whether a diagram explicitly carries external `In()` and `Out()` legs."""
+"""
+$(DocStringExtensions.SIGNATURES)
+
+Whether the diagram carries [`In`](@ref) and [`Out`](@ref) coordinates. A
+`DressedPropagator` diagram does; an amputated `SelfEnergy` diagram does not, so there is no
+way to tell which of its bulk coordinates the external legs attach to.
+"""
 has_external_legs(d::Diagram) = any(e -> is_in(fields(e)), contractions(d))
 
 """

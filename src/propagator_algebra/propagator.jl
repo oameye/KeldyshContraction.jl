@@ -39,6 +39,16 @@ Base.hash(m::Momenta, h::UInt) = hash(Momenta, hash(m.momenta, hash(m.prefactors
 # Transitional tuple representation retained until #241 replaces it with Contraction{S}.
 const Contraction = Tuple{Field{Boson},Field{Boson}}
 
+"""
+Type of propagator formed by contracting two fields, labelled by their Keldysh indices:
+the unbarred field supplies `x` and the barred field `y` in an x-y contour pair.
+- `Keldysh`: a Classical-Classical contour;
+- `Advanced`: a Quantum-Classical contour;
+- `Retarded`: a Classical-Quantum contour;
+- `Spectral`: the retarded-minus-advanced combination.
+
+The Quantum-Quantum propagator is always zero, so it has no label here.
+"""
 @enumx PropagatorType begin
     Keldysh
     Advanced
@@ -89,6 +99,12 @@ function propagator_checks(out::Field{Boson}, in::Field{Boson})::Nothing
     return nothing
 end
 
+"""
+$(DocStringExtensions.SIGNATURES)
+
+Determine the [`PropagatorType`](@ref) in the Retarded-Advanced-Keldysh basis from the
+Keldysh indices of the outgoing and incoming fields.
+"""
 function propagator_type(out::Field{Boson}, in::Field{Boson})::PropagatorType.T
     contours = Int.(keldysh_index.((out, in)))
     diff_contour = first(-(contours...))

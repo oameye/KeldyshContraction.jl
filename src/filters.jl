@@ -2,7 +2,7 @@
 #       Consistency checks
 #################################
 
-is_qq_contraction(v::Contraction) = iszero(sum(Int.(contour.(v))))
+is_qq_contraction(v::Contraction) = iszero(sum(Int.(keldysh_index.(v))))
 # has_qq_contraction(vv::Vector{Vector{<:QField}}) = any(is_qq_contraction.(vv))
 
 function is_physical_propagator(a::Contraction)

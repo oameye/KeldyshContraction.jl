@@ -52,136 +52,118 @@ const Classical = KeldyshIndex.Second
 end
 
 """
+Index-kind names in enum order, so `INDEX_KIND_NAMES[Int(kind) + 1]` names a kind and
+`findfirst` maps a name back. One table replaces the per-kind branches everywhere below.
+"""
+const INDEX_KIND_NAMES = (:spin, :flavor, :band, :species)
+
+const MAX_FIELD_INDICES = length(INDEX_KIND_NAMES)
+const NO_FIELD_INDEX = typemin(Int16)
+
+"""
+$(DocStringExtensions.TYPEDEF)
+
 A compact concrete internal field index such as spin, flavor, band, or species.
 
 The `Symbol` constructor is a convenient value-level API while the stored representation
 uses a one-byte index-kind enum.
+
+# Fields
+$(DocStringExtensions.FIELDS)
 """
 struct FieldIndex
+    "Which kind of internal index this is"
     kind::IndexKind.T
+    "The index value"
     value::Int16
 end
 
 function FieldIndex(kind::Symbol, value::Integer)
-    k = if kind === :spin
-        IndexKind.Spin
-    elseif kind === :flavor
-        IndexKind.Flavor
-    elseif kind === :band
-        IndexKind.Band
-    elseif kind === :species
-        IndexKind.Species
-    else
-        throw(ArgumentError("unknown field-index kind: $kind"))
-    end
-    return FieldIndex(k, convert(Int16, value))
+    slot = findfirst(==(kind), INDEX_KIND_NAMES)
+    slot === nothing && throw(ArgumentError("unknown field-index kind: $kind"))
+    return FieldIndex(IndexKind.T(slot - 1), convert(Int16, value))
 end
 
-function Base.isequal(a::FieldIndex, b::FieldIndex)
-    return a.kind === b.kind && a.value == b.value
-end
+"""Position of a kind in the [`FieldIndices`](@ref) slot tuple."""
+@inline _slot(kind::IndexKind.T) = Int(kind) + 1
+
+Base.isequal(a::FieldIndex, b::FieldIndex) = a.kind === b.kind && a.value == b.value
 Base.hash(x::FieldIndex, h::UInt) = hash(x.kind, hash(x.value, h))
 function Base.isless(a::FieldIndex, b::FieldIndex)
     a.kind === b.kind || return Int(a.kind) < Int(b.kind)
     return a.value < b.value
 end
 
-const MAX_FIELD_INDICES = 4
-const NO_FIELD_INDEX = typemin(Int16)
-
 """
+$(DocStringExtensions.TYPEDEF)
+
 Compact value-level storage for the supported field-index kinds.
 
 Each kind has one `Int16` slot; `typemin(Int16)` denotes absence. This keeps every
 `Field{S}` concrete and compact without making index values or index presence type
 parameters. Iteration yields present [`FieldIndex`](@ref) values in canonical
 spin/flavor/band/species order.
+
+# Fields
+$(DocStringExtensions.FIELDS)
 """
 struct FieldIndices
+    "Spin index, or `NO_FIELD_INDEX` when absent"
     spin::Int16
+    "Flavor index, or `NO_FIELD_INDEX` when absent"
     flavor::Int16
+    "Band index, or `NO_FIELD_INDEX` when absent"
     band::Int16
+    "Species index, or `NO_FIELD_INDEX` when absent"
     species::Int16
 end
 
-function FieldIndices()
-    return FieldIndices(NO_FIELD_INDEX, NO_FIELD_INDEX, NO_FIELD_INDEX, NO_FIELD_INDEX)
-end
+"""Slot values in canonical kind order, so every query below is one tuple lookup."""
+@inline slots(x::FieldIndices) = (x.spin, x.flavor, x.band, x.species)
+
+@inline _has_index(value::Int16) = value != NO_FIELD_INDEX
+
+FieldIndices() = FieldIndices(ntuple(_ -> NO_FIELD_INDEX, MAX_FIELD_INDICES)...)
+
 function FieldIndices(indices::Vararg{FieldIndex,N}) where {N}
     N <= MAX_FIELD_INDICES ||
         throw(ArgumentError("at most $MAX_FIELD_INDICES field indices are supported"))
 
-    spin = NO_FIELD_INDEX
-    flavor = NO_FIELD_INDEX
-    band = NO_FIELD_INDEX
-    species = NO_FIELD_INDEX
-
+    values = ntuple(_ -> NO_FIELD_INDEX, MAX_FIELD_INDICES)
     for idx in indices
         idx.value == NO_FIELD_INDEX && throw(
             ArgumentError("$(NO_FIELD_INDEX) is reserved as the absent-index sentinel")
         )
-        if idx.kind === IndexKind.Spin
-            spin == NO_FIELD_INDEX || throw(ArgumentError("duplicate spin index"))
-            spin = idx.value
-        elseif idx.kind === IndexKind.Flavor
-            flavor == NO_FIELD_INDEX || throw(ArgumentError("duplicate flavor index"))
-            flavor = idx.value
-        elseif idx.kind === IndexKind.Band
-            band == NO_FIELD_INDEX || throw(ArgumentError("duplicate band index"))
-            band = idx.value
-        else
-            species == NO_FIELD_INDEX || throw(ArgumentError("duplicate species index"))
-            species = idx.value
-        end
+        slot = _slot(idx.kind)
+        _has_index(values[slot]) &&
+            throw(ArgumentError("duplicate $(INDEX_KIND_NAMES[slot]) index"))
+        values = Base.setindex(values, idx.value, slot)
     end
-
-    return FieldIndices(spin, flavor, band, species)
+    return FieldIndices(values...)
 end
 
-@inline _has_index(value::Int16) = value != NO_FIELD_INDEX
-function Base.length(indices::FieldIndices)
-    return Int(_has_index(indices.spin)) +
-           Int(_has_index(indices.flavor)) +
-           Int(_has_index(indices.band)) +
-           Int(_has_index(indices.species))
-end
+Base.length(indices::FieldIndices) = count(_has_index, slots(indices))
 
 function Base.getindex(indices::FieldIndices, i::Int)
     1 <= i <= length(indices) || throw(BoundsError(indices, i))
     n = 0
-    if _has_index(indices.spin)
+    for (slot, value) in enumerate(slots(indices))
+        _has_index(value) || continue
         n += 1
-        n == i && return FieldIndex(IndexKind.Spin, indices.spin)
+        n == i && return FieldIndex(IndexKind.T(slot - 1), value)
     end
-    if _has_index(indices.flavor)
-        n += 1
-        n == i && return FieldIndex(IndexKind.Flavor, indices.flavor)
-    end
-    if _has_index(indices.band)
-        n += 1
-        n == i && return FieldIndex(IndexKind.Band, indices.band)
-    end
-    return FieldIndex(IndexKind.Species, indices.species)
+    return throw(BoundsError(indices, i))
 end
 function Base.iterate(indices::FieldIndices, state::Int=1)
     state > length(indices) && return nothing
     return indices[state], state + 1
 end
+Base.eltype(::Type{FieldIndices}) = FieldIndex
+Base.IteratorSize(::Type{FieldIndices}) = Base.HasLength()
 
-function Base.isequal(a::FieldIndices, b::FieldIndices)
-    return a.spin == b.spin &&
-           a.flavor == b.flavor &&
-           a.band == b.band &&
-           a.species == b.species
-end
-function Base.hash(indices::FieldIndices, h::UInt)
-    return hash(
-        indices.species, hash(indices.band, hash(indices.flavor, hash(indices.spin, h)))
-    )
-end
-function Base.isless(a::FieldIndices, b::FieldIndices)
-    return (a.spin, a.flavor, a.band, a.species) < (b.spin, b.flavor, b.band, b.species)
-end
+Base.isequal(a::FieldIndices, b::FieldIndices) = slots(a) == slots(b)
+Base.hash(indices::FieldIndices, h::UInt) = hash(slots(indices), h)
+Base.isless(a::FieldIndices, b::FieldIndices) = slots(a) < slots(b)
 
 ################################
 # Interface for SymbolicUtils
@@ -236,16 +218,44 @@ end
 #       Position
 #########################
 
-"""Concrete position of a Keldysh field."""
+"""
+$(DocStringExtensions.TYPEDEF)
+
+Concrete position of a Keldysh field. A position has three cases:
+- [`In`](@ref): index is `typemax(Int8)`, representing the incoming external field;
+- [`Out`](@ref): index is `typemin(Int8)`, representing the outgoing external field;
+- [`Bulk`](@ref): index is a positive integer naming an interaction vertex.
+
+# Fields
+$(DocStringExtensions.FIELDS)
+"""
 struct Position
+    "Encoded coordinate; the sentinel extremes mark the external legs"
     index::Int8
 end
 
+"""
+$(DocStringExtensions.SIGNATURES)
+
+Create a `Bulk` position with positive integer index `i`.
+"""
 function Bulk(i::Integer=1)
     i > 0 || throw(ArgumentError("Bulk index must be positive"))
     return Position(convert(Int8, i))
 end
+
+"""
+$(DocStringExtensions.SIGNATURES)
+
+Create a `Position` representing the incoming external field.
+"""
 In() = Position(typemax(Int8))
+
+"""
+$(DocStringExtensions.SIGNATURES)
+
+Create a `Position` representing the outgoing external field.
+"""
 Out() = Position(typemin(Int8))
 
 Base.isless(x::Position, y::Position) = x.index < y.index
