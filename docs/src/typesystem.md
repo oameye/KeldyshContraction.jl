@@ -9,10 +9,11 @@ symbolic-tree interoperability.
 The central distinction is between fundamental fields and composite expressions:
 
 ```@example interface
-using GraphRecipes, Plots, KeldyshContraction, Random
+import GraphRecipes, Plots, Random
+using KeldyshContraction
 Random.seed!(1) # hide
-theme(:dracula) # hide
-plot(
+Plots.theme(:dracula) # hide
+Plots.plot(
   KeldyshContraction.QField;
   method=:tree, fontsize=10, markersize=0.12, nodeshape=:ellipse
 )
