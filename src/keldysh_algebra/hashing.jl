@@ -18,10 +18,7 @@ function Base.hash(f::Field{S}, h::UInt) where {S<:Statistics}
                 orientation(f),
                 hash(
                     keldysh_index(f),
-                    hash(
-                        position(f),
-                        hash(regularisation(f), hash(field_indices(f), h)),
-                    ),
+                    hash(position(f), hash(regularisation(f), hash(field_indices(f), h))),
                 ),
             ),
         ),
