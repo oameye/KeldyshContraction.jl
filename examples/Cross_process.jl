@@ -13,9 +13,7 @@ inelastic_terms =
         0.5 * c(Plus) * q(Plus) * (bar(c) * bar(c) + bar(q) * bar(q)) +
         bar(c) * bar(q) * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
     )
-elastic_terms = -(
-    0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
-)
+elastic_terms = -(0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2))
 
 L_inelastic = InteractionLagrangian(inelastic_terms, Γ)
 L_elastic = InteractionLagrangian(elastic_terms, g)
