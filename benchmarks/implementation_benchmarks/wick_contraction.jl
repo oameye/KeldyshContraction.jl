@@ -15,7 +15,7 @@ L_int =
 expr = ϕᶜ(Out()) * bar(ϕᶜ)(In()) * L_int
 
 function _wick_contraction(
-    args_nc::Vector{Field{Boson}},
+    args_nc::Vector{Field{Boson}}
 )::Vector{Vector{Vector{Field{Boson}}}}
     _partitions = Combinatorics.partitions(args_nc, length(args_nc) ÷ 2)
     wick_contractions = Vector{Vector{Field{Boson}}}[]
