@@ -25,7 +25,8 @@ using KeldyshContraction: Regularisation.Minus as Minus
 # of the two-point correlators of the linear part of the system. However, in this case we
 # don't find that the vacuum expectation value of the interaction Lagrangian is zero:
 
-@qfields c::Boson(Classical) q::Boson(Quantum)
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]
 
 loss2boson_unregular =
     im * (
