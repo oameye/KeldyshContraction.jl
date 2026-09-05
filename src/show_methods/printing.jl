@@ -1,9 +1,13 @@
+field_symbol(f::Field) = name(f)
+field_symbol(f::Field{Boson}) =
+    Symbol(string(name(f), is_classical(f) ? "ᶜ" : "ᴾ"))
+
 function Base.show(io::IO, x::Field)
     reg = Int(regularisation(x))
     if is_barred(x)
         write(io, "̄")
     end
-    write(io, string(name(x)))
+    write(io, string(field_symbol(x)))
     if reg == 1
         write(io, "⁺")
     elseif reg == -1
