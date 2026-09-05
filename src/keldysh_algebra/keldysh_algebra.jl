@@ -47,18 +47,6 @@ function Field(
     return Field{S}(family, orientation, keldysh, pos, reg)
 end
 
-# Transitional constructor while existing component declarations migrate to families.
-function Field{S}(
-    name::Symbol,
-    keldysh::KeldyshIndex.T,
-    orientation::Orientation.T=Orientation.Unbarred,
-    reg::Regularisation.T=Regularisation.Zero,
-    pos::Position=Bulk(),
-    indices::FieldIndices=FieldIndices(),
-) where {S<:Statistics}
-    return Field(FieldFamily{S}(name, indices), keldysh, orientation, reg, pos)
-end
-
 Base.getindex(family::FieldFamily, keldysh::KeldyshIndex.T) = Field(family, keldysh)
 
 FieldFamily(f::Field) = f.family
@@ -171,46 +159,23 @@ Base.zero(f::Field{S}) where {S<:Statistics} = QMul{Int,S}(0, Field{S}[])
 Base.one(::Type{Field{S}}) where {S<:Statistics} = QMul{Int,S}(1, Field{S}[])
 Base.zero(::Type{Field{S}}) where {S<:Statistics} = QMul{Int,S}(0, Field{S}[])
 
-struct QFieldDeclaration
-    name::Symbol
-    statistics::Symbol
-    component::Symbol
-    has_component::Bool
-end
-
-"""Declare field families or individual Keldysh components."""
+"""Declare physical field families."""
 macro qfields(qs...)
-    declarations = map(parse_qfield_declaration, qs)
-    defs = map(declarations) do declaration
-        fname = declaration.name
-        statistics_expr = declaration.statistics
-        if declaration.has_component
-            component = declaration.component
-            construction = :(Field{$(esc(statistics_expr))}(
-                $(QuoteNode(fname)), $(esc(component)), Orientation.Unbarred
-            ))
-        else
-            construction = :(FieldFamily{$(esc(statistics_expr))}($(QuoteNode(fname))))
-        end
-        return :($(esc(fname)) = $construction)
+    defs = map(qs) do q
+        q isa Expr && q.head == :(::) && length(q.args) == 2 ||
+            throw(ArgumentError("expected field declaration of the form name::Statistics"))
+
+        fname, statistics_expr = q.args
+        fname isa Symbol || throw(ArgumentError("field family name must be a symbol"))
+        statistics_expr isa Symbol || throw(
+            ArgumentError(
+                "@qfields declares families only; construct components with family[Classical] or family[Quantum]"
+            ),
+        )
+
+        return :($(esc(fname)) = FieldFamily{$(esc(statistics_expr))}($(QuoteNode(fname))))
     end
 
-    names = map(declaration -> esc(declaration.name), declarations)
+    names = map(q -> esc(q.args[1]), qs)
     return Expr(:block, defs..., :(tuple($(names...))))
-end
-
-function parse_qfield_declaration(expr::Expr)::QFieldDeclaration
-    @assert expr.head == :(::) "Expected expression of form name::Statistics"
-    name = expr.args[1]::Symbol
-
-    rhs = expr.args[2]
-    if rhs isa Expr
-        @assert rhs.head == :call && length(rhs.args) == 2 "Expected Statistics(component)"
-        statistics = rhs.args[1]::Symbol
-        component = rhs.args[2]::Symbol
-        return QFieldDeclaration(name, statistics, component, true)
-    end
-
-    statistics = rhs::Symbol
-    return QFieldDeclaration(name, statistics, :none, false)
 end
