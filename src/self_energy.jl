@@ -51,8 +51,8 @@ end
 """
 $(DocStringExtensions.TYPEDEF)
 
-A struct representing the self-energy components in the Retarded-Advance-Keldysh basis ([`PropagatorType`](@ref)).
-The self-energy is divided into three components: Keldysh, retarded, and advanced.
+A struct representing the self-energy components in the Retarded-Advance-Keldysh basis.
+The components are classified by `PropagatorType` and divided into Keldysh, retarded, and advanced parts.
 
 # Fields
 $(DocStringExtensions.FIELDS)
