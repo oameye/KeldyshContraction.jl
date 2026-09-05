@@ -17,12 +17,12 @@ end
     using KeldyshContraction
     using KeldyshContraction: set_reg_to_zero
 
-    elasctic2boson_reguralisation = -0.5 * (
-        (c(Minus)^2 + q(Minus)^2) * bar(c) * bar(q) +
-        c(Plus) * q(Plus) * (bar(c)^2 + bar(q)^2)
-    )
-    elasctic2boson =
-        -0.5 * ((c^2 + q^2) * bar(c) * bar(q) + c * q * (bar(c)^2 + bar(q)^2))
+    elasctic2boson_reguralisation =
+        -0.5 * (
+            (c(Minus)^2 + q(Minus)^2) * bar(c) * bar(q) +
+            c(Plus) * q(Plus) * (bar(c)^2 + bar(q)^2)
+        )
+    elasctic2boson = -0.5 * ((c^2 + q^2) * bar(c) * bar(q) + c * q * (bar(c)^2 + bar(q)^2))
 
     L_reg = InteractionLagrangian(elasctic2boson_reguralisation)
     L_no_reg = InteractionLagrangian(elasctic2boson)
@@ -45,17 +45,18 @@ end
 @testset "regularise vs no regularise in inelastic setting" begin
     using KeldyshContraction
 
-    loss2boson_unregular = im * (
-        0.5 * bar(c) * bar(q) * (c^2 + q^2) -
-        0.5 * c * q * (bar(c)^2 + bar(q)^2) +
-        bar(c) * bar(q) * (c * q + c * q)
-    )
+    loss2boson_unregular =
+        im * (
+            0.5 * bar(c) * bar(q) * (c^2 + q^2) - 0.5 * c * q * (bar(c)^2 + bar(q)^2) +
+            bar(c) * bar(q) * (c * q + c * q)
+        )
 
-    loss2boson = im * (
-        0.5 * bar(c) * bar(q) * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
-        0.5 * c(Plus) * q(Plus) * (bar(c) * bar(c) + bar(q) * bar(q)) +
-        bar(c) * bar(q) * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
-    )
+    loss2boson =
+        im * (
+            0.5 * bar(c) * bar(q) * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
+            0.5 * c(Plus) * q(Plus) * (bar(c) * bar(c) + bar(q) * bar(q)) +
+            bar(c) * bar(q) * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
+        )
 
     L_reg = InteractionLagrangian(loss2boson)
     L_no_reg = InteractionLagrangian(loss2boson_unregular)

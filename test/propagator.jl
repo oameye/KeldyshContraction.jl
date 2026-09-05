@@ -28,11 +28,7 @@ end
 
 @testset "diagram construction" begin
     using KeldyshContraction: Diagram, Contraction
-    contractions = Contraction[
-        (q, bar(c)(In())),
-        (c, bar(c)),
-        (c(Out()), bar(q)),
-    ]
+    contractions = Contraction[(q, bar(c)(In())), (c, bar(c)), (c(Out()), bar(q))]
 
     @inferred Diagram(contractions, Val(3), Val(0))
 end
