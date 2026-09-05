@@ -19,10 +19,14 @@ elastic_terms = -(0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 
 L_inelastic = InteractionLagrangian(inelastic_terms, Γ)
 L_elastic = InteractionLagrangian(elastic_terms, g)
 
-L = L_inelastic + L_elastic
+L = @inferred L_inelastic + L_elastic
 
 @testset "Conversion" begin
-    @test typeof(L) == KC.LagrangianSum{KC.QAdd{ComplexF64,Boson}}
+    @test typeof(L_inelastic) === KC.InteractionLagrangian{ComplexF64,Boson}
+    @test typeof(L_elastic) === KC.InteractionLagrangian{Float64,Boson}
+    @test typeof(L) === KC.LagrangianSum{ComplexF64,Boson}
+    @test typeof(L_inelastic.lagrangian) === KC.QAdd{ComplexF64,Boson}
+    @test typeof(L_elastic.lagrangian) === KC.QAdd{Float64,Boson}
 end
 
 @testset "Accessing" begin
