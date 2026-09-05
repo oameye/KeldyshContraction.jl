@@ -1,6 +1,5 @@
-"compute the self-energy type from positions save in `dict`."
-function self_energy_type(dict::SmallCollections.SmallDict)
-    # G1K = GK[x1,y1] ΣA[y1,y1] GA[y1,x2] +GR[x1,y1] ΣK GA[y1,x2] + GR[x1,y1]ΣR[y1,y1] GK[y1,x2]
+"Compute the self-energy component from the external propagator types."
+function self_energy_type(::Type{Boson}, dict::SmallCollections.SmallDict)
     if is_keldysh(dict[:out]) && is_advanced(dict[:in])
         return PropagatorType.Advanced
     elseif is_retarded(dict[:out]) && is_keldysh(dict[:in])
@@ -8,15 +7,15 @@ function self_energy_type(dict::SmallCollections.SmallDict)
     elseif is_retarded(dict[:out]) && is_advanced(dict[:in])
         return PropagatorType.Keldysh
     else
-        @show dict
         error("Classical-Classical for self-energy should be zero.")
     end
 end
 
-"Construct the self-energy from diagrams and save in LittleDict self_energy."
+"Construct the self-energy from irreducible diagrams."
 function construct_self_energy!(
-    self_energy::SmallCollections.SmallDict, diagrams::Diagrams{E,E2}
-) where {E,E2}
+    self_energy::SmallCollections.SmallDict,
+    diagrams::Diagrams{C,S,E,E2},
+) where {C<:Number,S<:Statistics,E,E2}
     for (diagram, prefactor) in diagrams
         _contractions = contractions(diagram)
 
@@ -30,17 +29,15 @@ function construct_self_energy!(
             p => t for (p, t) in zip(positions, types_p)
         )
 
-        # The classical-classical component is identically zero.
         if is_keldysh(dict[:out]) && is_keldysh(dict[:in])
             continue
         end
 
-        # Find all bulk propagators (edges where both fields are bulk)
-        bulk_propagators = FixedVector{E - 2,Edge}(
+        bulk_propagators = FixedVector{E - 2,Edge{S}}(
             edge for edge in _contractions if is_bulk(edge)
         )
         push!(
-            self_energy[self_energy_type(dict)],
+            self_energy[self_energy_type(S, dict)],
             Diagram(bulk_propagators, Val(E2)),
             prefactor,
         )
@@ -51,117 +48,103 @@ end
 """
 $(DocStringExtensions.TYPEDEF)
 
-A struct representing the self-energy components in the Retarded-Advance-Keldysh basis.
-The components are classified by `PropagatorType` and divided into Keldysh, retarded, and advanced parts.
+Self-energy components in the Retarded-Advanced-Keldysh basis. Coefficient representation,
+statistics, perturbation order, and diagram shape are encoded in the type.
 
 # Fields
 $(DocStringExtensions.FIELDS)
-where it assumed that the fields are of type `Union{SymbolicUtils.BasicSymbolic, Number}`.
-
-
-# Constructor
-$(DocStringExtensions.TYPEDSIGNATURES)
-Constructs a `SelfEnergy` object from a [`DressedPropagator`](@ref).
-The self-energy is computed based on the Keldysh Green's function (`G.keldysh`) and expanded into
-its quantum-quantum (`qq`), classical-quantum (`cq`), and quantum-classical (`qc`) components.
-
 """
-struct SelfEnergy{E1,E2}
+struct SelfEnergy{C<:Number,S<:Statistics,O,E1,E2}
     "The Keldysh component of the self-energy."
-    keldysh::Diagrams{E1,E2}
-    " The retarded component of the self-energy."
-    retarded::Diagrams{E1,E2}
+    keldysh::Diagrams{C,S,E1,E2}
+    "The retarded component of the self-energy."
+    retarded::Diagrams{C,S,E1,E2}
     "The advanced component of the self-energy."
-    advanced::Diagrams{E1,E2}
-    "The order of the self-energy in the perturbation series"
-    order::Int64
+    advanced::Diagrams{C,S,E1,E2}
     "Parameters of the perturbation series"
     parameter::CSym
 end
-function _self_energy(G::DressedPropagator{E1,E2}, ::Val{O}) where {E1,E2,O}
-    @assert G.order == O "The supplied Val{order} must match the dressed propagator order"
-    self_energy = SmallCollections.SmallDict{
-        3,PropagatorType.T,Diagrams{E1 - 2,max_edges(O)}
-    }((
-        PropagatorType.Advanced => Diagrams{E1 - 2,max_edges(O)}(),
-        PropagatorType.Retarded => Diagrams{E1 - 2,max_edges(O)}(),
-        PropagatorType.Keldysh => Diagrams{E1 - 2,max_edges(O)}(),
+
+order(::SelfEnergy{C,S,O}) where {C,S,O} = O
+statistics(::SelfEnergy{C,S}) where {C,S} = S
+parameters(Σ::SelfEnergy) = Σ.parameter
+
+function self_energy_result_type(
+    ::Type{DressedPropagator{C,S,O,E1,E2}}
+) where {C<:Number,S<:Statistics,O,E1,E2}
+    return SelfEnergy{C,S,O,E1 - 2,max_edges(O)}
+end
+
+function _self_energy(
+    G::DressedPropagator{C,Boson,O,E1,E2}
+) where {C<:Number,O,E1,E2}
+    SE = E1 - 2
+    ST = max_edges(O)
+    D = Diagrams{C,Boson,SE,ST}
+    self_energy = SmallCollections.SmallDict{3,PropagatorType.T,D}((
+        PropagatorType.Advanced => D(),
+        PropagatorType.Retarded => D(),
+        PropagatorType.Keldysh => D(),
     ))
     construct_self_energy!(self_energy, G.keldysh)
-    # ^ keldysh GF should contain everything
-    # construct_self_energy!(self_energy, G.advanced)
-    # construct_self_energy!(self_energy, G.retarded)
 
-    # quantum-quantum is the keldysh term in the self-energy
-    # classical-classical is zero
-
-    # G_R(1) = G₀_R Σ_R G₀_R
-    # G_A(1) = G₀_A Σ_A G₀_A
-    # G_K(1) = G₀_K(x1) Σ_A(y) G₀_A(x2) + G_A(x2) Σ_A(y) G_R(x1) + G_R(x1) Σ_R(y) G_K(x2)
-    # G₀_K Σ_K G₀_K = 0
     _simplify_prefactors!(self_energy[PropagatorType.Keldysh])
     _simplify_prefactors!(self_energy[PropagatorType.Retarded])
     _simplify_prefactors!(self_energy[PropagatorType.Advanced])
-    return SelfEnergy(
+    return SelfEnergy{C,Boson,O,SE,ST}(
         self_energy[PropagatorType.Keldysh],
         self_energy[PropagatorType.Retarded],
         self_energy[PropagatorType.Advanced],
-        Int64(O),
         G.parameter,
     )
 end
 
-function SelfEnergy(G::DressedPropagator{E1,E2}, ::Val{O}) where {E1,E2,O}
-    return _self_energy(G, Val(O))
+SelfEnergy(G::DressedPropagator) = _self_energy(G)
+
+# Transitional call shape while repository call sites move to `SelfEnergy(G)`.
+function SelfEnergy(G::DressedPropagator{C,S,O}, ::Val{O}) where {C,S,O}
+    return SelfEnergy(G)
 end
 
 """
     matrix(Σ::SelfEnergy)
 
-Returns the matrix representation of the self energy `Σ`
-in the Retarded-Advanced-Keldysh basis.
+Return the bosonic Retarded-Advanced-Keldysh self-energy matrix
 ```math
-\\hat{\\Sigma}\\left(y_1, y_2\\right)=
-\\left(\\begin{array}{cc}0 & \\Sigma^A\\left(y_1, y_2\\right) \\\\
-\\Sigma^R\\left(y_1, y_2\\right) & \\Sigma^K\\left(y_1, y_2\\right)
-\\end{array}
-\\right)
+\\hat{\\Sigma}=\\begin{pmatrix}0&\\Sigma^A\\\\\\Sigma^R&\\Sigma^K\\end{pmatrix}.
 ```
 """
-function matrix(Σ::SelfEnergy{E1,E2}) where {E1,E2}
-    result = Matrix{Diagrams{E1,E2}}(undef, 2, 2)
-    result[1, 1] = Diagrams{E1,E2}()
+function matrix(Σ::SelfEnergy{C,Boson,O,E1,E2}) where {C<:Number,O,E1,E2}
+    return matrix(Boson, Σ)
+end
+function matrix(
+    ::Type{Boson}, Σ::SelfEnergy{C,Boson,O,E1,E2}
+) where {C<:Number,O,E1,E2}
+    D = Diagrams{C,Boson,E1,E2}
+    result = Matrix{D}(undef, 2, 2)
+    result[1, 1] = structural_zero(Boson, D)
     result[1, 2] = Σ.advanced
     result[2, 1] = Σ.retarded
     result[2, 2] = Σ.keldysh
     return result
 end
 
-parameters(Σ::SelfEnergy) = Σ.parameter
-
-"""
-$(DocStringExtensions.TYPEDEF)
-
-A structure representing a collection of dressed propagator each involving a
-different parameter of the expansion.
-
-# Fields
-$(DocStringExtensions.FIELDS)
-
-"""
-struct SelfEnergySum{Σs}
-    "The arguments of the dressed propagator sum. Each involving a different parameter."
-    arguments::Dict{CSym,Σs}
-    "The order of the dressed propagator in the perturbation series"
-    order::Int64
+"""Collection of self-energies with distinct perturbation-parameter monomials."""
+struct SelfEnergySum{K,ΣT,O}
+    arguments::Dict{K,ΣT}
 end
 
 SymbolicUtils.arguments(d::SelfEnergySum) = d.arguments
-order(d::SelfEnergySum) = d.order
-parameters(d::SelfEnergySum) = map(G -> G.parameter, arguments(d))
+order(::SelfEnergySum{K,ΣT,O}) where {K,ΣT,O} = O
+parameters(d::SelfEnergySum) = map(Σ -> Σ.parameter, values(arguments(d)))
 
-function SelfEnergy(G::DressedPropagatorSum, ::Val{O}) where {O}
-    @assert G.order == O "The supplied Val{order} must match the dressed propagator sum order"
-    dict = Dict(key => SelfEnergy(val, Val(O)) for (key, val) in arguments(G))
-    return SelfEnergySum(dict, Int64(O))
+function SelfEnergy(G::DressedPropagatorSum{K,GS,O}) where {K,GS,O}
+    ΣT = self_energy_result_type(GS)
+    dict = Dict{K,ΣT}(key => SelfEnergy(val) for (key, val) in arguments(G))
+    return SelfEnergySum{K,ΣT,O}(dict)
+end
+
+# Transitional call shape while repository call sites move to `SelfEnergy(G)`.
+function SelfEnergy(G::DressedPropagatorSum{K,GS,O}, ::Val{O}) where {K,GS,O}
+    return SelfEnergy(G)
 end
