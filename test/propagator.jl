@@ -4,7 +4,8 @@ using KeldyshContraction: Edge, position, keldysh_index
 using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus
 
-@qfields c::Boson(Classical) q::Boson(Quantum)
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]
 
 @testset "propagator checks" begin
     @test_throws AssertionError Edge((c, c))
