@@ -28,7 +28,9 @@ end
         @test is_conserved(expr)
         @test is_physical(expr)
 
-        wick_contractions = _wick_contraction(expr.arguments[1].args_nc; regularise=false)
+        wick_contractions = _wick_contraction(
+            expr.arguments[1].args_nc, Val(3); regularise=false
+        )
         @test length(wick_contractions) == 4
         regularized_wick = filter(wick_contractions) do cs
             all(regular(cn) for cn in cs)
