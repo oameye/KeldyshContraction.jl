@@ -36,19 +36,10 @@ Base.hash(m::Momenta, h::UInt) = hash(Momenta, hash(m.momenta, hash(m.prefactors
 #         Edge
 #########################
 
-# Transitional tuple representation retained until #241 replaces it with Contraction{S}.
+# Transitional representation until #241 introduces Contraction{S}.
 const Contraction = Tuple{Field{Boson},Field{Boson}}
 
-"""
-Type of propagator formed by contracting two fields, labelled by their Keldysh indices:
-the unbarred field supplies `x` and the barred field `y` in an x-y contour pair.
-- `Keldysh`: a Classical-Classical contour;
-- `Advanced`: a Quantum-Classical contour;
-- `Retarded`: a Classical-Quantum contour;
-- `Spectral`: the retarded-minus-advanced combination.
-
-The Quantum-Quantum propagator is always zero, so it has no label here.
-"""
+"""Bosonic propagator type in the retarded-advanced-Keldysh basis."""
 @enumx PropagatorType begin
     Keldysh
     Advanced
@@ -85,7 +76,7 @@ function Base.isequal(e1::Edge, e2::Edge)
 end
 Base.hash(q::Edge, h::UInt) = hash(Edge, hash(q.in, hash(q.edgetype, hash(q.out, h))))
 
-"Collect and check the rules for a physical bosonic propagator."
+"""Check the rules for a physical bosonic propagator."""
 function propagator_checks(out::Field{Boson}, in::Field{Boson})::Nothing
     @assert is_barred(in) "The incoming field must be barred"
     @assert is_unbarred(out) "The outgoing field must be unbarred"
@@ -99,12 +90,7 @@ function propagator_checks(out::Field{Boson}, in::Field{Boson})::Nothing
     return nothing
 end
 
-"""
-$(DocStringExtensions.SIGNATURES)
-
-Determine the [`PropagatorType`](@ref) in the Retarded-Advanced-Keldysh basis from the
-Keldysh indices of the outgoing and incoming fields.
-"""
+"""Determine the propagator type from the Keldysh indices of two fields."""
 function propagator_type(out::Field{Boson}, in::Field{Boson})::PropagatorType.T
     contours = Int.(keldysh_index.((out, in)))
     diff_contour = first(-(contours...))
@@ -158,22 +144,13 @@ function set_reg_to_zero(p::Edge)
 end
 contours(p::Edge) = keldysh_index.(fields(p))
 
-"""
-Adjoint of a propagator/contraction is meaningful at the two-point-object level: exchange
-endpoints and toggle their path-integral orientation. Coordinates are kept in place here;
-`reverse_contraction` additionally reverses the coordinates for diagram adjoints.
-"""
+"""Adjoint of a two-point contraction or edge."""
 function Base.adjoint(c::Contraction)
     return (bar(c[2](position(c[1]))), bar(c[1](position(c[2]))))
 end
 Base.adjoint(c::Edge) = Edge(adjoint(fields(c)))
 
-"""
-    reverse_contraction(c::Contraction)
-
-Reverse a contraction while exchanging `In()` and `Out()` coordinates. This is the
-coordinate-reversing operation used when taking the adjoint of a whole diagram.
-"""
+"""Reverse a contraction and exchange external coordinates."""
 function reverse_contraction(c::Contraction)
     _out, _in = c
     out′, in′ = adjoint(c)
