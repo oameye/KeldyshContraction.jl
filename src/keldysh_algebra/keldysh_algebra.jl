@@ -177,7 +177,7 @@ macro qfields(qs...)
     defs = map(declarations) do declaration
         fname = declaration.name
         statistics_expr = declaration.statistics
-        if declaration.component_args === nothing
+        if isempty(declaration.component_args)
             construction = :(FieldFamily{$(esc(statistics_expr))}($(QuoteNode(fname))))
         else
             field_args = declaration.component_args
@@ -201,5 +201,5 @@ function parse_qfield_declaration(expr)
     if rhs isa Expr && rhs.head == :call
         return (name=name, statistics=rhs.args[1], component_args=rhs.args[2:end])
     end
-    return (name=name, statistics=rhs, component_args=nothing)
+    return (name=name, statistics=rhs, component_args=Any[])
 end
