@@ -188,16 +188,42 @@ function canonicalization_permutation(vs, graph_positions::Vector{Position})
     return NautyGraphs.canonical_permutation(graph)
 end
 
+function out_bulk_positions(vs)
+    result = Position[]
+    for item in vs
+        p1, p2 = positions(item)
+        if is_out(p1) && is_bulk(p2)
+            p2 in result || push!(result, p2)
+        elseif is_out(p2) && is_bulk(p1)
+            p1 in result || push!(result, p1)
+        end
+    end
+    return result
+end
+
 function make_permutation_dict(
-    perm::AbstractVector{<:Integer}, graph_positions::Vector{Position}
+    perm::AbstractVector{<:Integer}, graph_positions::Vector{Position}, vs
 )
     npositions = length(graph_positions)
-    mapping = Dict{Position,Position}()
-    bulk_index = 0
+    canonical_bulk = Position[]
     for original_vertex in perm
         original_vertex <= npositions || continue
         old_position = graph_positions[original_vertex]
-        is_bulk(old_position) || continue
+        is_bulk(old_position) && push!(canonical_bulk, old_position)
+    end
+
+    # Preserve the package's external-anchor convention: bulk vertices attached to Out()
+    # receive the first canonical labels, ordered by their Nauty canonical rank.
+    anchors = out_bulk_positions(vs)
+    mapping = Dict{Position,Position}()
+    bulk_index = 0
+    for old_position in canonical_bulk
+        old_position in anchors || continue
+        bulk_index += 1
+        mapping[old_position] = Bulk(bulk_index)
+    end
+    for old_position in canonical_bulk
+        old_position in anchors && continue
         bulk_index += 1
         mapping[old_position] = Bulk(bulk_index)
     end
@@ -228,7 +254,7 @@ function canonicalize(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
     isempty(vs) && return copy(vs)
     graph_positions = canonicalization_positions(vs)
     perm = canonicalization_permutation(vs, graph_positions)
-    permutation_map = make_permutation_dict(perm, graph_positions)
+    permutation_map = make_permutation_dict(perm, graph_positions, vs)
     return T[relabel_bulk_positions(item, permutation_map) for item in vs]
 end
 function canonicalize(vs::Vector{Tuple{Field{S},Field{S}}}) where {S<:Statistics}
