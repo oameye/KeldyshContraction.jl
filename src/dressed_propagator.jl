@@ -32,6 +32,23 @@ function DressedPropagator(
     return DressedPropagator{C,S,O,E1,E2}(keldysh, retarded, advanced, parameter)
 end
 
+function Base.isequal(
+    a::DressedPropagator{C,S,O,E1,E2}, b::DressedPropagator{C,S,O,E1,E2}
+) where {C,S,O,E1,E2}
+    return isequal(a.keldysh, b.keldysh) &&
+           isequal(a.retarded, b.retarded) &&
+           isequal(a.advanced, b.advanced) &&
+           isequal(a.parameter, b.parameter)
+end
+function Base.:(==)(
+    a::DressedPropagator{C,S,O,E1,E2}, b::DressedPropagator{C,S,O,E1,E2}
+) where {C,S,O,E1,E2}
+    return isequal(a, b)
+end
+function Base.hash(d::DressedPropagator, h::UInt)
+    return hash((d.keldysh, d.retarded, d.advanced, d.parameter), h)
+end
+
 order(::DressedPropagator{C,S,O}) where {C,S,O} = O
 statistics(::DressedPropagator{C,S}) where {C,S} = S
 parameters(d::DressedPropagator) = d.parameter
