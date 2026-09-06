@@ -3,7 +3,7 @@ using KeldyshContraction, Test
 function has_no_zero_loops(component)
     return all(component) do pair
         diagram = first(pair)
-        vs = KeldyshContraction.Contraction[
+        vs = KeldyshContraction.Contraction{Boson}[
             (edge.out, edge.in) for edge in KeldyshContraction.contractions(diagram)
         ]
         return !KeldyshContraction.has_zero_loop(vs)
@@ -75,7 +75,7 @@ end
     )
     L_int = InteractionLagrangian(elasctic2boson)
     GF3 = DressedPropagator(L_int, Val(3), Val(7))
-    Σ = SelfEnergy(GF3, Val(3))
+    Σ = SelfEnergy(GF3)
     @test Σ isa SelfEnergy
     @test all(component -> !isempty(component), (Σ.keldysh, Σ.retarded, Σ.advanced))
     @test all(has_valid_self_energy_diagrams, (Σ.keldysh, Σ.retarded, Σ.advanced))
