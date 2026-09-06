@@ -1,13 +1,13 @@
 using BenchmarkTools
 using KeldyshContraction
-using KeldyshContraction: is_irreducible, Bulk, In, Out
+using KeldyshContraction: is_irreducible, Bulk, In, Out, Contraction
 
 function benchmark_irreducible!(suite::BenchmarkGroup)
     @qfields ϕ::Boson
     c, q = ϕ[Classical], ϕ[Quantum]
 
     # Dumbbell graph (6 vertices) - reducible with bridge
-    vs_dumbbell = [
+    vs_dumbbell = Contraction{Boson}[
         (c(Bulk(1)), bar(q)(Bulk(2))),  # Triangle 1: edge 1-2
         (c(Bulk(2)), bar(q)(Bulk(3))),  # Triangle 1: edge 2-3
         (c(Bulk(3)), bar(q)(Bulk(1))),  # Triangle 1: edge 3-1
@@ -21,7 +21,7 @@ function benchmark_irreducible!(suite::BenchmarkGroup)
     )
 
     # Complete graph K4 (4 vertices) - irreducible
-    vs_k4 = [
+    vs_k4 = Contraction{Boson}[
         (c(Bulk(1)), bar(q)(Bulk(2))),  # Edge 1-2
         (c(Bulk(1)), bar(q)(Bulk(3))),  # Edge 1-3
         (c(Bulk(1)), bar(q)(Bulk(4))),  # Edge 1-4
@@ -34,7 +34,7 @@ function benchmark_irreducible!(suite::BenchmarkGroup)
     )
 
     # Square with diagonal (4 vertices) - irreducible
-    vs_square_diag = [
+    vs_square_diag = Contraction{Boson}[
         (c(Bulk(1)), bar(q)(Bulk(2))),  # Square: edge 1-2
         (c(Bulk(2)), bar(q)(Bulk(3))),  # Square: edge 2-3
         (c(Bulk(3)), bar(q)(Bulk(4))),  # Square: edge 3-4
@@ -46,7 +46,7 @@ function benchmark_irreducible!(suite::BenchmarkGroup)
     )
 
     # Complete graph K5 (5 vertices) - irreducible, more expensive
-    vs_k5 = [
+    vs_k5 = Contraction{Boson}[
         (c(Bulk(1)), bar(q)(Bulk(2))),  # Edge 1-2
         (c(Bulk(1)), bar(q)(Bulk(3))),  # Edge 1-3
         (c(Bulk(1)), bar(q)(Bulk(4))),  # Edge 1-4
@@ -63,7 +63,7 @@ function benchmark_irreducible!(suite::BenchmarkGroup)
     )
 
     # Large sparse reducible graph (7 vertices) - tree structure
-    vs_tree = [
+    vs_tree = Contraction{Boson}[
         (c(Bulk(1)), bar(q)(Bulk(2))),  # Root to left subtree
         (c(Bulk(1)), bar(q)(Bulk(3))),  # Root to right subtree
         (c(Bulk(2)), bar(q)(Bulk(4))),  # Left subtree
