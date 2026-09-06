@@ -65,9 +65,9 @@ GF = DressedPropagator(L_int, Val(1), Val(3))
 # ## Self-Energy
 
 # Often we are interested in the self-energy of the system, which is defined as
-# the set of irreducible diagrams. Inside the package we can compute these to an order $g$ by
+# the set of irreducible diagrams. Its perturbation order is carried by `GF`'s type.
 
-Σ = SelfEnergy(GF, Val(1))
+Σ = SelfEnergy(GF)
 
 # ## Transport
 
@@ -100,4 +100,4 @@ topology_dict[[2]]
 
 # The topology involving only one edge is the reducible diagram, which will not contribute to the self-energy in second order. Indeed, internally we only consider the irreducible diagrams.
 
-Σ = SelfEnergy(GF, Val(2))
+Σ = SelfEnergy(GF)
