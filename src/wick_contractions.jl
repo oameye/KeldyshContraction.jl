@@ -360,12 +360,12 @@ end
 
 function _foreach_wick_matching!(
     f::F,
-    candidates::NTuple{E,Vector{Tuple{Int,C}}},
-    contractions::Vector{C},
+    candidates::NTuple{E,Vector{Tuple{Int,Contraction{S}}}},
+    contractions::Vector{Contraction{S}},
     permutation::Vector{Int},
     used::Vector{Bool},
     k::Int,
-) where {F,E,C<:Contraction}
+) where {F,S<:Statistics,E}
     if k > E
         f(contractions, permutation)
         return nothing
@@ -383,9 +383,11 @@ function _foreach_wick_matching!(
 end
 
 function foreach_wick_matching(
-    f::F, candidates::NTuple{E,Vector{Tuple{Int,C}}}, ::Val{E}
-) where {F,E,C<:Contraction}
-    contractions = Vector{C}(undef, E)
+    f::F,
+    candidates::NTuple{E,Vector{Tuple{Int,Contraction{S}}}},
+    ::Val{E},
+) where {F,S<:Statistics,E}
+    contractions = Vector{Contraction{S}}(undef, E)
     permutation = Vector{Int}(undef, E)
     used = fill(false, E)
     _foreach_wick_matching!(f, candidates, contractions, permutation, used, 1)
@@ -421,12 +423,11 @@ end
 """
 Generate final physical Wick-pairing representatives together with their static legacy topology.
 
-The stored pairing key is defined after optional advanced-to-retarded simplification. Bosonic
-matchings are pre-aggregated by an exact bulk-relabeling orbit key before Nauty. The exhaustive
-orbit scan compares compact immutable field keys and materializes relabeled contractions only for
-the winning permutation, avoiding the allocation-heavy full-contraction copies of the earlier
-implementation. Physical canonicalization is then run once per orbit representative and legacy
-uncolored topology once per final physical diagram.
+Matching permutations are first merged by their exact raw contraction tuple, including the
+statistics-dependent signed multiplicity. Connectivity, causal filtering, optional
+advanced-to-retarded simplification, and the exact bulk-relabeling orbit scan are therefore paid
+once per unique raw pairing rather than once per permutation. Physical canonicalization is then
+run once per orbit representative and legacy uncolored topology once per final physical diagram.
 """
 function _wick_contraction(
     args_nc::Vector{Field{S}},
@@ -443,24 +444,35 @@ function _wick_contraction(
         destroys, creates, Val(E); regularise, _set_reg_to_zero, skip_external_pair=skip
     )
 
-    raw_weights = Dict{FixedVector{E,Contraction{S}},Int}()
+    matching_weights = Dict{FixedVector{E,Contraction{S}},Int}()
     foreach_wick_matching(candidates, Val(E)) do contractions, permutation
-        if !is_connected(contractions) || has_zero_loop(contractions)
-            return nothing
-        end
-
-        current = Contraction{S}[contraction for contraction in contractions]
-        final_contractions, simplification_sign =
-            simplify ? advanced_to_retarded(current, 1) : (current, 1)
-        raw = FixedVector{E,Contraction{S}}(final_contractions)
-        key = wick_orbit_key(S, raw)
-        weight = Int(pairing_sign(S, permutation)) * Int(simplification_sign)
-        raw_weights[key] = get(raw_weights, key, 0) + weight
+        raw = FixedVector{E,Contraction{S}}(contractions)
+        weight = Int(pairing_sign(S, permutation))
+        matching_weights[raw] = get(matching_weights, raw, 0) + weight
         return nothing
     end
 
+    orbit_weights = Dict{FixedVector{E,Contraction{S}},Int}()
+    for (raw, weight) in matching_weights
+        iszero(weight) && continue
+        contractions = Contraction{S}[contraction for contraction in raw]
+        if !is_connected(contractions) || has_zero_loop(contractions)
+            continue
+        end
+
+        final_raw, simplification_sign = if simplify
+            simplified, sign = advanced_to_retarded(contractions, 1)
+            FixedVector{E,Contraction{S}}(simplified), sign
+        else
+            raw, 1
+        end
+        key = wick_orbit_key(S, final_raw)
+        final_weight = weight * Int(simplification_sign)
+        orbit_weights[key] = get(orbit_weights, key, 0) + final_weight
+    end
+
     canonical_weights = Dict{FixedVector{E,Contraction{S}},Int}()
-    for (raw, weight) in raw_weights
+    for (raw, weight) in orbit_weights
         iszero(weight) && continue
         contractions = Contraction{S}[contraction for contraction in raw]
         canonical = canonicalize(contractions)
