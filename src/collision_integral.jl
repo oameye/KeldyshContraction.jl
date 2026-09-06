@@ -117,9 +117,7 @@ end
 ⃗a ⃗a = - A A -  ⃗r ⃗r
 ⃗a ⃖r =  A A -  ⃗r ⃖a
 """
-function reduce_to_spectral(
-    ds::Diagrams{C,S,E1,E2}
-) where {C<:Number,S<:Statistics,E1,E2}
+function reduce_to_spectral(ds::Diagrams{C,S,E1,E2}) where {C<:Number,S<:Statistics,E1,E2}
     ds′ = Diagrams{C,S,E1,E2}()
     for (d, coeff) in ds.diagrams
         _contractions = contractions(d)
