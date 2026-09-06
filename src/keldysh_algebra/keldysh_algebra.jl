@@ -50,7 +50,10 @@ end
 Base.getindex(family::FieldFamily, keldysh::KeldyshIndex.T) = Field(family, keldysh)
 
 FieldFamily(f::Field) = f.family
+
+"""Return the physical `FieldFamily` shared by a field's Keldysh components."""
 field_family(f::Field) = f.family
+
 name(f::Field) = name(field_family(f))
 field_indices(f::Field) = field_indices(field_family(f))
 
@@ -169,7 +172,7 @@ macro qfields(qs...)
         fname isa Symbol || throw(ArgumentError("field family name must be a symbol"))
         statistics_expr isa Symbol || throw(
             ArgumentError(
-                "@qfields declares families only; construct components with family[Classical] or family[Quantum]"
+                "@qfields declares families only; construct components with family[Classical] or family[Quantum]",
             ),
         )
 
