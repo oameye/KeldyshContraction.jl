@@ -228,18 +228,17 @@ function wick_contract(
 end
 
 ######################
-# Vacuum Contractions
+# Explicit-shape contractions
 ######################
 
 function _wick_contraction(
-    a::QAdd{C,S}, ::Val{E}; kwargs...
-) where {C<:Number,S<:Statistics,E}
+    a::QAdd{C,S}, ::Val{E}, ::Val{E2}; kwargs...
+) where {C<:Number,S<:Statistics,E,E2}
     args = terms(a)
     @assert all(number_of_propagators(arg) == E for arg in args)
-    @assert is_bulk(a) "The private two-argument _wick_contraction entry point is for vacuum terms"
 
     D = diagram_coefficient_type(C)
-    diagrams = Diagrams{D,S,E,topology_length(E + 1)}()
+    diagrams = Diagrams{D,S,E,E2}()
     regularise = should_regularise(a)
     for arg in args
         wick_contraction!(diagrams, arg; regularise, kwargs...)
@@ -248,16 +247,33 @@ function _wick_contraction(
 end
 
 function _wick_contraction(
-    a::QMul{C,S}, ::Val{E}; kwargs...
-) where {C<:Number,S<:Statistics,E}
+    a::QMul{C,S}, ::Val{E}, ::Val{E2}; kwargs...
+) where {C<:Number,S<:Statistics,E,E2}
     @assert is_conserved(a)
     @assert is_physical(a)
     @assert number_of_propagators(a) == E
-    @assert is_bulk(a) "The private two-argument _wick_contraction entry point is for vacuum terms"
 
     D = diagram_coefficient_type(C)
-    diagrams = Diagrams{D,S,E,topology_length(E + 1)}()
+    diagrams = Diagrams{D,S,E,E2}()
     regularise = should_regularise(a)
     wick_contraction!(diagrams, a; regularise, kwargs...)
     return diagrams
+end
+
+######################
+# Vacuum Contractions
+######################
+
+function _wick_contraction(
+    a::QAdd{C,S}, ::Val{E}; kwargs...
+) where {C<:Number,S<:Statistics,E}
+    @assert is_bulk(a) "The private two-argument _wick_contraction entry point is for vacuum terms"
+    return _wick_contraction(a, Val(E), Val(topology_length(E + 1)); kwargs...)
+end
+
+function _wick_contraction(
+    a::QMul{C,S}, ::Val{E}; kwargs...
+) where {C<:Number,S<:Statistics,E}
+    @assert is_bulk(a) "The private two-argument _wick_contraction entry point is for vacuum terms"
+    return _wick_contraction(a, Val(E), Val(topology_length(E + 1)); kwargs...)
 end
