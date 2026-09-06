@@ -215,12 +215,12 @@ end
 
 function _foreach_wick_matching!(
     f::F,
-    candidates::NTuple{E,Vector{Tuple{Int,Contraction{S}}}},
-    contractions::Vector{Contraction{S}},
+    candidates::NTuple{E,V},
+    contractions::Vector{C},
     permutation::Vector{Int},
     used::Vector{Bool},
     k::Int,
-) where {F,S<:Statistics,E}
+) where {F,E,C<:Contraction,V<:Vector{Tuple{Int,C}}}
     if k > E
         f(contractions, permutation)
         return nothing
@@ -231,16 +231,25 @@ function _foreach_wick_matching!(
         used[l] = true
         contractions[k] = contraction
         permutation[k] = l
-        _foreach_wick_matching!(f, candidates, contractions, permutation, used, k + 1)
+
+        # A causal cycle in a partial matching cannot be removed by adding more edges.
+        # Reject it immediately so expensive connectivity/canonicalization work is never
+        # reached for any descendant of this branch.
+        partial = @view contractions[1:k]
+        if !has_zero_loop(partial)
+            _foreach_wick_matching!(f, candidates, contractions, permutation, used, k + 1)
+        end
         used[l] = false
     end
     return nothing
 end
 
 function foreach_wick_matching(
-    f::F, candidates::NTuple{E,Vector{Tuple{Int,Contraction{S}}}}, ::Val{E}
-) where {F,S<:Statistics,E}
-    contractions = Vector{Contraction{S}}(undef, E)
+    f::F, candidates::NTuple{E,V}, ::Val{E}
+) where {F,E,V}
+    Candidate = eltype(V)
+    C = fieldtype(Candidate, 2)
+    contractions = Vector{C}(undef, E)
     permutation = Vector{Int}(undef, E)
     used = fill(false, E)
     _foreach_wick_matching!(f, candidates, contractions, permutation, used, 1)
@@ -276,9 +285,9 @@ end
 """
 Generate canonical Wick pairings together with their static uncolored topology.
 
-The physical canonical form and the uncolored topology are derived from the same direct
-graph canonicalization. This prevents `Diagram` construction from performing another
-Nauty call inside the Wick-matching loop.
+Physical canonicalization is performed first. The topology helper then preserves the historical
+uncolored tie-breaking semantics, while avoiding a second direct Nauty pass except for symmetric
+multigraphs where that pass is mathematically necessary.
 """
 function _wick_contraction(
     args_nc::Vector{Field{S}},
