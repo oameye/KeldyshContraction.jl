@@ -13,7 +13,7 @@ elasctic2boson = -(
 @syms g
 L_int = InteractionLagrangian(elasctic2boson, g)
 
-@test isequal(KeldyshContraction.parameters(L_int), g)
+@test KeldyshContraction.parameters(L_int) == parameter_monomial(g)
 
 @testset "first order" begin
     @testset "Bubble diagrams" begin
@@ -60,7 +60,7 @@ L_int = InteractionLagrangian(elasctic2boson, g)
     @testset "self-energy" begin
         L = InteractionLagrangian(elasctic2boson)
         GF = DressedPropagator(L, Val(1), Val(3))
-        Σ = SelfEnergy(GF, Val(1))
+        Σ = SelfEnergy(GF)
 
         @test iszero(Σ.keldysh)
         @test isequal(adjoint(Σ.advanced), Σ.retarded)
@@ -310,7 +310,7 @@ end
         @test isequal(dict[keys[2]], truth2)
 
         # @test repr(dict[keys[3]]) ==
-        #     "-1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂) + -0.5*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) + 2.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴷ(y₂,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) + -0.5*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂) + -0.5*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂)"
+        #     "-1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂) + -0.5*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) + 2.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴷ(y₂,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) + -0.5*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂) + -0.5*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂)"
 
         # @test repr(dict[keys[4]]) ==
         #     "-1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + -0.5*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂) + -0.5*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,x₂)"
@@ -341,7 +341,7 @@ end
         @test length(terms_a) == 6
     end
 
-    Σ = SelfEnergy(GF, Val(2))
+    Σ = SelfEnergy(GF)
 
     @test isequal(adjoint(Σ.advanced), Σ.retarded)
     @test isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)
