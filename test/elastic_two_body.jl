@@ -37,13 +37,13 @@ L_int = InteractionLagrangian(elasctic2boson, g)
             Dict(
                 Diagram(
                     [(c(Out()), bar(c)), (c, bar(q)), (c, bar(q)(In()))], Val(3), Val(0)
-                ) => Complex{Rational{Int}}(-0.0 + 1.0 * im),
+                ) => ComplexF64(-0.0 + 1.0 * im),
                 Diagram(
                     [(c(Out()), bar(q)), (c, bar(c)), (c, bar(q)(In()))], Val(3), Val(0)
-                ) => Complex{Rational{Int}}(-0.0 + 1.0 * im),
+                ) => ComplexF64(-0.0 + 1.0 * im),
             ),
         )
-        result = _wick_contraction(expr.arguments[1], Val(3))
+        result = _wick_contraction(expr.arguments[1], Val(3), Val(0))
         KeldyshContraction._simplify_prefactors!(result)
         @test isequal(result, truth)
         # The keldysh in and keldysh out will disappear later
@@ -105,7 +105,7 @@ end
             qmul = mult * prod(L_int(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
 
             term = prefactor * in_out * qmul
-            diagrams = _wick_contraction(term, Val(5); simplify=true)
+            diagrams = _wick_contraction(term, Val(5), Val(1); simplify=true)
             KC._simplify_prefactors!(diagrams)
             dict[term] = diagrams
             push!(keys, term)
@@ -130,7 +130,7 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => -Complex{Rational{Int}}(1.0),
+                ) => -ComplexF64(1.0),
                 # -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂)
                 Diagram(
                     [
@@ -142,7 +142,7 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => -Complex{Rational{Int}}(1.0),
+                ) => -ComplexF64(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,x₂)
                 Diagram(
                     [
@@ -154,7 +154,7 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => -Complex{Rational{Int}}(1.0),
+                ) => -ComplexF64(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂)
                 Diagram(
                     [
@@ -166,7 +166,7 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => -Complex{Rational{Int}}(1.0),
+                ) => -ComplexF64(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂)
                 Diagram(
                     [
@@ -178,7 +178,7 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => -Complex{Rational{Int}}(1.0),
+                ) => -ComplexF64(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂)
                 Diagram(
                     [
@@ -190,7 +190,7 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => -Complex{Rational{Int}}(1.0),
+                ) => -ComplexF64(1.0),
                 # -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴷ(y₂,x₂)
                 Diagram(
                     [
@@ -202,8 +202,8 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => -Complex{Rational{Int}}(1.0),
-                # -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴷ(y₂,x₂)
+                ) => -ComplexF64(1.0),
+                # -1.0*Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂)
                 Diagram(
                     [
                         (c(Out()), bar(c)(Bulk(1))),     # Gᴷ(x₁,y₁)
@@ -214,7 +214,7 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => -Complex{Rational{Int}}(1.0),
+                ) => -ComplexF64(1.0),
             ),
         )
         @test isequal(dict[keys[1]], truth1)
@@ -232,7 +232,7 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => Complex{Rational{Int}}(1.0),
+                ) => ComplexF64(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂)
                 Diagram(
                     [
@@ -244,7 +244,7 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => -Complex{Rational{Int}}(1.0),
+                ) => -ComplexF64(1.0),
                 # -1.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴬ(y₂,x₂)
                 Diagram(
                     [
@@ -256,7 +256,7 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => -Complex{Rational{Int}}(1.0),
+                ) => -ComplexF64(1.0),
                 # Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂)
                 Diagram(
                     [
@@ -268,7 +268,7 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => Complex{Rational{Int}}(1.0),
+                ) => ComplexF64(1.0),
                 # -1.0*Gᴷ(x₁,y₁)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴬ(y₁,x₂)
                 Diagram(
                     [
@@ -280,7 +280,7 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => -Complex{Rational{Int}}(1.0),
+                ) => -ComplexF64(1.0),
                 # Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂)*Gᴷ(y₁,x₂)
                 Diagram(
                     [
@@ -292,7 +292,7 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => Complex{Rational{Int}}(1.0),
+                ) => ComplexF64(1.0),
                 # Gᴷ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴿ(y₂,y₂)*Gᴬ(y₂,x₂)
                 Diagram(
                     [
@@ -304,7 +304,7 @@ end
                     ],
                     Val(5),
                     Val(1),
-                ) => Complex{Rational{Int}}(1.0),
+                ) => ComplexF64(1.0),
             ),
         )
         @test isequal(dict[keys[2]], truth2)
