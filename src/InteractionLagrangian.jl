@@ -1,7 +1,4 @@
-const DEFAULT_PARAMETER = let
-    @syms g::Number
-    g
-end
+const DEFAULT_PARAMETER = ParameterMonomial(:g)
 
 abstract type Lagrangian end
 
@@ -36,8 +33,8 @@ struct InteractionLagrangian{C<:Number,S<:Statistics} <: Lagrangian
     families::Vector{FieldFamily{S}}
     "The position of the interaction Lagrangian"
     position::Position
-    "Parameter of the perturbation series"
-    parameter::CSym
+    "Canonical perturbation-parameter monomial"
+    parameter::ParameterMonomial
 end
 
 normalize_interaction(expr::QAdd) = expr
@@ -53,7 +50,10 @@ function InteractionLagrangian(
     assert_lagrangian(expression, fields)
 
     return InteractionLagrangian{C,S}(
-        expression, interaction_families(expression), position(first(fields)), parameter
+        expression,
+        interaction_families(expression),
+        position(first(fields)),
+        parameter_monomial(parameter),
     )
 end
 
@@ -190,7 +190,7 @@ function target_family(Ls::LagrangianSum{C,S}, target::FieldFamily{S}) where {C,
 end
 
 SymbolicUtils.arguments(Ls::LagrangianSum) = Ls.arguments
-parameters(Ls::LagrangianSum) = [L.parameter for L in arguments(Ls)]
+parameters(Ls::LagrangianSum) = ParameterMonomial[L.parameter for L in arguments(Ls)]
 Base.length(a::LagrangianSum) = length(arguments(a))
 SymbolicUtils.operation(::LagrangianSum) = (+)
 
