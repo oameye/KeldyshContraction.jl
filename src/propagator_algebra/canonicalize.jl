@@ -30,19 +30,23 @@ function sort_by_position_and_type(p::Contraction)::Float64
         return float(pairing(i, j) * 4 + type)
     end
 end
-function sort_by_position_and_type(p::Tuple{Field{S},Field{S}})::Float64 where {S<:Statistics}
+function sort_by_position_and_type(
+    p::Tuple{Field{S},Field{S}}
+)::Float64 where {S<:Statistics}
     return sort_by_position_and_type(Contraction(p))
 end
 sort_by_position_and_type(p::Edge)::Float64 =
     sort_by_position_and_type(Contraction(fields(p)))
 
-field_color(f::Field) = (
-    string(name(f)),
-    slots(field_indices(f)),
-    Int(orientation(f)),
-    Int(keldysh_index(f)),
-    Int(regularisation(f)),
-)
+function field_color(f::Field)
+    return (
+        string(name(f)),
+        slots(field_indices(f)),
+        Int(orientation(f)),
+        Int(keldysh_index(f)),
+        Int(regularisation(f)),
+    )
+end
 
 function propagator_color(c::Contraction)
     return (field_color(c.out), field_color(c.in), Int(propagator_type(c...)))
@@ -69,7 +73,13 @@ function make_NautyDiGraph(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
     labels = Vector{Int}(undef, npositions + length(vs))
 
     for (i, p) in enumerate(graph_positions)
-        labels[i] = is_out(p) ? 1 : is_in(p) ? 2 : 3
+        labels[i] = if is_out(p)
+            1
+        elseif is_in(p)
+            2
+        else
+            3
+        end
     end
     for (i, item) in enumerate(vs)
         color = propagator_color(item)
@@ -91,7 +101,9 @@ function make_NautyDiGraph(vs::Vector{Tuple{Field{S},Field{S}}}) where {S<:Stati
     return make_NautyDiGraph(contractions)
 end
 
-function make_permutation_dict(perm::AbstractVector{<:Integer}, graph_positions::Vector{Position})
+function make_permutation_dict(
+    perm::AbstractVector{<:Integer}, graph_positions::Vector{Position}
+)
     npositions = length(graph_positions)
     mapping = Dict{Position,Position}()
     bulk_index = 0
@@ -109,8 +121,12 @@ function relabel_bulk_position(f::Field, mapping::Dict{Position,Position})
     p = position(f)
     return is_bulk(p) && haskey(mapping, p) ? f(mapping[p]) : f
 end
-function relabel_bulk_positions(c::Contraction{S}, mapping::Dict{Position,Position}) where {S}
-    return Contraction(relabel_bulk_position(c.out, mapping), relabel_bulk_position(c.in, mapping))
+function relabel_bulk_positions(
+    c::Contraction{S}, mapping::Dict{Position,Position}
+) where {S}
+    return Contraction(
+        relabel_bulk_position(c.out, mapping), relabel_bulk_position(c.in, mapping)
+    )
 end
 function relabel_bulk_positions(e::Edge{S}, mapping::Dict{Position,Position}) where {S}
     return Edge(
