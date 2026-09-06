@@ -122,12 +122,7 @@ function wick_contraction!(
     @assert is_physical(a)
 
     pairings = _wick_contraction(
-        a.args_nc,
-        Val(E1),
-        Val(E2);
-        regularise,
-        _set_reg_to_zero,
-        simplify,
+        a.args_nc, Val(E1), Val(E2); regularise, _set_reg_to_zero, simplify
     )
     make_diagram!(diagrams, pairings, a.arg_c)
     return nothing
@@ -142,13 +137,7 @@ function make_diagram!(
     imag_factor = convert(C, im^E1)
     for (pairing, topology, multiplicity) in pairings
         diagram, prefactor = make_diagram_pair(
-            pairing,
-            topology,
-            multiplicity,
-            arg_c,
-            imag_factor,
-            Val(E1),
-            Val(E2),
+            pairing, topology, multiplicity, arg_c, imag_factor, Val(E1), Val(E2)
         )
         push!(diagrams, diagram, prefactor)
     end
@@ -212,9 +201,7 @@ end
 const WickFieldKey = Tuple{Int,Int8,Int,Symbol,Int,NTuple{4,Int16}}
 const WickContractionKey = Tuple{WickFieldKey,WickFieldKey}
 
-@inline function wick_field_key(
-    f::Field, mapping::Dict{Position,Position}
-)::WickFieldKey
+@inline function wick_field_key(f::Field, mapping::Dict{Position,Position})::WickFieldKey
     p = position(f)
     mapped_position = is_bulk(p) ? index(mapping[p]) : index(p)
     return (
@@ -274,7 +261,7 @@ function foreach_wick_relabeling!(
         foreach_position_relabeling!(
             others, anchor_mapping, length(anchors) + 1, 1
         ) do complete_mapping
-            f(complete_mapping)
+            return f(complete_mapping)
         end
     end
     return nothing
@@ -282,9 +269,7 @@ end
 
 wick_orbit_key(::Type{S}, raw::FixedVector{E,Contraction{S}}) where {S<:Statistics,E} = raw
 
-function wick_orbit_key(
-    ::Type{Boson}, raw::FixedVector{E,Contraction{Boson}}
-) where {E}
+function wick_orbit_key(::Type{Boson}, raw::FixedVector{E,Contraction{Boson}}) where {E}
     contractions = Contraction{Boson}[contraction for contraction in raw]
     graph_positions = canonicalization_positions(contractions)
     bulk_positions = Position[position for position in graph_positions if is_bulk(position)]
@@ -399,9 +384,10 @@ function wick_matching_key(
 )::NTuple{E,UInt8} where {C<:Contraction,Candidates<:Tuple,E}
     return ntuple(Val(E)) do k
         idx = findfirst(candidates[k]) do candidate
-            isequal(candidate[2], contractions[k])
+            return isequal(candidate[2], contractions[k])
         end
-        isnothing(idx) && error("Wick matching contraction is not present in its candidate row")
+        isnothing(idx) &&
+            error("Wick matching contraction is not present in its candidate row")
         return UInt8(idx)
     end
 end
@@ -431,10 +417,7 @@ function _wick_contraction(
         passes_wick_filters(contractions) || return nothing
 
         canonical = canonicalize(contractions)
-        push!(
-            wick_pairings,
-            WickPairing(canonical, pairing_sign(S, permutation), Val(E)),
-        )
+        push!(wick_pairings, WickPairing(canonical, pairing_sign(S, permutation), Val(E)))
         return nothing
     end
     return wick_pairings
@@ -487,7 +470,8 @@ function _wick_contraction(
         canonical = canonicalize(final_contractions)
         canonical_key = sorted_wick_key(canonical, Val(E))
         final_weight = weight * Int(simplification_sign)
-        canonical_weights[canonical_key] = get(canonical_weights, canonical_key, 0) + final_weight
+        canonical_weights[canonical_key] =
+            get(canonical_weights, canonical_key, 0) + final_weight
     end
 
     wick_pairings = Tuple{WickPairing{S,E},FixedVector{E2,Int},Int}[]

@@ -211,9 +211,7 @@ function is_connected(vs::AbstractVector{<:Contraction})
     ps = Tuple{Int8,Int8}[integer_positions(v) for v in vs]
     in_or_out = findfirst(p -> Int8(1) ∈ p || Int8(2) ∈ p, ps) # in case it a vacuum diagram
     if isnothing(in_or_out)
-        edges = Tuple{Int8,Int8}[
-            (p[1] - Int8(2), p[2] - Int8(2)) for p in ps
-        ]
+        edges = Tuple{Int8,Int8}[(p[1] - Int8(2), p[2] - Int8(2)) for p in ps]
         return is_connected(edges)
     end
     return is_connected(ps)

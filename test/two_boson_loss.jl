@@ -58,9 +58,7 @@ end
             ),
         )
         @test isequal(
-            set_reg_to_zero(
-                _wick_contraction(expr.arguments[1], Val(3), Val(0); simplify)
-            ),
+            set_reg_to_zero(_wick_contraction(expr.arguments[1], Val(3), Val(0); simplify)),
             truth,
         )
 
@@ -72,22 +70,16 @@ end
             ),
         )
         @test isequal(
-            set_reg_to_zero(
-                _wick_contraction(expr.arguments[2], Val(3), Val(0); simplify)
-            ),
+            set_reg_to_zero(_wick_contraction(expr.arguments[2], Val(3), Val(0); simplify)),
             truth,
         )
 
         @test repr(
-            set_reg_to_zero(
-                _wick_contraction(expr.arguments[3], Val(3), Val(0); simplify)
-            )
+            set_reg_to_zero(_wick_contraction(expr.arguments[3], Val(3), Val(0); simplify))
         ) == "-1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
         @test repr(
-            set_reg_to_zero(
-                _wick_contraction(expr.arguments[4], Val(3), Val(0); simplify)
-            )
+            set_reg_to_zero(_wick_contraction(expr.arguments[4], Val(3), Val(0); simplify))
         ) == "-1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
         truth = Diagrams(
@@ -101,9 +93,7 @@ end
             ),
         )
         @test isequal(
-            set_reg_to_zero(
-                _wick_contraction(expr.arguments[5], Val(3), Val(0); simplify)
-            ),
+            set_reg_to_zero(_wick_contraction(expr.arguments[5], Val(3), Val(0); simplify)),
             truth,
         )
 
@@ -118,9 +108,7 @@ end
             ),
         )
         @test isequal(
-            set_reg_to_zero(
-                _wick_contraction(expr.arguments[6], Val(3), Val(0); simplify)
-            ),
+            set_reg_to_zero(_wick_contraction(expr.arguments[6], Val(3), Val(0); simplify)),
             truth,
         )
 
@@ -205,16 +193,10 @@ end
             kp = Diagram([(c, bar(c))], Val(1), Val(0))
             rp = Diagram([(c, bar(q))], Val(1), Val(0))
             ap = Diagram([(q, bar(c))], Val(1), Val(0))
-            advanced_truth = Diagrams(
-                Dict(kp => ComplexF64(-1.0), rp => ComplexF64(1.0))
-            )
+            advanced_truth = Diagrams(Dict(kp => ComplexF64(-1.0), rp => ComplexF64(1.0)))
             retarded_truth = Diagrams(Dict(kp => ComplexF64(1.0), ap => ComplexF64(1.0)))
             keldysh_truth = Diagrams(
-                Dict(
-                    kp => ComplexF64(2.0),
-                    rp => ComplexF64(-1.0),
-                    ap => ComplexF64(1.0),
-                ),
+                Dict(kp => ComplexF64(2.0), rp => ComplexF64(-1.0), ap => ComplexF64(1.0))
             )
 
             @test isequal(set_reg_to_zero(Σ.advanced), advanced_truth)
