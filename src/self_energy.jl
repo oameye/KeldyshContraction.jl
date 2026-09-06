@@ -13,8 +13,7 @@ end
 
 "Construct the self-energy from irreducible diagrams."
 function construct_self_energy!(
-    self_energy::SmallCollections.SmallDict,
-    diagrams::Diagrams{C,S,E,E2},
+    self_energy::SmallCollections.SmallDict, diagrams::Diagrams{C,S,E,E2}
 ) where {C<:Number,S<:Statistics,E,E2}
     for (diagram, prefactor) in diagrams
         _contractions = contractions(diagram)
@@ -75,9 +74,7 @@ function self_energy_result_type(
     return SelfEnergy{C,S,O,E1 - 2,max_edges(O)}
 end
 
-function _self_energy(
-    G::DressedPropagator{C,Boson,O,E1,E2}
-) where {C<:Number,O,E1,E2}
+function _self_energy(G::DressedPropagator{C,Boson,O,E1,E2}) where {C<:Number,O,E1,E2}
     SE = E1 - 2
     ST = max_edges(O)
     D = Diagrams{C,Boson,SE,ST}
@@ -112,9 +109,7 @@ Return the bosonic Retarded-Advanced-Keldysh self-energy matrix
 function matrix(Σ::SelfEnergy{C,Boson,O,E1,E2}) where {C<:Number,O,E1,E2}
     return matrix(Boson, Σ)
 end
-function matrix(
-    ::Type{Boson}, Σ::SelfEnergy{C,Boson,O,E1,E2}
-) where {C<:Number,O,E1,E2}
+function matrix(::Type{Boson}, Σ::SelfEnergy{C,Boson,O,E1,E2}) where {C<:Number,O,E1,E2}
     D = Diagrams{C,Boson,E1,E2}
     result = Matrix{D}(undef, 2, 2)
     result[1, 1] = structural_zero(Boson, D)
@@ -136,8 +131,6 @@ parameters(d::SelfEnergySum) = collect(keys(d.arguments))
 
 function SelfEnergy(G::DressedPropagatorSum{GS,O}) where {GS,O}
     ΣT = self_energy_result_type(GS)
-    dict = Dict{ParameterMonomial,ΣT}(
-        key => SelfEnergy(val) for (key, val) in arguments(G)
-    )
+    dict = Dict{ParameterMonomial,ΣT}(key => SelfEnergy(val) for (key, val) in arguments(G))
     return SelfEnergySum{ΣT,O}(dict)
 end
