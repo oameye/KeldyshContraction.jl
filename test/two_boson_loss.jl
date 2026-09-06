@@ -45,7 +45,7 @@ end
                 Val(0),
             ),
             set_reg_to_zero(
-                first(keys(_wick_contraction(expr.arguments[1], Val(3)).diagrams))
+                first(keys(_wick_contraction(expr.arguments[1], Val(3), Val(0)).diagrams))
             ),
         )
 
@@ -54,61 +54,79 @@ end
             Dict(
                 Diagram(
                     [(c(Out()), bar(q)), (c, bar(c)), (c, bar(c)(In()))], Val(3), Val(0)
-                ) => Complex{Rational{Int}}(1.0),
+                ) => ComplexF64(1.0),
             ),
         )
         @test isequal(
-            set_reg_to_zero(_wick_contraction(expr.arguments[1], Val(3); simplify)), truth
+            set_reg_to_zero(
+                _wick_contraction(expr.arguments[1], Val(3), Val(0); simplify)
+            ),
+            truth,
         )
 
         truth = Diagrams(
             Dict(
                 Diagram(
                     [(c(Out()), bar(q)), (q, bar(c)), (q, bar(c)(In()))], Val(3), Val(0)
-                ) => Complex{Rational{Int}}(1.0),
+                ) => ComplexF64(1.0),
             ),
         )
         @test isequal(
-            set_reg_to_zero(_wick_contraction(expr.arguments[2], Val(3); simplify)), truth
+            set_reg_to_zero(
+                _wick_contraction(expr.arguments[2], Val(3), Val(0); simplify)
+            ),
+            truth,
         )
 
         @test repr(
-            set_reg_to_zero(_wick_contraction(expr.arguments[3], Val(3); simplify))
-        ) == "-1//1*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)"
+            set_reg_to_zero(
+                _wick_contraction(expr.arguments[3], Val(3), Val(0); simplify)
+            )
+        ) == "-1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
         @test repr(
-            set_reg_to_zero(_wick_contraction(expr.arguments[4], Val(3); simplify))
-        ) == "-1//1*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,x₂)"
+            set_reg_to_zero(
+                _wick_contraction(expr.arguments[4], Val(3), Val(0); simplify)
+            )
+        ) == "-1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁)*Gᴬ(y₁,x₂)"
 
         truth = Diagrams(
             Dict(
                 Diagram(
                     [(c(Out()), bar(c)), (c, bar(q)), (q, bar(c)(In()))], Val(3), Val(0)
-                ) => Complex{Rational{Int}}(1.0),
+                ) => ComplexF64(1.0),
                 Diagram(
                     [(c(Out()), bar(q)), (c, bar(c)), (q, bar(c)(In()))], Val(3), Val(0)
-                ) => Complex{Rational{Int}}(1.0),
+                ) => ComplexF64(1.0),
             ),
         )
         @test isequal(
-            set_reg_to_zero(_wick_contraction(expr.arguments[5], Val(3); simplify)), truth
+            set_reg_to_zero(
+                _wick_contraction(expr.arguments[5], Val(3), Val(0); simplify)
+            ),
+            truth,
         )
 
         truth = Diagrams(
             Dict(
                 Diagram(
                     [(c(Out()), bar(q)), (q, bar(c)), (c, bar(c)(In()))], Val(3), Val(0)
-                ) => Complex{Rational{Int}}(1.0),
+                ) => ComplexF64(1.0),
                 Diagram(
                     [(c(Out()), bar(q)), (c, bar(c)), (q, bar(c)(In()))], Val(3), Val(0)
-                ) => Complex{Rational{Int}}(1.0),
+                ) => ComplexF64(1.0),
             ),
         )
         @test isequal(
-            set_reg_to_zero(_wick_contraction(expr.arguments[6], Val(3); simplify)), truth
+            set_reg_to_zero(
+                _wick_contraction(expr.arguments[6], Val(3), Val(0); simplify)
+            ),
+            truth,
         )
 
-        result = _wick_contraction.(expr.arguments, Val(3); simplify, _set_reg_to_zero=true)
+        result = _wick_contraction.(
+            expr.arguments, Val(3), Val(0); simplify, _set_reg_to_zero=true
+        )
 
         diagrams_result = result[1]
         for idx in 2:length(result)
@@ -128,8 +146,8 @@ end
         @test is_conserved(expr)
         @test is_physical(expr)
 
-        @test !iszero(_wick_contraction(expr, Val(3); regularise=false))
-        @test iszero(_wick_contraction(expr, Val(3); regularise=true))
+        @test !iszero(_wick_contraction(expr, Val(3), Val(0); regularise=false))
+        @test iszero(_wick_contraction(expr, Val(3), Val(0); regularise=true))
     end
 
     @testset "R/A Green's function first order" begin
@@ -140,20 +158,20 @@ end
             Dict(
                 Diagram(
                     [(c(Out()), bar(q)), (q, bar(c)), (c, bar(q)(In()))], Val(3), Val(0)
-                ) => Complex{Rational{Int}}(1.0),
+                ) => ComplexF64(1.0),
                 Diagram(
                     [(c(Out()), bar(q)), (c, bar(c)), (c, bar(q)(In()))], Val(3), Val(0)
-                ) => Complex{Rational{Int}}(1.0),
+                ) => ComplexF64(1.0),
             ),
         )
         truth_advanced = Diagrams(
             Dict(
                 Diagram(
                     [(q(Out()), bar(c)), (c, bar(q)), (q, bar(c)(In()))], Val(3), Val(0)
-                ) => Complex{Rational{Int}}(1.0),
+                ) => ComplexF64(1.0),
                 Diagram(
                     [(q(Out()), bar(c)), (c, bar(c)), (q, bar(c)(In()))], Val(3), Val(0)
-                ) => Complex{Rational{Int}}(-1.0),
+                ) => ComplexF64(-1.0),
             ),
         )
         @test isequal(set_reg_to_zero(GF.retarded), truth_retarded)
@@ -188,16 +206,14 @@ end
             rp = Diagram([(c, bar(q))], Val(1), Val(0))
             ap = Diagram([(q, bar(c))], Val(1), Val(0))
             advanced_truth = Diagrams(
-                Dict(kp => Complex{Rational{Int}}(-1.0), rp => Complex{Rational{Int}}(1.0))
+                Dict(kp => ComplexF64(-1.0), rp => ComplexF64(1.0))
             )
-            retarded_truth = Diagrams(
-                Dict(kp => Complex{Rational{Int}}(1.0), ap => Complex{Rational{Int}}(1.0))
-            )
+            retarded_truth = Diagrams(Dict(kp => ComplexF64(1.0), ap => ComplexF64(1.0)))
             keldysh_truth = Diagrams(
                 Dict(
-                    kp => Complex{Rational{Int}}(2.0),
-                    rp => Complex{Rational{Int}}(-1.0),
-                    ap => Complex{Rational{Int}}(1.0),
+                    kp => ComplexF64(2.0),
+                    rp => ComplexF64(-1.0),
+                    ap => ComplexF64(1.0),
                 ),
             )
 
@@ -216,22 +232,13 @@ end
                 )
                 Σ = SelfEnergy(GF)
                 keldysh_truth = Diagrams(
-                    Dict(
-                        kp => Complex{Rational{Int}}(2.0),
-                        rp => Complex{Rational{Int}}(-2.0),
-                    ),
+                    Dict(kp => ComplexF64(2.0), rp => ComplexF64(-2.0))
                 )
                 advanced_truth = Diagrams(
-                    Dict(
-                        kp => Complex{Rational{Int}}(-1.0),
-                        rp => Complex{Rational{Int}}(1.0),
-                    ),
+                    Dict(kp => ComplexF64(-1.0), rp => ComplexF64(1.0))
                 )
                 retarded_truth = Diagrams(
-                    Dict(
-                        kp => Complex{Rational{Int}}(1.0),
-                        rp => Complex{Rational{Int}}(-1.0),
-                    ),
+                    Dict(kp => ComplexF64(1.0), rp => ComplexF64(-1.0))
                 )
 
                 @test isequal(set_reg_to_zero(Σ.advanced), advanced_truth)
@@ -250,7 +257,9 @@ end
         Σ = SelfEnergy(GF)
 
         expr_K = c(Out()) * bar(c)(In()) * L_int
-        G_K1 = _wick_contraction(expr_K, Val(3); simplify=false, _set_reg_to_zero=true)
+        G_K1 = _wick_contraction(
+            expr_K, Val(3), Val(0); simplify=false, _set_reg_to_zero=true
+        )
 
         D = Diagrams{ComplexF64,Boson,1,0}
         self_energy = SmallCollections.SmallDict{3,PropagatorType.T,D}((
