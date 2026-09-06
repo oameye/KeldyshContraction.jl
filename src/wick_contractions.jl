@@ -360,13 +360,13 @@ end
 
 function _foreach_wick_matching!(
     f::F,
-    candidates::NTuple{E,Vector{Tuple{Int,Contraction{S}}}},
-    contractions::Vector{Contraction{S}},
+    candidates::Tuple,
+    contractions::Vector{C},
     permutation::Vector{Int},
     used::Vector{Bool},
     k::Int,
-) where {F,S<:Statistics,E}
-    if k > E
+) where {F,C<:Contraction}
+    if k > length(candidates)
         f(contractions, permutation)
         return nothing
     end
@@ -383,11 +383,11 @@ function _foreach_wick_matching!(
 end
 
 function foreach_wick_matching(
-    f::F,
-    candidates::NTuple{E,Vector{Tuple{Int,Contraction{S}}}},
-    ::Val{E},
-) where {F,S<:Statistics,E}
-    contractions = Vector{Contraction{S}}(undef, E)
+    f::F, candidates::Candidates, ::Val{E}
+) where {F,E,Candidates<:Tuple}
+    candidate_vector_type = fieldtype(Candidates, 1)
+    candidate_type = fieldtype(eltype(candidate_vector_type), 2)
+    contractions = Vector{candidate_type}(undef, E)
     permutation = Vector{Int}(undef, E)
     used = fill(false, E)
     _foreach_wick_matching!(f, candidates, contractions, permutation, used, 1)
@@ -423,11 +423,12 @@ end
 """
 Generate final physical Wick-pairing representatives together with their static legacy topology.
 
-Matching permutations are first merged by their exact raw contraction tuple, including the
-statistics-dependent signed multiplicity. Connectivity, causal filtering, optional
-advanced-to-retarded simplification, and the exact bulk-relabeling orbit scan are therefore paid
-once per unique raw pairing rather than once per permutation. Physical canonicalization is then
-run once per orbit representative and legacy uncolored topology once per final physical diagram.
+Each complete matching is first subjected to the validated connectivity and causal-zero filters.
+The surviving permutations are then merged by their exact raw contraction tuple, including the
+statistics-dependent signed multiplicity. Optional advanced-to-retarded simplification and the
+exact bulk-relabeling orbit scan are therefore paid once per unique valid raw pairing rather than
+once per permutation. Physical canonicalization is run once per orbit representative and legacy
+uncolored topology once per final physical diagram.
 """
 function _wick_contraction(
     args_nc::Vector{Field{S}},
@@ -446,6 +447,9 @@ function _wick_contraction(
 
     matching_weights = Dict{FixedVector{E,Contraction{S}},Int}()
     foreach_wick_matching(candidates, Val(E)) do contractions, permutation
+        if !is_connected(contractions) || has_zero_loop(contractions)
+            return nothing
+        end
         raw = FixedVector{E,Contraction{S}}(contractions)
         weight = Int(pairing_sign(S, permutation))
         matching_weights[raw] = get(matching_weights, raw, 0) + weight
@@ -455,12 +459,8 @@ function _wick_contraction(
     orbit_weights = Dict{FixedVector{E,Contraction{S}},Int}()
     for (raw, weight) in matching_weights
         iszero(weight) && continue
-        contractions = Contraction{S}[contraction for contraction in raw]
-        if !is_connected(contractions) || has_zero_loop(contractions)
-            continue
-        end
-
         final_raw, simplification_sign = if simplify
+            contractions = Contraction{S}[contraction for contraction in raw]
             simplified, sign = advanced_to_retarded(contractions, 1)
             FixedVector{E,Contraction{S}}(simplified), sign
         else
