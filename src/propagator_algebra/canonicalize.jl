@@ -73,7 +73,8 @@ function make_NautyDiGraph(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
     end
     for (i, item) in enumerate(vs)
         color = propagator_color(item)
-        labels[npositions + i] = 3 + findfirst(isequal(color), colors)
+        color_index = findfirst(isequal(color), colors)::Int
+        labels[npositions + i] = 3 + color_index
     end
 
     graph = NautyGraphs.NautyDiGraph(length(labels); vertex_labels=labels)
