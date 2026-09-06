@@ -113,5 +113,7 @@ function parameter_monomial(x::CSym)
         exponent isa Integer || throw(ArgumentError("parameter exponents must be integers"))
         return parameter_monomial(args[1])^exponent
     end
-    return throw(ArgumentError("perturbation parameters must be symbols, products, or powers"))
+    return throw(
+        ArgumentError("perturbation parameters must be symbols, products, or powers")
+    )
 end
