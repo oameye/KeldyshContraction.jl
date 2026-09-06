@@ -11,7 +11,6 @@ using TermInterface: TermInterface
 using SymbolicUtils: SymbolicUtils, @syms, arguments
 using Combinatorics: Combinatorics
 using SmallCollections: SmallCollections, FixedVector
-using SmallCombinatorics: SmallCombinatorics
 using NautyGraphs: NautyGraphs
 using Graphs: Graphs
 
