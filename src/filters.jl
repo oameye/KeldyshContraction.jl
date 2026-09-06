@@ -208,13 +208,21 @@ function should_regularise(qadd::QAdd)::Bool
 end
 
 function is_connected(vs::AbstractVector{<:Contraction})
-    ps = integer_positions.(vs)
-    in_or_out = findfirst(p -> 1 ∈ p || 2 ∈ p, ps) # in case it a vacuum diagram
-    edges = isnothing(in_or_out) ? map(p -> p .- 2, ps) : ps
-    return is_connected(edges)
+    ps = Tuple{Int8,Int8}[integer_positions(v) for v in vs]
+    in_or_out = findfirst(p -> Int8(1) ∈ p || Int8(2) ∈ p, ps) # in case it a vacuum diagram
+    if isnothing(in_or_out)
+        edges = Tuple{Int8,Int8}[
+            (p[1] - Int8(2), p[2] - Int8(2)) for p in ps
+        ]
+        return is_connected(edges)
+    end
+    return is_connected(ps)
 end
 
-function is_connected(edges::Union{Vector{Tuple{Int,Int}},Vector{Tuple{Int8,Int8}}})
+is_connected(edges::Vector{Tuple{Int,Int}}) = _is_connected_edges(edges)
+is_connected(edges::Vector{Tuple{Int8,Int8}}) = _is_connected_edges(edges)
+
+function _is_connected_edges(edges)
     all_vertices = vertices(edges)
     if isempty(all_vertices)
         return true
