@@ -64,8 +64,8 @@ end
 
 @testset "Correctness second order" begin
     GF2 = DressedPropagator(L, Val(2), Val(5); simplify=false)
-    GF2_elastic = GF2[g^2]
-    GF2_inelastic = GF2[Γ^2]
+    GF2_elastic = GF2[g ^ 2]
+    GF2_inelastic = GF2[Γ ^ 2]
 
     trued_elastic = DressedPropagator(L_elastic, Val(2), Val(5); simplify=false)
     @test isequal(trued_elastic.keldysh, GF2_elastic.keldysh)
