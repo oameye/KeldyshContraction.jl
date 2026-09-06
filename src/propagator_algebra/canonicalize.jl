@@ -270,6 +270,68 @@ function relabel_bulk_positions(e::Edge{S}, mapping::Dict{Position,Position}) wh
     )
 end
 
+"""
+Build the uncolored direct position graph exactly as the pre-static implementation did.
+
+This helper is intentionally separate from physical canonicalization. Its sole purpose is to
+preserve the historical topology-label contract used by the analytical `1 / 3 / 11 / 59`
+regressions: external vertices are encoded by their legacy graph positions, bulk vertices are
+interchangeable, edge colors are ignored, and duplicate directed edges do not affect the vertex
+canonical permutation.
+"""
+function legacy_topology_graph(vs)
+    position_pairs = Tuple{Int8,Int8}[integer_positions(item) for item in vs]
+    flattened = collect(Iterators.flatten(position_pairs))
+    max_label = length(unique(flattened))
+    has_out = typemin(Int8) in flattened
+
+    graph_edges = map(position_pairs) do pair
+        vertices = if typemin(Int8) in pair
+            (1, last(pair) + Int(has_out))
+        elseif typemax(Int8) in pair
+            (first(pair) + Int(has_out), max_label)
+        else
+            pair .+ Int(has_out)
+        end
+        return Graphs.Edge(vertices)
+    end
+    return NautyGraphs.NautyDiGraph(graph_edges), max_label, has_out
+end
+
+function legacy_topology_permutation_dict(
+    permutation::AbstractVector{<:Integer}, max_label::Int, has_out::Bool
+)
+    if has_out
+        tracker = 0
+        in_index = findfirst(==(max_label), permutation)
+        out_index = findfirst(==(1), permutation)
+        mapping = Dict{Position,Position}()
+        for i in eachindex(permutation)
+            if i == out_index || i == in_index
+                tracker += 1
+            else
+                mapping[Bulk(permutation[i] - 1)] = Bulk(i - tracker)
+            end
+        end
+        return mapping
+    end
+
+    return Dict{Position,Position}(
+        Bulk(permutation[i]) => Bulk(i) for i in eachindex(permutation)
+    )
+end
+
+function legacy_topology(vs, ::Val{E2}) where {E2}
+    isempty(vs) && return bulk_multiplicity(Tuple{Int8,Int8}[], Val(E2))
+    graph, max_label, has_out = legacy_topology_graph(vs)
+    permutation = NautyGraphs.canonical_permutation(graph)
+    mapping = legacy_topology_permutation_dict(permutation, max_label, has_out)
+    topology_edges = Tuple{Int8,Int8}[
+        integer_positions(relabel_bulk_positions(item, mapping)) for item in vs
+    ]
+    return bulk_multiplicity(topology_edges, Val(E2))
+end
+
 function canonicalize(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
     isempty(vs) && return copy(vs)
     graph_positions = canonicalization_positions(vs)
@@ -281,12 +343,9 @@ end
 """
 Canonicalize physical contractions and compute the established uncolored topology signature.
 
-Topology is defined after physical canonical labels have been fixed. For simple position graphs,
-or for multigraphs with a trivial uncolored automorphism group, the resulting multiplicity
-signature can be read directly from the physically canonicalized contractions. Only a symmetric
-multigraph needs a second direct-graph canonicalization to reproduce the historical topology
-tie breaking. This preserves the analytical `1 / 3 / 11 / 59` topology contract without paying
-a redundant Nauty pass for every Wick matching.
+The physical canonical form uses the new color-aware graph representation. Topology metadata is
+computed independently with the pre-static uncolored graph and relabeling convention, so physical
+field colors cannot fragment topology classes and the historical topology labels remain exact.
 """
 function canonicalize_with_topology(
     vs::Vector{T}, ::Val{E2}
@@ -294,25 +353,10 @@ function canonicalize_with_topology(
     isempty(vs) && return copy(vs), bulk_multiplicity(Tuple{Int8,Int8}[], Val(E2))
 
     graph_positions = canonicalization_positions(vs)
-    physical_permutation, _, simple, automorphisms =
-        canonicalization_permutations(vs, graph_positions)
+    physical_permutation, _, _, _ = canonicalization_permutations(vs, graph_positions)
     physical_map = make_permutation_dict(physical_permutation, graph_positions, vs)
     canonical_vs = T[relabel_bulk_positions(item, physical_map) for item in vs]
-
-    topology_edges = if simple || isone(automorphisms.n)
-        Tuple{Int8,Int8}[integer_positions(item) for item in canonical_vs]
-    else
-        canonical_positions = canonicalization_positions(canonical_vs)
-        graph = make_simple_NautyDiGraph(canonical_vs, canonical_positions)
-        topology_permutation = NautyGraphs.canonical_permutation(graph)
-        topology_map =
-            make_permutation_dict(topology_permutation, canonical_positions, canonical_vs)
-        Tuple{Int8,Int8}[
-            integer_positions(relabel_bulk_positions(item, topology_map)) for item in canonical_vs
-        ]
-    end
-
-    topology = bulk_multiplicity(topology_edges, Val(E2))
+    topology = legacy_topology(vs, Val(E2))
     return canonical_vs, topology
 end
 
