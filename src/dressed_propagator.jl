@@ -138,7 +138,9 @@ struct DressedPropagatorSum{GS,O}
 end
 
 SymbolicUtils.arguments(d::DressedPropagatorSum) = d.arguments
-Base.getindex(d::DressedPropagatorSum, parameter) = d.arguments[parameter_monomial(parameter)]
+function Base.getindex(d::DressedPropagatorSum, parameter)
+    return d.arguments[parameter_monomial(parameter)]
+end
 order(::DressedPropagatorSum{GS,O}) where {GS,O} = O
 parameters(d::DressedPropagatorSum) = collect(keys(d.arguments))
 
