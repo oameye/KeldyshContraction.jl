@@ -17,9 +17,7 @@ end
 @testset "static computational spine" begin
     @qfields ϕ::Boson
     c, q = ϕ[Classical], ϕ[Quantum]
-    elastic = -0.5 * (
-        (c^2 + q^2) * bar(c) * bar(q) + c * q * (bar(c)^2 + bar(q)^2)
-    )
+    elastic = -0.5 * ((c^2 + q^2) * bar(c) * bar(q) + c * q * (bar(c)^2 + bar(q)^2))
 
     L = @inferred InteractionLagrangian(elastic)
     G = @inferred DressedPropagator(L, Val(1), Val(3); simplify=false)
