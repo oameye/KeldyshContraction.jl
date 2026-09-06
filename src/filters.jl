@@ -219,6 +219,13 @@ function is_connected(vs::AbstractVector{<:Contraction})
     return is_connected(ps)
 end
 
+@inline function passes_wick_filters(
+    contractions::Vector{Contraction{S}}
+)::Bool where {S<:Statistics}
+    is_connected(contractions) || return false
+    return !has_zero_loop(contractions)
+end
+
 is_connected(edges::Vector{Tuple{Int,Int}}) = _is_connected_edges(edges)
 is_connected(edges::Vector{Tuple{Int8,Int8}}) = _is_connected_edges(edges)
 
