@@ -32,6 +32,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("keldysh_algebra/QTerm.jl")
     include("keldysh_algebra/field_math.jl")
     include("keldysh_algebra/hashing.jl")
+    include("parameters.jl")
     include("InteractionLagrangian.jl")
 
     # Propagators
@@ -57,6 +58,8 @@ const ComplexRationals = Complex{Rational{Int64}}
         field_family,
         field_families,
         target_family,
+        ParameterMonomial,
+        parameter_monomial,
         Boson,
         bar,
         wick_contraction,
