@@ -23,10 +23,7 @@ end
     @qfields field::Boson
     c, q = field[Classical], field[Quantum]
     L = InteractionLagrangian(
-        -(
-            1 // 2 * (c^2 + q^2) * bar(c) * bar(q) +
-            1 // 2 * c * q * (bar(c)^2 + bar(q)^2)
-        ),
+        -(1 // 2 * (c^2 + q^2) * bar(c) * bar(q) + 1 // 2 * c * q * (bar(c)^2 + bar(q)^2))
     )
     inout = c(Out()) * bar(q)(In())
 
@@ -42,13 +39,11 @@ end
         L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true
     )
     @test propagator isa DressedPropagator{KC.ComplexRationals,Boson,1,3,0}
-    @test @inferred(matrix(propagator)) isa
-        Matrix{Diagrams{KC.ComplexRationals,Boson,3,0}}
+    @test @inferred(matrix(propagator)) isa Matrix{Diagrams{KC.ComplexRationals,Boson,3,0}}
 
     self_energy = @inferred SelfEnergy(propagator)
     @test self_energy isa SelfEnergy{KC.ComplexRationals,Boson,1,1,0}
-    @test @inferred(matrix(self_energy)) isa
-        Matrix{Diagrams{KC.ComplexRationals,Boson,1,0}}
+    @test @inferred(matrix(self_energy)) isa Matrix{Diagrams{KC.ComplexRationals,Boson,1,0}}
 
     @test_throws AssertionError DressedPropagator(L, Val(1), Val(2))
     @test_throws AssertionError wick_contraction(inout, L, Val(1), Val(2))
