@@ -177,31 +177,99 @@ function prepare_args(args::Vector{Field{S}}, ::Val{E}) where {S<:Statistics,E}
     return destroys, creates
 end
 
+"""
+Build the locally admissible partners for each destroying field.
+
+Family/index compatibility, orientation, physicality, QQ exclusion, and regularisation are
+pair-local constraints. Applying them once here avoids constructing all `E!` permutations
+only to reject almost all of them later.
+"""
+function wick_candidates(
+    destroys::Vector{Field{S}},
+    creates::Vector{Field{S}},
+    ::Val{E};
+    regularise=true,
+    _set_reg_to_zero=false,
+    skip_external_pair=false,
+) where {S<:Statistics,E}
+    return ntuple(Val(E)) do k
+        candidates = Tuple{Int,Contraction{S}}[]
+        for l in 1:E
+            skip_external_pair && k == 1 && l == 1 && continue
+
+            potential = Contraction(destroys[k], creates[l])
+            contraction_filter(potential) || continue
+            regularise && !regular(potential) && continue
+
+            if regularise
+                different_position = !allequal(position.(potential))
+                if _set_reg_to_zero && (different_position || is_keldysh(potential))
+                    potential = map(set_reg_to_zero, potential)
+                end
+            end
+            push!(candidates, (l, potential))
+        end
+        return candidates
+    end
+end
+
+function _foreach_wick_matching!(
+    f::F,
+    candidates::NTuple{E,Vector{Tuple{Int,Contraction{S}}}},
+    contractions::Vector{Contraction{S}},
+    permutation::Vector{Int},
+    used::Vector{Bool},
+    k::Int,
+) where {F,S<:Statistics,E}
+    if k > E
+        f(contractions, permutation)
+        return nothing
+    end
+
+    for (l, contraction) in candidates[k]
+        used[l] && continue
+        used[l] = true
+        contractions[k] = contraction
+        permutation[k] = l
+        _foreach_wick_matching!(f, candidates, contractions, permutation, used, k + 1)
+        used[l] = false
+    end
+    return nothing
+end
+
+function foreach_wick_matching(
+    f::F, candidates::NTuple{E,Vector{Tuple{Int,Contraction{S}}}}, ::Val{E}
+) where {F,S<:Statistics,E}
+    contractions = Vector{Contraction{S}}(undef, E)
+    permutation = Vector{Int}(undef, E)
+    used = falses(E)
+    _foreach_wick_matching!(f, candidates, contractions, permutation, used, 1)
+    return nothing
+end
+
 function _wick_contraction(
     args_nc::Vector{Field{S}}, ::Val{E}; regularise=true, _set_reg_to_zero=false
 )::Vector{WickPairing{S,E}} where {S<:Statistics,E}
     destroys, creates = prepare_args(args_nc, Val(E))
     ps = map(position, args_nc)
     skip = has_in(ps) && has_out(ps)
+    candidates = wick_candidates(
+        destroys, creates, Val(E); regularise, _set_reg_to_zero, skip_external_pair=skip
+    )
 
     wick_pairings = WickPairing{S,E}[]
-
-    for perm in SmallCombinatorics.permutations(E)
-        if skip && isone(first(perm))
-            continue
-        end
-        contractions, fail = wick_contract(
-            destroys, creates, perm; regularise, _set_reg_to_zero
-        )
-
-        if fail || !is_connected(contractions) || has_zero_loop(contractions)
-            continue
+    foreach_wick_matching(candidates, Val(E)) do contractions, permutation
+        if !is_connected(contractions) || has_zero_loop(contractions)
+            return nothing
         end
 
         canonical = canonicalize(contractions)
-        push!(wick_pairings, WickPairing(canonical, pairing_sign(S, perm), Val(E)))
+        push!(
+            wick_pairings,
+            WickPairing(canonical, pairing_sign(S, permutation), Val(E)),
+        )
+        return nothing
     end
-
     return wick_pairings
 end
 
@@ -210,7 +278,7 @@ Generate canonical Wick pairings together with their static uncolored topology.
 
 The physical canonical form and the uncolored topology are derived from the same direct
 graph canonicalization. This prevents `Diagram` construction from performing another
-Nauty call inside the factorial Wick-permutation loop.
+Nauty call inside the Wick-matching loop.
 """
 function _wick_contraction(
     args_nc::Vector{Field{S}},
@@ -222,26 +290,21 @@ function _wick_contraction(
     destroys, creates = prepare_args(args_nc, Val(E))
     ps = map(position, args_nc)
     skip = has_in(ps) && has_out(ps)
+    candidates = wick_candidates(
+        destroys, creates, Val(E); regularise, _set_reg_to_zero, skip_external_pair=skip
+    )
 
     wick_pairings = Tuple{WickPairing{S,E},FixedVector{E2,Int}}[]
-
-    for perm in SmallCombinatorics.permutations(E)
-        if skip && isone(first(perm))
-            continue
-        end
-        contractions, fail = wick_contract(
-            destroys, creates, perm; regularise, _set_reg_to_zero
-        )
-
-        if fail || !is_connected(contractions) || has_zero_loop(contractions)
-            continue
+    foreach_wick_matching(candidates, Val(E)) do contractions, permutation
+        if !is_connected(contractions) || has_zero_loop(contractions)
+            return nothing
         end
 
         canonical, topology = canonicalize_with_topology(contractions, Val(E2))
-        pairing = WickPairing(canonical, pairing_sign(S, perm), Val(E))
+        pairing = WickPairing(canonical, pairing_sign(S, permutation), Val(E))
         push!(wick_pairings, (pairing, topology))
+        return nothing
     end
-
     return wick_pairings
 end
 
