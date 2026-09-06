@@ -185,7 +185,7 @@ function prepare_args(args::Vector{Field{S}}, ::Val{E}) where {S<:Statistics,E}
     return destroys, creates
 end
 
-const WICK_ORBIT_EXHAUSTIVE_LIMIT = 3
+const WICK_ORBIT_EXHAUSTIVE_LIMIT = 5
 
 @inline function wick_contraction_isless(a::Contraction{S}, b::Contraction{S}) where {S}
     isequal(a.out, b.out) || return isless(a.out, b.out)
@@ -207,6 +207,40 @@ function sorted_wick_key(
 ) where {S<:Statistics,E}
     sort!(contractions; lt=wick_contraction_isless)
     return FixedVector{E,Contraction{S}}(contractions)
+end
+
+const WickFieldKey = Tuple{Int,Int8,Int,Symbol,Int,NTuple{4,Int16}}
+const WickContractionKey = Tuple{WickFieldKey,WickFieldKey}
+
+@inline function wick_field_key(
+    f::Field, mapping::Dict{Position,Position}
+)::WickFieldKey
+    p = position(f)
+    mapped_position = is_bulk(p) ? index(mapping[p]) : index(p)
+    return (
+        Int(orientation(f)),
+        mapped_position,
+        Int(keldysh_index(f)),
+        name(f),
+        Int(regularisation(f)),
+        slots(field_indices(f)),
+    )
+end
+
+@inline function wick_compact_contraction_key(
+    c::Contraction, mapping::Dict{Position,Position}
+)::WickContractionKey
+    return (wick_field_key(c.out, mapping), wick_field_key(c.in, mapping))
+end
+
+function wick_compact_isless(
+    a::Vector{WickContractionKey}, b::Vector{WickContractionKey}
+)::Bool
+    @inbounds for i in eachindex(a)
+        isequal(a[i], b[i]) && continue
+        return isless(a[i], b[i])
+    end
+    return false
 end
 
 function foreach_position_relabeling!(
@@ -263,19 +297,29 @@ function wick_orbit_key(
     sort!(anchors)
     others = Position[position for position in bulk_positions if position ∉ anchors]
 
-    best = Ref{FixedVector{E,Contraction{Boson}}}()
-    best_set = Ref(false)
+    scratch = Vector{WickContractionKey}(undef, E)
+    best = similar(scratch)
+    best_mapping = Dict{Position,Position}()
+    best_set = false
     foreach_wick_relabeling!(anchors, others) do mapping
-        relabeled = Contraction{Boson}[
-            relabel_bulk_positions(contraction, mapping) for contraction in contractions
-        ]
-        candidate = sorted_wick_key(relabeled, Val(E))
-        if !best_set[] || wick_fixed_isless(candidate, best[])
-            best[] = candidate
-            best_set[] = true
+        @inbounds for i in 1:E
+            scratch[i] = wick_compact_contraction_key(contractions[i], mapping)
+        end
+        sort!(scratch)
+        if !best_set || wick_compact_isless(scratch, best)
+            copyto!(best, scratch)
+            empty!(best_mapping)
+            for (old_position, new_position) in mapping
+                best_mapping[old_position] = new_position
+            end
+            best_set = true
         end
     end
-    return best[]
+
+    relabeled = Contraction{Boson}[
+        relabel_bulk_positions(contraction, best_mapping) for contraction in contractions
+    ]
+    return sorted_wick_key(relabeled, Val(E))
 end
 
 """
@@ -377,11 +421,12 @@ end
 """
 Generate final physical Wick-pairing representatives together with their static legacy topology.
 
-The stored pairing key is defined after optional advanced-to-retarded simplification and physical
-color-aware canonicalization. For at most three bulk vertices, an exact bulk-relabeling orbit key
-pre-aggregates equivalent bosonic matchings before Nauty. At four or more bulk vertices the
-factorial orbit enumeration is skipped; admissible matchings are canonicalized directly instead.
-Legacy uncolored topology is computed only once per final physical representative.
+The stored pairing key is defined after optional advanced-to-retarded simplification. Bosonic
+matchings are pre-aggregated by an exact bulk-relabeling orbit key before Nauty. The exhaustive
+orbit scan compares compact immutable field keys and materializes relabeled contractions only for
+the winning permutation, avoiding the allocation-heavy full-contraction copies of the earlier
+implementation. Physical canonicalization is then run once per orbit representative and legacy
+uncolored topology once per final physical diagram.
 """
 function _wick_contraction(
     args_nc::Vector{Field{S}},
