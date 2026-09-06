@@ -166,8 +166,14 @@ function make_diagram_pair(
     contractions′, prefactor =
         simplify ? advanced_to_retarded(contractions, arg_c) : (contractions, arg_c)
     prefactor *= pairing.sign * multiplicity
-    sort!(contractions′; by=sort_by_position_and_type)
-    edges = FixedVector{E,Edge{S}}(Edge(contraction) for contraction in contractions′)
+
+    # Physical canonicalization must act on the contractions that are actually stored.
+    # With color-aware canonicalization, doing this before advanced-to-retarded
+    # simplification can assign different bulk labels to terms that later become
+    # physically identical and should cancel.
+    canonical = canonicalize(contractions′)
+    sort!(canonical; by=sort_by_position_and_type)
+    edges = FixedVector{E,Edge{S}}(Edge(contraction) for contraction in canonical)
     return Diagram{S,E,E2}(edges, topology) => imag_factor * prefactor
 end
 
@@ -377,14 +383,16 @@ function _wick_contraction(
 end
 
 """
-Generate canonical Wick pairings together with their static uncolored topology.
+Generate Wick-pairing orbit representatives together with their static uncolored topology.
 
 Bosonic complete matchings are first grouped by an exact bulk-relabeling orbit key. This key
 includes the complete physical contraction data and differs only by interchangeable bulk labels
-and contraction ordering, so orbit aggregation cannot merge physically distinct diagrams. The
-existing graph canonicalizer is then run once per orbit representative, preserving its public
-canonical form while avoiding repeated Nauty work for equivalent matchings. Statistics with
-nontrivial exchange signs retain the exact raw-pairing path until their algebra is implemented.
+and contraction ordering, so orbit aggregation cannot merge physically distinct diagrams.
+Topology is position-only and is computed for each orbit representative here. Physical
+canonicalization is deliberately deferred until `make_diagram_pair`, after optional
+advanced-to-retarded simplification, so the canonical labels describe the contractions that are
+actually stored. Statistics with nontrivial exchange signs retain the exact raw-pairing path
+until their algebra is implemented.
 """
 function _wick_contraction(
     args_nc::Vector{Field{S}},
@@ -418,8 +426,8 @@ function _wick_contraction(
     for (raw, weight) in raw_weights
         iszero(weight) && continue
         contractions = Contraction{S}[contraction for contraction in raw]
-        canonical, topology = canonicalize_with_topology(contractions, Val(E2))
-        pairing = WickPairing(canonical, Int8(sign(weight)), Val(E))
+        topology = legacy_topology(contractions, Val(E2))
+        pairing = WickPairing(contractions, Int8(sign(weight)), Val(E))
         push!(wick_pairings, (pairing, topology, abs(weight)))
     end
     return wick_pairings
