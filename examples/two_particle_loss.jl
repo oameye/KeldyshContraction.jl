@@ -69,7 +69,7 @@ GF = DressedPropagator(L_int, Val(1), Val(3))
 
 #
 
-Σ = SelfEnergy(GF, Val(1))
+Σ = SelfEnergy(GF)
 
 # The following indeed corresponds with what is reported in [(Gerbino et al, 2024)](https://arxiv.org/abs/2406.20028).
 
@@ -79,7 +79,7 @@ GF = DressedPropagator(L_int, Val(2), Val(5))
 
 #
 
-Σ = SelfEnergy(GF, Val(2))
+Σ = SelfEnergy(GF)
 
 #
 
