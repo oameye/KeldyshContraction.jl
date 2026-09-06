@@ -38,9 +38,9 @@ end
 sort_by_position_and_type(p::Edge)::Float64 =
     sort_by_position_and_type(Contraction(fields(p)))
 
-function field_color(f::Field)
+@inline function field_color(f::Field)
     return (
-        string(name(f)),
+        name(f),
         slots(field_indices(f)),
         Int(orientation(f)),
         Int(keldysh_index(f)),
@@ -48,30 +48,41 @@ function field_color(f::Field)
     )
 end
 
-function propagator_color(c::Contraction)
+@inline function propagator_color(c::Contraction)
     return (field_color(c.out), field_color(c.in), Int(propagator_type(c...)))
 end
-function propagator_color(e::Edge)
+@inline function propagator_color(e::Edge)
     return (field_color(e.out), field_color(e.in), Int(propagator_type(e)))
 end
 
-"""
-Construct the vertex-colored directed graph used for canonicalization.
+function graph_positions(vs)
+    result = Position[]
+    sizehint!(result, 2length(vs))
+    for item in vs
+        for p in positions(item)
+            p in result || push!(result, p)
+        end
+    end
+    sort!(result)
+    return result
+end
 
-Physical propagator colors are represented by labeled subdivision vertices because
-NautyGraphs does not support edge labels. `Out()` and `In()` receive distinct vertex
-colors, while all bulk integration vertices share one color and may be relabeled.
-"""
-function make_NautyDiGraph(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
-    isempty(vs) && return NautyGraphs.NautyDiGraph(0), Position[]
+function uniform_simple_coloring(vs)
+    isempty(vs) && return true
+    color = propagator_color(first(vs))
+    for i in eachindex(vs)
+        item = vs[i]
+        isequal(propagator_color(item), color) || return false
+        item_positions = positions(item)
+        for j in firstindex(vs):(i - 1)
+            isequal(positions(vs[j]), item_positions) && return false
+        end
+    end
+    return true
+end
 
-    graph_positions = sort!(unique(Position[p for item in vs for p in positions(item)]))
-    position_vertex = Dict(p => i for (i, p) in enumerate(graph_positions))
-
-    colors = sort!(unique(propagator_color.(vs)))
-    npositions = length(graph_positions)
-    labels = Vector{Int}(undef, npositions + length(vs))
-
+function position_labels(graph_positions::Vector{Position})
+    labels = Vector{Int}(undef, length(graph_positions))
     for (i, p) in enumerate(graph_positions)
         labels[i] = if is_out(p)
             1
@@ -81,9 +92,47 @@ function make_NautyDiGraph(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
             3
         end
     end
-    for (i, item) in enumerate(vs)
+    return labels
+end
+
+@inline position_vertex(graph_positions::Vector{Position}, p::Position) =
+    searchsortedfirst(graph_positions, p)
+
+function make_simple_NautyDiGraph(vs, graph_positions::Vector{Position})
+    graph = NautyGraphs.NautyDiGraph(
+        length(graph_positions); vertex_labels=position_labels(graph_positions)
+    )
+    for item in vs
+        out, in = positions(item)
+        Graphs.add_edge!(
+            graph,
+            position_vertex(graph_positions, out),
+            position_vertex(graph_positions, in),
+        )
+    end
+    return graph
+end
+
+function propagator_colors(vs)
+    C = typeof(propagator_color(first(vs)))
+    colors = C[]
+    sizehint!(colors, length(vs))
+    for item in vs
         color = propagator_color(item)
-        color_index = findfirst(isequal(color), colors)::Int
+        color in colors || push!(colors, color)
+    end
+    sort!(colors)
+    return colors
+end
+
+function make_colored_NautyDiGraph(vs, graph_positions::Vector{Position})
+    colors = propagator_colors(vs)
+    npositions = length(graph_positions)
+    labels = Vector{Int}(undef, npositions + length(vs))
+    copyto!(labels, 1, position_labels(graph_positions), 1, npositions)
+
+    for (i, item) in enumerate(vs)
+        color_index = searchsortedfirst(colors, propagator_color(item))
         labels[npositions + i] = 3 + color_index
     end
 
@@ -91,8 +140,29 @@ function make_NautyDiGraph(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
     for (i, item) in enumerate(vs)
         out, in = positions(item)
         edge_vertex = npositions + i
-        Graphs.add_edge!(graph, position_vertex[out], edge_vertex)
-        Graphs.add_edge!(graph, edge_vertex, position_vertex[in])
+        Graphs.add_edge!(graph, position_vertex(graph_positions, out), edge_vertex)
+        Graphs.add_edge!(graph, edge_vertex, position_vertex(graph_positions, in))
+    end
+    return graph
+end
+
+"""
+Construct the vertex-colored directed graph used for canonicalization.
+
+A uniform simple propagator set uses the original position graph directly: when every edge
+has the same physical color and no directed position-pair is repeated, edge colors carry no
+additional isomorphism information. Mixed-color and multiedge graphs use labeled subdivision
+vertices so field family/index, propagator type, orientation, and regularisation remain part
+of the canonical form. `Out()` and `In()` always have fixed, distinct vertex colors.
+"""
+function make_NautyDiGraph(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
+    isempty(vs) && return NautyGraphs.NautyDiGraph(0), Position[]
+
+    graph_positions = canonicalization_positions(vs)
+    graph = if uniform_simple_coloring(vs)
+        make_simple_NautyDiGraph(vs, graph_positions)
+    else
+        make_colored_NautyDiGraph(vs, graph_positions)
     end
     return graph, graph_positions
 end
