@@ -20,7 +20,8 @@ Base.isless(a::ParameterPower, b::ParameterPower) = isless(a.name, b.name)
 Canonical commutative monomial in perturbation parameters.
 
 Factors are sorted by name and equal factors are combined, so multiplication order does
-not affect equality or hashing.
+not affect equality or hashing. This is the package-native perturbative bookkeeping type;
+SymbolicUtils expressions are converted to it at API boundaries.
 """
 struct ParameterMonomial
     powers::Vector{ParameterPower}
@@ -61,7 +62,9 @@ function Base.:^(p::ParameterMonomial, exponent::Integer)
     exponent >= 0 || throw(DomainError(exponent, "parameter powers must be non-negative"))
     iszero(exponent) && return one(ParameterMonomial)
     return ParameterMonomial(
-        ParameterPower[ParameterPower(power.name, power.exponent * exponent) for power in p.powers]
+        ParameterPower[
+            ParameterPower(power.name, power.exponent * exponent) for power in p.powers
+        ],
     )
 end
 
@@ -75,14 +78,22 @@ function Base.show(io::IO, p::ParameterMonomial)
     return nothing
 end
 
+"""
+    parameter_monomial(x)
+
+Normalize a perturbation parameter to a canonical `ParameterMonomial`.
+
+Symbols, products, and non-negative integer powers from SymbolicUtils are accepted as an
+interop boundary. Numeric input is accepted only for the multiplicative identity `1`.
+"""
 parameter_monomial(p::ParameterMonomial) = p
 parameter_monomial(name::Symbol) = ParameterMonomial(name)
 function parameter_monomial(x::Number)
-    isone(x) || throw(ArgumentError("numeric perturbation parameters are only supported for 1"))
+    isone(x) ||
+        throw(ArgumentError("numeric perturbation parameters are only supported for 1"))
     return one(ParameterMonomial)
 end
 
-"""Convert a SymbolicUtils parameter expression at the API boundary to native storage."""
 function parameter_monomial(x::CSym)
     if !SymbolicUtils.iscall(x)
         return ParameterMonomial(Symbol(string(x)))
@@ -102,5 +113,5 @@ function parameter_monomial(x::CSym)
         exponent isa Integer || throw(ArgumentError("parameter exponents must be integers"))
         return parameter_monomial(args[1])^exponent
     end
-    throw(ArgumentError("perturbation parameters must be symbols, products, or powers"))
+    return throw(ArgumentError("perturbation parameters must be symbols, products, or powers"))
 end
