@@ -39,9 +39,7 @@ import KeldyshContraction as KC
 
     # Direct Dict construction is used by the analytical regression fixtures and
     # must not provide a bypass around the canonical coefficient invariant.
-    from_dict = @inferred KC.Diagrams(
-        Dict(diagram => complex(-0.0, 1.0))
-    )
+    from_dict = @inferred KC.Diagrams(Dict(diagram => complex(-0.0, 1.0)))
     stored_from_dict = only(values(from_dict.diagrams))
     @test isequal(stored_from_dict, complex(0.0, 1.0))
     @test !signbit(real(stored_from_dict))

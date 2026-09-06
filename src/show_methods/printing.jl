@@ -57,7 +57,11 @@ function Base.show(io::IO, L::InteractionLagrangian)
     end
     write(io, ":\n")
     lagrangian_terms = terms(L.lagrangian)
-    length(lagrangian_terms) == 1 ? show(io, only(lagrangian_terms)) : show(io, L.lagrangian)
+    if length(lagrangian_terms) == 1
+        show(io, only(lagrangian_terms))
+    else
+        show(io, L.lagrangian)
+    end
     return nothing
 end
 

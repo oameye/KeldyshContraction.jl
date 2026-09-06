@@ -13,8 +13,12 @@ const KC = KeldyshContraction
     single_field_mul = KC.QMul(1, Field{Boson}[field])
     single_field_add = KC.QAdd(KC.QMul{Int,Boson}[single_field_mul])
 
-    for (a, b) in
-        ((scalar_one, 1), (scalar_zero, 0), (single_field_mul, field), (single_field_add, field))
+    for (a, b) in (
+        (scalar_one, 1),
+        (scalar_zero, 0),
+        (single_field_mul, field),
+        (single_field_add, field),
+    )
         @test isequal(a, b)
         @test isequal(b, a)
         @test hash(a) == hash(b)

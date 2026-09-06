@@ -350,9 +350,7 @@ The physical canonical form uses the new color-aware graph representation. Topol
 computed independently with the pre-static uncolored graph and relabeling convention, so physical
 field colors cannot fragment topology classes and the historical topology labels remain exact.
 """
-function _canonicalize_with_topology_typed(
-    vs::Vector{T}, ::Val{E2}
-) where {T,E2}
+function _canonicalize_with_topology_typed(vs::Vector{T}, ::Val{E2}) where {T,E2}
     isempty(vs) && return copy(vs), bulk_multiplicity(Tuple{Int8,Int8}[], Val(E2))
 
     graph_positions = canonicalization_positions(vs)
@@ -368,9 +366,7 @@ function canonicalize_with_topology(
 ) where {S<:Statistics,E2}
     return _canonicalize_with_topology_typed(vs, Val(E2))
 end
-function canonicalize_with_topology(
-    vs::Vector{Edge{S}}, ::Val{E2}
-) where {S<:Statistics,E2}
+function canonicalize_with_topology(vs::Vector{Edge{S}}, ::Val{E2}) where {S<:Statistics,E2}
     return _canonicalize_with_topology_typed(vs, Val(E2))
 end
 
