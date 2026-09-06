@@ -69,13 +69,12 @@ end
     @test repr(MIME"text/plain"(), L) ==
         "Interaction Lagrangian with fields ϕ:\n(ϕᴾ*ϕᶜ*̄ϕᴾ*̄ϕᶜ)"
 
-    @test repr(MIME"text/latex"(), L) ==
-        "\$\\phi^P \\phi^c \\bar{\\phi^P} \\bar{\\phi^c}\$"
+    @test repr(MIME"text/latex"(), L) == "\$\\phi^P \\phi^c \\bar{\\phi^P} \\bar{\\phi^c}\$"
 
     ds = Diagrams(
         [Diagram([Edge(ϕᶜ, bar(ϕᶜ))], Val(1), Val(0))], Complex{Rational{Int}}(1.0)
     )
-    DP = DressedPropagator(ds, ds, ds, 1, g)
+    DP = DressedPropagator(ds, ds, ds, Val(1), parameter_monomial(g))
     @test repr(MIME"text/plain"(), DP) ==
         "Dressed Propagator:\nkeldysh:  Gᴷ(y₁,y₁)\nretarded: Gᴷ(y₁,y₁)\nadvanced: Gᴷ(y₁,y₁)"
 end
