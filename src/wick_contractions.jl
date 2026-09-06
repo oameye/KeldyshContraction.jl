@@ -360,13 +360,13 @@ end
 
 function _foreach_wick_matching!(
     f::F,
-    candidates::NTuple{E,Vector{Tuple{Int,Contraction{S}}}},
-    contractions::Vector{Contraction{S}},
+    candidates::Tuple,
+    contractions::Vector{C},
     permutation::Vector{Int},
     used::Vector{Bool},
     k::Int,
-) where {F,S<:Statistics,E}
-    if k > E
+) where {F,C<:Contraction}
+    if k > length(candidates)
         f(contractions, permutation)
         return nothing
     end
@@ -383,11 +383,11 @@ function _foreach_wick_matching!(
 end
 
 function foreach_wick_matching(
-    f::F,
-    candidates::NTuple{E,Vector{Tuple{Int,Contraction{S}}}},
-    ::Val{E},
-) where {F,S<:Statistics,E}
-    contractions = Vector{Contraction{S}}(undef, E)
+    f::F, candidates::Candidates, ::Val{E}
+) where {F,E,Candidates<:Tuple}
+    candidate_vector_type = fieldtype(Candidates, 1)
+    candidate_type = fieldtype(eltype(candidate_vector_type), 2)
+    contractions = Vector{candidate_type}(undef, E)
     permutation = Vector{Int}(undef, E)
     used = fill(false, E)
     _foreach_wick_matching!(f, candidates, contractions, permutation, used, 1)
