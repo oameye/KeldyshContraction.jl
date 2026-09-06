@@ -280,17 +280,24 @@ function foreach_wick_relabeling!(
     return nothing
 end
 
-wick_orbit_key(::Type{S}, raw::FixedVector{E,Contraction{S}}) where {S<:Statistics,E} = raw
+"""
+Return the canonical physical Wick representative under all allowed bulk relabelings.
 
+For the small fixed bulk-vertex counts used by the perturbative Wick pipeline, enumerate the
+bulk-label orbit exactly using a compact field-color key. External `In`/`Out` positions are fixed
+and bulk vertices attached to `Out()` retain the package's first-label convention. For larger
+vertex counts, fall back to the general color-aware Nauty canonicalizer. The construction is
+statistics-neutral; statistics-dependent Wick signs are accumulated separately before this step.
+"""
 function wick_orbit_key(
-    ::Type{Boson}, raw::FixedVector{E,Contraction{Boson}}
-) where {E}
-    contractions = Contraction{Boson}[contraction for contraction in raw]
+    ::Type{S}, raw::FixedVector{E,Contraction{S}}
+) where {S<:Statistics,E}
+    contractions = Contraction{S}[contraction for contraction in raw]
     graph_positions = canonicalization_positions(contractions)
     bulk_positions = Position[position for position in graph_positions if is_bulk(position)]
 
     if length(bulk_positions) > WICK_ORBIT_EXHAUSTIVE_LIMIT
-        return sorted_wick_key(contractions, Val(E))
+        return sorted_wick_key(canonicalize(contractions), Val(E))
     end
 
     anchors = out_bulk_positions(contractions)
@@ -316,7 +323,7 @@ function wick_orbit_key(
         end
     end
 
-    relabeled = Contraction{Boson}[
+    relabeled = Contraction{S}[
         relabel_bulk_positions(contraction, best_mapping) for contraction in contractions
     ]
     return sorted_wick_key(relabeled, Val(E))
@@ -423,12 +430,12 @@ end
 """
 Generate final physical Wick-pairing representatives together with their static legacy topology.
 
-Each complete matching is first subjected to the validated connectivity and causal-zero filters.
-The surviving permutations are then merged by their exact raw contraction tuple, including the
-statistics-dependent signed multiplicity. Optional advanced-to-retarded simplification and the
-exact bulk-relabeling orbit scan are therefore paid once per unique valid raw pairing rather than
-once per permutation. Physical canonicalization is run once per orbit representative and legacy
-uncolored topology once per final physical diagram.
+Matching permutations are first merged by their exact raw contraction tuple, including the
+statistics-dependent signed multiplicity. Connectivity, causal filtering, optional
+advanced-to-retarded simplification, and exact physical bulk-orbit canonicalization are then paid
+once per unique raw pairing rather than once per permutation. The orbit representative is already
+the final physical canonical form, so no second graph-canonicalization pass is required. Legacy
+uncolored topology is computed once per final physical diagram.
 """
 function _wick_contraction(
     args_nc::Vector{Field{S}},
@@ -447,20 +454,21 @@ function _wick_contraction(
 
     matching_weights = Dict{FixedVector{E,Contraction{S}},Int}()
     foreach_wick_matching(candidates, Val(E)) do contractions, permutation
-        if !is_connected(contractions) || has_zero_loop(contractions)
-            return nothing
-        end
         raw = FixedVector{E,Contraction{S}}(contractions)
         weight = Int(pairing_sign(S, permutation))
         matching_weights[raw] = get(matching_weights, raw, 0) + weight
         return nothing
     end
 
-    orbit_weights = Dict{FixedVector{E,Contraction{S}},Int}()
+    canonical_weights = Dict{FixedVector{E,Contraction{S}},Int}()
     for (raw, weight) in matching_weights
         iszero(weight) && continue
+        contractions = Contraction{S}[contraction for contraction in raw]
+        if !is_connected(contractions) || has_zero_loop(contractions)
+            continue
+        end
+
         final_raw, simplification_sign = if simplify
-            contractions = Contraction{S}[contraction for contraction in raw]
             simplified, sign = advanced_to_retarded(contractions, 1)
             FixedVector{E,Contraction{S}}(simplified), sign
         else
@@ -468,16 +476,7 @@ function _wick_contraction(
         end
         key = wick_orbit_key(S, final_raw)
         final_weight = weight * Int(simplification_sign)
-        orbit_weights[key] = get(orbit_weights, key, 0) + final_weight
-    end
-
-    canonical_weights = Dict{FixedVector{E,Contraction{S}},Int}()
-    for (raw, weight) in orbit_weights
-        iszero(weight) && continue
-        contractions = Contraction{S}[contraction for contraction in raw]
-        canonical = canonicalize(contractions)
-        key = sorted_wick_key(canonical, Val(E))
-        canonical_weights[key] = get(canonical_weights, key, 0) + weight
+        canonical_weights[key] = get(canonical_weights, key, 0) + final_weight
     end
 
     wick_pairings = Tuple{WickPairing{S,E},FixedVector{E2,Int},Int}[]
