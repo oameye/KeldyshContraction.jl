@@ -22,7 +22,8 @@ Base.iterate(p::WickPairing, state) = iterate(p.contractions, state)
 Base.eltype(::Type{WickPairing{S,E}}) where {S,E} = Contraction{S}
 
 function Diagram(pairing::WickPairing{S,E}, ::Val{E}, ::Val{E2}) where {S<:Statistics,E,E2}
-    return Diagram(collect(pairing.contractions), Val(E), Val(E2))
+    contractions = Contraction{S}[contraction for contraction in pairing.contractions]
+    return Diagram(contractions, Val(E), Val(E2))
 end
 
 pairing_sign(::Type{Boson}, perm) = Int8(1)
@@ -162,7 +163,7 @@ function make_diagram_pair(
     ::Val{E},
     ::Val{E2},
 ) where {S<:Statistics,E,E2}
-    contractions = collect(pairing.contractions)
+    contractions = Contraction{S}[contraction for contraction in pairing.contractions]
     contractions′, prefactor =
         simplify ? advanced_to_retarded(contractions, arg_c) : (contractions, arg_c)
     prefactor *= pairing.sign
