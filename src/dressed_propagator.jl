@@ -18,8 +18,8 @@ struct DressedPropagator{C<:Number,S<:Statistics,O,E1,E2}
     retarded::Diagrams{C,S,E1,E2}
     "The advanced component of the propagator"
     advanced::Diagrams{C,S,E1,E2}
-    "Parameters of the perturbation series"
-    parameter::CSym
+    "Canonical perturbation-parameter monomial"
+    parameter::ParameterMonomial
 end
 
 function DressedPropagator(
@@ -27,7 +27,7 @@ function DressedPropagator(
     retarded::Diagrams{C,S,E1,E2},
     advanced::Diagrams{C,S,E1,E2},
     ::Val{O},
-    parameter::CSym,
+    parameter::ParameterMonomial,
 ) where {C<:Number,S<:Statistics,O,E1,E2}
     return DressedPropagator{C,S,O,E1,E2}(keldysh, retarded, advanced, parameter)
 end
@@ -133,13 +133,14 @@ function DressedPropagator(
 end
 
 """Collection of dressed propagators with distinct perturbation-parameter monomials."""
-struct DressedPropagatorSum{K,GS,O}
-    arguments::Dict{K,GS}
+struct DressedPropagatorSum{GS,O}
+    arguments::Dict{ParameterMonomial,GS}
 end
 
 SymbolicUtils.arguments(d::DressedPropagatorSum) = d.arguments
-order(::DressedPropagatorSum{K,GS,O}) where {K,GS,O} = O
-parameters(d::DressedPropagatorSum) = map(G -> G.parameter, values(arguments(d)))
+Base.getindex(d::DressedPropagatorSum, parameter) = d.arguments[parameter_monomial(parameter)]
+order(::DressedPropagatorSum{GS,O}) where {GS,O} = O
+parameters(d::DressedPropagatorSum) = collect(keys(d.arguments))
 
 """
     DressedPropagator(Ls::LagrangianSum, ::Val{order}, ::Val{edges}; target, kwargs...)
@@ -188,7 +189,7 @@ function DressedPropagator(
 
     D = diagram_coefficient_type(C)
     GS = DressedPropagator{D,Boson,O,E,max_edges(O)}
-    dict = Dict{CSym,GS}()
+    dict = Dict{ParameterMonomial,GS}()
     for idx in eachindex(keldysh_pairs)
         components = last.((keldysh_pairs[idx], retarded_pairs[idx], advanced_pairs[idx]))
         for component in components
@@ -199,5 +200,5 @@ function DressedPropagator(
         dict[parameter] = DressedPropagator(components..., Val(O), parameter)
     end
 
-    return DressedPropagatorSum{CSym,GS,O}(dict)
+    return DressedPropagatorSum{GS,O}(dict)
 end
