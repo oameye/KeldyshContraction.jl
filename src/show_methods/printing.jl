@@ -1,6 +1,5 @@
 field_symbol(f::Field) = name(f)
-field_symbol(f::Field{Boson}) =
-    Symbol(string(name(f), is_classical(f) ? "ᶜ" : "ᴾ"))
+field_symbol(f::Field{Boson}) = Symbol(string(name(f), is_classical(f) ? "ᶜ" : "ᴾ"))
 
 function Base.show(io::IO, x::Field)
     reg = Int(regularisation(x))
