@@ -27,64 +27,107 @@ function sort_by_position_and_type(p::Contraction)::Float64
     else
         i, j = integer_positions(p)
         type = Int(propagator_type(p...))
-        return float(pairing(i, j) * 3 + type)
+        return float(pairing(i, j) * 4 + type)
     end
+end
+function sort_by_position_and_type(p::Tuple{Field{S},Field{S}})::Float64 where {S<:Statistics}
+    return sort_by_position_and_type(Contraction(p))
 end
 sort_by_position_and_type(p::Edge)::Float64 =
     sort_by_position_and_type(Contraction(fields(p)))
 
-function make_NautyDiGraph(vs)
-    ps_int = map(integer_positions, vs)
-    flattened_int = Iterators.flatten(ps_int)
-    max_label = length(unique(flattened_int))
-    has_in = any(==(typemin(Int8)), flattened_int) # for vacuum diagram
+field_color(f::Field) = (
+    string(name(f)),
+    slots(field_indices(f)),
+    Int(orientation(f)),
+    Int(keldysh_index(f)),
+    Int(regularisation(f)),
+)
 
-    _edges = map(ps_int) do int_pair
-        tt = if typemin(Int8) in int_pair
-            (1, last(int_pair) + Int(has_in))
-        elseif typemax(Int8) in int_pair
-            (first(int_pair) + Int(has_in), max_label)
-        else
-            int_pair .+ Int(has_in)
-        end
-        return Graphs.Edge(tt)
-    end
-    return NautyGraphs.NautyDiGraph(_edges), max_label, has_in
+function propagator_color(c::Contraction)
+    return (field_color(c.out), field_color(c.in), Int(propagator_type(c...)))
 end
-function make_permutation_dict(perm, max_label, has_in)
-    if has_in
-        l = length(perm)
-        tracker = 0
-        last_index = findfirst(==(max_label), perm)
-        first_index = findfirst(==(1), perm)
-        dict = Dict{Position,Position}()
-        for i in 1:l
-            if i == first_index || i == last_index
-                tracker += 1
-            else
-                dict[Bulk(perm[i] - 1)] = Bulk(i - tracker)
-            end
-        end
-    else # vacuum diagram
-        dict = Dict{Position,Position}(Bulk(perm[i]) => Bulk(i) for i in 1:length(perm))
+function propagator_color(e::Edge)
+    return (field_color(e.out), field_color(e.in), Int(propagator_type(e)))
+end
+
+"""
+Construct the vertex-colored directed graph used for canonicalization.
+
+Physical propagator colors are represented by labeled subdivision vertices because
+NautyGraphs does not support edge labels. `Out()` and `In()` receive distinct vertex
+colors, while all bulk integration vertices share one color and may be relabeled.
+"""
+function make_NautyDiGraph(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
+    isempty(vs) && return NautyGraphs.NautyDiGraph(0), Position[]
+
+    graph_positions = sort!(unique(Position[p for item in vs for p in positions(item)]))
+    position_vertex = Dict(p => i for (i, p) in enumerate(graph_positions))
+
+    colors = sort!(unique(propagator_color.(vs)))
+    npositions = length(graph_positions)
+    labels = Vector{Int}(undef, npositions + length(vs))
+
+    for (i, p) in enumerate(graph_positions)
+        labels[i] = is_out(p) ? 1 : is_in(p) ? 2 : 3
+    end
+    for (i, item) in enumerate(vs)
+        color = propagator_color(item)
+        labels[npositions + i] = 3 + findfirst(isequal(color), colors)
     end
 
-    return dict
+    graph = NautyGraphs.NautyDiGraph(length(labels); vertex_labels=labels)
+    for (i, item) in enumerate(vs)
+        out, in = positions(item)
+        edge_vertex = npositions + i
+        Graphs.add_edge!(graph, position_vertex[out], edge_vertex)
+        Graphs.add_edge!(graph, edge_vertex, position_vertex[in])
+    end
+    return graph, graph_positions
 end
-function canonicalize(vs)
-    graph, max_label, has_in = make_NautyDiGraph(vs)
+function make_NautyDiGraph(vs::Vector{Tuple{Field{S},Field{S}}}) where {S<:Statistics}
+    contractions = Contraction{S}[Contraction(v) for v in vs]
+    return make_NautyDiGraph(contractions)
+end
+
+function make_permutation_dict(perm::AbstractVector{<:Integer}, graph_positions::Vector{Position})
+    npositions = length(graph_positions)
+    mapping = Dict{Position,Position}()
+    bulk_index = 0
+    for original_vertex in perm
+        original_vertex <= npositions || continue
+        old_position = graph_positions[original_vertex]
+        is_bulk(old_position) || continue
+        bulk_index += 1
+        mapping[old_position] = Bulk(bulk_index)
+    end
+    return mapping
+end
+
+function relabel_bulk_position(f::Field, mapping::Dict{Position,Position})
+    p = position(f)
+    return is_bulk(p) && haskey(mapping, p) ? f(mapping[p]) : f
+end
+function relabel_bulk_positions(c::Contraction{S}, mapping::Dict{Position,Position}) where {S}
+    return Contraction(relabel_bulk_position(c.out, mapping), relabel_bulk_position(c.in, mapping))
+end
+function relabel_bulk_positions(e::Edge{S}, mapping::Dict{Position,Position}) where {S}
+    return Edge(
+        relabel_bulk_position(e.out, mapping),
+        relabel_bulk_position(e.in, mapping),
+        e.edgetype,
+        e.momenta,
+    )
+end
+
+function canonicalize(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
+    isempty(vs) && return copy(vs)
+    graph, graph_positions = make_NautyDiGraph(vs)
     perm = NautyGraphs.canonical_permutation(graph)
-    permutation_map = make_permutation_dict(perm, max_label, has_in)
-
-    canonical_vs = map(vs) do c
-        map(c) do ψ
-            pos = position(ψ)
-            if is_bulk(pos) && haskey(permutation_map, pos)
-                ψ(permutation_map[pos])
-            else
-                ψ
-            end
-        end
-    end
-    return canonical_vs
+    permutation_map = make_permutation_dict(perm, graph_positions)
+    return T[relabel_bulk_positions(item, permutation_map) for item in vs]
+end
+function canonicalize(vs::Vector{Tuple{Field{S},Field{S}}}) where {S<:Statistics}
+    contractions = Contraction{S}[Contraction(v) for v in vs]
+    return Tuple{Field{S},Field{S}}[Tuple(c) for c in canonicalize(contractions)]
 end
