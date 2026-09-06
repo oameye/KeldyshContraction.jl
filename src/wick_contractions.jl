@@ -130,15 +130,22 @@ end
 
 function make_diagram!(
     diagrams::Diagrams{C,S,E1,E2},
-    pairings::Vector{Tuple{WickPairing{S,E1},FixedVector{E2,Int}}},
+    pairings::Vector{Tuple{WickPairing{S,E1},FixedVector{E2,Int},Int}},
     arg_c,
     simplify::Bool,
 ) where {C<:Number,S<:Statistics,E1,E2}
     isempty(pairings) && return nothing
     imag_factor = convert(C, im^E1)
-    for (pairing, topology) in pairings
+    for (pairing, topology, multiplicity) in pairings
         diagram, prefactor = make_diagram_pair(
-            pairing, topology, arg_c, imag_factor, simplify, Val(E1), Val(E2)
+            pairing,
+            topology,
+            multiplicity,
+            arg_c,
+            imag_factor,
+            simplify,
+            Val(E1),
+            Val(E2),
         )
         push!(diagrams, diagram, prefactor)
     end
@@ -148,6 +155,7 @@ end
 function make_diagram_pair(
     pairing::WickPairing{S,E},
     topology::FixedVector{E2,Int},
+    multiplicity::Int,
     arg_c,
     imag_factor,
     simplify::Bool,
@@ -157,7 +165,7 @@ function make_diagram_pair(
     contractions = Contraction{S}[contraction for contraction in pairing.contractions]
     contractions′, prefactor =
         simplify ? advanced_to_retarded(contractions, arg_c) : (contractions, arg_c)
-    prefactor *= pairing.sign
+    prefactor *= pairing.sign * multiplicity
     sort!(contractions′; by=sort_by_position_and_type)
     edges = FixedVector{E,Edge{S}}(Edge(contraction) for contraction in contractions′)
     return Diagram{S,E,E2}(edges, topology) => imag_factor * prefactor
@@ -285,9 +293,12 @@ end
 """
 Generate canonical Wick pairings together with their static uncolored topology.
 
-Physical canonicalization is performed first. The topology helper then preserves the historical
-uncolored tie-breaking semantics, while avoiding a second direct Nauty pass except for symmetric
-multigraphs where that pass is mathematically necessary.
+Exact duplicate raw contraction sequences are accumulated before graph canonicalization. Their
+statistics-dependent permutation signs are summed, so identical bosonic pairings become one
+weighted pairing and future fermionic cancellations remain representable. Physical
+canonicalization is then performed once per unique raw pairing. The topology helper preserves
+the historical uncolored tie-breaking semantics and pays a second direct Nauty pass only for
+symmetric multigraphs where that pass is mathematically necessary.
 """
 function _wick_contraction(
     args_nc::Vector{Field{S}},
@@ -295,7 +306,7 @@ function _wick_contraction(
     ::Val{E2};
     regularise=true,
     _set_reg_to_zero=false,
-)::Vector{Tuple{WickPairing{S,E},FixedVector{E2,Int}}} where {S<:Statistics,E,E2}
+)::Vector{Tuple{WickPairing{S,E},FixedVector{E2,Int},Int}} where {S<:Statistics,E,E2}
     destroys, creates = prepare_args(args_nc, Val(E))
     ps = map(position, args_nc)
     skip = has_in(ps) && has_out(ps)
@@ -303,16 +314,26 @@ function _wick_contraction(
         destroys, creates, Val(E); regularise, _set_reg_to_zero, skip_external_pair=skip
     )
 
-    wick_pairings = Tuple{WickPairing{S,E},FixedVector{E2,Int}}[]
+    raw_weights = Dict{FixedVector{E,Contraction{S}},Int}()
     foreach_wick_matching(candidates, Val(E)) do contractions, permutation
         if !is_connected(contractions) || has_zero_loop(contractions)
             return nothing
         end
 
-        canonical, topology = canonicalize_with_topology(contractions, Val(E2))
-        pairing = WickPairing(canonical, pairing_sign(S, permutation), Val(E))
-        push!(wick_pairings, (pairing, topology))
+        raw = FixedVector{E,Contraction{S}}(contractions)
+        weight = Int(pairing_sign(S, permutation))
+        raw_weights[raw] = get(raw_weights, raw, 0) + weight
         return nothing
+    end
+
+    wick_pairings = Tuple{WickPairing{S,E},FixedVector{E2,Int},Int}[]
+    sizehint!(wick_pairings, length(raw_weights))
+    for (raw, weight) in raw_weights
+        iszero(weight) && continue
+        contractions = Contraction{S}[contraction for contraction in raw]
+        canonical, topology = canonicalize_with_topology(contractions, Val(E2))
+        pairing = WickPairing(canonical, Int8(sign(weight)), Val(E))
+        push!(wick_pairings, (pairing, topology, abs(weight)))
     end
     return wick_pairings
 end
