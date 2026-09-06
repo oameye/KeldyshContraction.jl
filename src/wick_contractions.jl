@@ -394,6 +394,28 @@ function foreach_wick_matching(
     return nothing
 end
 
+function wick_matching_key(
+    contractions::Vector{C}, candidates::Candidates, ::Val{E}
+)::NTuple{E,UInt8} where {C<:Contraction,Candidates<:Tuple,E}
+    return ntuple(Val(E)) do k
+        idx = findfirst(candidates[k]) do candidate
+            isequal(candidate[2], contractions[k])
+        end
+        isnothing(idx) && error("Wick matching contraction is not present in its candidate row")
+        return UInt8(idx)
+    end
+end
+
+function contractions_from_matching_key(
+    key::NTuple{E,UInt8}, candidates::Candidates, ::Type{Contraction{S}}
+) where {S<:Statistics,E,Candidates<:Tuple}
+    contractions = Vector{Contraction{S}}(undef, E)
+    @inbounds for k in 1:E
+        contractions[k] = candidates[k][Int(key[k])][2]
+    end
+    return contractions
+end
+
 function _wick_contraction(
     args_nc::Vector{Field{S}}, ::Val{E}; regularise=true, _set_reg_to_zero=false
 )::Vector{WickPairing{S,E}} where {S<:Statistics,E}
@@ -421,10 +443,12 @@ end
 """
 Generate final physical Wick-pairing representatives together with their static legacy topology.
 
-Matching permutations are first merged by their exact raw contraction tuple, including the
-statistics-dependent signed multiplicity. Connectivity, causal filtering, optional
-advanced-to-retarded simplification, and color-aware physical canonicalization are then paid once
-per unique raw pairing. Legacy uncolored topology is computed once per final physical diagram.
+Matching permutations are first merged by a compact exact raw-contraction signature, including the
+statistics-dependent signed multiplicity. The signature indexes the precomputed candidate rows and
+therefore avoids storing full fixed contraction tuples as dictionary keys. Connectivity, causal
+filtering, optional advanced-to-retarded simplification, and color-aware physical canonicalization
+are then paid once per unique raw pairing. Legacy uncolored topology is computed once per final
+physical diagram.
 """
 function _wick_contraction(
     args_nc::Vector{Field{S}},
@@ -441,18 +465,18 @@ function _wick_contraction(
         destroys, creates, Val(E); regularise, _set_reg_to_zero, skip_external_pair=skip
     )
 
-    matching_weights = Dict{FixedVector{E,Contraction{S}},Int}()
+    matching_weights = Dict{NTuple{E,UInt8},Int}()
     foreach_wick_matching(candidates, Val(E)) do contractions, permutation
-        raw = FixedVector{E,Contraction{S}}(contractions)
+        key = wick_matching_key(contractions, candidates, Val(E))
         weight = Int(pairing_sign(S, permutation))
-        matching_weights[raw] = get(matching_weights, raw, 0) + weight
+        matching_weights[key] = get(matching_weights, key, 0) + weight
         return nothing
     end
 
     canonical_weights = Dict{FixedVector{E,Contraction{S}},Int}()
-    for (raw, weight) in matching_weights
+    for (key, weight) in matching_weights
         iszero(weight) && continue
-        contractions = Contraction{S}[contraction for contraction in raw]
+        contractions = contractions_from_matching_key(key, candidates, Contraction{S})
         passes_wick_filters(contractions) || continue
 
         final_contractions, simplification_sign = if simplify
@@ -461,9 +485,9 @@ function _wick_contraction(
             contractions, 1
         end
         canonical = canonicalize(final_contractions)
-        key = sorted_wick_key(canonical, Val(E))
+        canonical_key = sorted_wick_key(canonical, Val(E))
         final_weight = weight * Int(simplification_sign)
-        canonical_weights[key] = get(canonical_weights, key, 0) + final_weight
+        canonical_weights[canonical_key] = get(canonical_weights, canonical_key, 0) + final_weight
     end
 
     wick_pairings = Tuple{WickPairing{S,E},FixedVector{E2,Int},Int}[]
