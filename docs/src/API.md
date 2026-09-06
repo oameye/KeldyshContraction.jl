@@ -123,6 +123,18 @@ KeldyshContraction.is_conserved
 KeldyshContraction.is_physical
 ```
 
+### Perturbation parameters
+
+Perturbative result dictionaries use a package-native canonical commutative monomial as
+their key. SymbolicUtils symbols and products are accepted at API boundaries and normalized
+immediately, so symbolic expression trees do not become part of the computational result
+types.
+
+```@docs
+KeldyshContraction.ParameterMonomial
+KeldyshContraction.parameter_monomial
+```
+
 ## Systems
 
 ```@docs
