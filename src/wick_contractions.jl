@@ -122,9 +122,14 @@ function wick_contraction!(
     @assert is_physical(a)
 
     pairings = _wick_contraction(
-        a.args_nc, Val(E1), Val(E2); regularise, _set_reg_to_zero
+        a.args_nc,
+        Val(E1),
+        Val(E2);
+        regularise,
+        _set_reg_to_zero,
+        simplify,
     )
-    make_diagram!(diagrams, pairings, a.arg_c, simplify)
+    make_diagram!(diagrams, pairings, a.arg_c)
     return nothing
 end
 
@@ -132,7 +137,6 @@ function make_diagram!(
     diagrams::Diagrams{C,S,E1,E2},
     pairings::Vector{Tuple{WickPairing{S,E1},FixedVector{E2,Int},Int}},
     arg_c,
-    simplify::Bool,
 ) where {C<:Number,S<:Statistics,E1,E2}
     isempty(pairings) && return nothing
     imag_factor = convert(C, im^E1)
@@ -143,7 +147,6 @@ function make_diagram!(
             multiplicity,
             arg_c,
             imag_factor,
-            simplify,
             Val(E1),
             Val(E2),
         )
@@ -158,22 +161,13 @@ function make_diagram_pair(
     multiplicity::Int,
     arg_c,
     imag_factor,
-    simplify::Bool,
     ::Val{E},
     ::Val{E2},
 ) where {S<:Statistics,E,E2}
     contractions = Contraction{S}[contraction for contraction in pairing.contractions]
-    contractions′, prefactor =
-        simplify ? advanced_to_retarded(contractions, arg_c) : (contractions, arg_c)
-    prefactor *= pairing.sign * multiplicity
-
-    # Physical canonicalization must act on the contractions that are actually stored.
-    # With color-aware canonicalization, doing this before advanced-to-retarded
-    # simplification can assign different bulk labels to terms that later become
-    # physically identical and should cancel.
-    canonical = canonicalize(contractions′)
-    sort!(canonical; by=sort_by_position_and_type)
-    edges = FixedVector{E,Edge{S}}(Edge(contraction) for contraction in canonical)
+    sort!(contractions; by=sort_by_position_and_type)
+    edges = FixedVector{E,Edge{S}}(Edge(contraction) for contraction in contractions)
+    prefactor = arg_c * pairing.sign * multiplicity
     return Diagram{S,E,E2}(edges, topology) => imag_factor * prefactor
 end
 
@@ -191,7 +185,7 @@ function prepare_args(args::Vector{Field{S}}, ::Val{E}) where {S<:Statistics,E}
     return destroys, creates
 end
 
-const WICK_ORBIT_EXHAUSTIVE_LIMIT = 5
+const WICK_ORBIT_EXHAUSTIVE_LIMIT = 3
 
 @inline function wick_contraction_isless(a::Contraction{S}, b::Contraction{S}) where {S}
     isequal(a.out, b.out) || return isless(a.out, b.out)
@@ -381,16 +375,13 @@ function _wick_contraction(
 end
 
 """
-Generate Wick-pairing orbit representatives together with their static uncolored topology.
+Generate final physical Wick-pairing representatives together with their static legacy topology.
 
-Bosonic complete matchings are first grouped by an exact bulk-relabeling orbit key. This key
-includes the complete physical contraction data and differs only by interchangeable bulk labels
-and contraction ordering, so orbit aggregation cannot merge physically distinct diagrams.
-Topology is position-only and is computed for each orbit representative here. Physical
-canonicalization is deliberately deferred until `make_diagram_pair`, after optional
-advanced-to-retarded simplification, so the canonical labels describe the contractions that are
-actually stored. Statistics with nontrivial exchange signs retain the exact raw-pairing path
-until their algebra is implemented.
+The stored pairing key is defined after optional advanced-to-retarded simplification and physical
+color-aware canonicalization. For at most three bulk vertices, an exact bulk-relabeling orbit key
+pre-aggregates equivalent bosonic matchings before Nauty. At four or more bulk vertices the
+factorial orbit enumeration is skipped; admissible matchings are canonicalized directly instead.
+Legacy uncolored topology is computed only once per final physical representative.
 """
 function _wick_contraction(
     args_nc::Vector{Field{S}},
@@ -398,6 +389,7 @@ function _wick_contraction(
     ::Val{E2};
     regularise=true,
     _set_reg_to_zero=false,
+    simplify=false,
 )::Vector{Tuple{WickPairing{S,E},FixedVector{E2,Int},Int}} where {S<:Statistics,E,E2}
     destroys, creates = prepare_args(args_nc, Val(E))
     ps = map(position, args_nc)
@@ -412,18 +404,30 @@ function _wick_contraction(
             return nothing
         end
 
-        raw = FixedVector{E,Contraction{S}}(contractions)
+        current = Contraction{S}[contraction for contraction in contractions]
+        final_contractions, simplification_sign =
+            simplify ? advanced_to_retarded(current, 1) : (current, 1)
+        raw = FixedVector{E,Contraction{S}}(final_contractions)
         key = wick_orbit_key(S, raw)
-        weight = Int(pairing_sign(S, permutation))
+        weight = Int(pairing_sign(S, permutation)) * Int(simplification_sign)
         raw_weights[key] = get(raw_weights, key, 0) + weight
         return nothing
     end
 
-    wick_pairings = Tuple{WickPairing{S,E},FixedVector{E2,Int},Int}[]
-    sizehint!(wick_pairings, length(raw_weights))
+    canonical_weights = Dict{FixedVector{E,Contraction{S}},Int}()
     for (raw, weight) in raw_weights
         iszero(weight) && continue
         contractions = Contraction{S}[contraction for contraction in raw]
+        canonical = canonicalize(contractions)
+        key = sorted_wick_key(canonical, Val(E))
+        canonical_weights[key] = get(canonical_weights, key, 0) + weight
+    end
+
+    wick_pairings = Tuple{WickPairing{S,E},FixedVector{E2,Int},Int}[]
+    sizehint!(wick_pairings, length(canonical_weights))
+    for (canonical, weight) in canonical_weights
+        iszero(weight) && continue
+        contractions = Contraction{S}[contraction for contraction in canonical]
         topology = legacy_topology(contractions, Val(E2))
         pairing = WickPairing(contractions, Int8(sign(weight)), Val(E))
         push!(wick_pairings, (pairing, topology, abs(weight)))
