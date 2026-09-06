@@ -28,9 +28,7 @@ function Diagram(edges::Vector{Edge{S}}, ::Val{E}, ::Val{E2}) where {S<:Statisti
     return Diagram(FixedVector{E,Edge{S}}(edges), Val(E2))
 end
 
-function Diagram(
-    edges::FixedVector{E,Edge{S}}, ::Val{E2}
-) where {S<:Statistics,E,E2}
+function Diagram(edges::FixedVector{E,Edge{S}}, ::Val{E2}) where {S<:Statistics,E,E2}
     topology = bulk_multiplicity(edges, Val(E2))
     @assert length(topology) == E2 "The supplied Val{topology} must match the topology size"
     fixed_topology = SmallCollections.FixedVector{E2,Int}(topology)
@@ -49,8 +47,7 @@ end
 function Base.isequal(d1::Diagram{S,E1,E2}, d2::Diagram{S,E1,E2}) where {S,E1,E2}
     return isequal(contractions(d1), contractions(d2))
 end
-Base.:(==)(d1::Diagram{S,E1,E2}, d2::Diagram{S,E1,E2}) where {S,E1,E2} =
-    isequal(d1, d2)
+Base.:(==)(d1::Diagram{S,E1,E2}, d2::Diagram{S,E1,E2}) where {S,E1,E2} = isequal(d1, d2)
 Base.hash(d::Diagram, h::UInt) = hash(contractions(d), h)
 contractions(d::Diagram) = d.contractions
 topology(d::Diagram) = d.topology
@@ -70,8 +67,9 @@ end
 
 """Coefficient representation used after Wick factors are applied."""
 diagram_coefficient_type(::Type{C}) where {C<:Number} = promote_type(C, ComplexRationals)
-diagram_coefficient_type(::Type{C}, ::Type{D}) where {C<:Number,D<:Number} =
-    diagram_coefficient_type(promote_type(C, D))
+function diagram_coefficient_type(::Type{C}, ::Type{D}) where {C<:Number,D<:Number}
+    return diagram_coefficient_type(promote_type(C, D))
+end
 
 struct Diagrams{C<:Number,S<:Statistics,E1,E2}
     diagrams::Dict{Diagram{S,E1,E2},C}
@@ -89,10 +87,7 @@ function Diagrams(
 end
 
 function Diagrams(
-    contractions::Vector{Vector{Contraction{S}}},
-    prefactor::C,
-    ::Val{E},
-    ::Val{E2},
+    contractions::Vector{Vector{Contraction{S}}}, prefactor::C, ::Val{E}, ::Val{E2}
 ) where {C<:Number,S<:Statistics,E,E2}
     @assert !isempty(contractions) "Contraction vector must not be empty"
     c = first(contractions)
@@ -108,26 +103,24 @@ function Diagrams(
     return Diagrams{D,S,E,E2}(dict)
 end
 
-function Base.isequal(
-    d1::Diagrams{C,S,E1,E2}, d2::Diagrams{C,S,E1,E2}
-) where {C,S,E1,E2}
+function Base.isequal(d1::Diagrams{C,S,E1,E2}, d2::Diagrams{C,S,E1,E2}) where {C,S,E1,E2}
     return isequal(d1.diagrams, d2.diagrams)
 end
-Base.:(==)(d1::Diagrams{C,S,E1,E2}, d2::Diagrams{C,S,E1,E2}) where {C,S,E1,E2} =
-    isequal(d1, d2)
+function Base.:(==)(d1::Diagrams{C,S,E1,E2}, d2::Diagrams{C,S,E1,E2}) where {C,S,E1,E2}
+    return isequal(d1, d2)
+end
 Base.hash(d::Diagrams, h::UInt) = hash(d.diagrams, h)
 Base.iszero(d::Diagrams) = isempty(d.diagrams)
-SmallCollections.default(::Type{Diagrams{C,S,E1,E2}}) where {C,S,E1,E2} =
-    Diagrams{C,S,E1,E2}()
+function SmallCollections.default(::Type{Diagrams{C,S,E1,E2}}) where {C,S,E1,E2}
+    return Diagrams{C,S,E1,E2}()
+end
 
 number_of_propagators(a::QMul) = length(a) ÷ 2
 number_of_propagators(a::QAdd) = length(first(a.arguments)) ÷ 2
 number_of_propagators(L::InteractionLagrangian) = length(first(L.lagrangian.arguments)) ÷ 2
 
 function Base.push!(
-    collection::Diagrams{C,S,E1,E2},
-    diagram::Diagram{S,E1,E2},
-    prefactor::Number,
+    collection::Diagrams{C,S,E1,E2}, diagram::Diagram{S,E1,E2}, prefactor::Number
 ) where {C<:Number,S<:Statistics,E1,E2}
     value = convert(C, prefactor)
     if haskey(collection.diagrams, diagram)
@@ -163,8 +156,7 @@ Base.:*(diagrams::Diagrams, prefactor::Number) = prefactor * diagrams
 Base.iterate(collection::Diagrams) = iterate(collection.diagrams)
 Base.iterate(collection::Diagrams, state) = iterate(collection.diagrams, state)
 Base.length(collection::Diagrams) = length(collection.diagrams)
-Base.eltype(::Type{Diagrams{C,S,E1,E2}}) where {C,S,E1,E2} =
-    Pair{Diagram{S,E1,E2},C}
+Base.eltype(::Type{Diagrams{C,S,E1,E2}}) where {C,S,E1,E2} = Pair{Diagram{S,E1,E2},C}
 
 function Base.adjoint(d::Diagrams{C,S,E1,E2}) where {C<:Number,S<:Statistics,E1,E2}
     dict = Dict{Diagram{S,E1,E2},C}(adjoint_diagram(pair) for pair in d)
@@ -229,9 +221,7 @@ function adjoint_diagram(
     return diagram => convert(C, _simplify(adjoint(prefactor′)))
 end
 
-function set_reg_to_zero(
-    d::Diagrams{C,S,E1,E2}
-) where {C<:Number,S<:Statistics,E1,E2}
+function set_reg_to_zero(d::Diagrams{C,S,E1,E2}) where {C<:Number,S<:Statistics,E1,E2}
     diagrams = Diagrams{C,S,E1,E2}()
     for (diagram, value) in d
         push!(diagrams, set_reg_to_zero(diagram), value)
@@ -289,9 +279,7 @@ function is_not_equal_time_bulk_edge(edge)
     return !(typemin(Int8) ∈ edge) && !(typemax(Int8) ∈ edge) && !isequal(edge[1], edge[2])
 end
 
-function topologies(
-    ds::Diagrams{C,S,E1,E2}
-) where {C<:Number,S<:Statistics,E1,E2}
+function topologies(ds::Diagrams{C,S,E1,E2}) where {C<:Number,S<:Statistics,E1,E2}
     terms = collect(keys(ds.diagrams))
     diagram_topologies = getfield.(terms, :topology)
     _topologies = unique(diagram_topologies)
