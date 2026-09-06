@@ -39,22 +39,14 @@ end
 Compute Wick-contracted diagrams of an interaction with the supplied external fields.
 """
 function wick_contraction(
-    in_out::QMul{CI,S},
-    L::InteractionLagrangian{CL,S},
-    ::Val{O},
-    ::Val{E};
-    kwargs...,
+    in_out::QMul{CI,S}, L::InteractionLagrangian{CL,S}, ::Val{O}, ::Val{E}; kwargs...
 ) where {CI<:Number,CL<:Number,S<:Statistics,O,E}
     @assert number_of_propagators(L) * O + 1 == E "The supplied Val{edges} must equal the interaction's propagator count times Val{order}, plus the external propagator"
     return _wick_contraction(in_out, L, Val(E), Val(O); kwargs...)
 end
 
 @inline function _wick_contraction(
-    in_out::QMul{CI,S},
-    L::InteractionLagrangian{CL,S},
-    ::Val{E},
-    ::Val{O};
-    kwargs...,
+    in_out::QMul{CI,S}, L::InteractionLagrangian{CL,S}, ::Val{E}, ::Val{O}; kwargs...
 ) where {CI<:Number,CL<:Number,S<:Statistics,E,O}
     l = length(L.lagrangian)
     C = diagram_coefficient_type(CI, CL)
@@ -106,11 +98,7 @@ function wick_contraction(
 end
 
 @inline function _wick_contraction(
-    in_out::QMul{CI,S},
-    a::QAdd{CA,S},
-    ::Val{E},
-    ::Val{O};
-    kwargs...,
+    in_out::QMul{CI,S}, a::QAdd{CA,S}, ::Val{E}, ::Val{O}; kwargs...
 ) where {CI<:Number,CA<:Number,S<:Statistics,E,O}
     C = diagram_coefficient_type(CI, CA)
     diagrams = Diagrams{C,S,E,max_edges(O)}()
@@ -156,12 +144,7 @@ function make_diagram!(
 end
 
 function make_diagram_pair(
-    pairing::WickPairing{S,E},
-    arg_c,
-    imag_factor,
-    simplify::Bool,
-    ::Val{E},
-    ::Val{E2},
+    pairing::WickPairing{S,E}, arg_c, imag_factor, simplify::Bool, ::Val{E}, ::Val{E2}
 ) where {S<:Statistics,E,E2}
     contractions = Contraction{S}[contraction for contraction in pairing.contractions]
     contractions′, prefactor =
@@ -248,7 +231,9 @@ end
 # Vacuum Contractions
 ######################
 
-function _wick_contraction(a::QAdd{C,S}, ::Val{E}; kwargs...) where {C<:Number,S<:Statistics,E}
+function _wick_contraction(
+    a::QAdd{C,S}, ::Val{E}; kwargs...
+) where {C<:Number,S<:Statistics,E}
     args = terms(a)
     @assert all(number_of_propagators(arg) == E for arg in args)
     @assert is_bulk(a) "The private two-argument _wick_contraction entry point is for vacuum terms"
@@ -262,7 +247,9 @@ function _wick_contraction(a::QAdd{C,S}, ::Val{E}; kwargs...) where {C<:Number,S
     return diagrams
 end
 
-function _wick_contraction(a::QMul{C,S}, ::Val{E}; kwargs...) where {C<:Number,S<:Statistics,E}
+function _wick_contraction(
+    a::QMul{C,S}, ::Val{E}; kwargs...
+) where {C<:Number,S<:Statistics,E}
     @assert is_conserved(a)
     @assert is_physical(a)
     @assert number_of_propagators(a) == E
