@@ -30,7 +30,7 @@ L = @inferred L_inelastic + L_elastic
 end
 
 @testset "Accessing" begin
-    @test isequal(parameters(L), [Γ, g])
+    @test parameters(L) == [parameter_monomial(Γ), parameter_monomial(g)]
     @test field_families(L_inelastic) == [ϕ]
     @test field_families(L_elastic) == [ϕ]
     @test target_family(L_inelastic) === ϕ
@@ -42,8 +42,8 @@ end
     GF1_targeted = DressedPropagator(L, Val(1), Val(3); target=ϕ, simplify=false)
     @test isequal(arguments(GF1_targeted), arguments(GF1))
 
-    GF1_elastic = arguments(GF1)[g]
-    GF1_inelastic = arguments(GF1)[Γ]
+    GF1_elastic = GF1[g]
+    GF1_inelastic = GF1[Γ]
 
     trued_elastic = DressedPropagator(L_elastic, Val(1), Val(3); simplify=false)
     targeted_elastic = DressedPropagator(
@@ -64,8 +64,8 @@ end
 
 @testset "Correctness second order" begin
     GF2 = DressedPropagator(L, Val(2), Val(5); simplify=false)
-    GF2_elastic = arguments(GF2)[g ^ 2]
-    GF2_inelastic = arguments(GF2)[Γ ^ 2]
+    GF2_elastic = GF2[g^2]
+    GF2_inelastic = GF2[Γ^2]
 
     trued_elastic = DressedPropagator(L_elastic, Val(2), Val(5); simplify=false)
     @test isequal(trued_elastic.keldysh, GF2_elastic.keldysh)
@@ -81,8 +81,8 @@ end
         term12 = L_elastic(1).lagrangian * L_inelastic(2).lagrangian
         term21 = L_elastic(2).lagrangian * L_inelastic(1).lagrangian
         regularise = KeldyshContraction.should_regularise(term12)
-        diagrams12 = Diagrams{5,1}()
-        diagrams21 = Diagrams{5,1}()
+        diagrams12 = Diagrams{ComplexF64,Boson,5,1}()
+        diagrams21 = Diagrams{ComplexF64,Boson,5,1}()
         for arg in arguments(term12)
             KeldyshContraction.wick_contraction!(
                 diagrams12, c(Out()) * bar(c)(In()) * arg; simplify=false, regularise
@@ -99,6 +99,8 @@ end
 
 @testset "SelfEnergy" begin
     GF2 = DressedPropagator(L, Val(2), Val(5))
-    Σ2 = @inferred SelfEnergy(GF2, Val(2))
-    @test Σ2 isa KC.SelfEnergySum{KC.SelfEnergy{3,1}}
+    Σ2 = @inferred SelfEnergy(GF2)
+    @test KC.order(Σ2) == 2
+    @test all(Σ -> typeof(Σ).parameters[4] == 3, values(arguments(Σ2)))
+    @test all(Σ -> typeof(Σ).parameters[5] == 1, values(arguments(Σ2)))
 end
