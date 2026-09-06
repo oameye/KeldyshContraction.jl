@@ -242,7 +242,7 @@ function foreach_wick_matching(
 ) where {F,S<:Statistics,E}
     contractions = Vector{Contraction{S}}(undef, E)
     permutation = Vector{Int}(undef, E)
-    used = falses(E)
+    used = fill(false, E)
     _foreach_wick_matching!(f, candidates, contractions, permutation, used, 1)
     return nothing
 end
