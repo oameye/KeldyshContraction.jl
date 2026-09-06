@@ -83,6 +83,12 @@ struct Diagrams{C<:Number,S<:Statistics,E1,E2}
     end
 end
 
+function Diagrams(
+    diagrams::Dict{Diagram{S,E1,E2},C}
+) where {C<:Number,S<:Statistics,E1,E2}
+    return Diagrams{C,S,E1,E2}(diagrams)
+end
+
 function Diagrams{C,S,E1,E2}() where {C<:Number,S<:Statistics,E1,E2}
     return Diagrams{C,S,E1,E2}(Dict{Diagram{S,E1,E2},C}())
 end
@@ -244,24 +250,14 @@ end
 Compute the uncolored canonical topology signature of a diagram.
 
 Physical diagram canonicalization deliberately includes field family, internal indices,
-Keldysh component, orientation, regularisation, and propagator type.  `Diagram.topology`
-has a different contract: it groups the analytically established uncolored graph
-topologies.  Therefore topology labels must be derived from the position graph alone and
-must not depend on physical edge colors.
-
-This intentionally mirrors the pre-static canonicalization semantics: `Out()` and `In()`
-remain distinguished vertex colors, bulk vertices are interchangeable, and propagator
-colors do not participate in the canonical permutation.
+Keldysh component, orientation, regularisation, and propagator type. `Diagram.topology` has a
+different contract: it reproduces the package's analytically validated pre-static uncolored
+topology labels independently of physical edge colors.
 """
 function canonical_topology(
     edges::FixedVector{E,Edge{S}}, ::Val{E2}
 ) where {S<:Statistics,E,E2}
-    graph_positions = canonicalization_positions(edges)
-    graph = make_simple_NautyDiGraph(edges, graph_positions)
-    permutation = NautyGraphs.canonical_permutation(graph)
-    mapping = make_permutation_dict(permutation, graph_positions, edges)
-    canonical_edges = map(edge -> relabel_bulk_positions(edge, mapping), edges)
-    return bulk_multiplicity(canonical_edges, Val(E2))
+    return legacy_topology(edges, Val(E2))
 end
 
 """
