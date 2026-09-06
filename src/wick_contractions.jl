@@ -423,9 +423,8 @@ Generate final physical Wick-pairing representatives together with their static 
 
 Matching permutations are first merged by their exact raw contraction tuple, including the
 statistics-dependent signed multiplicity. Connectivity, causal filtering, optional
-advanced-to-retarded simplification, and the exact bulk-relabeling orbit scan are therefore paid
-once per unique raw pairing rather than once per permutation. Physical canonicalization is then
-run once per orbit representative and legacy uncolored topology once per final physical diagram.
+advanced-to-retarded simplification, and color-aware physical canonicalization are then paid once
+per unique raw pairing. Legacy uncolored topology is computed once per final physical diagram.
 """
 function _wick_contraction(
     args_nc::Vector{Field{S}},
@@ -450,30 +449,21 @@ function _wick_contraction(
         return nothing
     end
 
-    orbit_weights = Dict{FixedVector{E,Contraction{S}},Int}()
+    canonical_weights = Dict{FixedVector{E,Contraction{S}},Int}()
     for (raw, weight) in matching_weights
         iszero(weight) && continue
         contractions = Contraction{S}[contraction for contraction in raw]
         passes_wick_filters(contractions) || continue
 
-        final_raw, simplification_sign = if simplify
-            simplified, sign = advanced_to_retarded(contractions, 1)
-            FixedVector{E,Contraction{S}}(simplified), sign
+        final_contractions, simplification_sign = if simplify
+            advanced_to_retarded(contractions, 1)
         else
-            raw, 1
+            contractions, 1
         end
-        key = wick_orbit_key(S, final_raw)
-        final_weight = weight * Int(simplification_sign)
-        orbit_weights[key] = get(orbit_weights, key, 0) + final_weight
-    end
-
-    canonical_weights = Dict{FixedVector{E,Contraction{S}},Int}()
-    for (raw, weight) in orbit_weights
-        iszero(weight) && continue
-        contractions = Contraction{S}[contraction for contraction in raw]
-        canonical = canonicalize(contractions)
+        canonical = canonicalize(final_contractions)
         key = sorted_wick_key(canonical, Val(E))
-        canonical_weights[key] = get(canonical_weights, key, 0) + weight
+        final_weight = weight * Int(simplification_sign)
+        canonical_weights[key] = get(canonical_weights, key, 0) + final_weight
     end
 
     wick_pairings = Tuple{WickPairing{S,E},FixedVector{E2,Int},Int}[]
