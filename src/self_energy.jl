@@ -61,8 +61,8 @@ struct SelfEnergy{C<:Number,S<:Statistics,O,E1,E2}
     retarded::Diagrams{C,S,E1,E2}
     "The advanced component of the self-energy."
     advanced::Diagrams{C,S,E1,E2}
-    "Parameters of the perturbation series"
-    parameter::CSym
+    "Canonical perturbation-parameter monomial"
+    parameter::ParameterMonomial
 end
 
 order(::SelfEnergy{C,S,O}) where {C,S,O} = O
@@ -101,11 +101,6 @@ end
 
 SelfEnergy(G::DressedPropagator) = _self_energy(G)
 
-# Transitional call shape while repository call sites move to `SelfEnergy(G)`.
-function SelfEnergy(G::DressedPropagator{C,S,O}, ::Val{O}) where {C,S,O}
-    return SelfEnergy(G)
-end
-
 """
     matrix(Σ::SelfEnergy)
 
@@ -130,21 +125,19 @@ function matrix(
 end
 
 """Collection of self-energies with distinct perturbation-parameter monomials."""
-struct SelfEnergySum{K,ΣT,O}
-    arguments::Dict{K,ΣT}
+struct SelfEnergySum{ΣT,O}
+    arguments::Dict{ParameterMonomial,ΣT}
 end
 
 SymbolicUtils.arguments(d::SelfEnergySum) = d.arguments
-order(::SelfEnergySum{K,ΣT,O}) where {K,ΣT,O} = O
-parameters(d::SelfEnergySum) = map(Σ -> Σ.parameter, values(arguments(d)))
+Base.getindex(d::SelfEnergySum, parameter) = d.arguments[parameter_monomial(parameter)]
+order(::SelfEnergySum{ΣT,O}) where {ΣT,O} = O
+parameters(d::SelfEnergySum) = collect(keys(d.arguments))
 
-function SelfEnergy(G::DressedPropagatorSum{K,GS,O}) where {K,GS,O}
+function SelfEnergy(G::DressedPropagatorSum{GS,O}) where {GS,O}
     ΣT = self_energy_result_type(GS)
-    dict = Dict{K,ΣT}(key => SelfEnergy(val) for (key, val) in arguments(G))
-    return SelfEnergySum{K,ΣT,O}(dict)
-end
-
-# Transitional call shape while repository call sites move to `SelfEnergy(G)`.
-function SelfEnergy(G::DressedPropagatorSum{K,GS,O}, ::Val{O}) where {K,GS,O}
-    return SelfEnergy(G)
+    dict = Dict{ParameterMonomial,ΣT}(
+        key => SelfEnergy(val) for (key, val) in arguments(G)
+    )
+    return SelfEnergySum{ΣT,O}(dict)
 end
