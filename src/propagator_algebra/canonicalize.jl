@@ -100,18 +100,26 @@ end
 @inline position_vertex(graph_positions::Vector{Position}, p::Position) =
     searchsortedfirst(graph_positions, p)
 
-function make_simple_NautyDiGraph(vs, graph_positions::Vector{Position})
+# Build the direct position graph and report whether every directed position pair
+# was unique.  Detecting multiplicity while inserting edges avoids the previous
+# O(E^2) `simple_position_pairs` pre-scan on the canonicalization hot path.
+function _make_simple_NautyDiGraph(vs, graph_positions::Vector{Position})
     graph = NautyGraphs.NautyDiGraph(
         length(graph_positions); vertex_labels=position_labels(graph_positions)
     )
+    simple = true
     for item in vs
         out, in = positions(item)
-        Graphs.add_edge!(
-            graph,
-            position_vertex(graph_positions, out),
-            position_vertex(graph_positions, in),
-        )
+        source = position_vertex(graph_positions, out)
+        target = position_vertex(graph_positions, in)
+        simple &= !Graphs.has_edge(graph, source, target)
+        Graphs.add_edge!(graph, source, target)
     end
+    return graph, simple
+end
+
+function make_simple_NautyDiGraph(vs, graph_positions::Vector{Position})
+    graph, _ = _make_simple_NautyDiGraph(vs, graph_positions)
     return graph
 end
 
@@ -161,8 +169,9 @@ function make_NautyDiGraph(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
     isempty(vs) && return NautyGraphs.NautyDiGraph(0), Position[]
 
     graph_positions = canonicalization_positions(vs)
-    graph = if uniform_coloring(vs) && simple_position_pairs(vs)
-        make_simple_NautyDiGraph(vs, graph_positions)
+    simple_graph, simple = _make_simple_NautyDiGraph(vs, graph_positions)
+    graph = if simple && uniform_coloring(vs)
+        simple_graph
     else
         make_colored_NautyDiGraph(vs, graph_positions)
     end
@@ -174,14 +183,17 @@ function make_NautyDiGraph(vs::Vector{Tuple{Field{S},Field{S}}}) where {S<:Stati
 end
 
 function canonicalization_permutation(vs, graph_positions::Vector{Position})
-    if simple_position_pairs(vs)
-        graph = make_simple_NautyDiGraph(vs, graph_positions)
-        if uniform_coloring(vs)
-            return NautyGraphs.canonical_permutation(graph)
-        end
-
+    # Always build the small direct graph first.  Nauty already has to inspect this
+    # graph, so use the same call to obtain both the canonical permutation and the
+    # automorphism count.  If the position graph has no nontrivial automorphism,
+    # physical edge colors cannot change the vertex relabeling and we return without
+    # constructing color tuples or a subdivision graph.
+    graph, simple = _make_simple_NautyDiGraph(vs, graph_positions)
+    if simple
         permutation, automorphisms = NautyGraphs.nauty(graph)
-        isone(automorphisms.n) && return permutation
+        if isone(automorphisms.n) || uniform_coloring(vs)
+            return permutation
+        end
     end
 
     graph = make_colored_NautyDiGraph(vs, graph_positions)
