@@ -185,6 +185,99 @@ function prepare_args(args::Vector{Field{S}}, ::Val{E}) where {S<:Statistics,E}
     return destroys, creates
 end
 
+const WICK_ORBIT_EXHAUSTIVE_LIMIT = 5
+
+@inline function wick_contraction_isless(a::Contraction{S}, b::Contraction{S}) where {S}
+    isequal(a.out, b.out) || return isless(a.out, b.out)
+    return isless(a.in, b.in)
+end
+
+function wick_fixed_isless(
+    a::FixedVector{E,Contraction{S}}, b::FixedVector{E,Contraction{S}}
+) where {S<:Statistics,E}
+    for i in 1:E
+        isequal(a[i], b[i]) && continue
+        return wick_contraction_isless(a[i], b[i])
+    end
+    return false
+end
+
+function sorted_wick_key(
+    contractions::Vector{Contraction{S}}, ::Val{E}
+) where {S<:Statistics,E}
+    sort!(contractions; lt=wick_contraction_isless)
+    return FixedVector{E,Contraction{S}}(contractions)
+end
+
+function foreach_position_relabeling!(
+    f::F,
+    positions::Vector{Position},
+    mapping::Dict{Position,Position},
+    first_label::Int,
+    k::Int,
+) where {F}
+    if k > length(positions)
+        f(mapping)
+        return nothing
+    end
+
+    for j in k:length(positions)
+        positions[k], positions[j] = positions[j], positions[k]
+        old_position = positions[k]
+        mapping[old_position] = Bulk(first_label + k - 1)
+        foreach_position_relabeling!(f, positions, mapping, first_label, k + 1)
+        delete!(mapping, old_position)
+        positions[k], positions[j] = positions[j], positions[k]
+    end
+    return nothing
+end
+
+function foreach_wick_relabeling!(
+    f::F, anchors::Vector{Position}, others::Vector{Position}
+) where {F}
+    mapping = Dict{Position,Position}()
+    foreach_position_relabeling!(anchors, mapping, 1, 1) do anchor_mapping
+        foreach_position_relabeling!(
+            others, anchor_mapping, length(anchors) + 1, 1
+        ) do complete_mapping
+            f(complete_mapping)
+        end
+    end
+    return nothing
+end
+
+wick_orbit_key(::Type{S}, raw::FixedVector{E,Contraction{S}}) where {S<:Statistics,E} = raw
+
+function wick_orbit_key(
+    ::Type{Boson}, raw::FixedVector{E,Contraction{Boson}}
+) where {E}
+    contractions = Contraction{Boson}[contraction for contraction in raw]
+    graph_positions = canonicalization_positions(contractions)
+    bulk_positions = Position[position for position in graph_positions if is_bulk(position)]
+
+    if length(bulk_positions) > WICK_ORBIT_EXHAUSTIVE_LIMIT
+        return sorted_wick_key(contractions, Val(E))
+    end
+
+    anchors = out_bulk_positions(contractions)
+    sort!(anchors)
+    others = Position[position for position in bulk_positions if position ∉ anchors]
+
+    best = Ref{FixedVector{E,Contraction{Boson}}}()
+    best_set = Ref(false)
+    foreach_wick_relabeling!(anchors, others) do mapping
+        relabeled = Contraction{Boson}[
+            relabel_bulk_positions(contraction, mapping) for contraction in contractions
+        ]
+        candidate = sorted_wick_key(relabeled, Val(E))
+        if !best_set[] || wick_fixed_isless(candidate, best[])
+            best[] = candidate
+            best_set[] = true
+        end
+    end
+    return best[]
+end
+
 """
 Build the locally admissible partners for each destroying field.
 
@@ -239,14 +332,7 @@ function _foreach_wick_matching!(
         used[l] = true
         contractions[k] = contraction
         permutation[k] = l
-
-        # A causal cycle in a partial matching cannot be removed by adding more edges.
-        # Reject it immediately so expensive connectivity/canonicalization work is never
-        # reached for any descendant of this branch.
-        partial = @view contractions[1:k]
-        if !has_zero_loop(partial)
-            _foreach_wick_matching!(f, candidates, contractions, permutation, used, k + 1)
-        end
+        _foreach_wick_matching!(f, candidates, contractions, permutation, used, k + 1)
         used[l] = false
     end
     return nothing
@@ -293,12 +379,12 @@ end
 """
 Generate canonical Wick pairings together with their static uncolored topology.
 
-Exact duplicate raw contraction sequences are accumulated before graph canonicalization. Their
-statistics-dependent permutation signs are summed, so identical bosonic pairings become one
-weighted pairing and future fermionic cancellations remain representable. Physical
-canonicalization is then performed once per unique raw pairing. The topology helper preserves
-the historical uncolored tie-breaking semantics and pays a second direct Nauty pass only for
-symmetric multigraphs where that pass is mathematically necessary.
+Bosonic complete matchings are first grouped by an exact bulk-relabeling orbit key. This key
+includes the complete physical contraction data and differs only by interchangeable bulk labels
+and contraction ordering, so orbit aggregation cannot merge physically distinct diagrams. The
+existing graph canonicalizer is then run once per orbit representative, preserving its public
+canonical form while avoiding repeated Nauty work for equivalent matchings. Statistics with
+nontrivial exchange signs retain the exact raw-pairing path until their algebra is implemented.
 """
 function _wick_contraction(
     args_nc::Vector{Field{S}},
@@ -321,8 +407,9 @@ function _wick_contraction(
         end
 
         raw = FixedVector{E,Contraction{S}}(contractions)
+        key = wick_orbit_key(S, raw)
         weight = Int(pairing_sign(S, permutation))
-        raw_weights[raw] = get(raw_weights, raw, 0) + weight
+        raw_weights[key] = get(raw_weights, key, 0) + weight
         return nothing
     end
 
