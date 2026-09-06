@@ -105,9 +105,7 @@ struct Edge{S<:Statistics}
     momenta::Momenta
 end
 
-function Edge(
-    out::Field{S}, in::Field{S}, edgetype::PropagatorType.T
-) where {S<:Statistics}
+function Edge(out::Field{S}, in::Field{S}, edgetype::PropagatorType.T) where {S<:Statistics}
     return Edge{S}(out, in, edgetype, Momenta())
 end
 function Edge(edge::Edge{S}, momenta::Momenta) where {S<:Statistics}
@@ -134,9 +132,7 @@ Base.:(==)(e1::Edge{S}, e2::Edge{S}) where {S<:Statistics} = isequal(e1, e2)
 Base.hash(q::Edge, h::UInt) = hash(Edge, hash(q.in, hash(q.edgetype, hash(q.out, h))))
 
 """Check the rules for a physical propagator with statistics `S`."""
-function propagator_checks(
-    ::Type{Boson}, out::Field{Boson}, in::Field{Boson}
-)::Nothing
+function propagator_checks(::Type{Boson}, out::Field{Boson}, in::Field{Boson})::Nothing
     @assert is_barred(in) "The incoming field must be barred"
     @assert is_unbarred(out) "The outgoing field must be unbarred"
     @assert contraction_compatible(Boson, out, in) "Contracted fields must belong to the same field family"
@@ -181,8 +177,9 @@ is_advanced(x::Contraction) = is_advanced(propagator_type(x))
 is_retarded(x::Contraction) = is_retarded(propagator_type(x))
 is_keldysh(x::Contraction) = is_keldysh(propagator_type(x))
 
-make_spectral(edge::Edge{S}) where {S<:Statistics} =
-    Edge{S}(edge.out, edge.in, PropagatorType.Spectral, edge.momenta)
+function make_spectral(edge::Edge{S}) where {S<:Statistics}
+    return Edge{S}(edge.out, edge.in, PropagatorType.Spectral, edge.momenta)
+end
 function make_retarded(edge::Edge{S}) where {S<:Statistics}
     return Edge{S}(
         bar(edge.in)(position(edge.out)),
