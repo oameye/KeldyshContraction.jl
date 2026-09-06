@@ -69,7 +69,10 @@ function Base.:^(p::ParameterMonomial, exponent::Integer)
 end
 
 function Base.show(io::IO, p::ParameterMonomial)
-    isempty(p.powers) && return write(io, "1")
+    if isempty(p.powers)
+        write(io, "1")
+        return nothing
+    end
     for (i, power) in enumerate(p.powers)
         i > 1 && write(io, "*")
         write(io, string(power.name))
@@ -109,7 +112,7 @@ function parameter_monomial(x::CSym)
         return result
     elseif operation === (^)
         length(args) == 2 || throw(ArgumentError("invalid parameter power"))
-        exponent = args[2]
+        exponent = SymbolicUtils.unwrap_const(args[2])
         exponent isa Integer || throw(ArgumentError("parameter exponents must be integers"))
         return parameter_monomial(args[1])^exponent
     end
