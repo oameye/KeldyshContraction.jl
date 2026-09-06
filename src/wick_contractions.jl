@@ -121,22 +121,24 @@ function wick_contraction!(
     @assert is_conserved(a)
     @assert is_physical(a)
 
-    pairings = _wick_contraction(a.args_nc, Val(E1); regularise, _set_reg_to_zero)
+    pairings = _wick_contraction(
+        a.args_nc, Val(E1), Val(E2); regularise, _set_reg_to_zero
+    )
     make_diagram!(diagrams, pairings, a.arg_c, simplify)
     return nothing
 end
 
 function make_diagram!(
     diagrams::Diagrams{C,S,E1,E2},
-    pairings::Vector{WickPairing{S,E1}},
+    pairings::Vector{Tuple{WickPairing{S,E1},FixedVector{E2,Int}}},
     arg_c,
     simplify::Bool,
 ) where {C<:Number,S<:Statistics,E1,E2}
     isempty(pairings) && return nothing
     imag_factor = convert(C, im^E1)
-    for pairing in pairings
+    for (pairing, topology) in pairings
         diagram, prefactor = make_diagram_pair(
-            pairing, arg_c, imag_factor, simplify, Val(E1), Val(E2)
+            pairing, topology, arg_c, imag_factor, simplify, Val(E1), Val(E2)
         )
         push!(diagrams, diagram, prefactor)
     end
@@ -144,7 +146,13 @@ function make_diagram!(
 end
 
 function make_diagram_pair(
-    pairing::WickPairing{S,E}, arg_c, imag_factor, simplify::Bool, ::Val{E}, ::Val{E2}
+    pairing::WickPairing{S,E},
+    topology::FixedVector{E2,Int},
+    arg_c,
+    imag_factor,
+    simplify::Bool,
+    ::Val{E},
+    ::Val{E2},
 ) where {S<:Statistics,E,E2}
     contractions = Contraction{S}[contraction for contraction in pairing.contractions]
     contractions′, prefactor =
@@ -152,7 +160,7 @@ function make_diagram_pair(
     prefactor *= pairing.sign
     sort!(contractions′; by=sort_by_position_and_type)
     edges = FixedVector{E,Edge{S}}(Edge(contraction) for contraction in contractions′)
-    return Diagram(edges, Val(E2)) => imag_factor * prefactor
+    return Diagram{S,E,E2}(edges, topology) => imag_factor * prefactor
 end
 
 """
@@ -192,6 +200,46 @@ function _wick_contraction(
 
         canonical = canonicalize(contractions)
         push!(wick_pairings, WickPairing(canonical, pairing_sign(S, perm), Val(E)))
+    end
+
+    return wick_pairings
+end
+
+"""
+Generate canonical Wick pairings together with their static uncolored topology.
+
+The physical canonical form and the uncolored topology are derived from the same direct
+graph canonicalization. This prevents `Diagram` construction from performing another
+Nauty call inside the factorial Wick-permutation loop.
+"""
+function _wick_contraction(
+    args_nc::Vector{Field{S}},
+    ::Val{E},
+    ::Val{E2};
+    regularise=true,
+    _set_reg_to_zero=false,
+)::Vector{Tuple{WickPairing{S,E},FixedVector{E2,Int}}} where {S<:Statistics,E,E2}
+    destroys, creates = prepare_args(args_nc, Val(E))
+    ps = map(position, args_nc)
+    skip = has_in(ps) && has_out(ps)
+
+    wick_pairings = Tuple{WickPairing{S,E},FixedVector{E2,Int}}[]
+
+    for perm in SmallCombinatorics.permutations(E)
+        if skip && isone(first(perm))
+            continue
+        end
+        contractions, fail = wick_contract(
+            destroys, creates, perm; regularise, _set_reg_to_zero
+        )
+
+        if fail || !is_connected(contractions) || has_zero_loop(contractions)
+            continue
+        end
+
+        canonical, topology = canonicalize_with_topology(contractions, Val(E2))
+        pairing = WickPairing(canonical, pairing_sign(S, perm), Val(E))
+        push!(wick_pairings, (pairing, topology))
     end
 
     return wick_pairings
