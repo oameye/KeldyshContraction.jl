@@ -182,7 +182,7 @@ end
     @testset "correctness check" begin
         @testset "first order" begin
             GF = DressedPropagator(L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true)
-            Σ = SelfEnergy(GF, Val(1))
+            Σ = SelfEnergy(GF)
 
             kp = Diagram([(c, bar(c))], Val(1), Val(0))
             rp = Diagram([(c, bar(q))], Val(1), Val(0))
@@ -214,7 +214,7 @@ end
                 GF = DressedPropagator(
                     L, Val(1), Val(3); simplify=true, _set_reg_to_zero=true
                 )
-                Σ = SelfEnergy(GF, Val(1))
+                Σ = SelfEnergy(GF)
                 keldysh_truth = Diagrams(
                     Dict(
                         kp => Complex{Rational{Int}}(2.0),
@@ -247,15 +247,16 @@ end
 
         L = InteractionLagrangian(L_int)
         GF = DressedPropagator(L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true)
-        Σ = SelfEnergy(GF, Val(1))
+        Σ = SelfEnergy(GF)
 
         expr_K = c(Out()) * bar(c)(In()) * L_int
         G_K1 = _wick_contraction(expr_K, Val(3); simplify=false, _set_reg_to_zero=true)
 
-        self_energy = SmallCollections.SmallDict{3,PropagatorType.T,Diagrams}((
-            PropagatorType.Advanced => Diagrams{1,0}(),
-            PropagatorType.Retarded => Diagrams{1,0}(),
-            PropagatorType.Keldysh => Diagrams{1,0}(),
+        D = Diagrams{ComplexF64,Boson,1,0}
+        self_energy = SmallCollections.SmallDict{3,PropagatorType.T,D}((
+            PropagatorType.Advanced => D(),
+            PropagatorType.Retarded => D(),
+            PropagatorType.Keldysh => D(),
         ))
         construct_self_energy!(self_energy, G_K1)
         @test isequal(self_energy[PropagatorType.Advanced], Σ.advanced)
@@ -265,7 +266,7 @@ end
 
 @testset "second order" begin
     L = InteractionLagrangian(L_int)
-    GF = DressedPropagator(L, Val(2), Val(5), _set_reg_to_zero=true, simplify=true)
+    GF = DressedPropagator(L, Val(2), Val(5); _set_reg_to_zero=true, simplify=true)
 
     @testset "vacuum" begin
         using KeldyshContraction: filter_nonzero!
@@ -278,7 +279,7 @@ end
         @test iszero(expr)
     end
 
-    Σ = SelfEnergy(GF, Val(2))
+    Σ = SelfEnergy(GF)
 
     # 9 of the 11 diagrams line up. The two that do not differ only in which leg carries
     # the regularisation of an equal-time tadpole: Gᴿ(y⁺,y) against Gᴿ(y,y⁻), which have
