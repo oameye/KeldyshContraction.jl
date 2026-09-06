@@ -72,6 +72,15 @@ end
 
 struct Diagrams{C<:Number,S<:Statistics,E1,E2}
     diagrams::Dict{Diagram{S,E1,E2},C}
+
+    function Diagrams{C,S,E1,E2}(
+        diagrams::Dict{Diagram{S,E1,E2},C}
+    ) where {C<:Number,S<:Statistics,E1,E2}
+        for diagram in keys(diagrams)
+            diagrams[diagram] = _simplify(diagrams[diagram])
+        end
+        return new{C,S,E1,E2}(diagrams)
+    end
 end
 
 function Diagrams{C,S,E1,E2}() where {C<:Number,S<:Statistics,E1,E2}
