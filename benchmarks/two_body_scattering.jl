@@ -7,12 +7,10 @@ function benchmark_two_body_scattering!(SUITE)
     L_int = InteractionLagrangian(elasctic2boson)
 
     GF = DressedPropagator(L_int, Val(1), Val(3))
-    # Σ = SelfEnergy(GF, Val(1))
 
     SUITE["Two body scattering"]["Green's function"] = @benchmarkable DressedPropagator(
         $L_int, Val(1), Val(3);
     ) seconds = 10
-    # SUITE["Two body loss"]["Self-energy"] = @benchmarkable SelfEnergy($GF, Val(1)) seconds = 10
 
     order = 2
     SUITE["Two body scattering"]["Green's function second order"] = @benchmarkable DressedPropagator(
@@ -25,7 +23,7 @@ function benchmark_two_body_scattering!(SUITE)
     SUITE["Two body scattering"]["Wigner transform"] = @benchmarkable wigner_transform($GF2) seconds =
         10
 
-    Σ2 = SelfEnergy(GF2, Val(2))
+    Σ2 = SelfEnergy(GF2)
     Σk2 = wigner_transform(Σ2)
     SUITE["Two body scattering"]["Collision integral"] = @benchmarkable KeldyshContraction.CollisionIntegral(
         $Σk2
