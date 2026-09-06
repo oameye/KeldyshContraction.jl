@@ -101,8 +101,8 @@ end
     searchsortedfirst(graph_positions, p)
 
 # Build the direct position graph and report whether every directed position pair
-# was unique.  Detecting multiplicity while inserting edges avoids the previous
-# O(E^2) `simple_position_pairs` pre-scan on the canonicalization hot path.
+# was unique. Detecting multiplicity while inserting edges avoids an O(E^2)
+# duplicate-edge pre-scan on the canonicalization hot path.
 function _make_simple_NautyDiGraph(vs, graph_positions::Vector{Position})
     graph = NautyGraphs.NautyDiGraph(
         length(graph_positions); vertex_labels=position_labels(graph_positions)
@@ -182,22 +182,31 @@ function make_NautyDiGraph(vs::Vector{Tuple{Field{S},Field{S}}}) where {S<:Stati
     return make_NautyDiGraph(contractions)
 end
 
-function canonicalization_permutation(vs, graph_positions::Vector{Position})
-    # Always build the small direct graph first.  Nauty already has to inspect this
-    # graph, so use the same call to obtain both the canonical permutation and the
-    # automorphism count.  If the position graph has no nontrivial automorphism,
-    # physical edge colors cannot change the vertex relabeling and we return without
-    # constructing color tuples or a subdivision graph.
-    graph, simple = _make_simple_NautyDiGraph(vs, graph_positions)
-    if simple
-        permutation, automorphisms = NautyGraphs.nauty(graph)
-        if isone(automorphisms.n) || uniform_coloring(vs)
-            return permutation
-        end
-    end
+"""
+Return the physical and uncolored canonical permutations from one direct-graph Nauty call.
 
-    graph = make_colored_NautyDiGraph(vs, graph_positions)
-    return NautyGraphs.canonical_permutation(graph)
+The direct position graph defines topology. Its canonical permutation is therefore retained
+independently of physical edge colors. The same permutation is also sufficient for the
+physical diagram whenever the direct graph has no nontrivial automorphism, or when a simple
+graph has uniform physical coloring. Only genuinely ambiguous colored graphs require the
+subdivision-graph fallback.
+"""
+function canonicalization_permutations(vs, graph_positions::Vector{Position})
+    graph, simple = _make_simple_NautyDiGraph(vs, graph_positions)
+    topology_permutation, automorphisms = NautyGraphs.nauty(graph)
+
+    physical_permutation = if isone(automorphisms.n) || (simple && uniform_coloring(vs))
+        topology_permutation
+    else
+        colored_graph = make_colored_NautyDiGraph(vs, graph_positions)
+        NautyGraphs.canonical_permutation(colored_graph)
+    end
+    return physical_permutation, topology_permutation
+end
+
+function canonicalization_permutation(vs, graph_positions::Vector{Position})
+    physical_permutation, _ = canonicalization_permutations(vs, graph_positions)
+    return physical_permutation
 end
 
 function out_bulk_positions(vs)
@@ -265,10 +274,38 @@ end
 function canonicalize(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
     isempty(vs) && return copy(vs)
     graph_positions = canonicalization_positions(vs)
-    perm = canonicalization_permutation(vs, graph_positions)
-    permutation_map = make_permutation_dict(perm, graph_positions, vs)
+    physical_permutation, _ = canonicalization_permutations(vs, graph_positions)
+    permutation_map = make_permutation_dict(physical_permutation, graph_positions, vs)
     return T[relabel_bulk_positions(item, permutation_map) for item in vs]
 end
+
+"""
+Canonicalize physical contractions and compute their uncolored topology in one graph pass.
+
+This is the Wick hot-path entry point. The simple position graph is canonicalized once; its
+permutation determines the topology, while physical colors only trigger an additional
+subdivision-graph canonicalization when they can actually resolve a graph automorphism.
+"""
+function canonicalize_with_topology(
+    vs::Vector{T}, ::Val{E2}
+) where {T<:Union{Contraction,Edge},E2}
+    isempty(vs) && return copy(vs), bulk_multiplicity(Tuple{Int8,Int8}[], Val(E2))
+
+    graph_positions = canonicalization_positions(vs)
+    physical_permutation, topology_permutation =
+        canonicalization_permutations(vs, graph_positions)
+
+    physical_map = make_permutation_dict(physical_permutation, graph_positions, vs)
+    canonical_vs = T[relabel_bulk_positions(item, physical_map) for item in vs]
+
+    topology_map = make_permutation_dict(topology_permutation, graph_positions, vs)
+    topology_edges = Tuple{Int8,Int8}[
+        integer_positions(relabel_bulk_positions(item, topology_map)) for item in vs
+    ]
+    topology = bulk_multiplicity(topology_edges, Val(E2))
+    return canonical_vs, topology
+end
+
 function canonicalize(vs::Vector{Tuple{Field{S},Field{S}}}) where {S<:Statistics}
     contractions = Contraction{S}[Contraction(v) for v in vs]
     return Tuple{Field{S},Field{S}}[Tuple(c) for c in canonicalize(contractions)]
