@@ -181,7 +181,7 @@ function canonicalization_permutation(vs, graph_positions::Vector{Position})
         end
 
         permutation, automorphisms = NautyGraphs.nauty(graph)
-        isone(NautyGraphs.order(automorphisms)) && return permutation
+        isone(automorphisms.n) && return permutation
     end
 
     graph = make_colored_NautyDiGraph(vs, graph_positions)
