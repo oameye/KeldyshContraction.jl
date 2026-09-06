@@ -132,18 +132,18 @@ c, q = ϕ[Classical], ϕ[Quantum]
         ]
         @test canonicalize(colored1) != canonicalize(propagator_changed)
 
-        χ↑ = FieldFamily{Boson}(:χ, FieldIndices(FieldIndex(:spin, 1)))
-        χ↓ = FieldFamily{Boson}(:χ, FieldIndices(FieldIndex(:spin, 2)))
-        ↑c, ↑q = χ↑[Classical], χ↑[Quantum]
-        ↓c, ↓q = χ↓[Classical], χ↓[Quantum]
+        χ_up = FieldFamily{Boson}(:χ, FieldIndices(FieldIndex(:spin, 1)))
+        χ_down = FieldFamily{Boson}(:χ, FieldIndices(FieldIndex(:spin, 2)))
+        up_c, up_q = χ_up[Classical], χ_up[Quantum]
+        down_c, down_q = χ_down[Classical], χ_down[Quantum]
         spin_up = [
             (c(Out()), bar(q)(Bulk(1))),
-            (↑c(Bulk(1)), bar(↑q)(Bulk(2))),
+            (up_c(Bulk(1)), bar(up_q)(Bulk(2))),
             (c(Bulk(2)), bar(q)(In())),
         ]
         spin_down = [
             (c(Out()), bar(q)(Bulk(1))),
-            (↓c(Bulk(1)), bar(↓q)(Bulk(2))),
+            (down_c(Bulk(1)), bar(down_q)(Bulk(2))),
             (c(Bulk(2)), bar(q)(In())),
         ]
         @test canonicalize(spin_up) != canonicalize(spin_down)
