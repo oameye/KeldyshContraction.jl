@@ -55,9 +55,9 @@ end
     return (field_color(e.out), field_color(e.in), Int(propagator_type(e)))
 end
 
-function graph_positions(vs)
+function canonicalization_positions(vs)
     result = Position[]
-    sizehint!(result, 2length(vs))
+    sizehint!(result, 2 * length(vs))
     for item in vs
         for p in positions(item)
             p in result || push!(result, p)
