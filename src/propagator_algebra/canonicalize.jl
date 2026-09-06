@@ -67,13 +67,15 @@ function canonicalization_positions(vs)
     return result
 end
 
-function uniform_simple_coloring(vs)
+function uniform_coloring(vs)
     isempty(vs) && return true
     color = propagator_color(first(vs))
+    return all(item -> isequal(propagator_color(item), color), vs)
+end
+
+function simple_position_pairs(vs)
     for i in eachindex(vs)
-        item = vs[i]
-        isequal(propagator_color(item), color) || return false
-        item_positions = positions(item)
+        item_positions = positions(vs[i])
         for j in firstindex(vs):(i - 1)
             isequal(positions(vs[j]), item_positions) && return false
         end
@@ -159,7 +161,7 @@ function make_NautyDiGraph(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
     isempty(vs) && return NautyGraphs.NautyDiGraph(0), Position[]
 
     graph_positions = canonicalization_positions(vs)
-    graph = if uniform_simple_coloring(vs)
+    graph = if uniform_coloring(vs) && simple_position_pairs(vs)
         make_simple_NautyDiGraph(vs, graph_positions)
     else
         make_colored_NautyDiGraph(vs, graph_positions)
@@ -169,6 +171,21 @@ end
 function make_NautyDiGraph(vs::Vector{Tuple{Field{S},Field{S}}}) where {S<:Statistics}
     contractions = Contraction{S}[Contraction(v) for v in vs]
     return make_NautyDiGraph(contractions)
+end
+
+function canonicalization_permutation(vs, graph_positions::Vector{Position})
+    if simple_position_pairs(vs)
+        graph = make_simple_NautyDiGraph(vs, graph_positions)
+        if uniform_coloring(vs)
+            return NautyGraphs.canonical_permutation(graph)
+        end
+
+        permutation, automorphisms = NautyGraphs.nauty(graph)
+        isone(NautyGraphs.order(automorphisms)) && return permutation
+    end
+
+    graph = make_colored_NautyDiGraph(vs, graph_positions)
+    return NautyGraphs.canonical_permutation(graph)
 end
 
 function make_permutation_dict(
@@ -209,8 +226,8 @@ end
 
 function canonicalize(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
     isempty(vs) && return copy(vs)
-    graph, graph_positions = make_NautyDiGraph(vs)
-    perm = NautyGraphs.canonical_permutation(graph)
+    graph_positions = canonicalization_positions(vs)
+    perm = canonicalization_permutation(vs, graph_positions)
     permutation_map = make_permutation_dict(perm, graph_positions)
     return T[relabel_bulk_positions(item, permutation_map) for item in vs]
 end
