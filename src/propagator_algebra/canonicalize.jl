@@ -332,13 +332,16 @@ function legacy_topology(vs, ::Val{E2}) where {E2}
     return bulk_multiplicity(topology_edges, Val(E2))
 end
 
-function canonicalize(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
+function _canonicalize_typed(vs::Vector{T}) where {T}
     isempty(vs) && return copy(vs)
     graph_positions = canonicalization_positions(vs)
     physical_permutation, _, _, _ = canonicalization_permutations(vs, graph_positions)
     permutation_map = make_permutation_dict(physical_permutation, graph_positions, vs)
     return T[relabel_bulk_positions(item, permutation_map) for item in vs]
 end
+
+canonicalize(vs::Vector{Contraction{S}}) where {S<:Statistics} = _canonicalize_typed(vs)
+canonicalize(vs::Vector{Edge{S}}) where {S<:Statistics} = _canonicalize_typed(vs)
 
 """
 Canonicalize physical contractions and compute the established uncolored topology signature.
@@ -347,9 +350,9 @@ The physical canonical form uses the new color-aware graph representation. Topol
 computed independently with the pre-static uncolored graph and relabeling convention, so physical
 field colors cannot fragment topology classes and the historical topology labels remain exact.
 """
-function canonicalize_with_topology(
+function _canonicalize_with_topology_typed(
     vs::Vector{T}, ::Val{E2}
-) where {T<:Union{Contraction,Edge},E2}
+) where {T,E2}
     isempty(vs) && return copy(vs), bulk_multiplicity(Tuple{Int8,Int8}[], Val(E2))
 
     graph_positions = canonicalization_positions(vs)
@@ -358,6 +361,17 @@ function canonicalize_with_topology(
     canonical_vs = T[relabel_bulk_positions(item, physical_map) for item in vs]
     topology = legacy_topology(vs, Val(E2))
     return canonical_vs, topology
+end
+
+function canonicalize_with_topology(
+    vs::Vector{Contraction{S}}, ::Val{E2}
+) where {S<:Statistics,E2}
+    return _canonicalize_with_topology_typed(vs, Val(E2))
+end
+function canonicalize_with_topology(
+    vs::Vector{Edge{S}}, ::Val{E2}
+) where {S<:Statistics,E2}
+    return _canonicalize_with_topology_typed(vs, Val(E2))
 end
 
 function canonicalize(vs::Vector{Tuple{Field{S},Field{S}}}) where {S<:Statistics}
