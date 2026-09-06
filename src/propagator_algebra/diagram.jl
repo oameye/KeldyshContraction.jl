@@ -29,10 +29,9 @@ function Diagram(edges::Vector{Edge{S}}, ::Val{E}, ::Val{E2}) where {S<:Statisti
 end
 
 function Diagram(edges::FixedVector{E,Edge{S}}, ::Val{E2}) where {S<:Statistics,E,E2}
-    topology = bulk_multiplicity(edges, Val(E2))
+    topology = canonical_topology(edges, Val(E2))
     @assert length(topology) == E2 "The supplied Val{topology} must match the topology size"
-    fixed_topology = SmallCollections.FixedVector{E2,Int}(topology)
-    return Diagram{S,E,E2}(edges, fixed_topology)
+    return Diagram{S,E,E2}(edges, topology)
 end
 
 function Diagram(
@@ -82,7 +81,8 @@ end
 function Diagrams(
     diagrams::Vector{Diagram{S,E1,E2}}, prefactor::C
 ) where {C<:Number,S<:Statistics,E1,E2}
-    dict = Dict{Diagram{S,E1,E2},C}(d => prefactor for d in diagrams)
+    value = _simplify(prefactor)
+    dict = Dict{Diagram{S,E1,E2},C}(d => value for d in diagrams)
     return Diagrams{C,S,E1,E2}(dict)
 end
 
@@ -122,11 +122,13 @@ number_of_propagators(L::InteractionLagrangian) = length(first(L.lagrangian.argu
 function Base.push!(
     collection::Diagrams{C,S,E1,E2}, diagram::Diagram{S,E1,E2}, prefactor::Number
 ) where {C<:Number,S<:Statistics,E1,E2}
-    value = convert(C, prefactor)
+    value = _simplify(convert(C, prefactor))
     if haskey(collection.diagrams, diagram)
-        collection.diagrams[diagram] += value
-        if iszero(collection.diagrams[diagram])
+        combined = _simplify(collection.diagrams[diagram] + value)
+        if iszero(combined)
             delete!(collection.diagrams, diagram)
+        else
+            collection.diagrams[diagram] = combined
         end
     else
         collection.diagrams[diagram] = value
@@ -227,6 +229,30 @@ function set_reg_to_zero(d::Diagrams{C,S,E1,E2}) where {C<:Number,S<:Statistics,
         push!(diagrams, set_reg_to_zero(diagram), value)
     end
     return diagrams
+end
+
+"""
+Compute the uncolored canonical topology signature of a diagram.
+
+Physical diagram canonicalization deliberately includes field family, internal indices,
+Keldysh component, orientation, regularisation, and propagator type.  `Diagram.topology`
+has a different contract: it groups the analytically established uncolored graph
+topologies.  Therefore topology labels must be derived from the position graph alone and
+must not depend on physical edge colors.
+
+This intentionally mirrors the pre-static canonicalization semantics: `Out()` and `In()`
+remain distinguished vertex colors, bulk vertices are interchangeable, and propagator
+colors do not participate in the canonical permutation.
+"""
+function canonical_topology(
+    edges::FixedVector{E,Edge{S}}, ::Val{E2}
+) where {S<:Statistics,E,E2}
+    graph_positions = canonicalization_positions(edges)
+    graph = make_simple_NautyDiGraph(edges, graph_positions)
+    permutation = NautyGraphs.canonical_permutation(graph)
+    mapping = make_permutation_dict(permutation, graph_positions, edges)
+    canonical_edges = map(edge -> relabel_bulk_positions(edge, mapping), edges)
+    return bulk_multiplicity(canonical_edges, Val(E2))
 end
 
 """
