@@ -174,21 +174,9 @@ function prepare_args(args::Vector{Field{S}}, ::Val{E}) where {S<:Statistics,E}
     return destroys, creates
 end
 
-const WICK_ORBIT_EXHAUSTIVE_LIMIT = 5
-
 @inline function wick_contraction_isless(a::Contraction{S}, b::Contraction{S}) where {S}
     isequal(a.out, b.out) || return isless(a.out, b.out)
     return isless(a.in, b.in)
-end
-
-function wick_fixed_isless(
-    a::FixedVector{E,Contraction{S}}, b::FixedVector{E,Contraction{S}}
-) where {S<:Statistics,E}
-    for i in 1:E
-        isequal(a[i], b[i]) && continue
-        return wick_contraction_isless(a[i], b[i])
-    end
-    return false
 end
 
 function sorted_wick_key(
@@ -196,115 +184,6 @@ function sorted_wick_key(
 ) where {S<:Statistics,E}
     sort!(contractions; lt=wick_contraction_isless)
     return FixedVector{E,Contraction{S}}(contractions)
-end
-
-const WickFieldKey = Tuple{Int,Int8,Int,Symbol,Int,NTuple{4,Int16}}
-const WickContractionKey = Tuple{WickFieldKey,WickFieldKey}
-
-@inline function wick_field_key(f::Field, mapping::Dict{Position,Position})::WickFieldKey
-    p = position(f)
-    mapped_position = is_bulk(p) ? index(mapping[p]) : index(p)
-    return (
-        Int(orientation(f)),
-        mapped_position,
-        Int(keldysh_index(f)),
-        name(f),
-        Int(regularisation(f)),
-        slots(field_indices(f)),
-    )
-end
-
-@inline function wick_compact_contraction_key(
-    c::Contraction, mapping::Dict{Position,Position}
-)::WickContractionKey
-    return (wick_field_key(c.out, mapping), wick_field_key(c.in, mapping))
-end
-
-function wick_compact_isless(
-    a::Vector{WickContractionKey}, b::Vector{WickContractionKey}
-)::Bool
-    @inbounds for i in eachindex(a)
-        isequal(a[i], b[i]) && continue
-        return isless(a[i], b[i])
-    end
-    return false
-end
-
-function foreach_position_relabeling!(
-    f::F,
-    positions::Vector{Position},
-    mapping::Dict{Position,Position},
-    first_label::Int,
-    k::Int,
-) where {F}
-    if k > length(positions)
-        f(mapping)
-        return nothing
-    end
-
-    for j in k:length(positions)
-        positions[k], positions[j] = positions[j], positions[k]
-        old_position = positions[k]
-        mapping[old_position] = Bulk(first_label + k - 1)
-        foreach_position_relabeling!(f, positions, mapping, first_label, k + 1)
-        delete!(mapping, old_position)
-        positions[k], positions[j] = positions[j], positions[k]
-    end
-    return nothing
-end
-
-function foreach_wick_relabeling!(
-    f::F, anchors::Vector{Position}, others::Vector{Position}
-) where {F}
-    mapping = Dict{Position,Position}()
-    foreach_position_relabeling!(anchors, mapping, 1, 1) do anchor_mapping
-        foreach_position_relabeling!(
-            others, anchor_mapping, length(anchors) + 1, 1
-        ) do complete_mapping
-            return f(complete_mapping)
-        end
-    end
-    return nothing
-end
-
-wick_orbit_key(::Type{S}, raw::FixedVector{E,Contraction{S}}) where {S<:Statistics,E} = raw
-
-function wick_orbit_key(::Type{Boson}, raw::FixedVector{E,Contraction{Boson}}) where {E}
-    contractions = Contraction{Boson}[contraction for contraction in raw]
-    graph_positions = canonicalization_positions(contractions)
-    bulk_positions = Position[position for position in graph_positions if is_bulk(position)]
-
-    if length(bulk_positions) > WICK_ORBIT_EXHAUSTIVE_LIMIT
-        return sorted_wick_key(contractions, Val(E))
-    end
-
-    anchors = out_bulk_positions(contractions)
-    sort!(anchors)
-    others = Position[position for position in bulk_positions if position ∉ anchors]
-
-    scratch = Vector{WickContractionKey}(undef, E)
-    best = similar(scratch)
-    best_mapping = Dict{Position,Position}()
-    best_set = false
-    foreach_wick_relabeling!(anchors, others) do mapping
-        @inbounds for i in 1:E
-            scratch[i] = wick_compact_contraction_key(contractions[i], mapping)
-        end
-        sort!(scratch)
-        if !best_set || wick_compact_isless(scratch, best)
-            copyto!(best, scratch)
-            empty!(best_mapping)
-            for (old_position, new_position) in mapping
-                best_mapping[old_position] = new_position
-            end
-            best_set = true
-        end
-    end
-
-    relabeled = Contraction{Boson}[
-        relabel_bulk_positions(contraction, best_mapping) for contraction in contractions
-    ]
-    return sorted_wick_key(relabeled, Val(E))
 end
 
 """
@@ -484,36 +363,6 @@ function _wick_contraction(
         push!(wick_pairings, (pairing, topology, abs(weight)))
     end
     return wick_pairings
-end
-
-function wick_contract(
-    destroys::Vector{Field{S}},
-    creates::Vector{Field{S}},
-    perm;
-    regularise=true,
-    _set_reg_to_zero=false,
-) where {S<:Statistics}
-    contractions = Contraction{S}[]
-    fail = false
-    for (k, l) in pairs(perm)
-        potential = Contraction(destroys[k], creates[l])
-        if !contraction_filter(potential)
-            fail = true
-            break
-        end
-        if regularise
-            if !regular(potential)
-                fail = true
-                break
-            end
-            different_position = !allequal(position.(potential))
-            if _set_reg_to_zero && (different_position || is_keldysh(potential))
-                potential = map(set_reg_to_zero, potential)
-            end
-        end
-        push!(contractions, potential)
-    end
-    return contractions, fail
 end
 
 ######################
