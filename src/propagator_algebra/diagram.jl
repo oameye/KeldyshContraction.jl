@@ -83,9 +83,7 @@ struct Diagrams{C<:Number,S<:Statistics,E1,E2}
     end
 end
 
-function Diagrams(
-    diagrams::Dict{Diagram{S,E1,E2},C}
-) where {C<:Number,S<:Statistics,E1,E2}
+function Diagrams(diagrams::Dict{Diagram{S,E1,E2},C}) where {C<:Number,S<:Statistics,E1,E2}
     return Diagrams{C,S,E1,E2}(diagrams)
 end
 
