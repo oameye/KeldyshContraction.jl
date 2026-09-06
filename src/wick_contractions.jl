@@ -406,9 +406,7 @@ function _wick_contraction(
 
     wick_pairings = WickPairing{S,E}[]
     foreach_wick_matching(candidates, Val(E)) do contractions, permutation
-        if !is_connected(contractions) || has_zero_loop(contractions)
-            return nothing
-        end
+        passes_wick_filters(contractions) || return nothing
 
         canonical = canonicalize(contractions)
         push!(
@@ -456,9 +454,7 @@ function _wick_contraction(
     for (raw, weight) in matching_weights
         iszero(weight) && continue
         contractions = Contraction{S}[contraction for contraction in raw]
-        if !is_connected(contractions) || has_zero_loop(contractions)
-            continue
-        end
+        passes_wick_filters(contractions) || continue
 
         final_raw, simplification_sign = if simplify
             simplified, sign = advanced_to_retarded(contractions, 1)
