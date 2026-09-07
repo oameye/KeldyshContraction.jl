@@ -2,6 +2,7 @@ pages = [
     "Home" => "index.md",
     "API" => "API.md",
     "Symbolic fields" => "typesystem.md",
+    "Type-stability guarantee" => "type_stability.md",
     "Keldysh Conventions" => "conventions.md",
     "Literature" => "literature.md",
     "Examples" => [
