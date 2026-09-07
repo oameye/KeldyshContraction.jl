@@ -6,6 +6,7 @@ on:
       - 'main'
     paths:
       - '.github/workflows/Tests.yml'
+      - '.github/check_coverage.jl'
       - 'codecov.yml'
       - 'src/**'
       - 'ext/**'
@@ -17,6 +18,7 @@ on:
       - 'main'
     paths:
       - '.github/workflows/Tests.yml'
+      - '.github/check_coverage.jl'
       - 'codecov.yml'
       - 'src/**'
       - 'ext/**'
@@ -75,4 +77,7 @@ jobs:
           file: lcov.info
           name: codecov-umbrella
           fail_ci_if_error: true
+        if: ${{ matrix.version == 'lts' }}
+      - name: Require 100% source line coverage
+        run: julia .github/check_coverage.jl lcov.info
         if: ${{ matrix.version == 'lts' }}
