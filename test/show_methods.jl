@@ -79,6 +79,24 @@ end
     @test @inferred(write_latex(io, difference)) === nothing
 end
 
+@testset "Public LaTeX coefficient rendering" begin
+    @qfields a::Boson
+    aᶜ = a[Classical]
+    @test repr(MIME"text/latex"(), aᶜ) == "\$a^c\$"
+
+    fields = ϕᶜ * bar(ϕᶜ)
+    @test contains(repr(MIME"text/latex"(), (1 // 2) * fields), "\\frac{1}{2}")
+    @test contains(repr(MIME"text/latex"(), im * fields), "i ")
+    @test contains(repr(MIME"text/latex"(), -im * fields), "-i ")
+    @test contains(repr(MIME"text/latex"(), 2im * fields), "2 i ")
+    @test contains(
+        repr(MIME"text/latex"(), complex(1.0, 2.0) * fields), "(1.0 + 2.0 i)"
+    )
+    @test contains(
+        repr(MIME"text/latex"(), complex(1.0, -2.0) * fields), "(1.0 - 2.0 i)"
+    )
+end
+
 @testset "Structs" begin
     using KeldyshContraction: Diagram, Diagrams
     using SymbolicUtils
