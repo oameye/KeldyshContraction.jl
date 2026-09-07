@@ -50,7 +50,8 @@ end
 end
 
 @testset "keldysh to distribution" begin
-    using KeldyshContraction: BosonicDistributions, reduce_to_spectral, kelysh_to_distribution
+    using KeldyshContraction:
+        BosonicDistributions, reduce_to_spectral, kelysh_to_distribution
     tmp = @inferred reduce_to_spectral(Σk.keldysh)
     ΣkF = @inferred kelysh_to_distribution(tmp)
     @test ΣkF isa Dict{KC.FixedVector{1,Int},BosonicDistributions{ComplexF64}}
