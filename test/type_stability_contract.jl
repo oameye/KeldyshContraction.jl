@@ -136,6 +136,20 @@ function assert_supported_fermion_contract(
     @test iszero(Gm[2, 1])
     @test iszero(Σm[2, 1])
 
+    L_peer = @inferred InteractionLagrangian(interaction, :h)
+    Ls = @inferred L + L_peer
+    Gs = @inferred(DressedPropagator(Ls, Val(1), Val(3); target=contract_ψ, simplify=false))
+    Σs = @inferred SelfEnergy(Gs)
+    sum_parameters = @inferred parameters(Gs)
+    self_energy_parameters = @inferred parameters(Σs)
+    @test Set(sum_parameters) == Set((parameter_monomial(:g), parameter_monomial(:h)))
+    @test Set(self_energy_parameters) == Set(sum_parameters)
+    @test typeof(Gs[:g]).parameters[1] === D
+    @test typeof(Σs[:g]).parameters[1] === D
+    @test contract_recursively_concrete(typeof(Ls))
+    @test contract_recursively_concrete(typeof(Gs))
+    @test contract_recursively_concrete(typeof(Σs))
+
     @test contract_recursively_concrete(typeof(L))
     @test contract_recursively_concrete(typeof(G))
     @test contract_recursively_concrete(typeof(Σ))

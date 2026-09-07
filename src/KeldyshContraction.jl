@@ -42,6 +42,7 @@ const ComplexRationals = Complex{Rational{Int64}}
 
     # Statistics extensions
     include("fermionic_keldysh.jl")
+    include("fermionic_propagator_dispatch.jl")
 
     include("propagator_algebra/wigner.jl")
     include("collision_integral.jl")

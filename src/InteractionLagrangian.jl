@@ -174,12 +174,18 @@ struct LagrangianSum{C<:Number,S<:Statistics} <: Lagrangian
     end
 end
 
-function check_common_fields(args::AbstractVector{<:InteractionLagrangian})
-    allequal(getfield.(args, :families)) || throw(
-        ArgumentError(
-            "all InteractionLagrangian must have the same physical field families"
-        ),
-    )
+function check_common_fields(
+    args::Vector{InteractionLagrangian{C,S}}
+) where {C<:Number,S<:Statistics}
+    isempty(args) && return nothing
+    reference = first(args).families
+    for i in 2:length(args)
+        isequal(args[i].families, reference) || throw(
+            ArgumentError(
+                "all InteractionLagrangian must have the same physical field families"
+            ),
+        )
+    end
     return nothing
 end
 
