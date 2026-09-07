@@ -64,12 +64,19 @@ end
     @test repr(MIME"text/latex"(), L_int) ==
         "\$0.5 i \\phi^c \\phi^c \\bar{\\phi^P} \\bar{\\phi^c}\$"
 
+    difference = ϕᶜ * bar(ϕᶜ) - ϕᴾ * bar(ϕᴾ)
+    difference_latex = repr(MIME"text/latex"(), difference)
+    @test contains(difference_latex, " - ")
+    @test !contains(difference_latex, "+ -")
+
     io = IOBuffer()
     @test @inferred(show(io, L_int)) === nothing
     io = IOBuffer()
     @test @inferred(show(io, MIME"text/latex"(), L_int)) === nothing
     io = IOBuffer()
     @test @inferred(write_latex(io, L_int)) === nothing
+    io = IOBuffer()
+    @test @inferred(write_latex(io, difference)) === nothing
 end
 
 @testset "Structs" begin
