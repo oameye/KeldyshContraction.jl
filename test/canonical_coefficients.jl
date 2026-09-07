@@ -1,5 +1,5 @@
 using KeldyshContraction, Test
-using KeldyshContraction: Bulk, In, Out
+using KeldyshContraction: Bulk, In, Out, coefficient, fields, terms
 import KeldyshContraction as KC
 
 @testset "canonical numeric coefficients" begin
@@ -43,4 +43,38 @@ import KeldyshContraction as KC
     stored_from_dict = only(values(from_dict.diagrams))
     @test isequal(stored_from_dict, complex(0.0, 1.0))
     @test !signbit(real(stored_from_dict))
+end
+
+@testset "public coefficient conversion and accessors" begin
+    @qfields family::Boson
+    c, q = family[Classical], family[Quantum]
+
+    rational_term = (1 // 2) * c * bar(c)
+    float_term = 0.5 * c * bar(c)
+    complex_float_term = complex(0.5, 0.25) * c * bar(c)
+    sum = float_term + 0.25 * q * bar(q)
+
+    converted = @inferred convert_coefficients(ComplexF64, rational_term)
+    @test @inferred(coefficient(converted)) == 0.5 + 0.0im
+    @test @inferred(fields(converted)) == fields(rational_term)
+
+    rationalized = @inferred rationalize_coefficients(float_term)
+    @test @inferred(coefficient(rationalized)) == 1 // 2
+    @test rationalize_coefficients(rational_term) == rational_term
+
+    rationalized_complex = @inferred rationalize_coefficients(complex_float_term)
+    @test @inferred(coefficient(rationalized_complex)) == complex(1 // 2, 1 // 4)
+
+    rationalized_sum = @inferred rationalize_coefficients(sum)
+    @test @inferred(coefficient(rationalized_sum)) == [1 // 2, 1 // 4]
+    @test length(@inferred(terms(rationalized_sum))) == 2
+    @test @inferred(terms(rationalized)) == (rationalized,)
+
+    returned_fields = @inferred fields(float_term)
+    pop!(returned_fields)
+    @test length(fields(float_term)) == 2
+
+    returned_terms = @inferred terms(sum)
+    pop!(returned_terms)
+    @test length(terms(sum)) == 2
 end
