@@ -47,7 +47,8 @@ function assert_supported_public_contract(coefficient::C, ::Type{D}) where {C<:R
         )
     )
     @test contract_recursively_concrete(typeof(diagrams))
-    @test contract_recursively_concrete(typeof(@inferred(topologies(diagrams)))
+    diagram_topologies = @inferred topologies(diagrams)
+    @test contract_recursively_concrete(typeof(diagram_topologies))
 
     G = @inferred(DressedPropagator(L, Val(1), Val(3); simplify=false))
     Σ = @inferred SelfEnergy(G)
@@ -65,7 +66,8 @@ function assert_supported_public_contract(coefficient::C, ::Type{D}) where {C<:R
     Σm = @inferred matrix(Σ)
     @test contract_recursively_concrete(typeof(Gm))
     @test contract_recursively_concrete(typeof(Σm))
-    @test contract_recursively_concrete(typeof(@inferred(topologies(Gm[1, 1])))
+    matrix_topologies = @inferred topologies(Gm[1, 1])
+    @test contract_recursively_concrete(typeof(matrix_topologies))
 
     @test contract_recursively_concrete(typeof(L))
     @test contract_recursively_concrete(typeof(G))
