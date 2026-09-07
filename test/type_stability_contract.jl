@@ -19,7 +19,9 @@ end
 const contract_c = contract_ϕ[Classical]
 const contract_q = contract_ϕ[Quantum]
 
-function assert_supported_public_contract(coefficient::C, ::Type{D}) where {C<:Real,D<:Number}
+function assert_supported_public_contract(
+    coefficient::C, ::Type{D}
+) where {C<:Real,D<:Number}
     c = contract_c
     q = contract_q
     interaction =
@@ -42,9 +44,7 @@ function assert_supported_public_contract(coefficient::C, ::Type{D}) where {C<:R
 
     inout = c(Out()) * bar(q)(In())
     diagrams = @inferred(
-        wick_contraction(
-            inout, L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true
-        )
+        wick_contraction(inout, L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true)
     )
     @test contract_recursively_concrete(typeof(diagrams))
     diagram_topologies = @inferred topologies(diagrams)
