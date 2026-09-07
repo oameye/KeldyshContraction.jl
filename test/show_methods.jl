@@ -1,5 +1,5 @@
 using KeldyshContraction, Test
-using KeldyshContraction: In, Out, Edge, Bulk
+using KeldyshContraction: In, Out, Edge, Bulk, write_latex
 using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus
 
@@ -34,7 +34,7 @@ using KeldyshContraction: Regularisation.Minus as Minus
         @test repr(i) == o
     end
     s = IOBuffer(sizehint=0)
-    @inferred show(s, ϕᶜ * bar(ϕᶜ))
+    @test @inferred(show(s, ϕᶜ * bar(ϕᶜ))) === nothing
 
     output_latex = [
         "\$\\phi^c\$",
@@ -51,6 +51,11 @@ using KeldyshContraction: Regularisation.Minus as Minus
         @test sprint(show, MIME"text/latex"(), i) == o
         @test repr(MIME"text/latex"(), i) == o
     end
+
+    io = IOBuffer()
+    @test @inferred(show(io, MIME"text/latex"(), ϕᶜ)) === nothing
+    io = IOBuffer()
+    @test @inferred(write_latex(io, ϕᶜ)) === nothing
 end
 
 @testset "Term" begin
@@ -58,6 +63,13 @@ end
     @test repr(L_int) == "(0.0 + 0.5im)*(ϕᶜ*ϕᶜ*̄ϕᴾ*̄ϕᶜ)"
     @test repr(MIME"text/latex"(), L_int) ==
         "\$0.5 i \\phi^c \\phi^c \\bar{\\phi^P} \\bar{\\phi^c}\$"
+
+    io = IOBuffer()
+    @test @inferred(show(io, L_int)) === nothing
+    io = IOBuffer()
+    @test @inferred(show(io, MIME"text/latex"(), L_int)) === nothing
+    io = IOBuffer()
+    @test @inferred(write_latex(io, L_int)) === nothing
 end
 
 @testset "Structs" begin
@@ -71,12 +83,27 @@ end
 
     @test repr(MIME"text/latex"(), L) == "\$\\phi^P \\phi^c \\bar{\\phi^P} \\bar{\\phi^c}\$"
 
+    io = IOBuffer()
+    @test @inferred(show(io, L)) === nothing
+    io = IOBuffer()
+    @test @inferred(show(io, MIME"text/latex"(), L)) === nothing
+    io = IOBuffer()
+    @test @inferred(write_latex(io, L)) === nothing
+
     ds = Diagrams(
         [Diagram([Edge(ϕᶜ, bar(ϕᶜ))], Val(1), Val(0))], Complex{Rational{Int}}(1.0)
     )
     DP = DressedPropagator(ds, ds, ds, Val(1), parameter_monomial(g))
     @test repr(MIME"text/plain"(), DP) ==
         "Dressed Propagator:\nkeldysh:  Gᴷ(y₁,y₁)\nretarded: Gᴷ(y₁,y₁)\nadvanced: Gᴷ(y₁,y₁)"
+
+    diagram = first(ds)
+    io = IOBuffer()
+    @test @inferred(show(io, diagram)) === nothing
+    io = IOBuffer()
+    @test @inferred(show(io, MIME"text/latex"(), diagram)) === nothing
+    io = IOBuffer()
+    @test @inferred(write_latex(io, diagram)) === nothing
 end
 
 @testset "Momentum" begin
@@ -97,4 +124,9 @@ end
     @test repr(e0) == "Gᴬ(k)"
     @test repr(e1) == "Gᴬ(q₁)"
     @test repr(e2) == "Gᴬ(q₂)"
+
+    io = IOBuffer()
+    @test @inferred(show(io, ms)) === nothing
+    io = IOBuffer()
+    @test @inferred(write_latex(io, ms)) === nothing
 end
