@@ -23,7 +23,8 @@ import KeldyshContraction as KC
     @test isone(one(ParameterMonomial))
     @test !isone(gₘ)
     @test_throws ArgumentError parameter_monomial(2)
-    @test_throws DomainError gₘ^(-1)
+    negative_exponent = -1
+    @test_throws DomainError gₘ^negative_exponent
     @test_throws ArgumentError parameter_monomial(g + λ)
 
     @test sprint(show, one(ParameterMonomial)) == "1"
