@@ -23,15 +23,17 @@ Term.typestree(KeldyshContraction.QSym) # hide
 ```
 
 The package uses one concrete field representation, parameterized only by statistics.
-Bosonic fields therefore have type `Field{Boson}`. Physical field identity is stored in a
-`FieldFamily{Boson}`, while barred/unbarred orientation, Keldysh component, position, and
-regularisation are concrete value data on each field component.
+Bosonic and fermionic fields therefore have types `Field{Boson}` and `Field{Fermion}` while
+sharing the same storage layout. Physical field identity is stored in `FieldFamily{S}`;
+barred/unbarred orientation, Keldysh component, position, and regularisation are concrete value
+data on each field component.
 
 ```@docs
 KeldyshContraction.QField
 KeldyshContraction.QSym
 KeldyshContraction.Statistics
 KeldyshContraction.Boson
+KeldyshContraction.Fermion
 KeldyshContraction.FieldFamily
 KeldyshContraction.Field
 KeldyshContraction.field_family
@@ -40,9 +42,14 @@ KeldyshContraction.bar
 
 #### Field properties
 
-Bosonic `Classical` and `Quantum` are semantic aliases over the package's neutral two-valued
-Keldysh index. They are components of one physical field family and do not create different
-Julia field types.
+The stored Keldysh index is neutral and two-valued. Bosonic `Classical` / `Quantum` and
+fermionic `One` / `Two` are statistics-specific semantic labels over that same representation;
+none of these component labels creates a different Julia field type.
+
+For fermions, `bar(psi)` constructs the independent barred Grassmann path-integral variable
+and preserves the `One` / `Two` component. It is not an operator-adjoint operation. See
+[the convention page](conventions.md) for the asymmetric fermionic LO rotation and matrix
+placement.
 
 ```@docs
 KeldyshContraction.KeldyshIndex
@@ -69,11 +76,19 @@ indexing the family:
 using KeldyshContraction
 using KeldyshContraction: position
 
-@qfields ϕ::Boson
+@qfields ϕ::Boson ψ::Fermion
 c, q = ϕ[Classical], ϕ[Quantum]
-barc = bar(c)
+ψ1, ψ2 = ψ[One], ψ[Two]
+barψ1 = bar(ψ1)
 
-(field_family(c) == field_family(q), position(c), typeof(c), typeof(barc))
+(
+    field_family(c) == field_family(q),
+    field_family(ψ1) == field_family(ψ2),
+    position(c),
+    typeof(c),
+    typeof(ψ1),
+    typeof(barψ1),
+)
 ```
 
 ```@docs
@@ -95,8 +110,9 @@ QAdd{C,S} -> Vector{QMul{C,S}}
 ```
 
 where `C` is the coefficient representation and `S` the field statistics. Algebraic zero
-and one remain inside this symbolic representation instead of returning value-dependent
-raw scalars.
+and one remain inside this symbolic representation instead of returning value-dependent raw
+scalars. For `Fermion`, canonical products additionally implement Grassmann exchange signs and
+nilpotency while retaining the same `QMul{C,Fermion}` result representation.
 
 ```@docs
 KeldyshContraction.QTerm
@@ -141,10 +157,15 @@ KeldyshContraction.parameter_monomial
 InteractionLagrangian
 ```
 
+Single-family interactions infer their target propagator. Multi-family interactions use the
+same explicit `target` field-family selection for bosonic and fermionic statistics.
+
 ## Wick contraction
 
 The perturbation order and propagator edge count are supplied as `Val` arguments because
-they determine the static diagram representation.
+they determine the static diagram representation. Fermionic contractions reuse the same
+`WickPairing{S,E}` representation; statistics dispatch supplies permutation parity to the
+pairing weight.
 
 ```@docs
 wick_contraction
@@ -153,7 +174,9 @@ wick_contraction
 ### Propagator
 
 Propagator edges carry their retarded, advanced, Keldysh, or spectral component as concrete
-value data.
+value data. `DressedPropagator` stores semantic R/A/K components independently of statistics;
+`matrix` supplies the statistics-specific layout. In particular, the fermionic LO matrix is
+`[[R,K],[0,A]]`, while the bosonic RAK matrix is `[[K,R],[A,0]]`.
 
 ```@docs
 DressedPropagator
@@ -162,6 +185,9 @@ KeldyshContraction.matrix(::DressedPropagator)
 ```
 
 ### Self-energy
+
+`SelfEnergy` likewise stores semantic R/A/K components. The fermionic LO self-energy matrix
+is `[[R,K],[0,A]]`; the bosonic self-energy uses `[[0,A],[R,K]]`.
 
 ```@docs
 KeldyshContraction.SelfEnergy
