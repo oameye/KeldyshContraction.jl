@@ -1,4 +1,5 @@
 using KeldyshContraction, Test
+import KeldyshContraction as KC
 
 @qfields ϕ::Boson
 c, q = ϕ[Classical], ϕ[Quantum]
@@ -7,13 +8,25 @@ elasctic2boson = -(
 )
 L_int = InteractionLagrangian(elasctic2boson)
 
-GF = DressedPropagator(L_int, Val(2), Val(5))
-Σ = SelfEnergy(GF)
-Σk = wigner_transform(Σ)
+GF = @inferred DressedPropagator(L_int, Val(2), Val(5))
+Σ = @inferred SelfEnergy(GF)
+Σk = @inferred wigner_transform(Σ)
+
+@testset "distribution coefficient representation" begin
+    using KeldyshContraction: BosonicDistributionTerm, BosonicDistributions, Momenta
+
+    term = BosonicDistributionTerm([Momenta(0)])
+    real_distribution = BosonicDistributions{Float64}(Dict(term => 1.0))
+    complex_distribution = @inferred im * real_distribution
+
+    @test complex_distribution isa BosonicDistributions{ComplexF64}
+    @test valtype(typeof(complex_distribution.terms)) === ComplexF64
+end
 
 @testset "reduce to spectral" begin
     using KeldyshContraction: reduce_to_spectral
-    tmp = reduce_to_spectral(Σk.keldysh)
+    tmp = @inferred reduce_to_spectral(Σk.keldysh)
+    @test typeof(tmp) === typeof(Σk.keldysh)
     @test length(tmp.diagrams) == 3
     @test Set(abs.(values(tmp.diagrams))) == Set(abs.(values(Σk.keldysh.diagrams)))
 end
@@ -26,30 +39,32 @@ end
         Val(6),
     )
     ds = Diagrams([d], Complex{Rational{Int}}(1.0))
-    @test isequal(reduce_to_spectral(ds), ds)
+    @test isequal(@inferred(reduce_to_spectral(ds)), ds)
 end
 
 @testset "reduce to spectral duplicate check" begin
     using KeldyshContraction: reduce_to_spectral
-    tmp = reduce_to_spectral(Σk.keldysh)
+    tmp = @inferred reduce_to_spectral(Σk.keldysh)
     @test length(tmp.diagrams) == 3
     @test Set(abs.(values(tmp.diagrams))) == Set(abs.(values(Σk.keldysh.diagrams)))
 end
 
 @testset "keldysh to distribution" begin
-    using KeldyshContraction: reduce_to_spectral, kelysh_to_distribution
-    tmp = reduce_to_spectral(Σk.keldysh)
-    ΣkF = kelysh_to_distribution(tmp)
-    iΣkF = im * ΣkF[[3]]
+    using KeldyshContraction: BosonicDistributions, reduce_to_spectral, kelysh_to_distribution
+    tmp = @inferred reduce_to_spectral(Σk.keldysh)
+    ΣkF = @inferred kelysh_to_distribution(tmp)
+    @test ΣkF isa Dict{KC.FixedVector{1,Int},BosonicDistributions{ComplexF64}}
+    iΣkF = @inferred im * ΣkF[[3]]
+    @test iΣkF isa BosonicDistributions{ComplexF64}
     @test length(tmp.diagrams) == 3
     @test isequal(Set(real.(values(iΣkF.terms))), Set([-1 / 16, -1 / 4, 1 / 2]))
 end
 
 @testset "keldysh to distribution multiplicity" begin
     using KeldyshContraction: reduce_to_spectral, kelysh_to_distribution
-    tmp = reduce_to_spectral(Σk.keldysh)
-    ΣkF = kelysh_to_distribution(tmp)
-    iΣkF = im * ΣkF[[3]]
+    tmp = @inferred reduce_to_spectral(Σk.keldysh)
+    ΣkF = @inferred kelysh_to_distribution(tmp)
+    iΣkF = @inferred im * ΣkF[[3]]
     @test length(tmp.diagrams) == 3
     @test isequal(Set(real.(values(iΣkF.terms))), Set([-1 / 16, -1 / 4, 1 / 2]))
     number_of_F = Set(map(t -> length(t.momenta), collect(keys(iΣkF.terms))))
@@ -57,8 +72,10 @@ end
 end
 
 @testset "imaginary part" begin
-    using KeldyshContraction: imaginary_part
-    imΣr = imaginary_part(Σk.retarded)[[3]]
+    using KeldyshContraction: BosonicDistributions, imaginary_part
+    imΣr_all = @inferred imaginary_part(Σk.retarded)
+    @test imΣr_all isa Dict{KC.FixedVector{1,Int},BosonicDistributions{ComplexF64}}
+    imΣr = imΣr_all[[3]]
     @test length(imΣr.terms) == 3
     @test Set(real.(values(imΣr.terms))) == Set([-1 / 16, 1 / 8])
 
@@ -75,7 +92,8 @@ end
 
 @testset "Collision Integral" begin
     using KeldyshContraction: CollisionIntegral
-    ci = CollisionIntegral(Σk)
+    ci = @inferred CollisionIntegral(Σk)
+    @test ci isa CollisionIntegral{ComplexF64,1}
     @test isempty(ci.terms[[2]])
     Cint = ci.terms[[3]]
     @test length(Cint) == 6
