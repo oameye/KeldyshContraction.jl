@@ -55,3 +55,73 @@ end
     different_component = @inferred ψ₁ * ψ₂
     @test !iszero(different_component)
 end
+
+function reference_permutation_sign(permutation)
+    inversions = 0
+    for i in 1:(length(permutation) - 1), j in (i + 1):length(permutation)
+        inversions += permutation[i] > permutation[j]
+    end
+    return iseven(inversions) ? Int8(1) : Int8(-1)
+end
+
+@testset "fermionic Wick permutation parity" begin
+    for permutation in ([1], [1, 2], [2, 1], [1, 3, 2], [2, 3, 1], [3, 2, 1])
+        @test KC.pairing_sign(Fermion, permutation) ==
+            reference_permutation_sign(permutation)
+    end
+end
+
+@testset "fermionic LO propagator mapping" begin
+    ψ₁ = ψ[One]
+    ψ₂ = ψ[Two]
+    bψ₁ = bar(ψ₁)
+    bψ₂ = bar(ψ₂)
+
+    @test KC.propagator_type(ψ₁, bψ₁) === KC.PropagatorType.Retarded
+    @test KC.propagator_type(ψ₁, bψ₂) === KC.PropagatorType.Keldysh
+    @test KC.propagator_type(ψ₂, bψ₂) === KC.PropagatorType.Advanced
+    @test_throws ArgumentError KC.propagator_type(ψ₂, bψ₁)
+
+    @test KC.contraction_filter(KC.Contraction(ψ₁, bψ₁))
+    @test KC.contraction_filter(KC.Contraction(ψ₁, bψ₂))
+    @test KC.contraction_filter(KC.Contraction(ψ₂, bψ₂))
+    @test !KC.contraction_filter(KC.Contraction(ψ₂, bψ₁))
+    @test_throws AssertionError KC.Edge(ψ₂, bψ₁)
+
+    advanced = KC.Edge(ψ₂, bψ₂)
+    retarded = adjoint(advanced)
+    @test KC.is_advanced(advanced)
+    @test KC.is_retarded(retarded)
+    @test KC.is_one(retarded.out)
+    @test KC.is_one(retarded.in)
+end
+
+@testset "fermionic LO matrices" begin
+    ψ₁ = ψ[One]
+    ψ₂ = ψ[Two]
+
+    dR = KC.Diagram([KC.Edge(ψ₁, bar(ψ₁))], Val(1), Val(0))
+    dK = KC.Diagram([KC.Edge(ψ₁, bar(ψ₂))], Val(1), Val(0))
+    dA = KC.Diagram([KC.Edge(ψ₂, bar(ψ₂))], Val(1), Val(0))
+
+    R = KC.Diagrams([dR], ComplexF64(1))
+    K = KC.Diagrams([dK], ComplexF64(2))
+    A = KC.Diagrams([dA], ComplexF64(3))
+    parameter = parameter_monomial(:g)
+
+    G = DressedPropagator(K, R, A, Val(1), parameter)
+    Gm = @inferred KC.matrix(G)
+    @test Gm[1, 1] == R
+    @test Gm[1, 2] == K
+    @test iszero(Gm[2, 1])
+    @test Gm[2, 2] == A
+    @test eltype(Gm) === KC.Diagrams{ComplexF64,Fermion,1,0}
+
+    Σ = SelfEnergy{ComplexF64,Fermion,1,1,0}(K, R, A, parameter)
+    Σm = @inferred KC.matrix(Σ)
+    @test Σm[1, 1] == R
+    @test Σm[1, 2] == K
+    @test iszero(Σm[2, 1])
+    @test Σm[2, 2] == A
+    @test eltype(Σm) === KC.Diagrams{ComplexF64,Fermion,1,0}
+end
