@@ -65,13 +65,17 @@ function Base.show(io::IO, L::InteractionLagrangian)
     return nothing
 end
 
-const T_LATEX = Union{<:QField,Diagrams,Diagram,Edge}
+const T_LATEX = Union{QField,Diagrams,Diagram,Edge}
 function Base.show(io::IO, ::MIME"text/latex", x::T_LATEX)
-    write(io, latexify(x))
+    write(io, "\$")
+    write_latex(io, x)
+    write(io, "\$")
     return nothing
 end
 function Base.show(io::IO, ::MIME"text/latex", L::InteractionLagrangian)
-    write(io, latexify(L.lagrangian))
+    write(io, "\$")
+    write_latex(io, L)
+    write(io, "\$")
     return nothing
 end
 
@@ -142,7 +146,7 @@ function Base.show(io::IO, ds::Diagrams)
     end
     return nothing
 end
-function show_key(io, terms::Dict, key)
+function show_key(io::IO, terms::AbstractDict{K,C}, key::K) where {K,C}
     prefactor = terms[key]
     print_number(io, prefactor)
     if !isempty(key)
@@ -152,12 +156,27 @@ function show_key(io, terms::Dict, key)
     return nothing
 end
 
-function print_number(io, x::Number)
+function print_number(io::IO, x::Real)
     if !SymbolicUtils._isone(x)
-        x = make_real(x)
-        x isa Complex ? write(io, "(") : write(io, "")
         show(io, x)
-        x isa Complex ? write(io, ")") : write(io, "")
+    end
+    return nothing
+end
+function print_number(io::IO, x::Complex)
+    if !SymbolicUtils._isone(x)
+        if iszero(imag(x))
+            show(io, real(x))
+        else
+            write(io, "(")
+            show(io, x)
+            write(io, ")")
+        end
+    end
+    return nothing
+end
+function print_number(io::IO, x::Number)
+    if !SymbolicUtils._isone(x)
+        show(io, x)
     end
     return nothing
 end
@@ -235,10 +254,10 @@ end
 
 function Base.show(io::IO, bds::BosonicDistributionTerm)
     for (i, ms) in enumerate(bds.momenta)
-        if i > 1
-            write(io, "*")
-        end
-        write(io, string("F(", ms, ")"))
+        i > 1 && write(io, "*")
+        write(io, "F(")
+        show(io, ms)
+        write(io, ")")
     end
     return nothing
 end
