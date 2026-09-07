@@ -21,8 +21,8 @@ const contract_q = contract_ϕ[Quantum]
 function assert_supported_type_contract(coefficient::C, ::Type{D}) where {C<:Real,D<:Number}
     c = contract_c
     q = contract_q
-    interaction = -coefficient *
-                  ((c^2 + q^2) * bar(c) * bar(q) + c * q * (bar(c)^2 + bar(q)^2))
+    interaction =
+        -coefficient * ((c^2 + q^2) * bar(c) * bar(q) + c * q * (bar(c)^2 + bar(q)^2))
 
     L = @inferred InteractionLagrangian(interaction)
     G = @inferred DressedPropagator(L, Val(1), Val(3); simplify=false)
@@ -55,7 +55,8 @@ end
 
 @testset "supported type-stability contract" begin
     @testset "exact coefficients" begin
-        @test @inferred(assert_supported_type_contract(1 // 2, KC.ComplexRationals)) === nothing
+        @test @inferred(assert_supported_type_contract(1 // 2, KC.ComplexRationals)) ===
+            nothing
     end
 
     @testset "floating-point coefficients" begin
