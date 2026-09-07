@@ -41,13 +41,15 @@ function assert_supported_public_contract(coefficient::C, ::Type{D}) where {C<:R
     @test @inferred(parameters(L)) isa ParameterMonomial
 
     inout = c(Out()) * bar(q)(In())
-    diagrams = @inferred wick_contraction(
-        inout, L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true
+    diagrams = @inferred(
+        wick_contraction(
+            inout, L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true
+        )
     )
     @test contract_recursively_concrete(typeof(diagrams))
     @test contract_recursively_concrete(typeof(@inferred(topologies(diagrams)))
 
-    G = @inferred DressedPropagator(L, Val(1), Val(3); simplify=false)
+    G = @inferred(DressedPropagator(L, Val(1), Val(3); simplify=false))
     Σ = @inferred SelfEnergy(G)
     Gk = @inferred wigner_transform(G)
     Σk = @inferred wigner_transform(Σ)
