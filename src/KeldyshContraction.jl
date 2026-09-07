@@ -13,11 +13,7 @@ using Combinatorics: Combinatorics
 using SmallCollections: SmallCollections, FixedVector
 using NautyGraphs: NautyGraphs
 using Graphs: Graphs
-
-using Latexify: Latexify, latexify, @latexrecipe
-using MacroTools: MacroTools
-using LaTeXStrings: LaTeXStrings, latexstring
-using DispatchDoctor: @stable, @unstable
+using DispatchDoctor: @stable
 
 const ComplexRationals = Complex{Rational{Int64}}
 
@@ -48,7 +44,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("collision_integral.jl")
 
     # show methods
-    @unstable include("show_methods/latexify_recipes.jl")
+    include("show_methods/latexify_recipes.jl")
     include("show_methods/printing.jl")
 
     export @qfields,
