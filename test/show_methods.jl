@@ -89,12 +89,8 @@ end
     @test contains(repr(MIME"text/latex"(), im * fields), "i ")
     @test contains(repr(MIME"text/latex"(), -im * fields), "-i ")
     @test contains(repr(MIME"text/latex"(), 2im * fields), "2 i ")
-    @test contains(
-        repr(MIME"text/latex"(), complex(1.0, 2.0) * fields), "(1.0 + 2.0 i)"
-    )
-    @test contains(
-        repr(MIME"text/latex"(), complex(1.0, -2.0) * fields), "(1.0 - 2.0 i)"
-    )
+    @test contains(repr(MIME"text/latex"(), complex(1.0, 2.0) * fields), "(1.0 + 2.0 i)")
+    @test contains(repr(MIME"text/latex"(), complex(1.0, -2.0) * fields), "(1.0 - 2.0 i)")
 end
 
 @testset "Structs" begin
