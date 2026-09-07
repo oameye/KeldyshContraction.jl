@@ -54,6 +54,15 @@ end
 
     different_component = @inferred ψ₁ * ψ₂
     @test !iszero(different_component)
+
+    left_associated = @inferred((ψ₁ * ψ₂ * bar(ψ₁)) * bar(ψ₂))
+    product_reference = @inferred((ψ₁ * ψ₂) * (bar(ψ₁) * bar(ψ₂)))
+    @test left_associated == product_reference
+
+    sum = ψ₁ + ψ₂
+    right_multiplied = @inferred sum * bar(ψ₁)
+    distributed = @inferred ψ₁ * bar(ψ₁) + ψ₂ * bar(ψ₁)
+    @test right_multiplied == distributed
 end
 
 function reference_permutation_sign(permutation)
@@ -124,4 +133,51 @@ end
     @test iszero(Σm[2, 1])
     @test Σm[2, 2] == A
     @test eltype(Σm) === KC.Diagrams{ComplexF64,Fermion,1,0}
+end
+
+@testset "fermionic multi-family first-order reference" begin
+    @qfields ψref::Fermion χref::Fermion
+    ψ₁ = ψref[One]
+    χ₂ = χref[Two]
+
+    vertex = @inferred ψ₁ * χ₂ * bar(ψ₁) * bar(χ₂)
+    L = @inferred InteractionLagrangian(vertex, :u)
+
+    @test Set(field_families(L)) == Set((ψref, χref))
+    @test_throws ArgumentError DressedPropagator(L, Val(1), Val(3); simplify=false)
+
+    G = @inferred DressedPropagator(L, Val(1), Val(3); target=ψref, simplify=false)
+    @test G isa DressedPropagator{KC.ComplexRationals,Fermion,1,3,0}
+    @test length(G.retarded) == 1
+    @test length(G.keldysh) == 1
+    @test isempty(G.advanced)
+    @test only(values(G.retarded.diagrams)) == -im
+    @test only(values(G.keldysh.diagrams)) == -im
+
+    retarded_edges = KC.contractions(only(keys(G.retarded.diagrams)))
+    @test count(KC.is_retarded, retarded_edges) == 2
+    @test count(KC.is_advanced, retarded_edges) == 1
+    @test count(KC.is_keldysh, retarded_edges) == 0
+
+    keldysh_edges = KC.contractions(only(keys(G.keldysh.diagrams)))
+    @test count(KC.is_retarded, keldysh_edges) == 1
+    @test count(KC.is_advanced, keldysh_edges) == 1
+    @test count(KC.is_keldysh, keldysh_edges) == 1
+
+    Σ = @inferred SelfEnergy(G)
+    @test Σ isa SelfEnergy{KC.ComplexRationals,Fermion,1,1,0}
+    @test length(Σ.retarded) == 1
+    @test isempty(Σ.keldysh)
+    @test isempty(Σ.advanced)
+    @test only(values(Σ.retarded.diagrams)) == -im
+
+    internal_edge = only(KC.contractions(only(keys(Σ.retarded.diagrams))))
+    @test KC.is_advanced(internal_edge)
+    @test field_family(internal_edge.out) === χref
+    @test field_family(internal_edge.in) === χref
+
+    Gm = @inferred KC.matrix(G)
+    Σm = @inferred KC.matrix(Σ)
+    @test iszero(Gm[2, 1])
+    @test iszero(Σm[2, 1])
 end

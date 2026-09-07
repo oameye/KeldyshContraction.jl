@@ -33,6 +33,20 @@ end
     return QMul{C,Fermion}(coeff, args_nc, Val(:presorted))
 end
 
+# The generic right-multiplication shorthands are valid for commuting bosons but reverse
+# operand order. Fermionic products must preserve the original noncommutative order before
+# canonicalization so the accumulated Grassmann sign is correct.
+function Base.:*(a::QMul{C,Fermion}, b::Field{Fermion}) where {C<:Number}
+    return canonical_qmul(a.arg_c, vcat(a.args_nc, Field{Fermion}[b]))
+end
+function Base.:*(a::QAdd{C,Fermion}, b::Field{Fermion}) where {C<:Number}
+    return normalized_add(QMul{C,Fermion}[term * b for term in a.arguments])
+end
+function Base.:*(a::QAdd{C1,Fermion}, b::QMul{C2,Fermion}) where {C1<:Number,C2<:Number}
+    C = promote_type(C1, C2)
+    return normalized_add(QMul{C,Fermion}[term * b for term in a.arguments])
+end
+
 """Permutation parity used by fermionic Wick pairings."""
 function pairing_sign(::Type{Fermion}, permutation)::Int8
     sign = Int8(1)
