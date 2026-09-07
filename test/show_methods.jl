@@ -97,7 +97,7 @@ end
     @test repr(MIME"text/plain"(), DP) ==
         "Dressed Propagator:\nkeldysh:  Gᴷ(y₁,y₁)\nretarded: Gᴷ(y₁,y₁)\nadvanced: Gᴷ(y₁,y₁)"
 
-    diagram = first(ds)
+    diagram = first(keys(ds.diagrams))
     io = IOBuffer()
     @test @inferred(show(io, diagram)) === nothing
     io = IOBuffer()
