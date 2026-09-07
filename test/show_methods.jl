@@ -142,9 +142,7 @@ end
     @test contains(negative_latex, "- 2 G^K")
     @test !contains(negative_latex, "+ -")
 
-    two_edge_diagram = Diagram(
-        [Edge(ϕᶜ, bar(ϕᶜ)), Edge(ϕᶜ, bar(ϕᶜ))], Val(2), Val(0)
-    )
+    two_edge_diagram = Diagram([Edge(ϕᶜ, bar(ϕᶜ)), Edge(ϕᶜ, bar(ϕᶜ))], Val(2), Val(0))
     two_edge_latex = repr(MIME"text/latex"(), two_edge_diagram)
     @test count(==('G'), two_edge_latex) == 2
 
