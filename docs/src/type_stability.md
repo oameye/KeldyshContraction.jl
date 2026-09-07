@@ -21,9 +21,9 @@ For `Boson`, the guarantee covers package-owned public entry points for:
 
 - field construction and access;
 - coefficient conversion and rationalization;
-- `InteractionLagrangian`;
+- `InteractionLagrangian` and `LagrangianSum`;
 - `wick_contraction`;
-- `DressedPropagator` and `SelfEnergy`;
+- `DressedPropagator` and `SelfEnergy`, including parameter-keyed sum results;
 - matrix and topology access;
 - Wigner transformation;
 - package-owned plain-text and LaTeX rendering.
@@ -40,12 +40,15 @@ For `Fermion`, the guarantee covers the v1 fermionic physics implemented by the 
 - Grassmann field algebra;
 - explicit coefficient conversion and rationalization;
 - `InteractionLagrangian`, including multi-family target selection;
+- `LagrangianSum` for sums whose terms share the same physical field families;
 - `wick_contraction` with fermionic permutation signs;
-- `DressedPropagator` and `SelfEnergy`;
+- `DressedPropagator` and `SelfEnergy`, including parameter-keyed sum results;
 - statistics-dispatched `matrix` access with the fermionic upper-triangular LO layout.
 
 Representative exact and floating-point fermionic pipelines are exercised with `@inferred`
 and recursively concrete result checks from field algebra through self-energy construction.
+The sum workload additionally exercises distinct perturbation parameters and the mixed
+second-order parameter monomial under the same concrete result representation.
 
 Fermionic Wigner transformation and collision-integral physics are not part of this guarantee.
 They are explicitly outside the fermionic v1 scope and must not be inferred from the bosonic
@@ -60,7 +63,8 @@ The guarantee is enforced by several independent gates:
 2. every guaranteed coefficient/statistics domain is exercised through package-owned public
    computational APIs with `@inferred`;
 3. resulting public representations are recursively checked for concrete field types;
-4. JET package analysis must report no package-owned inference/runtime-dispatch errors;
+4. JET package analysis and representative `JET.@test_opt` workloads must report no
+   package-owned inference/runtime-dispatch errors;
 5. `@unstable` exemptions are forbidden under `src/`;
 6. Codecov is retained as an informational coverage trend and must upload successfully, but
    private implementation lines are not a type-stability acceptance target.

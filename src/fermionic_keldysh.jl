@@ -158,51 +158,14 @@ function propagator_fields(
     return family[One], family[Two]
 end
 
-function DressedPropagator(
-    L::InteractionLagrangian{C,Fermion},
-    ::Val{O},
-    ::Val{E};
-    target=nothing,
-    simplify=true,
-    _set_reg_to_zero=true,
-    kwargs...,
-) where {C<:Number,O,E}
-    @assert number_of_propagators(L) * O + 1 == E "The supplied Val{edges} must equal the interaction's propagator count times Val{order}, plus the external propagator"
-    onefield, twofield = propagator_fields(L, target)
-
-    keldysh = wick_contraction(
+function propagator_external_products(
+    ::Type{Fermion}, onefield::Field{Fermion}, twofield::Field{Fermion}
+)
+    return (
         onefield(Out()) * bar(twofield)(In()),
-        L,
-        Val(O),
-        Val(E);
-        simplify,
-        _set_reg_to_zero,
-        kwargs...,
-    )
-    retarded = wick_contraction(
         onefield(Out()) * bar(onefield)(In()),
-        L,
-        Val(O),
-        Val(E);
-        simplify,
-        _set_reg_to_zero,
-        kwargs...,
-    )
-    advanced = wick_contraction(
         twofield(Out()) * bar(twofield)(In()),
-        L,
-        Val(O),
-        Val(E);
-        simplify,
-        _set_reg_to_zero,
-        kwargs...,
     )
-
-    for component in (keldysh, retarded, advanced)
-        filter_nonzero!(component)
-    end
-
-    return DressedPropagator(keldysh, retarded, advanced, Val(O), parameters(L)^O)
 end
 
 function self_energy_type(::Type{Fermion}, dict::SmallCollections.SmallDict)
