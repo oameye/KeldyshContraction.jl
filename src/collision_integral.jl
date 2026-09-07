@@ -167,24 +167,24 @@ function reduce_to_spectral(ds::Diagrams{C,S,E1,E2}) where {C<:Number,S<:Statist
             push!(ds′, d, coeff)
             continue
         elseif aa_simplification
-            contractions′ = FixedVector(
+            contractions′ = FixedVector{E1,Edge{S}}(
                 i ∈ idxs ? make_spectral(e) : e for (i, e) in enumerate(_contractions)
             )
             d′ = Diagram(contractions′, d.topology)
             push!(ds′, d′, -coeff)
-            contractions′ = FixedVector(
+            contractions′ = FixedVector{E1,Edge{S}}(
                 i ∈ idxs ? make_retarded(e) : e for (i, e) in enumerate(_contractions)
             )
             d′ = Diagram(contractions′, d.topology)
             push!(ds′, d′, -coeff)
             continue
         elseif ar_simplification
-            contractions′ = FixedVector(
+            contractions′ = FixedVector{E1,Edge{S}}(
                 i ∈ idxs ? make_spectral(e) : e for (i, e) in enumerate(_contractions)
             )
             d′ = Diagram(contractions′, d.topology)
             push!(ds′, d′, coeff)
-            contractions′ = FixedVector(
+            contractions′ = FixedVector{E1,Edge{S}}(
                 if i == idxs[1]
                     make_retarded(e)
                 elseif i == idxs[2]
