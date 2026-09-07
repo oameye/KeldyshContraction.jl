@@ -90,7 +90,7 @@ function construct_momenta(dep_idx, free_idx, P)
     return out
 end
 
-function construct_linear_system(contractions)::Matrix{Int}
+function construct_linear_system(contractions)
     A = zeros(Int, 2, length(contractions))
     pos = positions.(contractions)
     for (j, ps) in enumerate(pos)
