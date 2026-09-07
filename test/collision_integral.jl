@@ -15,6 +15,8 @@ GF = @inferred DressedPropagator(L_int, Val(2), Val(5))
 @testset "distribution coefficient representation" begin
     using KeldyshContraction: BosonicDistributionTerm, BosonicDistributions, Momenta
 
+    @test isempty(@inferred(BosonicDistributions()))
+
     term = BosonicDistributionTerm([Momenta(0)])
     real_distribution = BosonicDistributions{Float64}(Dict(term => 1.0))
     complex_distribution = @inferred im * real_distribution
@@ -51,7 +53,10 @@ end
 
 @testset "keldysh to distribution" begin
     using KeldyshContraction:
-        BosonicDistributions, reduce_to_spectral, kelysh_to_distribution
+        BosonicDistributionTerm,
+        BosonicDistributions,
+        reduce_to_spectral,
+        kelysh_to_distribution
     tmp = @inferred reduce_to_spectral(Σk.keldysh)
     ΣkF = @inferred kelysh_to_distribution(tmp)
     @test ΣkF isa Dict{KC.FixedVector{1,Int},BosonicDistributions{ComplexF64}}
@@ -59,6 +64,11 @@ end
     @test iΣkF isa BosonicDistributions{ComplexF64}
     @test length(tmp.diagrams) == 3
     @test isequal(Set(real.(values(iΣkF.terms))), Set([-1 / 16, -1 / 4, 1 / 2]))
+
+    diagram = first(keys(tmp.diagrams))
+    single_distribution = @inferred kelysh_to_distribution(diagram)
+    @test first(single_distribution) isa BosonicDistributionTerm
+    @test last(single_distribution) isa Number
 end
 
 @testset "keldysh to distribution multiplicity" begin
@@ -73,12 +83,17 @@ end
 end
 
 @testset "imaginary part" begin
-    using KeldyshContraction: BosonicDistributions, imaginary_part
+    using KeldyshContraction: BosonicDistributionTerm, BosonicDistributions, imaginary_part
     imΣr_all = @inferred imaginary_part(Σk.retarded)
     @test imΣr_all isa Dict{KC.FixedVector{1,Int},BosonicDistributions{ComplexF64}}
     imΣr = imΣr_all[[3]]
     @test length(imΣr.terms) == 3
     @test Set(real.(values(imΣr.terms))) == Set([-1 / 16, 1 / 8])
+
+    diagram = first(keys(Σk.retarded.diagrams))
+    single_imaginary = @inferred imaginary_part(diagram)
+    @test first(single_imaginary) isa BosonicDistributionTerm
+    @test last(single_imaginary) isa Number
 
     imΣr_string = repr(imΣr)
     @test contains(imΣr_string, "-0.0625*F(q₁)*F(q₂)")
