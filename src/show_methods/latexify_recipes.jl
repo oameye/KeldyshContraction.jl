@@ -134,9 +134,14 @@ function write_latex_number(io::IO, x::Number)
     return nothing
 end
 
-function write_latex(io::IO, term::QMul)
-    coefficient = term.arg_c
-    fields = term.args_nc
+const LatexOrderedReal = Union{Integer,Rational,AbstractFloat}
+_latex_negative_real(x::LatexOrderedReal) = x < 0
+function _latex_negative_real(x::Complex{T}) where {T<:LatexOrderedReal}
+    return iszero(imag(x)) && real(x) < 0
+end
+_latex_negative_real(::Number) = false
+
+function write_latex_qmul(io::IO, coefficient, fields)
     if isempty(fields)
         write_latex_number(io, coefficient)
         return nothing
@@ -157,10 +162,21 @@ function write_latex(io::IO, term::QMul)
     return nothing
 end
 
+function write_latex(io::IO, term::QMul)
+    write_latex_qmul(io, term.arg_c, term.args_nc)
+    return nothing
+end
+
 function write_latex(io::IO, sum::QAdd)
     for (i, term) in enumerate(sum.arguments)
-        i > 1 && write(io, " + ")
-        write_latex(io, term)
+        coefficient = term.arg_c
+        if _latex_negative_real(coefficient)
+            write(io, isone(i) ? "- " : " - ")
+            write_latex_qmul(io, -coefficient, term.args_nc)
+        else
+            i > 1 && write(io, " + ")
+            write_latex_qmul(io, coefficient, term.args_nc)
+        end
     end
     return nothing
 end
@@ -238,15 +254,25 @@ function write_latex(io::IO, diagram::Diagram)
     return nothing
 end
 
+function write_latex_diagram_term(io::IO, diagram::Diagram, coefficient)
+    if !SymbolicUtils._isone(coefficient)
+        write_latex_number(io, coefficient)
+        isempty(diagram) || write(io, " ")
+    end
+    write_latex(io, diagram)
+    return nothing
+end
+
 function write_latex(io::IO, diagrams::Diagrams)
     entries = collect(diagrams.diagrams)
     for (i, (diagram, coefficient)) in enumerate(entries)
-        i > 1 && write(io, " + ")
-        if !SymbolicUtils._isone(coefficient)
-            write_latex_number(io, coefficient)
-            isempty(diagram) || write(io, " ")
+        if _latex_negative_real(coefficient)
+            write(io, isone(i) ? "- " : " - ")
+            write_latex_diagram_term(io, diagram, -coefficient)
+        else
+            i > 1 && write(io, " + ")
+            write_latex_diagram_term(io, diagram, coefficient)
         end
-        write_latex(io, diagram)
     end
     return nothing
 end
