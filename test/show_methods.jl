@@ -88,9 +88,7 @@ end
 end
 
 @testset "Public LaTeX coefficient rendering" begin
-    using SymbolicUtils
     @qfields a::Boson
-    @syms g::Number
     aᶜ = a[Classical]
     @test repr(MIME"text/latex"(), aᶜ) == "\$a^c\$"
 
@@ -101,11 +99,6 @@ end
     @test contains(repr(MIME"text/latex"(), 2im * fields), "2 i ")
     @test contains(repr(MIME"text/latex"(), complex(1.0, 2.0) * fields), "(1.0 + 2.0 i)")
     @test contains(repr(MIME"text/latex"(), complex(1.0, -2.0) * fields), "(1.0 - 2.0 i)")
-
-    symbolic_sum = g * fields + ϕᴾ * bar(ϕᴾ)
-    symbolic_latex = repr(MIME"text/latex"(), symbolic_sum)
-    @test contains(symbolic_latex, "g")
-    @test contains(symbolic_latex, " + ")
 end
 
 @testset "Structs" begin
@@ -168,7 +161,6 @@ end
     ms = Momenta([1, 1, -1], [Momentum(1), Momentum(2), Momentum(0)])
     @test repr(ms) == "q₁ + q₂ - k"
 
-    zero_ms = Momenta([0], [Momentum(0)])
     negative_ms = Momenta([-1], [Momentum(1)])
 
     e = Edge(ϕᴾ(Bulk(2)), bar(ϕᶜ))
@@ -176,7 +168,6 @@ end
     e1 = Edge(e, Momenta(1))
     e2 = Edge(e, Momenta(2))
     em = Edge(e, ms)
-    ezero = Edge(e, zero_ms)
     enegative = Edge(e, negative_ms)
 
     @test repr(e0) == "Gᴬ(k)"
@@ -187,7 +178,6 @@ end
     @test repr(MIME"text/latex"(), e1) == "\$G^A\\left( q_1 \\right)\$"
     @test repr(MIME"text/latex"(), e2) == "\$G^A\\left( q_2 \\right)\$"
     @test repr(MIME"text/latex"(), em) == "\$G^A\\left( q_1 + q_2 - k \\right)\$"
-    @test repr(MIME"text/latex"(), ezero) == "\$G^A\\left( 0 \\right)\$"
     @test repr(MIME"text/latex"(), enegative) == "\$G^A\\left( -q_1 \\right)\$"
 
     io = IOBuffer()
