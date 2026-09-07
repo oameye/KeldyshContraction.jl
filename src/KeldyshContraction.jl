@@ -27,7 +27,6 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("keldysh_algebra/QTerm.jl")
     include("keldysh_algebra/field_math.jl")
     include("keldysh_algebra/hashing.jl")
-    include("fermionic_keldysh.jl")
     include("parameters.jl")
     include("InteractionLagrangian.jl")
 
@@ -40,6 +39,9 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("wick_contractions.jl")
     include("filters.jl")
     include("self_energy.jl")
+
+    # Statistics extensions
+    include("fermionic_keldysh.jl")
 
     include("propagator_algebra/wigner.jl")
     include("collision_integral.jl")
