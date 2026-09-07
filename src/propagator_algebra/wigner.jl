@@ -4,7 +4,7 @@ function wigner_transform(gf::DressedPropagator{C,S,O,E1,E2}) where {C,S,O,E1,E2
     keldysh = construct_momenta_from_gf(gf.keldysh)
     retarded = construct_momenta_from_gf(gf.retarded)
     advanced = construct_momenta_from_gf(gf.advanced)
-    return DressedPropagator(keldysh, retarded, advanced, Val(O), gf.parameter)
+    return DressedPropagator{C,S,O,E1,E2}(keldysh, retarded, advanced, gf.parameter)
 end
 
 function wigner_transform(se::SelfEnergy{C,S,O,E1,E2}) where {C,S,O,E1,E2}
@@ -16,21 +16,16 @@ end
 
 function construct_momenta_from_gf(d::Diagram{S,E1,E2}) where {S,E1,E2}
     if iszero(E2)
-        momenta = map(positions.(d.contractions)) do ps
-            if has_in(ps) || has_out(ps)
-                m = Momenta(0)
-            else
-                m = Momenta(1)
-            end
-            return m
-        end
+        momenta = FixedVector{E1,Momenta}(
+            Momenta(has_in(ps) || has_out(ps) ? 0 : 1) for ps in positions.(d.contractions)
+        )
     else
         A = construct_linear_system(d.contractions)
         dep_idx, free_idx, P = solve_linear_system(A)
-        momenta = construct_momenta(dep_idx, free_idx, P)
-        pushfirst!(momenta, Momenta(0))
-        push!(momenta, Momenta(0))
-        momenta = FixedVector(momenta)
+        momenta_dynamic = construct_momenta(dep_idx, free_idx, P)
+        pushfirst!(momenta_dynamic, Momenta(0))
+        push!(momenta_dynamic, Momenta(0))
+        momenta = FixedVector{E1,Momenta}(momenta_dynamic)
     end
     return Diagram(d, momenta)
 end
@@ -45,14 +40,9 @@ end
 
 function construct_momenta_from_self_energy(d::Diagram{S,E1,E2}) where {S,E1,E2}
     if iszero(E2)
-        momenta = map(positions.(d.contractions)) do ps
-            if has_in(ps) || has_out(ps)
-                m = Momenta(0)
-            else
-                m = Momenta(1)
-            end
-            return m
-        end
+        momenta = FixedVector{E1,Momenta}(
+            Momenta(has_in(ps) || has_out(ps) ? 0 : 1) for ps in positions.(d.contractions)
+        )
     else
         A = construct_linear_system(d.contractions)
         A = hcat([-1; 0], A)
@@ -63,8 +53,8 @@ function construct_momenta_from_self_energy(d::Diagram{S,E1,E2}) where {S,E1,E2}
         end
 
         dep_idx, free_idx, P = solve_linear_system(A)
-        momenta = construct_momenta(dep_idx, free_idx, P)
-        momenta = FixedVector(momenta)
+        momenta_dynamic = construct_momenta(dep_idx, free_idx, P)
+        momenta = FixedVector{E1,Momenta}(momenta_dynamic)
     end
     return Diagram(d, momenta)
 end
@@ -81,7 +71,7 @@ function construct_momenta(dep_idx, free_idx, P)
     l = size(P, 2)
 
     if isone(length(unique(eachrow(P))))
-        return [Momenta(0) for _ in 1:l]
+        return Momenta[Momenta(0) for _ in 1:l]
     end
     out = Vector{Momenta}(undef, l)
 
@@ -132,7 +122,7 @@ function solve_linear_system(A::Matrix{Int})
     if idx == 1
         error("No two dependent index found in the linear system.")
     end
-    idxs = [1, idx]
+    idxs = Int[1, idx]
     idxs_diff = setdiff(1:size(A, 2), idxs)
     A1 = A[:, idxs]
     A2 = A[:, idxs_diff]
@@ -145,6 +135,6 @@ function solve_linear_system(A::Matrix{Int})
         error("A[:, dep_idx] is singular and not invertible.")
     end
 
-    P = -inv(A1) * A2
+    P = -(A1 \ A2)
     return idxs, idxs_diff, P
 end
