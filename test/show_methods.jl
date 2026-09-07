@@ -45,6 +45,7 @@ using KeldyshContraction: Regularisation.Minus as Minus
         "\$G^K\\left( x_1, y_1 \\right)\$",
         "\$G^R\\left( x_1, y_1 \\right)\$",
         "\$G^A\\left( x_1, y_1 \\right)\$",
+        "\$G^A\\left( y_2, y_1 \\right)\$",
     ]
 
     for (i, o) in zip(input, output_latex)
@@ -114,6 +115,8 @@ end
     ds = Diagrams(
         [Diagram([Edge(ϕᶜ, bar(ϕᶜ))], Val(1), Val(0))], Complex{Rational{Int}}(1.0)
     )
+    @test repr(MIME"text/latex"(), ds) == "\$G^K\\left( y_1, y_1 \\right)\$"
+
     DP = DressedPropagator(ds, ds, ds, Val(1), parameter_monomial(g))
     @test repr(MIME"text/plain"(), DP) ==
         "Dressed Propagator:\nkeldysh:  Gᴷ(y₁,y₁)\nretarded: Gᴷ(y₁,y₁)\nadvanced: Gᴷ(y₁,y₁)"
@@ -141,10 +144,16 @@ end
     e0 = Edge(e, Momenta(0))
     e1 = Edge(e, Momenta(1))
     e2 = Edge(e, Momenta(2))
+    em = Edge(e, ms)
 
     @test repr(e0) == "Gᴬ(k)"
     @test repr(e1) == "Gᴬ(q₁)"
     @test repr(e2) == "Gᴬ(q₂)"
+
+    @test repr(MIME"text/latex"(), e0) == "\$G^A\\left( k \\right)\$"
+    @test repr(MIME"text/latex"(), e1) == "\$G^A\\left( q_1 \\right)\$"
+    @test repr(MIME"text/latex"(), e2) == "\$G^A\\left( q_2 \\right)\$"
+    @test repr(MIME"text/latex"(), em) == "\$G^A\\left( q_1 + q_2 - k \\right)\$"
 
     io = IOBuffer()
     @test @inferred(show(io, ms)) === nothing
