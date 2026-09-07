@@ -30,9 +30,7 @@ end
 BosonicDistributions() = BosonicDistributions{ComplexRationals}()
 
 function Base.push!(
-    collection::BosonicDistributions{C},
-    diagram::BosonicDistributionTerm,
-    prefactor::Number,
+    collection::BosonicDistributions{C}, diagram::BosonicDistributionTerm, prefactor::Number
 ) where {C<:Number}
     value = _simplify(convert(C, prefactor))
     if haskey(collection.terms, diagram)
@@ -88,9 +86,12 @@ function filter_nonzero!(collection::BosonicDistributions)
     return collection
 end
 
-_real_distribution_coefficient_type(::Type{C}) where {C<:Number} =
-    promote_type(C, Rational{Int64})
-_distribution_coefficient_type(::Type{C}) where {C<:Number} = promote_type(C, ComplexRationals)
+function _real_distribution_coefficient_type(::Type{C}) where {C<:Number}
+    return promote_type(C, Rational{Int64})
+end
+function _distribution_coefficient_type(::Type{C}) where {C<:Number}
+    return promote_type(C, ComplexRationals)
+end
 
 #################################
 #      imaginary_part Im(Σᴿ)
@@ -206,7 +207,9 @@ Convert a `Diagrams` object to a dictionary of `BosonicDistributions`. By substi
 Gᴷ(k) = im*0.5*F(k)A(k)
 
 """
-function kelysh_to_distribution(ds::Diagrams{C,S,E1,E2}) where {C<:Number,S<:Statistics,E1,E2}
+function kelysh_to_distribution(
+    ds::Diagrams{C,S,E1,E2}
+) where {C<:Number,S<:Statistics,E1,E2}
     D = _distribution_coefficient_type(C)
     topo = topologies(ds)
     dict = Dict{FixedVector{E2,Int},BosonicDistributions{D}}()
