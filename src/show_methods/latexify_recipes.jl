@@ -50,20 +50,42 @@ function write_latex_symbol(io::IO, symbol::Symbol)
     return nothing
 end
 
-function write_latex(io::IO, field::Field{Boson})
-    if is_barred(field)
-        write(io, "\\bar{", string(name(field)), is_classical(field) ? "ᶜ" : "ᴾ", "}")
-    else
-        write_latex_symbol(io, name(field))
-        write(io, is_classical(field) ? "^c" : "^P")
-    end
-
+function write_latex_regularisation(io::IO, field::Field)
     reg = Int(regularisation(field))
     if reg == 1
         write(io, "^+")
     elseif reg == -1
         write(io, "^{-}")
     end
+    return nothing
+end
+
+function write_latex_field(io::IO, field::Field{Boson}, ::Val{:standalone})
+    if is_barred(field)
+        write(io, "\\bar{", string(name(field)), is_classical(field) ? "ᶜ" : "ᴾ", "}")
+    else
+        write_latex_symbol(io, name(field))
+        write(io, is_classical(field) ? "^c" : "^P")
+    end
+    write_latex_regularisation(io, field)
+    return nothing
+end
+
+function write_latex_field(io::IO, field::Field{Boson}, ::Val{:expression})
+    if is_barred(field)
+        write(io, "\\bar{")
+        write_latex_symbol(io, name(field))
+        write(io, is_classical(field) ? "^c}" : "^P}")
+    else
+        write_latex_symbol(io, name(field))
+        write(io, is_classical(field) ? "^c" : "^P")
+    end
+    write_latex_regularisation(io, field)
+    return nothing
+end
+
+function write_latex(io::IO, field::Field{Boson})
+    write_latex_field(io, field, Val(:standalone))
     return nothing
 end
 
@@ -130,7 +152,7 @@ function write_latex(io::IO, term::QMul)
     end
     for (i, field) in enumerate(fields)
         i > 1 && write(io, " ")
-        write_latex(io, field)
+        write_latex_field(io, field, Val(:expression))
     end
     return nothing
 end
