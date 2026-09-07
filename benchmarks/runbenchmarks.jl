@@ -8,11 +8,13 @@ include("two_body_loss.jl")
 include("two_body_scattering.jl")
 include("canonicalize.jl")
 include("irreducible.jl")
+include("fermionic_lagrangian_sum.jl")
 
 benchmark_two_body_loss!(SUITE)
 benchmark_two_body_scattering!(SUITE)
 benchmark_canonicalize!(SUITE)
 benchmark_irreducible!(SUITE)
+benchmark_fermionic_lagrangian_sum!(SUITE)
 
 BenchmarkTools.tune!(SUITE)
 results = BenchmarkTools.run(SUITE; verbose=true)

@@ -155,10 +155,16 @@ KeldyshContraction.parameter_monomial
 
 ```@docs
 InteractionLagrangian
+KeldyshContraction.LagrangianSum
 ```
 
 Single-family interactions infer their target propagator. Multi-family interactions use the
 same explicit `target` field-family selection for bosonic and fermionic statistics.
+
+Adding `InteractionLagrangian`s with common physical field families constructs a
+`LagrangianSum{C,S}`. `DressedPropagator` supports these sums for both `Boson` and `Fermion`;
+distinct perturbation processes remain separated by canonical `ParameterMonomial` keys, and
+higher orders include the corresponding mixed monomials.
 
 ## Wick contraction
 
@@ -178,8 +184,13 @@ value data. `DressedPropagator` stores semantic R/A/K components independently o
 `matrix` supplies the statistics-specific layout. In particular, the fermionic LO matrix is
 `[[R,K],[0,A]]`, while the bosonic RAK matrix is `[[K,R],[A,0]]`.
 
+For a `LagrangianSum`, `DressedPropagator` returns a parameter-keyed
+`DressedPropagatorSum`. Each stored value is the same concrete `DressedPropagator{C,S,...}`
+used by the single-interaction path.
+
 ```@docs
 DressedPropagator
+KeldyshContraction.DressedPropagatorSum
 KeldyshContraction.PropagatorType
 KeldyshContraction.matrix(::DressedPropagator)
 ```
@@ -189,7 +200,11 @@ KeldyshContraction.matrix(::DressedPropagator)
 `SelfEnergy` likewise stores semantic R/A/K components. The fermionic LO self-energy matrix
 is `[[R,K],[0,A]]`; the bosonic self-energy uses `[[0,A],[R,K]]`.
 
+Applying `SelfEnergy` to a `DressedPropagatorSum` preserves the parameter-monomial keys and
+returns a concrete `SelfEnergySum`.
+
 ```@docs
 KeldyshContraction.SelfEnergy
+KeldyshContraction.SelfEnergySum
 KeldyshContraction.matrix(::KeldyshContraction.SelfEnergy)
 ```
