@@ -181,3 +181,44 @@ end
     @test iszero(Gm[2, 1])
     @test iszero(Σm[2, 1])
 end
+
+@testset "fermionic indexed-generator identity" begin
+    spin_up = KC.FieldIndices(KC.FieldIndex(:spin, 1))
+    spin_down = KC.FieldIndices(KC.FieldIndex(:spin, 2))
+    ψup = FieldFamily{Fermion}(:ψindexed, spin_up)[One]
+    ψdown = FieldFamily{Fermion}(:ψindexed, spin_down)[One]
+
+    @test !iszero(@inferred(ψup * ψdown))
+    @test iszero(@inferred(ψup * ψup))
+    @test field_family(ψup) != field_family(ψdown)
+end
+
+@testset "fermionic signed diagram cancellation" begin
+    ψ₁ = ψ[One]
+    diagram = KC.Diagram([KC.Edge(ψ₁, bar(ψ₁))], Val(1), Val(0))
+    diagrams = KC.Diagrams{ComplexF64,Fermion,1,0}()
+
+    push!(diagrams, diagram, 1)
+    @test length(diagrams) == 1
+    push!(diagrams, diagram, -1)
+    @test iszero(diagrams)
+end
+
+@testset "fermionic LO Dyson matrix oracle" begin
+    GR, GK, GA = 2, 3, 5
+    ΣR, ΣK, ΣA = 7, 11, 13
+
+    G0 = [GR GK; 0 GA]
+    ΣLO = [ΣR ΣK; 0 ΣA]
+    correction = G0 * ΣLO * G0
+
+    expected = [
+        GR * ΣR * GR GR * ΣR * GK + GR * ΣK * GA + GK * ΣA * GA
+        0 GA * ΣA * GA
+    ]
+    @test correction == expected
+    @test iszero(correction[2, 1])
+
+    bosonic_slot_layout = [0 ΣA; ΣR ΣK]
+    @test !iszero((G0 * bosonic_slot_layout * G0)[2, 1])
+end
