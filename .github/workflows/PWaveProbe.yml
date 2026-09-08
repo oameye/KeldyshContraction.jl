@@ -1,0 +1,24 @@
+name: PWave Probe
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Run p-wave Fourier probe
+        run: julia --project research/pwave_fourier_probe.jl
