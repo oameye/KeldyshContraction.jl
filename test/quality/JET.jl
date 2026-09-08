@@ -1,5 +1,6 @@
 using KeldyshContraction
-using KeldyshContraction: matrix
+using KeldyshContraction:
+    MomentumBasis, RoutingEdge, basis_momentum, matrix, momentum_routing, routing_matrix
 using Test
 using JET
 
@@ -35,6 +36,16 @@ function derivative_fermionic_jet_workload()
     return derivatives(∂xχ₂), matrix(G), matrix(Σ)
 end
 
+function momentum_routing_jet_workload()
+    basis = MomentumBasis(2)
+    linear = basis_momentum(basis, 1) - 2 * basis_momentum(basis, 2)
+    edges = RoutingEdge[
+        RoutingEdge(1, 2), RoutingEdge(2, 3), RoutingEdge(3, 1), RoutingEdge(1, 3)
+    ]
+    routing = momentum_routing(edges)
+    return linear, length(routing.basis), routing_matrix(routing)
+end
+
 @static if isempty(VERSION.prerelease)
     @testset "JET report_package" begin
         rep = JET.report_package(KeldyshContraction; target_modules=(KeldyshContraction,))
@@ -52,5 +63,9 @@ end
 
     @testset "JET derivative fermionic workload" begin
         JET.@test_opt target_modules=(KeldyshContraction,) derivative_fermionic_jet_workload()
+    end
+
+    @testset "JET exact momentum-routing workload" begin
+        JET.@test_opt target_modules=(KeldyshContraction,) momentum_routing_jet_workload()
     end
 end
