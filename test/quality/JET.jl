@@ -26,6 +26,15 @@ function fermionic_lagrangian_sum_jet_workload()
     return matrix(G[:u]), matrix(Σ[:v])
 end
 
+function derivative_fermionic_jet_workload()
+    ∂xχ₂ = partial(jet_χ₂, :x)
+    interaction = jet_ψ₁ * ∂xχ₂ * bar(jet_ψ₁) * bar(∂xχ₂)
+    L = InteractionLagrangian(interaction, :d)
+    G = DressedPropagator(L, Val(1), Val(3); target=jet_ψ, simplify=false)
+    Σ = SelfEnergy(G)
+    return derivatives(∂xχ₂), matrix(G), matrix(Σ)
+end
+
 @static if isempty(VERSION.prerelease)
     @testset "JET report_package" begin
         rep = JET.report_package(KeldyshContraction; target_modules=(KeldyshContraction,))
@@ -39,5 +48,9 @@ end
 
     @testset "JET fermionic LagrangianSum workload" begin
         JET.@test_opt target_modules=(KeldyshContraction,) fermionic_lagrangian_sum_jet_workload()
+    end
+
+    @testset "JET derivative fermionic workload" begin
+        JET.@test_opt target_modules=(KeldyshContraction,) derivative_fermionic_jet_workload()
     end
 end

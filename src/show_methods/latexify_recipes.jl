@@ -50,6 +50,15 @@ function write_latex_symbol(io::IO, symbol::Symbol)
     return nothing
 end
 
+function write_latex_derivatives(io::IO, field::Field)
+    for axis in derivative_multiindex(field)
+        write(io, "\\partial_{")
+        write_latex_symbol(io, axis)
+        write(io, "} ")
+    end
+    return nothing
+end
+
 function write_latex_regularisation(io::IO, field::Field)
     reg = Int(regularisation(field))
     if reg == 1
@@ -61,6 +70,7 @@ function write_latex_regularisation(io::IO, field::Field)
 end
 
 function write_latex_field(io::IO, field::Field{Boson}, ::Val{:standalone})
+    write_latex_derivatives(io, field)
     if is_barred(field)
         write(io, "\\bar{", string(name(field)), is_classical(field) ? "ᶜ" : "ᴾ", "}")
     else
@@ -72,6 +82,7 @@ function write_latex_field(io::IO, field::Field{Boson}, ::Val{:standalone})
 end
 
 function write_latex_field(io::IO, field::Field{Boson}, ::Val{:expression})
+    write_latex_derivatives(io, field)
     if is_barred(field)
         write(io, "\\bar{")
         write_latex_symbol(io, name(field))
