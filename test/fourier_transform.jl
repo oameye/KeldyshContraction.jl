@@ -28,13 +28,13 @@ function fourier_recursively_concrete(@nospecialize(T::Type), seen=Set{Type}())
 end
 
 function exact_monomial(momentums::Vector{LinearMomentum}, axis::Symbol)
-    return MomentumMonomial(MomentumComponent[MomentumComponent(p, axis) for p in momentums])
+    return MomentumMonomial(
+        MomentumComponent[MomentumComponent(p, axis) for p in momentums]
+    )
 end
 
 function exact_polynomial(momentums::Vector{LinearMomentum}, axis::Symbol)
-    return MomentumPolynomial(
-        exact_monomial(momentums, axis), one(KC.ComplexRationals)
-    )
+    return MomentumPolynomial(exact_monomial(momentums, axis), one(KC.ComplexRationals))
 end
 
 @qfields fourier_collection_ϕ::Boson
@@ -42,9 +42,16 @@ const fourier_collection_c = fourier_collection_ϕ[Classical]
 const fourier_collection_q = fourier_collection_ϕ[Quantum]
 
 function aggregation_diagram(; derivative_endpoint::Symbol)
-    out_field = derivative_endpoint === :out ? partial(fourier_collection_c, :x) : fourier_collection_c
-    in_field =
-        derivative_endpoint === :in ? partial(bar(fourier_collection_q), :x) : bar(fourier_collection_q)
+    out_field = if derivative_endpoint === :out
+        partial(fourier_collection_c, :x)
+    else
+        fourier_collection_c
+    end
+    in_field = if derivative_endpoint === :in
+        partial(bar(fourier_collection_q), :x)
+    else
+        bar(fourier_collection_q)
+    end
     contractions = Contraction{Boson}[
         Contraction(out_field(Out()), bar(fourier_collection_q)(Bulk(1))),
         Contraction(fourier_collection_c(Bulk(1)), bar(fourier_collection_q)(Bulk(1))),
