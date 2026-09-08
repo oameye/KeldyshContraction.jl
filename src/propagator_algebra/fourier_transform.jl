@@ -4,14 +4,15 @@ struct FourierContribution{C<:Number}
     kinematic::MomentumPolynomial{ComplexRationals}
 end
 
-function Base.isequal(a::FourierContribution{C}, b::FourierContribution{C}) where {C<:Number}
+function Base.isequal(
+    a::FourierContribution{C}, b::FourierContribution{C}
+) where {C<:Number}
     return isequal(a.coefficient, b.coefficient) && isequal(a.kinematic, b.kinematic)
 end
 Base.:(==)(a::FourierContribution, b::FourierContribution) = isequal(a, b)
 function Base.hash(contribution::FourierContribution, h::UInt)
     return hash(
-        FourierContribution,
-        hash(contribution.kinematic, hash(contribution.coefficient, h)),
+        FourierContribution, hash(contribution.kinematic, hash(contribution.coefficient, h))
     )
 end
 
@@ -25,16 +26,12 @@ coordinate derivative placements that lower to the same physical graph therefore
 under one key without widening the numeric coefficient type.
 """
 struct FourierDiagrams{C<:Number,S<:Statistics,E1,E2}
-    diagrams::Dict{
-        FourierDiagram{S,E1,E2,Nothing},Vector{FourierContribution{C}}
-    }
+    diagrams::Dict{FourierDiagram{S,E1,E2,Nothing},Vector{FourierContribution{C}}}
 end
 
 function FourierDiagrams{C,S,E1,E2}() where {C<:Number,S<:Statistics,E1,E2}
     K = FourierDiagram{S,E1,E2,Nothing}
-    return FourierDiagrams{C,S,E1,E2}(
-        Dict{K,Vector{FourierContribution{C}}}()
-    )
+    return FourierDiagrams{C,S,E1,E2}(Dict{K,Vector{FourierContribution{C}}}())
 end
 
 Base.length(collection::FourierDiagrams) = length(collection.diagrams)
@@ -43,9 +40,7 @@ Base.iszero(collection::FourierDiagrams) = isempty(collection.diagrams)
 Base.iterate(collection::FourierDiagrams) = iterate(collection.diagrams)
 Base.iterate(collection::FourierDiagrams, state) = iterate(collection.diagrams, state)
 function Base.eltype(::Type{FourierDiagrams{C,S,E1,E2}}) where {C,S,E1,E2}
-    return Pair{
-        FourierDiagram{S,E1,E2,Nothing},Vector{FourierContribution{C}}
-    }
+    return Pair{FourierDiagram{S,E1,E2,Nothing},Vector{FourierContribution{C}}}
 end
 function Base.isequal(
     a::FourierDiagrams{C,S,E1,E2}, b::FourierDiagrams{C,S,E1,E2}
@@ -65,7 +60,7 @@ function _push_fourier!(
     iszero(value) && return collection
 
     contributions = get!(collection.diagrams, graph) do
-        FourierContribution{C}[]
+        return FourierContribution{C}[]
     end
     for i in eachindex(contributions)
         existing = contributions[i]
@@ -116,17 +111,11 @@ end
 end
 
 @inline function _derivative_tiebreak(edge::Edge)
-    return (
-        derivative_multiindex(edge.out).orders,
-        derivative_multiindex(edge.in).orders,
-    )
+    return (derivative_multiindex(edge.out).orders, derivative_multiindex(edge.in).orders)
 end
 
 function _fourier_source_isless(
-    stripped_a::Edge,
-    decorated_a::Edge,
-    stripped_b::Edge,
-    decorated_b::Edge,
+    stripped_a::Edge, decorated_a::Edge, stripped_b::Edge, decorated_b::Edge
 )
     key_a = _edge_fourier_key(stripped_a)
     key_b = _edge_fourier_key(stripped_b)
@@ -137,9 +126,7 @@ function _fourier_source_isless(
     return isless(derivative_a, derivative_b)
 end
 
-function _canonical_fourier_source(
-    diagram::Diagram{S,E1,E2},
-) where {S<:Statistics,E1,E2}
+function _canonical_fourier_source(diagram::Diagram{S,E1,E2}) where {S<:Statistics,E1,E2}
     decorated = Edge{S}[
         Edge{S}(edge.out, edge.in, edge.edgetype, Momenta()) for
         edge in contractions(diagram)
@@ -147,8 +134,7 @@ function _canonical_fourier_source(
     stripped = Edge{S}[_without_derivatives(edge) for edge in decorated]
 
     graph_positions = canonicalization_positions(stripped)
-    physical_permutation, _, _, _ =
-        canonicalization_permutations(stripped, graph_positions)
+    physical_permutation, _, _, _ = canonicalization_permutations(stripped, graph_positions)
     mapping = make_permutation_dict(physical_permutation, graph_positions, stripped)
 
     decorated = Edge{S}[relabel_bulk_positions(edge, mapping) for edge in decorated]
@@ -156,9 +142,8 @@ function _canonical_fourier_source(
 
     permutation = sortperm(
         collect(eachindex(stripped));
-        lt=(i, j) -> _fourier_source_isless(
-            stripped[i], decorated[i], stripped[j], decorated[j]
-        ),
+        lt=(i, j) ->
+            _fourier_source_isless(stripped[i], decorated[i], stripped[j], decorated[j]),
     )
     decorated = decorated[permutation]
     stripped = stripped[permutation]
@@ -189,7 +174,7 @@ end
 
 """Transform and derivative-consume a collection of coordinate-space diagrams."""
 function fourier_transform(
-    diagrams::Diagrams{C,S,E1,E2},
+    diagrams::Diagrams{C,S,E1,E2}
 ) where {C<:Number,S<:Statistics,E1,E2}
     out = FourierDiagrams{C,S,E1,E2}()
     for (diagram, coefficient) in diagrams
@@ -211,8 +196,7 @@ order(::FourierDressedPropagator{C,S,O}) where {C,S,O} = O
 statistics(::FourierDressedPropagator{C,S}) where {C,S} = S
 parameters(G::FourierDressedPropagator) = G.parameter
 function Base.isequal(
-    a::FourierDressedPropagator{C,S,O,E1,E2},
-    b::FourierDressedPropagator{C,S,O,E1,E2},
+    a::FourierDressedPropagator{C,S,O,E1,E2}, b::FourierDressedPropagator{C,S,O,E1,E2}
 ) where {C,S,O,E1,E2}
     return isequal(a.keldysh, b.keldysh) &&
            isequal(a.retarded, b.retarded) &&
@@ -220,11 +204,12 @@ function Base.isequal(
            isequal(a.parameter, b.parameter)
 end
 Base.:(==)(a::FourierDressedPropagator, b::FourierDressedPropagator) = isequal(a, b)
-Base.hash(G::FourierDressedPropagator, h::UInt) =
-    hash((G.keldysh, G.retarded, G.advanced, G.parameter), h)
+function Base.hash(G::FourierDressedPropagator, h::UInt)
+    return hash((G.keldysh, G.retarded, G.advanced, G.parameter), h)
+end
 
 function fourier_transform(
-    G::DressedPropagator{C,S,O,E1,E2},
+    G::DressedPropagator{C,S,O,E1,E2}
 ) where {C<:Number,S<:Statistics,O,E1,E2}
     return FourierDressedPropagator{C,S,O,E1,E2}(
         fourier_transform(G.keldysh),
@@ -246,8 +231,7 @@ order(::FourierSelfEnergy{C,S,O}) where {C,S,O} = O
 statistics(::FourierSelfEnergy{C,S}) where {C,S} = S
 parameters(Σ::FourierSelfEnergy) = Σ.parameter
 function Base.isequal(
-    a::FourierSelfEnergy{C,S,O,E1,E2},
-    b::FourierSelfEnergy{C,S,O,E1,E2},
+    a::FourierSelfEnergy{C,S,O,E1,E2}, b::FourierSelfEnergy{C,S,O,E1,E2}
 ) where {C,S,O,E1,E2}
     return isequal(a.keldysh, b.keldysh) &&
            isequal(a.retarded, b.retarded) &&
@@ -255,8 +239,9 @@ function Base.isequal(
            isequal(a.parameter, b.parameter)
 end
 Base.:(==)(a::FourierSelfEnergy, b::FourierSelfEnergy) = isequal(a, b)
-Base.hash(Σ::FourierSelfEnergy, h::UInt) =
-    hash((Σ.keldysh, Σ.retarded, Σ.advanced, Σ.parameter), h)
+function Base.hash(Σ::FourierSelfEnergy, h::UInt)
+    return hash((Σ.keldysh, Σ.retarded, Σ.advanced, Σ.parameter), h)
+end
 
 function _amputate_fourier_graph(
     graph::FourierDiagram{S,E,E2,Nothing}, ::Val{SE}, ::Val{ST}
@@ -268,7 +253,8 @@ function _amputate_fourier_graph(
         push!(edges, edge)
         push!(momenta, momentum)
     end
-    length(edges) == SE || error("Fourier self-energy amputation found the wrong bulk-edge count")
+    length(edges) == SE ||
+        error("Fourier self-energy amputation found the wrong bulk-edge count")
 
     fixed_edges = FixedVector{SE,Edge{S}}(edges)
     coordinate = Diagram(fixed_edges, Val(ST))
@@ -317,7 +303,7 @@ function construct_fourier_self_energy!(
 end
 
 function _fourier_self_energy(
-    G::FourierDressedPropagator{C,S,O,E1,E2},
+    G::FourierDressedPropagator{C,S,O,E1,E2}
 ) where {C<:Number,S<:Statistics,O,E1,E2}
     SE = E1 - 2
     ST = max_edges(O)
@@ -338,41 +324,18 @@ end
 
 SelfEnergy(G::FourierDressedPropagator) = _fourier_self_energy(G)
 
-@inline function _diagram_has_derivatives(diagram::Diagram)
-    for edge in contractions(diagram), field in fields(edge)
-        isempty(derivative_multiindex(field)) || return true
-    end
-    return false
-end
-
-function _collection_has_derivatives(diagrams::Diagrams)
-    return any(_diagram_has_derivatives(diagram) for diagram in keys(diagrams.diagrams))
-end
-
 """
-Transform a coordinate-space self-energy when its amputated representation is derivative-free.
+Reject direct transformation of an amputated coordinate-space self-energy.
 
-For derivative-decorated interactions, coordinate-space amputation can already have removed
-external endpoint derivative metadata. In that case transform the `DressedPropagator` first
-and construct `SelfEnergy(fourier_transform(G))` so the external momentum factors are retained.
+`SelfEnergy` does not retain provenance proving that external derivative metadata was absent
+before amputation. Transform the `DressedPropagator` first, then construct
+`SelfEnergy(fourier_transform(G))` so all external momentum factors are preserved exactly.
 """
-function fourier_transform(
-    Σ::SelfEnergy{C,S,O,E1,E2},
-) where {C<:Number,S<:Statistics,O,E1,E2}
-    if _collection_has_derivatives(Σ.keldysh) ||
-       _collection_has_derivatives(Σ.retarded) ||
-       _collection_has_derivatives(Σ.advanced)
-        throw(
-            ArgumentError(
-                "cannot safely Fourier-transform a derivative-decorated coordinate SelfEnergy after amputation; transform the DressedPropagator first and construct SelfEnergy(fourier_transform(G))",
-            ),
-        )
-    end
-    return FourierSelfEnergy{C,S,O,E1,E2}(
-        fourier_transform(Σ.keldysh),
-        fourier_transform(Σ.retarded),
-        fourier_transform(Σ.advanced),
-        Σ.parameter,
+function fourier_transform(::SelfEnergy)
+    throw(
+        ArgumentError(
+            "cannot safely Fourier-transform an amputated coordinate SelfEnergy; transform the DressedPropagator first and construct SelfEnergy(fourier_transform(G))",
+        ),
     )
 end
 
@@ -380,9 +343,7 @@ function _fourier_zero(::Type{FourierDiagrams{C,S,E1,E2}}) where {C,S,E1,E2}
     return FourierDiagrams{C,S,E1,E2}()
 end
 
-function matrix(
-    G::FourierDressedPropagator{C,Boson,O,E1,E2},
-) where {C<:Number,O,E1,E2}
+function matrix(G::FourierDressedPropagator{C,Boson,O,E1,E2}) where {C<:Number,O,E1,E2}
     D = FourierDiagrams{C,Boson,E1,E2}
     result = Matrix{D}(undef, 2, 2)
     result[1, 1] = G.keldysh
@@ -392,9 +353,7 @@ function matrix(
     return result
 end
 
-function matrix(
-    G::FourierDressedPropagator{C,Fermion,O,E1,E2},
-) where {C<:Number,O,E1,E2}
+function matrix(G::FourierDressedPropagator{C,Fermion,O,E1,E2}) where {C<:Number,O,E1,E2}
     D = FourierDiagrams{C,Fermion,E1,E2}
     result = Matrix{D}(undef, 2, 2)
     result[1, 1] = G.retarded
@@ -404,9 +363,7 @@ function matrix(
     return result
 end
 
-function matrix(
-    Σ::FourierSelfEnergy{C,Boson,O,E1,E2},
-) where {C<:Number,O,E1,E2}
+function matrix(Σ::FourierSelfEnergy{C,Boson,O,E1,E2}) where {C<:Number,O,E1,E2}
     D = FourierDiagrams{C,Boson,E1,E2}
     result = Matrix{D}(undef, 2, 2)
     result[1, 1] = _fourier_zero(D)
@@ -416,9 +373,7 @@ function matrix(
     return result
 end
 
-function matrix(
-    Σ::FourierSelfEnergy{C,Fermion,O,E1,E2},
-) where {C<:Number,O,E1,E2}
+function matrix(Σ::FourierSelfEnergy{C,Fermion,O,E1,E2}) where {C<:Number,O,E1,E2}
     D = FourierDiagrams{C,Fermion,E1,E2}
     result = Matrix{D}(undef, 2, 2)
     result[1, 1] = Σ.retarded
