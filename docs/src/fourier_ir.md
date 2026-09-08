@@ -24,6 +24,32 @@ exact linear momentum assigned to every coordinate-space edge. Its equality and 
 so physically different momentum-space objects cannot alias merely because their coordinate graphs are
 equal.
 
-This layer intentionally does not yet lower coordinate derivatives to momentum polynomials. The
-`kinematic` slot is therefore `nothing`; the following derivative/Fourier layer will populate it without
-widening ordinary numeric diagram coefficients.
+## Derivative momentum factors
+
+Coordinate derivatives are lowered only after exact routing. The Fourier/Wigner convention is
+
+```math
+A(X,k)=\int ds\; e^{-i(\mathbf{k}\cdot\mathbf{s}-\epsilon t)}
+A(X+s/2,X-s/2).
+```
+
+At homogeneous gradient order zero, the inverse transform therefore gives the endpoint rules
+
+```math
+\partial_{x_{\rm out}^j} \mapsto +i p_j,
+\qquad
+\partial_{x_{\rm in}^j} \mapsto -i p_j,
+```
+
+for spatial axes, while time derivatives carry the opposite sign because the Fourier phase is
+`\mathbf{k}\cdot\mathbf{s}-\epsilon t`.
+
+`MomentumComponent` stores one axis component of an exact `LinearMomentum`. Products are represented by
+canonical `MomentumMonomial`s, and finite sums by `MomentumPolynomial{C}`. Fourier derivative lowering
+uses exact `ComplexRationals` coefficients for powers of `i`; the ordinary numeric diagram coefficient
+remains separate and is never widened to a symbolic momentum expression.
+
+A routed `FourierDiagram{...,Nothing}` is converted by `lower_fourier_derivatives` to a
+`FourierDiagram` whose `kinematic` field is a concrete exact momentum polynomial. The routed linear
+momentum is retained as one factor rather than expanded into an external/loop expression tree. This is the
+representation needed for derivative/p-wave vertices while preserving deterministic routing identity.

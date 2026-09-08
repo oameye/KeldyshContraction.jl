@@ -10,6 +10,8 @@ using KeldyshContraction:
     RoutingEdge,
     basis_momentum,
     edge_momenta,
+    kinematic_factor,
+    lower_fourier_derivatives,
     matrix,
     momentum_basis,
     momentum_routing,
@@ -73,6 +75,19 @@ function fourier_diagram_jet_workload()
     return length(momentum_basis(routed)), edge_momenta(routed)
 end
 
+function fourier_derivative_jet_workload()
+    ∂xϕc = partial(jet_ϕc, :x)
+    contractions = Contraction{Boson}[
+        Contraction(∂xϕc(Out()), bar(jet_ϕq)(Bulk(1))),
+        Contraction(jet_ϕc(Bulk(1)), bar(jet_ϕq)(Bulk(1))),
+        Contraction(jet_ϕc(Bulk(1)), bar(jet_ϕq)(In())),
+    ]
+    diagram = Diagram(contractions, Val(3), Val(0))
+    routed = FourierDiagram(diagram)
+    lowered = lower_fourier_derivatives(routed)
+    return kinematic_factor(lowered)
+end
+
 @static if isempty(VERSION.prerelease)
     @testset "JET report_package" begin
         rep = JET.report_package(KeldyshContraction; target_modules=(KeldyshContraction,))
@@ -98,5 +113,9 @@ end
 
     @testset "JET Fourier-diagram routing workload" begin
         JET.@test_opt target_modules=(KeldyshContraction,) fourier_diagram_jet_workload()
+    end
+
+    @testset "JET Fourier derivative-lowering workload" begin
+        JET.@test_opt target_modules=(KeldyshContraction,) fourier_derivative_jet_workload()
     end
 end
