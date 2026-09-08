@@ -51,6 +51,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("fermionic_propagator_dispatch.jl")
 
     include("propagator_algebra/fourier_transform.jl")
+    SmallCollections.default(::Type{FourierDiagrams{C,S,E1,E2}}) where {C,S,E1,E2} =
+        FourierDiagrams{C,S,E1,E2}()
     include("propagator_algebra/wigner.jl")
     include("collision_integral.jl")
 
