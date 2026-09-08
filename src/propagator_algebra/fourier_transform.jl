@@ -126,7 +126,22 @@ function _fourier_source_isless(
     return isless(derivative_a, derivative_b)
 end
 
-function _canonical_fourier_source(diagram::Diagram{S,E1,E2}) where {S<:Statistics,E1,E2}
+@inline function _routing_only_fourier_diagram(
+    diagram::Diagram{S,E1,E2}
+)::FourierDiagram{S,E1,E2,Nothing} where {S<:Statistics,E1,E2}
+    basis, momenta, external_count, loop_count = _diagram_affine_routing(diagram)
+    return FourierDiagram{S,E1,E2,Nothing}(
+        diagram, basis, momenta, external_count, loop_count, nothing
+    )
+end
+
+function _canonical_fourier_source(
+    diagram::Diagram{S,E1,E2}
+)::Tuple{
+    FourierDiagram{S,E1,E2,Nothing},
+    MomentumPolynomial{ComplexRationals},
+    FourierDiagram{S,E1,E2,MomentumPolynomial{ComplexRationals}},
+} where {S<:Statistics,E1,E2}
     decorated = Edge{S}[
         Edge{S}(edge.out, edge.in, edge.edgetype, Momenta()) for
         edge in contractions(diagram)
@@ -153,7 +168,7 @@ function _canonical_fourier_source(diagram::Diagram{S,E1,E2}) where {S<:Statisti
     decorated_fixed = FixedVector{E1,Edge{S}}(decorated)
     decorated_diagram = Diagram{S,E1,E2}(decorated_fixed, topology(stripped_diagram))
 
-    routed = FourierDiagram(stripped_diagram)
+    routed = _routing_only_fourier_diagram(stripped_diagram)
     decorated_routed = FourierDiagram{S,E1,E2,Nothing}(
         decorated_diagram,
         routed.basis,
@@ -332,7 +347,7 @@ before amputation. Transform the `DressedPropagator` first, then construct
 `SelfEnergy(fourier_transform(G))` so all external momentum factors are preserved exactly.
 """
 function fourier_transform(::SelfEnergy)
-    throw(
+    return throw(
         ArgumentError(
             "cannot safely Fourier-transform an amputated coordinate SelfEnergy; transform the DressedPropagator first and construct SelfEnergy(fourier_transform(G))",
         ),
