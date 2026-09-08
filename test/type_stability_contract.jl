@@ -23,6 +23,7 @@ const contract_q = contract_ϕ[Quantum]
 const contract_ψ = contract_ψ_raw
 const contract_χ = contract_χ_raw
 const contract_ψ₁ = contract_ψ[One]
+const contract_ψ₂ = contract_ψ[Two]
 const contract_χ₂ = contract_χ[Two]
 
 function assert_supported_public_contract(
@@ -37,6 +38,12 @@ function assert_supported_public_contract(
     @test q isa Field{Boson}
     @test @inferred(field_family(c)) === contract_ϕ
     @test @inferred(field_family(q)) === contract_ϕ
+
+    ∂xc = @inferred partial(c, :x)
+    @test ∂xc isa Field{Boson}
+    @test @inferred(field_family(∂xc)) === contract_ϕ
+    @test @inferred(derivatives(∂xc)) == [:x]
+    @test contract_recursively_concrete(typeof(∂xc))
 
     converted = @inferred convert_coefficients(D, interaction)
     rationalized = @inferred rationalize_coefficients(interaction)
@@ -104,6 +111,12 @@ function assert_supported_fermion_contract(
     @test @inferred(field_family(χ₂)) === contract_χ
     @test @inferred(bar(ψ₁)) isa Field{Fermion}
 
+    ∂xχ₂ = @inferred partial(χ₂, :x)
+    @test ∂xχ₂ isa Field{Fermion}
+    @test @inferred(field_family(∂xχ₂)) === contract_χ
+    @test @inferred(derivatives(∂xχ₂)) == [:x]
+    @test contract_recursively_concrete(typeof(∂xχ₂))
+
     converted = @inferred convert_coefficients(D, interaction)
     rationalized = @inferred rationalize_coefficients(interaction)
     @test contract_recursively_concrete(typeof(converted))
@@ -149,6 +162,16 @@ function assert_supported_fermion_contract(
     @test contract_recursively_concrete(typeof(Ls))
     @test contract_recursively_concrete(typeof(Gs))
     @test contract_recursively_concrete(typeof(Σs))
+
+    derivative_interaction = coefficient * ψ₁ * ∂xχ₂ * bar(ψ₁) * bar(∂xχ₂)
+    Ld = @inferred InteractionLagrangian(derivative_interaction, :d)
+    Gd = @inferred(DressedPropagator(Ld, Val(1), Val(3); target=contract_ψ, simplify=false))
+    Σd = @inferred SelfEnergy(Gd)
+    @test typeof(Gd).parameters[1] === D
+    @test typeof(Σd).parameters[1] === D
+    @test contract_recursively_concrete(typeof(Ld))
+    @test contract_recursively_concrete(typeof(Gd))
+    @test contract_recursively_concrete(typeof(Σd))
 
     @test contract_recursively_concrete(typeof(L))
     @test contract_recursively_concrete(typeof(G))

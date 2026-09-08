@@ -38,14 +38,16 @@ end
 sort_by_position_and_type(p::Edge)::Float64 =
     sort_by_position_and_type(Contraction(fields(p)))
 
+@inline function field_state_color(f::Field)::UInt64
+    derivative = UInt64(derivative_multiindex(f).orders)
+    orientation_bits = UInt64(Int(orientation(f))) << 63
+    keldysh_bits = UInt64(Int(keldysh_index(f))) << 62
+    regularisation_bits = UInt64(Int(regularisation(f)) + 1) << 60
+    return orientation_bits | keldysh_bits | regularisation_bits | derivative
+end
+
 @inline function field_color(f::Field)
-    return (
-        name(f),
-        slots(field_indices(f)),
-        Int(orientation(f)),
-        Int(keldysh_index(f)),
-        Int(regularisation(f)),
-    )
+    return (name(f), slots(field_indices(f)), field_state_color(f))
 end
 
 @inline function propagator_color(c::Contraction)
@@ -67,10 +69,29 @@ function canonicalization_positions(vs)
     return result
 end
 
+# Uniform-color detection is on the canonicalization hot path. Cache the reference field
+# families, packed state colors, and propagator type once, then compare each remaining edge
+# against those concrete values. Derivative decoration remains part of the packed state while
+# the derivative-free path avoids rebuilding nested color tuples or decoding the reference
+# fields on every comparison.
 function uniform_coloring(vs)
     isempty(vs) && return true
-    color = propagator_color(first(vs))
-    return all(item -> isequal(propagator_color(item), color), vs)
+    reference = first(vs)
+    reference_out_family = field_family(reference.out)
+    reference_in_family = field_family(reference.in)
+    reference_out_state = field_state_color(reference.out)
+    reference_in_state = field_state_color(reference.in)
+    reference_type = propagator_type(reference)
+
+    @inbounds for i in (firstindex(vs) + 1):lastindex(vs)
+        item = vs[i]
+        isequal(field_family(item.out), reference_out_family) || return false
+        isequal(field_family(item.in), reference_in_family) || return false
+        field_state_color(item.out) == reference_out_state || return false
+        field_state_color(item.in) == reference_in_state || return false
+        propagator_type(item) === reference_type || return false
+    end
+    return true
 end
 
 function simple_position_pairs(vs)
@@ -162,8 +183,9 @@ Construct the vertex-colored directed graph used for canonicalization.
 A uniform simple propagator set uses the original position graph directly: when every edge
 has the same physical color and no directed position-pair is repeated, edge colors carry no
 additional isomorphism information. Mixed-color and multiedge graphs use labeled subdivision
-vertices so field family/index, propagator type, orientation, and regularisation remain part
-of the canonical form. `Out()` and `In()` always have fixed, distinct vertex colors.
+vertices so field family/index, propagator type, orientation, regularisation, and derivative
+endpoint decoration remain part of the canonical form. `Out()` and `In()` always have fixed,
+distinct vertex colors.
 """
 function make_NautyDiGraph(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
     isempty(vs) && return NautyGraphs.NautyDiGraph(0), Position[]
