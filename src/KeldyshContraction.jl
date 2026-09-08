@@ -53,6 +53,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("propagator_algebra/fourier_transform.jl")
     SmallCollections.default(::Type{FourierDiagrams{C,S,E1,E2}}) where {C,S,E1,E2} =
         FourierDiagrams{C,S,E1,E2}()
+
+    # Legacy private routing used only by the pre-Fourier collision reducer.
     include("propagator_algebra/wigner.jl")
     include("collision_integral.jl")
 
@@ -91,7 +93,6 @@ const ComplexRationals = Complex{Rational{Int64}}
         FourierDiagrams,
         FourierDressedPropagator,
         FourierSelfEnergy,
-        wigner_transform,
         parameters
 end
 
