@@ -88,6 +88,17 @@ function fourier_derivative_jet_workload()
     return kinematic_factor(lowered)
 end
 
+function fourier_pwave_jet_workload()
+    ψ₂ = jet_ψ[Two]
+    ∂xψ₂ = partial(ψ₂, :x)
+    interaction = jet_ψ₁ * ∂xψ₂ * bar(jet_ψ₁) * bar(∂xψ₂)
+    L = InteractionLagrangian(interaction, :d)
+    G = DressedPropagator(L, Val(1), Val(3); target=jet_ψ, simplify=false)
+    Gk = fourier_transform(G)
+    Σk = SelfEnergy(Gk)
+    return matrix(Gk), matrix(Σk)
+end
+
 @static if isempty(VERSION.prerelease)
     @testset "JET report_package" begin
         rep = JET.report_package(KeldyshContraction; target_modules=(KeldyshContraction,))
@@ -117,5 +128,9 @@ end
 
     @testset "JET Fourier derivative-lowering workload" begin
         JET.@test_opt target_modules=(KeldyshContraction,) fourier_derivative_jet_workload()
+    end
+
+    @testset "JET p-wave Fourier self-energy workload" begin
+        JET.@test_opt target_modules=(KeldyshContraction,) fourier_pwave_jet_workload()
     end
 end
