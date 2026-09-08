@@ -60,6 +60,37 @@ function aggregation_diagram(; derivative_endpoint::Symbol)
     return Diagram(contractions, Val(3), Val(0))
 end
 
+function parallel_aggregation_diagram(; derivative_endpoint::Symbol, reverse_parallel=false)
+    parallel_out = if derivative_endpoint === :out
+        partial(fourier_collection_c, :x)(Bulk(2))
+    else
+        fourier_collection_c(Bulk(2))
+    end
+    parallel_in = if derivative_endpoint === :in
+        partial(bar(fourier_collection_q), :x)(Bulk(1))
+    else
+        bar(fourier_collection_q)(Bulk(1))
+    end
+    decorated = Contraction(parallel_out, parallel_in)
+    plain = Contraction(
+        fourier_collection_c(Bulk(2)), bar(fourier_collection_q)(Bulk(1))
+    )
+    parallel = reverse_parallel ? (plain, decorated) : (decorated, plain)
+
+    contractions = Contraction{Boson}[
+        Contraction(
+            fourier_collection_c(Out()), bar(fourier_collection_q)(Bulk(1))
+        ),
+        parallel[1],
+        parallel[2],
+        Contraction(
+            fourier_collection_c(Bulk(1)), bar(fourier_collection_q)(Bulk(2))
+        ),
+        Contraction(fourier_collection_c(Bulk(2)), bar(fourier_collection_q)(In())),
+    ]
+    return Diagram(contractions, Val(5), Val(1))
+end
+
 @testset "derivative-consumed Fourier collection identity" begin
     out_derivative = aggregation_diagram(; derivative_endpoint=:out)
     in_derivative = aggregation_diagram(; derivative_endpoint=:in)
@@ -90,6 +121,29 @@ end
     )
     @test Set(contribution.kinematic for contribution in contributions) ==
         Set((expected_out, expected_in))
+end
+
+@testset "derivative-exposed parallel-edge symmetry" begin
+    out_derivative = parallel_aggregation_diagram(; derivative_endpoint=:out)
+    out_reversed = parallel_aggregation_diagram(
+        ; derivative_endpoint=:out, reverse_parallel=true
+    )
+    in_derivative = parallel_aggregation_diagram(; derivative_endpoint=:in)
+
+    @test @inferred(fourier_transform(out_derivative)) ==
+        @inferred(fourier_transform(out_reversed))
+
+    diagrams = KC.Diagrams{KC.ComplexRationals,Boson,5,1}()
+    push!(diagrams, out_derivative, one(KC.ComplexRationals))
+    push!(diagrams, in_derivative, one(KC.ComplexRationals))
+    transformed = @inferred fourier_transform(diagrams)
+
+    @test length(transformed) == 1
+    graph, contributions = only(transformed)
+    @test length(contributions) == 2
+    @test KC.external_momentum_count(graph) == 1
+    @test KC.loop_momentum_count(graph) == 2
+    @test fourier_recursively_concrete(typeof(transformed))
 end
 
 @qfields fourier_pwave_ψ::Fermion
