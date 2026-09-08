@@ -6,6 +6,7 @@ using KeldyshContraction: Regularisation.Minus as Minus
 @qfields probe_ϕ::Boson
 const probe_c = probe_ϕ[Classical]
 const probe_q = probe_ϕ[Quantum]
+@syms probe_Γ probe_g
 
 function print_collision(label, Σ)
     println("=== ", label, " SELF ENERGY ===")
@@ -58,6 +59,20 @@ end
     )
     Σ_loss2 = SelfEnergy(GF_loss2)
     print_collision("LOSS_GAMMA2", Σ_loss2)
+
+    L_elastic_p = InteractionLagrangian(elastic, probe_g)
+    L_loss_p = InteractionLagrangian(loss, probe_Γ)
+    GF_sum2 = DressedPropagator(
+        L_elastic_p + L_loss_p,
+        Val(2),
+        Val(5);
+        simplify=true,
+        _set_reg_to_zero=true,
+    )
+    Σ_sum2 = SelfEnergy(GF_sum2)
+    println("=== MIXED PARAMETERS ===")
+    println(repr(parameters(Σ_sum2)))
+    print_collision("MIXED_G_GAMMA", Σ_sum2[probe_g * probe_Γ])
 
     @test true
 end
