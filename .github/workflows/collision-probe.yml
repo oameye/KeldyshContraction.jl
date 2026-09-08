@@ -1,0 +1,19 @@
+name: Collision Probe
+
+on:
+  push:
+    branches:
+      - research/bosonic-collision-reproduction
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Run collision probe
+        run: julia --project=. --startup-file=no -e 'include("test/collision_oracle_probe.jl")'
