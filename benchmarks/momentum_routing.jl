@@ -49,8 +49,9 @@ function benchmark_momentum_routing!(SUITE)
     SUITE["Momentum routing"]["exact matrix"] = @benchmarkable exact_momentum_routing(
         $incidence
     ) seconds = 10
-    SUITE["Momentum routing"]["exact affine matrix"] =
-        @benchmarkable exact_affine_momentum_routing($affine_incidence, $affine_source) seconds = 10
+    SUITE["Momentum routing"]["exact affine matrix"] = @benchmarkable exact_affine_momentum_routing(
+        $affine_incidence, $affine_source
+    ) seconds = 10
     SUITE["Momentum routing"]["Fourier diagram"] = @benchmarkable FourierDiagram($diagram) seconds =
         10
     return nothing
