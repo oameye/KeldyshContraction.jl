@@ -27,8 +27,9 @@ function Base.hash(x::AffineMomentumRouting, h::UInt)
 end
 
 external_momentum_count(routing::AffineMomentumRouting) = Int(routing.external_count)
-loop_momentum_count(routing::AffineMomentumRouting) =
-    length(routing.basis) - external_momentum_count(routing)
+function loop_momentum_count(routing::AffineMomentumRouting)
+    return length(routing.basis) - external_momentum_count(routing)
+end
 
 """Return the edge-by-basis coefficient matrix of an affine routing."""
 function routing_matrix(routing::AffineMomentumRouting)::Matrix{MomentumCoefficient}
@@ -37,7 +38,8 @@ function routing_matrix(routing::AffineMomentumRouting)::Matrix{MomentumCoeffici
     out = zeros(MomentumCoefficient, nedge, nbasis)
     for edge in 1:nedge
         coefficients = routing.edge_momenta[edge].coefficients
-        length(coefficients) == nbasis || error("inconsistent affine momentum-routing basis")
+        length(coefficients) == nbasis ||
+            error("inconsistent affine momentum-routing basis")
         for basis in 1:nbasis
             out[edge, basis] = coefficients[basis]
         end
@@ -86,8 +88,8 @@ function _exact_rref_with_source(
 
         if pivot != row
             for j in 1:total
-                augmented[row, j], augmented[pivot, j] =
-                    augmented[pivot, j], augmented[row, j]
+                augmented[row, j], augmented[pivot, j] = augmented[pivot, j],
+                augmented[row, j]
             end
         end
 
@@ -162,7 +164,8 @@ function exact_affine_momentum_routing(
 
     ncols = size(A, 2)
     nsource = size(source, 2)
-    nsource <= typemax(Int16) || throw(ArgumentError("too many external momentum variables"))
+    nsource <= typemax(Int16) ||
+        throw(ArgumentError("too many external momentum variables"))
 
     pivot_mask = falses(ncols)
     for col in pivots
@@ -199,7 +202,5 @@ function exact_affine_momentum_routing(
         momenta[col] = LinearMomentum(coefficients)
     end
 
-    return AffineMomentumRouting(
-        basis, momenta, convert(Int16, nsource), pivots, free
-    )
+    return AffineMomentumRouting(basis, momenta, convert(Int16, nsource), pivots, free)
 end
