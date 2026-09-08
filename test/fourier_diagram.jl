@@ -46,9 +46,8 @@ end
 
 function bulk_conservation(diagram::FourierDiagram, vertex::Int)
     out = zeros(Rational{Int}, length(momentum_basis(diagram)))
-    for (edge, momentum) in zip(
-        contractions(coordinate_diagram(diagram)), edge_momenta(diagram)
-    )
+    for (edge, momentum) in
+        zip(contractions(coordinate_diagram(diagram)), edge_momenta(diagram))
         out_position, in_position = positions(edge)
         if is_bulk(out_position) && index(out_position) == vertex
             add_linear!(out, momentum, 1)
