@@ -50,7 +50,9 @@ end
     return convert(Int16, index(in_position)), convert(Int16, index(out_position))
 end
 
-function _canonical_internal_routing_edges(legged::Vector{Contraction{S}}) where {S<:Statistics}
+function _canonical_internal_routing_edges(
+    legged::Vector{Contraction{S}}
+) where {S<:Statistics}
     counts = Dict{Tuple{Int16,Int16},Int}()
     routing_edges = RoutingEdge[]
     legged_indices = Int[]
@@ -79,11 +81,14 @@ function _bulk_vertices(legged::Vector{Contraction{S}}) where {S<:Statistics}
         end
     end
     sort!(unique!(vertices))
-    isempty(vertices) && throw(ArgumentError("Fourier routing requires at least one bulk vertex"))
+    isempty(vertices) &&
+        throw(ArgumentError("Fourier routing requires at least one bulk vertex"))
     return vertices
 end
 
-function _validate_two_point_external_flow(legged::Vector{Contraction{S}}) where {S<:Statistics}
+function _validate_two_point_external_flow(
+    legged::Vector{Contraction{S}}
+) where {S<:Statistics}
     incoming = 0
     outgoing = 0
     for contraction in legged
@@ -92,21 +97,29 @@ function _validate_two_point_external_flow(legged::Vector{Contraction{S}}) where
         has_out_edge = is_out(out_position) || is_out(in_position)
         if has_in_edge || has_out_edge
             (has_in_edge ⊻ has_out_edge) || throw(
-                ArgumentError("each external propagator must connect one bulk and one external endpoint")
+                ArgumentError(
+                    "each external propagator must connect one bulk and one external endpoint",
+                ),
             )
             count(is_bulk, (out_position, in_position)) == 1 || throw(
-                ArgumentError("each external propagator must connect exactly one bulk endpoint")
+                ArgumentError(
+                    "each external propagator must connect exactly one bulk endpoint"
+                ),
             )
         end
         if has_in_edge
             is_in(in_position) || throw(
-                ArgumentError("incoming external momentum must enter through an edge in-endpoint")
+                ArgumentError(
+                    "incoming external momentum must enter through an edge in-endpoint"
+                ),
             )
             incoming += 1
         end
         if has_out_edge
             is_out(out_position) || throw(
-                ArgumentError("outgoing external momentum must leave through an edge out-endpoint")
+                ArgumentError(
+                    "outgoing external momentum must leave through an edge out-endpoint"
+                ),
             )
             outgoing += 1
         end
@@ -135,7 +148,10 @@ function _diagram_affine_routing(d::Diagram{S,E1,E2}) where {S<:Statistics,E1,E2
     for contraction in legged
         out_position, in_position = positions(contraction)
         has_external =
-            is_in(out_position) || is_out(out_position) || is_in(in_position) || is_out(in_position)
+            is_in(out_position) ||
+            is_out(out_position) ||
+            is_in(in_position) ||
+            is_out(in_position)
         has_external || continue
 
         if is_bulk(out_position)
@@ -149,7 +165,8 @@ function _diagram_affine_routing(d::Diagram{S,E1,E2}) where {S<:Statistics,E1,E2
 
     routing = exact_affine_momentum_routing(incidence, source)
     external_count = external_momentum_count(routing)
-    external_count == 1 || error("two-point Fourier routing must have one external momentum")
+    external_count == 1 ||
+        error("two-point Fourier routing must have one external momentum")
     loop_count = loop_momentum_count(routing)
 
     assigned = Vector{LinearMomentum}(undef, E1)
@@ -164,14 +181,14 @@ function _diagram_affine_routing(d::Diagram{S,E1,E2}) where {S<:Statistics,E1,E2
     end
 
     for (column, legged_index) in enumerate(legged_indices)
-        legged_index <= E1 || error("virtual external-leg reconstruction produced an internal edge")
+        legged_index <= E1 ||
+            error("virtual external-leg reconstruction produced an internal edge")
         assigned[legged_index] = routing.edge_momenta[column]
     end
 
     fixed_momenta = FixedVector{E1,LinearMomentum}(assigned)
     return routing.basis,
-    fixed_momenta,
-    convert(Int16, external_count),
+    fixed_momenta, convert(Int16, external_count),
     convert(Int16, loop_count)
 end
 
