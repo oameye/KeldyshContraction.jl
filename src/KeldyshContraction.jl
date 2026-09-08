@@ -50,6 +50,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("fermionic_keldysh.jl")
     include("fermionic_propagator_dispatch.jl")
 
+    include("propagator_algebra/fourier_transform.jl")
     include("propagator_algebra/wigner.jl")
     include("collision_integral.jl")
 
@@ -83,6 +84,11 @@ const ComplexRationals = Complex{Rational{Int64}}
         @syms,
         arguments,
         topologies,
+        fourier_transform,
+        FourierDiagram,
+        FourierDiagrams,
+        FourierDressedPropagator,
+        FourierSelfEnergy,
         wigner_transform,
         parameters
 end
