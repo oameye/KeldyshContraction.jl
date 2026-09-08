@@ -103,13 +103,13 @@ end
     end
 end
 
-@testset "Wigner transform" begin
+@testset "Legacy momentum transform" begin
     @testset "first order" begin
         GF = DressedPropagator(L_int, Val(1), Val(3))
         SE = SelfEnergy(GF)
 
-        GFk = @inferred wigner_transform(GF)
-        SEk = @inferred wigner_transform(SE)
+        GFk = @inferred KeldyshContraction.wigner_transform(GF)
+        SEk = @inferred KeldyshContraction.wigner_transform(SE)
         @test typeof(GFk) === typeof(GF)
         @test typeof(SEk) === typeof(SE)
     end
@@ -117,8 +117,8 @@ end
         GF = DressedPropagator(L_int, Val(2), Val(5))
         SE = SelfEnergy(GF)
 
-        GFk = @inferred wigner_transform(GF)
-        SEk = @inferred wigner_transform(SE)
+        GFk = @inferred KeldyshContraction.wigner_transform(GF)
+        SEk = @inferred KeldyshContraction.wigner_transform(SE)
         @test typeof(GFk) === typeof(GF)
         @test typeof(SEk) === typeof(SE)
     end
