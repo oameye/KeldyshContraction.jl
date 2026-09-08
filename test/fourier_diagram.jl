@@ -221,14 +221,14 @@ end
 end
 
 @qfields fourier_ψ::Fermion
-const fourier_fc = fourier_ψ[Classical]
-const fourier_fq = fourier_ψ[Quantum]
+const fourier_fout = fourier_ψ[One]
+const fourier_fin = fourier_ψ[Two]
 
 @testset "statistics-neutral routing" begin
     fermion_contractions = Contraction{Fermion}[
-        Contraction(fourier_fc(Out()), bar(fourier_fq)(Bulk(1))),
-        Contraction(fourier_fc(Bulk(1)), bar(fourier_fq)(Bulk(1))),
-        Contraction(fourier_fc(Bulk(1)), bar(fourier_fq)(In())),
+        Contraction(fourier_fout(Out()), bar(fourier_fin)(Bulk(1))),
+        Contraction(fourier_fout(Bulk(1)), bar(fourier_fin)(Bulk(1))),
+        Contraction(fourier_fout(Bulk(1)), bar(fourier_fin)(In())),
     ]
     fermion = Diagram(fermion_contractions, Val(3), Val(0))
 
