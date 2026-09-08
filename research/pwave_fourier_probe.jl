@@ -12,9 +12,8 @@ L = InteractionLagrangian(vertex, :γ)
 G = DressedPropagator(L, Val(1), Val(3); simplify=false)
 Σ = SelfEnergy(G)
 
-println("PWAVE_PROBE_BEGIN")
-for (component_name, diagrams) in ((:retarded, Σ.retarded), (:keldysh, Σ.keldysh), (:advanced, Σ.advanced))
-    println("COMPONENT=", component_name, " COUNT=", length(diagrams))
+function print_collection(stage, component_name, diagrams)
+    println("STAGE=", stage, " COMPONENT=", component_name, " COUNT=", length(diagrams))
     for (diagram_index, pair) in enumerate(diagrams)
         diagram, coefficient = pair
         println("DIAGRAM=", diagram_index, " COEFF=", repr(coefficient))
@@ -39,5 +38,13 @@ for (component_name, diagrams) in ((:retarded, Σ.retarded), (:keldysh, Σ.keldy
             println("TERM COEFF=", repr(value), " FACTORS=", repr(factors))
         end
     end
+end
+
+println("PWAVE_PROBE_BEGIN")
+for (component_name, diagrams) in ((:retarded, G.retarded), (:keldysh, G.keldysh), (:advanced, G.advanced))
+    print_collection(:propagator, component_name, diagrams)
+end
+for (component_name, diagrams) in ((:retarded, Σ.retarded), (:keldysh, Σ.keldysh), (:advanced, Σ.advanced))
+    print_collection(:self_energy, component_name, diagrams)
 end
 println("PWAVE_PROBE_END")
