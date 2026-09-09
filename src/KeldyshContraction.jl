@@ -50,7 +50,10 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("fermionic_keldysh.jl")
     include("fermionic_propagator_dispatch.jl")
 
-    include("propagator_algebra/wigner.jl")
+    include("propagator_algebra/fourier_transform.jl")
+
+    # Legacy private routing used only by the pre-Fourier collision reducer.
+    include("propagator_algebra/legacy_momentum_routing.jl")
     include("collision_integral.jl")
 
     # show methods
@@ -83,7 +86,11 @@ const ComplexRationals = Complex{Rational{Int64}}
         @syms,
         arguments,
         topologies,
-        wigner_transform,
+        fourier_transform,
+        FourierDiagram,
+        FourierDiagrams,
+        FourierDressedPropagator,
+        FourierSelfEnergy,
         parameters
 end
 

@@ -1,13 +1,13 @@
-# (* Experimental *)
+# (* Legacy momentum routing compatibility *)
 
-function wigner_transform(gf::DressedPropagator{C,S,O,E1,E2}) where {C,S,O,E1,E2}
+function _legacy_momentum_transform(gf::DressedPropagator{C,S,O,E1,E2}) where {C,S,O,E1,E2}
     keldysh = construct_momenta_from_gf(gf.keldysh)
     retarded = construct_momenta_from_gf(gf.retarded)
     advanced = construct_momenta_from_gf(gf.advanced)
     return DressedPropagator{C,S,O,E1,E2}(keldysh, retarded, advanced, gf.parameter)
 end
 
-function wigner_transform(se::SelfEnergy{C,S,O,E1,E2}) where {C,S,O,E1,E2}
+function _legacy_momentum_transform(se::SelfEnergy{C,S,O,E1,E2}) where {C,S,O,E1,E2}
     keldysh = construct_momenta_from_self_energy(se.keldysh)
     retarded = construct_momenta_from_self_energy(se.retarded)
     advanced = construct_momenta_from_self_energy(se.advanced)
