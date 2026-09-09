@@ -65,20 +65,26 @@ function assert_supported_public_contract(
 
     G = @inferred(DressedPropagator(L, Val(1), Val(3); simplify=false))
     Σ = @inferred SelfEnergy(G)
-    Gk = @inferred wigner_transform(G)
-    Σk = @inferred wigner_transform(Σ)
+    Gk = @inferred fourier_transform(G)
+    Σk = @inferred SelfEnergy(Gk)
 
     @test typeof(G).parameters[1] === D
     @test typeof(Σ).parameters[1] === D
-    @test typeof(Gk) === typeof(G)
-    @test typeof(Σk) === typeof(Σ)
+    @test Gk isa FourierDressedPropagator{D,Boson,1,3,0}
+    @test Σk isa FourierSelfEnergy{D,Boson,1,1,0}
     @test @inferred(parameters(G)) == parameters(L)
     @test @inferred(parameters(Σ)) == parameters(G)
+    @test @inferred(parameters(Gk)) == parameters(G)
+    @test @inferred(parameters(Σk)) == parameters(Gk)
 
     Gm = @inferred matrix(G)
     Σm = @inferred matrix(Σ)
+    Gkm = @inferred matrix(Gk)
+    Σkm = @inferred matrix(Σk)
     @test contract_recursively_concrete(typeof(Gm))
     @test contract_recursively_concrete(typeof(Σm))
+    @test contract_recursively_concrete(typeof(Gkm))
+    @test contract_recursively_concrete(typeof(Σkm))
     matrix_topologies = @inferred topologies(Gm[1, 1])
     @test contract_recursively_concrete(typeof(matrix_topologies))
 
