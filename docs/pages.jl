@@ -5,6 +5,7 @@ pages = [
     "Type-stability guarantee" => "type_stability.md",
     "Keldysh Conventions" => "conventions.md",
     "Fourier routing IR" => "fourier_ir.md",
+    "Wigner representation" => "wigner.md",
     "Literature" => "literature.md",
     "Examples" => [
         "Elastic two body scattering" => "examples/elastic_two_body.md",
