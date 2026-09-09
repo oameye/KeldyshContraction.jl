@@ -26,7 +26,7 @@ equal.
 
 ## Derivative momentum factors
 
-Coordinate derivatives are lowered only after exact routing. The Fourier/Wigner convention is
+Coordinate derivatives are lowered only after exact routing. The Fourier convention is
 
 ```math
 A(X,k)=\int ds\; e^{-i(\mathbf{k}\cdot\mathbf{s}-\epsilon t)}
@@ -53,3 +53,39 @@ A routed `FourierDiagram{...,Nothing}` is converted by `lower_fourier_derivative
 `FourierDiagram` whose `kinematic` field is a concrete exact momentum polynomial. The routed linear
 momentum is retained as one factor rather than expanded into an external/loop expression tree. This is the
 representation needed for derivative/p-wave vertices while preserving deterministic routing identity.
+
+## Public Fourier transformation
+
+`fourier_transform` is the public translation-invariant coordinate-to-momentum operation. It does not
+perform a center/relative-coordinate Wigner transform or a gradient expansion.
+
+For one `Diagram`, `fourier_transform` returns its canonically routed diagram with all coordinate
+derivatives lowered to the exact kinematic polynomial. For `Diagrams`, the result is a
+`FourierDiagrams` collection keyed by the derivative-consumed routed graph. Numerical diagram
+coefficients and momentum-polynomial kinematics remain separate. Coordinate diagrams that differ only by
+derivative placement can therefore meet under one physical Fourier graph while retaining distinct exact
+kinematic contributions.
+
+`fourier_transform(::DressedPropagator)` applies the same transformation component-wise and preserves the
+coefficient representation, statistics, perturbation order, and static graph shape in
+`FourierDressedPropagator`.
+
+For derivative-decorated interactions, self-energy amputation must happen after Fourier lowering:
+
+```julia
+Gk = fourier_transform(G)
+Σk = SelfEnergy(Gk)
+```
+
+This order is semantically required. A coordinate-space `SelfEnergy` has already removed its external
+propagators, so it does not retain enough provenance to prove that no derivative metadata was discarded
+at those endpoints. Direct `fourier_transform(::SelfEnergy)` is therefore rejected rather than silently
+producing an incomplete momentum factor.
+
+The Fourier-space self-energy retains the routed internal graph and the complete kinematic factor computed
+before amputation. In particular, derivative factors carried by external legs remain present in the
+self-energy contribution even though those propagators are no longer stored in the amputated graph.
+
+The former experimental `wigner_transform` algorithm is not the Wigner layer of this architecture. The
+actual center/relative-coordinate Wigner representation and gradient expansion are separate follow-up
+work built on this Fourier IR.

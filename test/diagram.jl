@@ -51,7 +51,8 @@ end
     @test_throws MethodError SelfEnergy(propagator, Val(2))
     @test @inferred(topologies(propagator.keldysh)) isa
         Dict{FixedVector{0,Int},Vector{Diagram{Boson,3,0}}}
-    @test typeof(@inferred(wigner_transform(propagator))) === typeof(propagator)
+    fourier_propagator = @inferred fourier_transform(propagator)
+    @test fourier_propagator isa FourierDressedPropagator{KC.ComplexRationals,Boson,1,3,0}
 
     @test_throws MethodError wick_contraction(inout, L, 1)
     @test_throws MethodError wick_contraction(inout, L, Val(1))
