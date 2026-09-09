@@ -71,7 +71,6 @@ end
         @test SE isa SelfEnergy{ComplexF64,Boson,1,1,0}
 
         diagram = first(first(SE.retarded))
-
         d′ = @inferred construct_momenta_from_self_energy(diagram)
         @test isequal(momenta(d′), FixedVector([Momenta(1)]))
     end
@@ -104,7 +103,6 @@ end
 end
 
 @testset "Legacy momentum compatibility" begin
-    @test !isdefined(KeldyshContraction, :wigner_transform)
     @test :fourier_transform ∈ names(KeldyshContraction)
 
     @testset "first order" begin

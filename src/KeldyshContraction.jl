@@ -51,6 +51,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("fermionic_propagator_dispatch.jl")
 
     include("propagator_algebra/fourier_transform.jl")
+    include("propagator_algebra/wigner.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
     include("propagator_algebra/legacy_momentum_routing.jl")
@@ -91,6 +92,15 @@ const ComplexRationals = Complex{Rational{Int64}}
         FourierDiagrams,
         FourierDressedPropagator,
         FourierSelfEnergy,
+        wigner_transform,
+        WignerDiagram,
+        WignerDiagrams,
+        WignerDressedPropagator,
+        WignerSelfEnergy,
+        HomogeneousWignerContext,
+        gradient_order,
+        external_wigner_momentum,
+        wigner_context,
         parameters
 end
 
