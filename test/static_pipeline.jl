@@ -26,6 +26,9 @@ end
     Σk = @inferred SelfEnergy(Gk)
     GW = @inferred wigner_transform(Gk; gradient_order=Val(0))
     ΣW = @inferred wigner_transform(Σk; gradient_order=Val(0))
+    KΣ = @inferred kinetic_expression(ΣW)
+    ΔΣ = @inferred retarded_minus_advanced(KΣ)
+    AΣ = @inferred spectral_self_energy(KΣ)
     collision = @inferred KC.CollisionIntegral(Σ)
 
     GT = typeof(G)
@@ -43,8 +46,11 @@ end
     @test Σk isa FourierSelfEnergy{ComplexF64,Boson,1,1,0}
     @test GW isa WignerDressedPropagator{ComplexF64,Boson,1,3,0,0,HomogeneousWignerContext}
     @test ΣW isa WignerSelfEnergy{ComplexF64,Boson,1,1,0,0,HomogeneousWignerContext}
+    @test KΣ isa KineticSelfEnergy{ComplexF64,Boson,1,1,0,0,HomogeneousWignerContext}
     @test gradient_order(GW) == Val(0)
     @test gradient_order(ΣW) == Val(0)
+    @test gradient_order(KΣ) == Val(0)
+    @test AΣ == im * ΔΣ
     @test recursively_concrete(typeof(L))
     @test recursively_concrete(typeof(G))
     @test recursively_concrete(typeof(Σ))
@@ -52,6 +58,9 @@ end
     @test recursively_concrete(typeof(Σk))
     @test recursively_concrete(typeof(GW))
     @test recursively_concrete(typeof(ΣW))
+    @test recursively_concrete(typeof(KΣ))
+    @test recursively_concrete(typeof(ΔΣ))
+    @test recursively_concrete(typeof(AΣ))
     @test recursively_concrete(typeof(collision))
     @test parameters(G) isa ParameterMonomial
     @test parameters(Σ) == parameters(G)
@@ -59,6 +68,7 @@ end
     @test parameters(Σk) == parameters(Gk)
     @test parameters(GW) == parameters(Gk)
     @test parameters(ΣW) == parameters(Σk)
+    @test parameters(KΣ) == parameters(ΣW)
 
     Gm = @inferred KC.matrix(G)
     @test Gm[1, 1] === G.keldysh
