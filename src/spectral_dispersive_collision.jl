@@ -22,7 +22,9 @@ statistics(::SpectralDispersiveTerm{S}) where {S} = S
 spectral_dispersive_kinds(term::SpectralDispersiveTerm) = term.kinds
 kinematic_factor(term::SpectralDispersiveTerm) = kinematic_factor(term.carrier)
 momentum_basis(term::SpectralDispersiveTerm) = momentum_basis(term.carrier)
-external_wigner_momentum(term::SpectralDispersiveTerm) = external_wigner_momentum(term.carrier)
+function external_wigner_momentum(term::SpectralDispersiveTerm)
+    return external_wigner_momentum(term.carrier)
+end
 topology(term::SpectralDispersiveTerm) = term.carrier.topology
 
 function Base.isequal(
@@ -57,7 +59,9 @@ Base.length(expression::SpectralDispersiveExpression) = length(expression.terms)
 Base.isempty(expression::SpectralDispersiveExpression) = isempty(expression.terms)
 Base.iszero(expression::SpectralDispersiveExpression) = isempty(expression.terms)
 Base.iterate(expression::SpectralDispersiveExpression) = iterate(expression.terms)
-Base.iterate(expression::SpectralDispersiveExpression, state) = iterate(expression.terms, state)
+function Base.iterate(expression::SpectralDispersiveExpression, state)
+    return iterate(expression.terms, state)
+end
 function Base.eltype(
     ::Type{SpectralDispersiveExpression{C,S,E1,E2,G,Ctx}}
 ) where {C,S,E1,E2,G,Ctx}
@@ -72,7 +76,9 @@ function Base.isequal(
 end
 Base.:(==)(a::SpectralDispersiveExpression, b::SpectralDispersiveExpression) = isequal(a, b)
 function Base.hash(expression::SpectralDispersiveExpression, h::UInt)
-    return hash(expression.context, hash(expression.terms, hash(SpectralDispersiveExpression, h)))
+    return hash(
+        expression.context, hash(expression.terms, hash(SpectralDispersiveExpression, h))
+    )
 end
 
 function Base.push!(
@@ -154,9 +160,8 @@ end
         return Pair{SpectralDispersiveKind,C}[CollisionSpectral => one(C)]
     end
 
-    statistical_weight(line) === NoStatisticalWeight || error(
-        "causal kinetic line unexpectedly carries a statistical distribution weight"
-    )
+    statistical_weight(line) === NoStatisticalWeight ||
+        error("causal kinetic line unexpectedly carries a statistical distribution weight")
     half_i = convert(C, (1 // 2) * im)
     spectral_coefficient = if kind === KineticRetarded
         -half_i
@@ -217,9 +222,7 @@ function _spectral_dispersive_expression(
 ) where {C<:Number,S<:Statistics,E1,E2,G,Ctx<:AbstractWignerContext}
     out = SpectralDispersiveExpression{C,S,E1,E2,G,Ctx}(wigner_context(expression))
     for (source_term, source_coefficient) in expression
-        partials = Pair{Vector{SpectralDispersiveKind},C}[
-            SpectralDispersiveKind[] => source_coefficient
-        ]
+        partials = Pair{Vector{SpectralDispersiveKind},C}[SpectralDispersiveKind[] => source_coefficient]
         for line in kinetic_lines(source_term)
             components = _spectral_dispersive_components(line, C)
             next = Pair{Vector{SpectralDispersiveKind},C}[]
