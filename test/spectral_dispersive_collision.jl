@@ -33,8 +33,7 @@ function sd_self_energy(coefficient; loss=false)
             2 * bar(c) * bar(q) * (c(plus) * q(plus) + c(minus) * q(minus))
         )
     else
-        -coefficient *
-        ((c^2 + q^2) * bar(c) * bar(q) + c * q * (bar(c)^2 + bar(q)^2))
+        -coefficient * ((c^2 + q^2) * bar(c) * bar(q) + c * q * (bar(c)^2 + bar(q)^2))
     end
     L = InteractionLagrangian(interaction, loss ? :γ : :g)
     G = DressedPropagator(L, Val(2), Val(5); simplify=false)
@@ -77,8 +76,21 @@ end
     source_lines = collect(kinetic_lines(source))
     seed = first(source_lines)
 
+    function spectral_spectator(line)
+        return KineticLine{Boson}(
+            line.family,
+            line.out_position,
+            line.in_position,
+            line.regularisation_shift,
+            KC.momentum(line),
+            KineticSpectral,
+            statistical_weight(line),
+        )
+    end
+    spectator_lines = KineticLine{Boson}[spectral_spectator(line) for line in source_lines]
+
     function causal_variant(kind)
-        lines = copy(source_lines)
+        lines = copy(spectator_lines)
         lines[1] = KineticLine{Boson}(
             seed.family,
             seed.out_position,
@@ -125,7 +137,9 @@ end
     @test @inferred(wigner_context(decomposed)) == wigner_context(collision)
     @test sd_recursively_concrete(typeof(decomposed))
 
-    expressions = (collision_offset(decomposed), collision_distribution_coefficient(decomposed))
+    expressions = (
+        collision_offset(decomposed), collision_distribution_coefficient(decomposed)
+    )
     @test all(expression -> !iszero(expression), expressions)
     @test all(
         expression -> all(
@@ -164,7 +178,8 @@ end
     loss_decomposed = @inferred spectral_dispersive_collision(loss_collision)
     source_shifts = Set(
         regularisation_shift(line) for expression in (
-            collision_offset(loss_collision), collision_distribution_coefficient(loss_collision)
+            collision_offset(loss_collision),
+            collision_distribution_coefficient(loss_collision),
         ) for (term, _) in expression for line in kinetic_lines(term)
     )
     decomposed_shifts = Set(
@@ -195,14 +210,14 @@ end
     @test sd_recursively_concrete(typeof(decomposed))
 
     source_kinematics = Set(
-        KC.kinematic_factor(term) for expression in (
-            collision_offset(collision), collision_distribution_coefficient(collision)
-        ) for (term, _) in expression
+        KC.kinematic_factor(term) for expression in
+        (collision_offset(collision), collision_distribution_coefficient(collision)) for
+        (term, _) in expression
     )
     decomposed_kinematics = Set(
-        KC.kinematic_factor(term) for expression in (
-            collision_offset(decomposed), collision_distribution_coefficient(decomposed)
-        ) for (term, _) in expression
+        KC.kinematic_factor(term) for expression in
+        (collision_offset(decomposed), collision_distribution_coefficient(decomposed)) for
+        (term, _) in expression
     )
     @test decomposed_kinematics ⊆ source_kinematics
     @test any(
