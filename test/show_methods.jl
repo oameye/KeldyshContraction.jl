@@ -139,7 +139,7 @@ end
     two_edge_latex = repr(MIME"text/latex"(), two_edge_diagram)
     @test count(==('G'), two_edge_latex) == 2
 
-    DP = DressedPropagator(ds, ds, ds, Val(1), parameter_monomial(g))
+    DP = DressedPropagator(ds, ds, ds, Val(1), parameter_monomial(g), ϕ)
     @test repr(MIME"text/plain"(), DP) ==
         "Dressed Propagator:\nkeldysh:  Gᴷ(y₁,y₁)\nretarded: Gᴷ(y₁,y₁)\nadvanced: Gᴷ(y₁,y₁)"
 
