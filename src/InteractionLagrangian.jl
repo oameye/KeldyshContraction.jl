@@ -259,9 +259,9 @@ function rationalize_coefficients(
     q::QMul{Complex{C},S}
 ) where {C<:AbstractFloat,S<:Statistics}
     R = typeof(rationalize(zero(C)))
-    CR = Complex{R}
-    c = complex(rationalize(real(q.arg_c)), rationalize(imag(q.arg_c)))
-    return QMul{CR,S}(convert(CR, c), copy(q.args_nc))
+    real_part = rationalize(real(q.arg_c))
+    imag_part = rationalize(imag(q.arg_c))
+    return QMul{Complex{R},S}(Complex{R}(real_part, imag_part), copy(q.args_nc))
 end
 rationalize_coefficients(q::QMul{C,S}) where {C<:Number,S<:Statistics} = q
 
