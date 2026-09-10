@@ -56,6 +56,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("off_shell_collision.jl")
     include("spectral_dispersive_collision.jl")
     include("frequency_support.jl")
+    include("full_rank_frequency_reduction.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
     include("propagator_algebra/legacy_momentum_routing.jl")
@@ -147,6 +148,15 @@ const ComplexRationals = Complex{Rational{Int64}}
         PrincipalValueSupport,
         principal_value_support,
         FrequencySupport,
+        FullRankFrequencyReduction,
+        loop_frequency_count,
+        spectral_frequency_rank,
+        full_rank_frequency_reduction,
+        loop_frequency_basis_indices,
+        loop_frequency_energies,
+        spectral_pivot_lines,
+        frequency_support,
+        frequency_factor,
         parameters
 end
 
