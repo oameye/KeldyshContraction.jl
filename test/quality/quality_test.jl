@@ -35,6 +35,17 @@ using ExplicitImports
             KeldyshContraction.ComplexRationals,KeldyshContraction.Boson,2,3,1
         },
     )
+    all_concrete(
+        KeldyshContraction.OffShellCollisionExpression{
+            ComplexF64,
+            KeldyshContraction.Boson,
+            1,
+            1,
+            0,
+            0,
+            KeldyshContraction.HomogeneousWignerContext,
+        },
+    )
 
     all_concrete(KeldyshContraction.BosonicDistributionTerm)
     all_concrete(KeldyshContraction.BosonicDistributions{ComplexF64})
