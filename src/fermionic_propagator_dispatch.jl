@@ -11,9 +11,17 @@ function DressedPropagator(
     kwargs...,
 ) where {C<:Number,O,E}
     fields = propagator_fields(L, target)
+    selected_target = field_family(first(fields))
     external_products = propagator_external_products(Fermion, fields...)
     return _dressed_propagator(
-        L, external_products, order, edges; simplify, _set_reg_to_zero, kwargs...
+        L,
+        external_products,
+        selected_target,
+        order,
+        edges;
+        simplify,
+        _set_reg_to_zero,
+        kwargs...,
     )
 end
 
@@ -27,8 +35,16 @@ function DressedPropagator(
     kwargs...,
 ) where {C<:Number,O,E}
     fields = propagator_fields(first(arguments(Ls)), target)
+    selected_target = field_family(first(fields))
     external_products = propagator_external_products(Fermion, fields...)
     return _dressed_propagator_sum(
-        Ls, external_products, order, edges; simplify, _set_reg_to_zero, kwargs...
+        Ls,
+        external_products,
+        selected_target,
+        order,
+        edges;
+        simplify,
+        _set_reg_to_zero,
+        kwargs...,
     )
 end

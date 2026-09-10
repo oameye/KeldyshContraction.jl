@@ -199,6 +199,7 @@ function _self_energy(G::DressedPropagator{C,Fermion,O,E1,E2}) where {C<:Number,
         self_energy[PropagatorType.Retarded],
         self_energy[PropagatorType.Advanced],
         G.parameter,
+        G.target,
     )
 end
 

@@ -187,12 +187,14 @@ struct WignerDressedPropagator{C<:Number,S<:Statistics,O,E1,E2,G,Ctx<:AbstractWi
     retarded::WignerDiagrams{C,S,E1,E2,G,Ctx}
     advanced::WignerDiagrams{C,S,E1,E2,G,Ctx}
     parameter::ParameterMonomial
+    target::FieldFamily{S}
     context::Ctx
 end
 
 order(::WignerDressedPropagator{C,S,O}) where {C,S,O} = O
 statistics(::WignerDressedPropagator{C,S}) where {C,S} = S
 parameters(G::WignerDressedPropagator) = G.parameter
+target_family(G::WignerDressedPropagator) = G.target
 gradient_order(::WignerDressedPropagator{C,S,O,E1,E2,G}) where {C,S,O,E1,E2,G} = Val(G)
 wigner_context(G::WignerDressedPropagator) = G.context
 function Base.isequal(
@@ -203,11 +205,12 @@ function Base.isequal(
            isequal(a.retarded, b.retarded) &&
            isequal(a.advanced, b.advanced) &&
            isequal(a.parameter, b.parameter) &&
+           isequal(a.target, b.target) &&
            isequal(a.context, b.context)
 end
 Base.:(==)(a::WignerDressedPropagator, b::WignerDressedPropagator) = isequal(a, b)
 function Base.hash(G::WignerDressedPropagator, h::UInt)
-    return hash((G.keldysh, G.retarded, G.advanced, G.parameter, G.context), h)
+    return hash((G.keldysh, G.retarded, G.advanced, G.parameter, G.target, G.context), h)
 end
 
 function _wigner_transform(
@@ -221,6 +224,7 @@ function _wigner_transform(
         _homogeneous_wigner_diagrams(G.retarded),
         _homogeneous_wigner_diagrams(G.advanced),
         G.parameter,
+        G.target,
         context,
     )
 end
@@ -242,12 +246,14 @@ struct WignerSelfEnergy{C<:Number,S<:Statistics,O,E1,E2,G,Ctx<:AbstractWignerCon
     retarded::WignerDiagrams{C,S,E1,E2,G,Ctx}
     advanced::WignerDiagrams{C,S,E1,E2,G,Ctx}
     parameter::ParameterMonomial
+    target::FieldFamily{S}
     context::Ctx
 end
 
 order(::WignerSelfEnergy{C,S,O}) where {C,S,O} = O
 statistics(::WignerSelfEnergy{C,S}) where {C,S} = S
 parameters(Σ::WignerSelfEnergy) = Σ.parameter
+target_family(Σ::WignerSelfEnergy) = Σ.target
 gradient_order(::WignerSelfEnergy{C,S,O,E1,E2,G}) where {C,S,O,E1,E2,G} = Val(G)
 wigner_context(Σ::WignerSelfEnergy) = Σ.context
 function Base.isequal(
@@ -257,11 +263,12 @@ function Base.isequal(
            isequal(a.retarded, b.retarded) &&
            isequal(a.advanced, b.advanced) &&
            isequal(a.parameter, b.parameter) &&
+           isequal(a.target, b.target) &&
            isequal(a.context, b.context)
 end
 Base.:(==)(a::WignerSelfEnergy, b::WignerSelfEnergy) = isequal(a, b)
 function Base.hash(Σ::WignerSelfEnergy, h::UInt)
-    return hash((Σ.keldysh, Σ.retarded, Σ.advanced, Σ.parameter, Σ.context), h)
+    return hash((Σ.keldysh, Σ.retarded, Σ.advanced, Σ.parameter, Σ.target, Σ.context), h)
 end
 
 function _wigner_transform(
@@ -275,6 +282,7 @@ function _wigner_transform(
         _homogeneous_wigner_diagrams(Σ.retarded),
         _homogeneous_wigner_diagrams(Σ.advanced),
         Σ.parameter,
+        Σ.target,
         context,
     )
 end
