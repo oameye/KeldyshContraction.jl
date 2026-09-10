@@ -52,6 +52,7 @@ const ComplexRationals = Complex{Rational{Int64}}
 
     include("propagator_algebra/fourier_transform.jl")
     include("propagator_algebra/wigner.jl")
+    include("propagator_algebra/spectral_statistical.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
     include("propagator_algebra/legacy_momentum_routing.jl")
@@ -101,6 +102,27 @@ const ComplexRationals = Complex{Rational{Int64}}
         gradient_order,
         external_wigner_momentum,
         wigner_context,
+        KineticLineKind,
+        KineticRetarded,
+        KineticAdvanced,
+        KineticSpectral,
+        StatisticalWeight,
+        NoStatisticalWeight,
+        DistributionWeight,
+        KineticLine,
+        KineticMonomial,
+        KineticTerm,
+        KineticExpression,
+        KineticSelfEnergy,
+        kinetic_expression,
+        kinetic_lines,
+        kinetic_line_kind,
+        statistical_weight,
+        regularisation_shift,
+        retarded_minus_advanced,
+        spectral_self_energy,
+        statistical_occupation_coefficients,
+        statistical_from_occupation,
         parameters
 end
 
