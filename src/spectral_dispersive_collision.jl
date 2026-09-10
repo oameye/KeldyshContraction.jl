@@ -19,6 +19,7 @@ struct SpectralDispersiveTerm{S<:Statistics,E1,E2}
 end
 
 statistics(::SpectralDispersiveTerm{S}) where {S} = S
+"""Return the canonical spectral/dispersive kind vector for one collision term."""
 spectral_dispersive_kinds(term::SpectralDispersiveTerm) = term.kinds
 kinematic_factor(term::SpectralDispersiveTerm) = kinematic_factor(term.carrier)
 momentum_basis(term::SpectralDispersiveTerm) = momentum_basis(term.carrier)
