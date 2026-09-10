@@ -55,6 +55,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("propagator_algebra/spectral_statistical.jl")
     include("off_shell_collision.jl")
     include("spectral_dispersive_collision.jl")
+    include("frequency_support.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
     include("propagator_algebra/legacy_momentum_routing.jl")
@@ -137,6 +138,15 @@ const ComplexRationals = Complex{Rational{Int64}}
         SpectralDispersiveCollision,
         spectral_dispersive_kinds,
         spectral_dispersive_collision,
+        DispersionAtom,
+        EnergyForm,
+        energy_terms,
+        energy_basis_size,
+        EnergyShell,
+        energy_shell,
+        PrincipalValueSupport,
+        principal_value_support,
+        FrequencySupport,
         parameters
 end
 
