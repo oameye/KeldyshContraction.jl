@@ -6,7 +6,7 @@ $(DocStringExtensions.TYPEDEF)
 
 A structure representing a dressed propagator in the Retarded-Advanced-Keldysh basis.
 Its coefficient representation, statistics, perturbation order, and diagram shape are
-encoded in the type.
+encoded in the type. The selected external physical field family is retained explicitly.
 
 # Fields
 $(DocStringExtensions.FIELDS)
@@ -20,6 +20,8 @@ struct DressedPropagator{C<:Number,S<:Statistics,O,E1,E2}
     advanced::Diagrams{C,S,E1,E2}
     "Canonical perturbation-parameter monomial"
     parameter::ParameterMonomial
+    "Physical field family selected for the external two-point function"
+    target::FieldFamily{S}
 end
 
 function DressedPropagator(
@@ -28,8 +30,9 @@ function DressedPropagator(
     advanced::Diagrams{C,S,E1,E2},
     ::Val{O},
     parameter::ParameterMonomial,
+    target::FieldFamily{S},
 ) where {C<:Number,S<:Statistics,O,E1,E2}
-    return DressedPropagator{C,S,O,E1,E2}(keldysh, retarded, advanced, parameter)
+    return DressedPropagator{C,S,O,E1,E2}(keldysh, retarded, advanced, parameter, target)
 end
 
 function Base.isequal(
@@ -38,7 +41,8 @@ function Base.isequal(
     return isequal(a.keldysh, b.keldysh) &&
            isequal(a.retarded, b.retarded) &&
            isequal(a.advanced, b.advanced) &&
-           isequal(a.parameter, b.parameter)
+           isequal(a.parameter, b.parameter) &&
+           isequal(a.target, b.target)
 end
 function Base.:(==)(
     a::DressedPropagator{C,S,O,E1,E2}, b::DressedPropagator{C,S,O,E1,E2}
@@ -46,12 +50,13 @@ function Base.:(==)(
     return isequal(a, b)
 end
 function Base.hash(d::DressedPropagator, h::UInt)
-    return hash((d.keldysh, d.retarded, d.advanced, d.parameter), h)
+    return hash((d.keldysh, d.retarded, d.advanced, d.parameter, d.target), h)
 end
 
 order(::DressedPropagator{C,S,O}) where {C,S,O} = O
 statistics(::DressedPropagator{C,S}) where {C,S} = S
 parameters(d::DressedPropagator) = d.parameter
+target_family(d::DressedPropagator) = d.target
 
 function structural_zero(
     ::Type{Boson}, ::Type{Diagrams{C,Boson,E1,E2}}
@@ -106,6 +111,7 @@ end
 function _dressed_propagator(
     L::InteractionLagrangian{C,S},
     external_products::Tuple{QMul{P1,S},QMul{P2,S},QMul{P3,S}},
+    target::FieldFamily{S},
     ::Val{O},
     ::Val{E};
     simplify=true,
@@ -129,15 +135,16 @@ function _dressed_propagator(
         filter_nonzero!(component)
     end
 
-    return DressedPropagator(keldysh, retarded, advanced, Val(O), parameters(L)^O)
+    return DressedPropagator(keldysh, retarded, advanced, Val(O), parameters(L)^O, target)
 end
 
 """
     DressedPropagator(L::InteractionLagrangian, ::Val{order}, ::Val{edges}; target, kwargs...)
 
 For a single field family, the target propagator is inferred. Multi-family interactions
-require `target` to select the physical field family. Statistics dispatch selects the
-external K/R/A field products; diagram generation then shares one implementation.
+require `target` to select the physical field family. The selected family is retained in the
+returned propagator. Statistics dispatch selects the external K/R/A field products; diagram
+generation then shares one implementation.
 
 All the same-coordinate advanced propagators are converted to retarded propagators when
 `simplify=true`.
@@ -152,9 +159,17 @@ function DressedPropagator(
     kwargs...,
 ) where {C<:Number,O,E}
     fields = propagator_fields(L, target)
+    selected_target = field_family(first(fields))
     external_products = propagator_external_products(Boson, fields...)
     return _dressed_propagator(
-        L, external_products, order, edges; simplify, _set_reg_to_zero, kwargs...
+        L,
+        external_products,
+        selected_target,
+        order,
+        edges;
+        simplify,
+        _set_reg_to_zero,
+        kwargs...,
     )
 end
 
@@ -173,6 +188,7 @@ parameters(d::DressedPropagatorSum) = collect(keys(d.arguments))
 function _dressed_propagator_sum(
     Ls::LagrangianSum{C,S},
     external_products::Tuple{QMul{P1,S},QMul{P2,S},QMul{P3,S}},
+    target::FieldFamily{S},
     ::Val{O},
     ::Val{E};
     simplify=true,
@@ -221,7 +237,7 @@ function _dressed_propagator_sum(
             _simplify_prefactors!(component)
         end
         parameter = first(keldysh_pairs[idx])
-        dict[parameter] = DressedPropagator(components..., Val(O), parameter)
+        dict[parameter] = DressedPropagator(components..., Val(O), parameter, target)
     end
 
     return DressedPropagatorSum{GS,O}(dict)
@@ -232,7 +248,8 @@ end
 
 Construct a perturbative propagator for a sum of interactions with common field families.
 Statistics dispatch selects the R/A/K external products while diagram generation and
-parameter-monomial accumulation share one implementation.
+parameter-monomial accumulation share one implementation. The selected external family is
+retained by every propagator in the sum.
 """
 function DressedPropagator(
     Ls::LagrangianSum{C,Boson},
@@ -244,8 +261,16 @@ function DressedPropagator(
     kwargs...,
 ) where {C<:Number,O,E}
     fields = propagator_fields(first(arguments(Ls)), target)
+    selected_target = field_family(first(fields))
     external_products = propagator_external_products(Boson, fields...)
     return _dressed_propagator_sum(
-        Ls, external_products, order, edges; simplify, _set_reg_to_zero, kwargs...
+        Ls,
+        external_products,
+        selected_target,
+        order,
+        edges;
+        simplify,
+        _set_reg_to_zero,
+        kwargs...,
     )
 end

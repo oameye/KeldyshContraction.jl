@@ -259,22 +259,25 @@ struct FourierDressedPropagator{C<:Number,S<:Statistics,O,E1,E2}
     retarded::FourierDiagrams{C,S,E1,E2}
     advanced::FourierDiagrams{C,S,E1,E2}
     parameter::ParameterMonomial
+    target::FieldFamily{S}
 end
 
 order(::FourierDressedPropagator{C,S,O}) where {C,S,O} = O
 statistics(::FourierDressedPropagator{C,S}) where {C,S} = S
 parameters(G::FourierDressedPropagator) = G.parameter
+target_family(G::FourierDressedPropagator) = G.target
 function Base.isequal(
     a::FourierDressedPropagator{C,S,O,E1,E2}, b::FourierDressedPropagator{C,S,O,E1,E2}
 ) where {C,S,O,E1,E2}
     return isequal(a.keldysh, b.keldysh) &&
            isequal(a.retarded, b.retarded) &&
            isequal(a.advanced, b.advanced) &&
-           isequal(a.parameter, b.parameter)
+           isequal(a.parameter, b.parameter) &&
+           isequal(a.target, b.target)
 end
 Base.:(==)(a::FourierDressedPropagator, b::FourierDressedPropagator) = isequal(a, b)
 function Base.hash(G::FourierDressedPropagator, h::UInt)
-    return hash((G.keldysh, G.retarded, G.advanced, G.parameter), h)
+    return hash((G.keldysh, G.retarded, G.advanced, G.parameter, G.target), h)
 end
 
 function fourier_transform(
@@ -285,6 +288,7 @@ function fourier_transform(
         fourier_transform(G.retarded),
         fourier_transform(G.advanced),
         G.parameter,
+        G.target,
     )
 end
 
@@ -294,22 +298,25 @@ struct FourierSelfEnergy{C<:Number,S<:Statistics,O,E1,E2}
     retarded::FourierDiagrams{C,S,E1,E2}
     advanced::FourierDiagrams{C,S,E1,E2}
     parameter::ParameterMonomial
+    target::FieldFamily{S}
 end
 
 order(::FourierSelfEnergy{C,S,O}) where {C,S,O} = O
 statistics(::FourierSelfEnergy{C,S}) where {C,S} = S
 parameters(Σ::FourierSelfEnergy) = Σ.parameter
+target_family(Σ::FourierSelfEnergy) = Σ.target
 function Base.isequal(
     a::FourierSelfEnergy{C,S,O,E1,E2}, b::FourierSelfEnergy{C,S,O,E1,E2}
 ) where {C,S,O,E1,E2}
     return isequal(a.keldysh, b.keldysh) &&
            isequal(a.retarded, b.retarded) &&
            isequal(a.advanced, b.advanced) &&
-           isequal(a.parameter, b.parameter)
+           isequal(a.parameter, b.parameter) &&
+           isequal(a.target, b.target)
 end
 Base.:(==)(a::FourierSelfEnergy, b::FourierSelfEnergy) = isequal(a, b)
 function Base.hash(Σ::FourierSelfEnergy, h::UInt)
-    return hash((Σ.keldysh, Σ.retarded, Σ.advanced, Σ.parameter), h)
+    return hash((Σ.keldysh, Σ.retarded, Σ.advanced, Σ.parameter, Σ.target), h)
 end
 
 function _amputate_fourier_graph(
@@ -388,6 +395,7 @@ function _fourier_self_energy(
         self_energy[PropagatorType.Retarded],
         self_energy[PropagatorType.Advanced],
         G.parameter,
+        G.target,
     )
 end
 
