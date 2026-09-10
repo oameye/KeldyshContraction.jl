@@ -82,11 +82,7 @@ function off_shell_collision_expression(
     offset = convert(D, im) * Σ.keldysh
     distribution_coefficient = -spectral_self_energy(Σ)
     return OffShellCollisionExpression{D,S,O,E1,E2,0,Ctx}(
-        offset,
-        distribution_coefficient,
-        target_family(Σ),
-        Σ.parameter,
-        Σ.context,
+        offset, distribution_coefficient, target_family(Σ), Σ.parameter, Σ.context
     )
 end
 

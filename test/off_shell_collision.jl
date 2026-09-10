@@ -49,9 +49,7 @@ function bosonic_elastic_kinetic_self_energy(coefficient)
     return kinetic_expression(ΣW)
 end
 
-function edgewise_spectral_term(
-    term::KineticTerm{S,E1,E2}
-) where {S<:KC.Statistics,E1,E2}
+function edgewise_spectral_term(term::KineticTerm{S,E1,E2}) where {S<:KC.Statistics,E1,E2}
     lines = KineticLine{S}[
         KineticLine{S}(
             line.family,
@@ -74,9 +72,7 @@ end
 
 function edgewise_spectral_product_surrogate(
     expression::KineticExpression{C,S,E1,E2,G,Ctx}
-) where {
-    C<:Number,S<:KC.Statistics,E1,E2,G,Ctx<:KC.AbstractWignerContext
-}
+) where {C<:Number,S<:KC.Statistics,E1,E2,G,Ctx<:KC.AbstractWignerContext}
     out = KineticExpression{C,S,E1,E2,G,Ctx}(wigner_context(expression))
     for (term, coefficient) in expression
         push!(out, edgewise_spectral_term(term), coefficient)
@@ -114,8 +110,12 @@ end
 end
 
 @testset "collision coefficient domain follows the kinetic self-energy" begin
-    exact = @inferred off_shell_collision_expression(bosonic_loss_kinetic_self_energy(1 // 2))
-    floating = @inferred off_shell_collision_expression(bosonic_loss_kinetic_self_energy(0.5))
+    exact = @inferred off_shell_collision_expression(
+        bosonic_loss_kinetic_self_energy(1 // 2)
+    )
+    floating = @inferred off_shell_collision_expression(
+        bosonic_loss_kinetic_self_energy(0.5)
+    )
 
     @test valtype(typeof(collision_offset(exact).terms)) === KC.ComplexRationals
     @test valtype(typeof(collision_distribution_coefficient(exact).terms)) ===
@@ -132,9 +132,8 @@ end
     @test !iszero(AΣ)
     @test AΣ != edgewise
     @test all(
-        term -> all(
-            line -> kinetic_line_kind(line) === KineticSpectral, kinetic_lines(term)
-        ),
+        term ->
+            all(line -> kinetic_line_kind(line) === KineticSpectral, kinetic_lines(term)),
         keys(edgewise.terms),
     )
     @test any(
@@ -190,12 +189,7 @@ end
     @test collision_recursively_concrete(typeof(collision))
 
     synthetic = @inferred typeof(KΣ)(
-        KΣ.retarded,
-        KΣ.retarded,
-        KΣ.advanced,
-        KΣ.parameter,
-        target_family(KΣ),
-        KΣ.context,
+        KΣ.retarded, KΣ.retarded, KΣ.advanced, KΣ.parameter, target_family(KΣ), KΣ.context
     )
     synthetic_collision = @inferred off_shell_collision_expression(synthetic)
     source_kinematics = Set(
