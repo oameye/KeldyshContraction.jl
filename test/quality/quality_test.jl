@@ -46,6 +46,28 @@ using ExplicitImports
             KeldyshContraction.HomogeneousWignerContext,
         },
     )
+    all_concrete(KeldyshContraction.SpectralDispersiveTerm{KeldyshContraction.Boson,3,1})
+    all_concrete(
+        KeldyshContraction.SpectralDispersiveExpression{
+            ComplexF64,
+            KeldyshContraction.Boson,
+            3,
+            1,
+            0,
+            KeldyshContraction.HomogeneousWignerContext,
+        },
+    )
+    all_concrete(
+        KeldyshContraction.SpectralDispersiveCollision{
+            ComplexF64,
+            KeldyshContraction.Boson,
+            2,
+            3,
+            1,
+            0,
+            KeldyshContraction.HomogeneousWignerContext,
+        },
+    )
 
     all_concrete(KeldyshContraction.BosonicDistributionTerm)
     all_concrete(KeldyshContraction.BosonicDistributions{ComplexF64})
