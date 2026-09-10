@@ -11,9 +11,13 @@ function benchmark_off_shell_collision!(SUITE)
     G = DressedPropagator(L, Val(2), Val(5); simplify=false)
     ΣW = wigner_transform(SelfEnergy(fourier_transform(G)); gradient_order=Val(0))
     KΣ = kinetic_expression(ΣW)
+    collision = off_shell_collision_expression(KΣ)
 
     SUITE["Off-shell collision"]["Kadanoff-Baym identity"] = @benchmarkable off_shell_collision_expression(
         $KΣ
+    ) seconds = 10
+    SUITE["Off-shell collision"]["spectral-dispersive decomposition"] = @benchmarkable spectral_dispersive_collision(
+        $collision
     ) seconds = 10
     return nothing
 end

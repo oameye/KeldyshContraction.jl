@@ -8,6 +8,7 @@ pages = [
     "Wigner representation" => "wigner.md",
     "Spectral/statistical kinetic IR" => "spectral_statistical.md",
     "Off-shell collision identity" => "off_shell_collision.md",
+    "Spectral/dispersive collision basis" => "spectral_dispersive_collision.md",
     "Literature" => "literature.md",
     "Examples" => [
         "Elastic two body scattering" => "examples/elastic_two_body.md",
