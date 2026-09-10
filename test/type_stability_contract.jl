@@ -69,6 +69,9 @@ function assert_supported_public_contract(
     Σk = @inferred SelfEnergy(Gk)
     GW = @inferred wigner_transform(Gk; gradient_order=Val(0))
     ΣW = @inferred wigner_transform(Σk; gradient_order=Val(0))
+    KΣ = @inferred kinetic_expression(ΣW)
+    ΔΣ = @inferred retarded_minus_advanced(KΣ)
+    AΣ = @inferred spectral_self_energy(KΣ)
 
     @test typeof(G).parameters[1] === D
     @test typeof(Σ).parameters[1] === D
@@ -76,14 +79,18 @@ function assert_supported_public_contract(
     @test Σk isa FourierSelfEnergy{D,Boson,1,1,0}
     @test GW isa WignerDressedPropagator{D,Boson,1,3,0,0,HomogeneousWignerContext}
     @test ΣW isa WignerSelfEnergy{D,Boson,1,1,0,0,HomogeneousWignerContext}
+    @test KΣ isa KineticSelfEnergy{D,Boson,1,1,0,0,HomogeneousWignerContext}
     @test @inferred(parameters(G)) == parameters(L)
     @test @inferred(parameters(Σ)) == parameters(G)
     @test @inferred(parameters(Gk)) == parameters(G)
     @test @inferred(parameters(Σk)) == parameters(Gk)
     @test @inferred(parameters(GW)) == parameters(Gk)
     @test @inferred(parameters(ΣW)) == parameters(Σk)
+    @test @inferred(parameters(KΣ)) == parameters(ΣW)
     @test @inferred(gradient_order(GW)) == Val(0)
     @test @inferred(gradient_order(ΣW)) == Val(0)
+    @test @inferred(gradient_order(KΣ)) == Val(0)
+    @test AΣ == im * ΔΣ
 
     Gm = @inferred matrix(G)
     Σm = @inferred matrix(Σ)
@@ -107,6 +114,9 @@ function assert_supported_public_contract(
     @test contract_recursively_concrete(typeof(Σk))
     @test contract_recursively_concrete(typeof(GW))
     @test contract_recursively_concrete(typeof(ΣW))
+    @test contract_recursively_concrete(typeof(KΣ))
+    @test contract_recursively_concrete(typeof(ΔΣ))
+    @test contract_recursively_concrete(typeof(AΣ))
 
     io = IOBuffer()
     @test @inferred(show(io, c)) === nothing
@@ -191,12 +201,19 @@ function assert_supported_fermion_contract(
     Σdk = @inferred SelfEnergy(Gdk)
     GdW = @inferred wigner_transform(Gdk; gradient_order=Val(0))
     ΣdW = @inferred wigner_transform(Σdk; gradient_order=Val(0))
+    KΣd = @inferred kinetic_expression(ΣdW)
+    ΔΣd = @inferred retarded_minus_advanced(KΣd)
+    AΣd = @inferred spectral_self_energy(KΣd)
     @test typeof(Gd).parameters[1] === D
     @test typeof(Σd).parameters[1] === D
     @test Gdk isa FourierDressedPropagator{D,Fermion,1,3,0}
     @test Σdk isa FourierSelfEnergy{D,Fermion,1,1,0}
     @test GdW isa WignerDressedPropagator{D,Fermion,1,3,0,0,HomogeneousWignerContext}
     @test ΣdW isa WignerSelfEnergy{D,Fermion,1,1,0,0,HomogeneousWignerContext}
+    @test KΣd isa KineticSelfEnergy{D,Fermion,1,1,0,0,HomogeneousWignerContext}
+    @test @inferred(parameters(KΣd)) == parameters(ΣdW)
+    @test @inferred(gradient_order(KΣd)) == Val(0)
+    @test AΣd == im * ΔΣd
     @test contract_recursively_concrete(typeof(Ld))
     @test contract_recursively_concrete(typeof(Gd))
     @test contract_recursively_concrete(typeof(Σd))
@@ -204,6 +221,9 @@ function assert_supported_fermion_contract(
     @test contract_recursively_concrete(typeof(Σdk))
     @test contract_recursively_concrete(typeof(GdW))
     @test contract_recursively_concrete(typeof(ΣdW))
+    @test contract_recursively_concrete(typeof(KΣd))
+    @test contract_recursively_concrete(typeof(ΔΣd))
+    @test contract_recursively_concrete(typeof(AΣd))
     @test contract_recursively_concrete(typeof(@inferred matrix(GdW)))
     @test contract_recursively_concrete(typeof(@inferred matrix(ΣdW)))
 
