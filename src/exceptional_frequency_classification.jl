@@ -88,9 +88,10 @@ end
 @inline function _same_causal_frequency_denominator(
     a::KineticLine{S}, b::KineticLine{S}
 ) where {S<:Statistics}
+    # After homogeneous Fourier/Wigner lowering, the causal frequency denominator is fixed by
+    # the physical species, routed momentum, and equal-time shift. Coordinate-graph endpoints
+    # are provenance only: oppositely oriented edges can carry the same frequency denominator.
     return isequal(a.family, b.family) &&
-           isequal(a.out_position, b.out_position) &&
-           isequal(a.in_position, b.in_position) &&
            a.regularisation_shift == b.regularisation_shift &&
            isequal(momentum(a), momentum(b))
 end
@@ -149,7 +150,9 @@ The result type is fixed by the input term type; the runtime outcome is stored i
 
 The current Kramers--Kronig zero proof is deliberately conservative. It is accepted only when
 one loop-frequency variable occurs in exactly two factors, those factors are one spectral and
-one dispersive copy of the same causal denominator, and no equal-time shift is present. All
+one dispersive copy of the same routed causal denominator, and no equal-time shift is present.
+The denominator identity is defined in the post-Wigner kinetic variables (field family, routed
+momentum, and shift), not by the coordinate-graph endpoint labels retained as provenance. All
 other factors are therefore independent of the witnessed frequency and factor out of the
 frequency integral. Within the quasiparticle statistical convention, any distribution weight
 on the spectral factor is likewise frequency-independent and factors out, leaving the causal
