@@ -68,6 +68,9 @@ using ExplicitImports
             KeldyshContraction.HomogeneousWignerContext,
         },
     )
+    all_concrete(
+        KeldyshContraction.ExceptionalFrequencyClassification{KeldyshContraction.Boson,2,0}
+    )
 
     all_concrete(KeldyshContraction.BosonicDistributionTerm)
     all_concrete(KeldyshContraction.BosonicDistributions{ComplexF64})

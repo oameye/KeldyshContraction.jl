@@ -57,6 +57,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("spectral_dispersive_collision.jl")
     include("frequency_support.jl")
     include("full_rank_frequency_reduction.jl")
+    include("exceptional_frequency_classification.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
     include("propagator_algebra/legacy_momentum_routing.jl")
@@ -157,6 +158,16 @@ const ComplexRationals = Complex{Rational{Int64}}
         spectral_pivot_lines,
         frequency_support,
         frequency_factor,
+        ExceptionalFrequencyKind,
+        FrequencyUnresolved,
+        FrequencyKramersKronigZero,
+        FrequencyTrotterRequired,
+        ExceptionalFrequencyClassification,
+        classify_exceptional_frequency,
+        exceptional_frequency_kind,
+        exceptional_frequency_term,
+        exceptional_frequency_witness_lines,
+        exceptional_frequency_loop_basis_index,
         parameters
 end
 
