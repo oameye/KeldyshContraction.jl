@@ -4,7 +4,8 @@ using KeldyshContraction: is_physical, is_conserved, _wick_contraction
 using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus
 import KeldyshContraction as KC
-@qfields c::Boson(Classical) q::Boson(Quantum)
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]
 @syms Γ g
 
 inelastic_terms =
@@ -18,22 +19,39 @@ elastic_terms = -(0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 
 L_inelastic = InteractionLagrangian(inelastic_terms, Γ)
 L_elastic = InteractionLagrangian(elastic_terms, g)
 
-L = L_inelastic + L_elastic
+L = @inferred L_inelastic + L_elastic
 
 @testset "Conversion" begin
-    @test typeof(L) == KC.LagrangianSum{KC.QAdd{ComplexF64,Boson}}
+    @test typeof(L_inelastic) === KC.InteractionLagrangian{ComplexF64,Boson}
+    @test typeof(L_elastic) === KC.InteractionLagrangian{Float64,Boson}
+    @test typeof(L) === KC.LagrangianSum{ComplexF64,Boson}
+    @test typeof(L_inelastic.lagrangian) === KC.QAdd{ComplexF64,Boson}
+    @test typeof(L_elastic.lagrangian) === KC.QAdd{Float64,Boson}
 end
 
 @testset "Accessing" begin
-    @test isequal(parameters(L), [Γ, g])
+    @test parameters(L) == [parameter_monomial(Γ), parameter_monomial(g)]
+    @test field_families(L_inelastic) == [ϕ]
+    @test field_families(L_elastic) == [ϕ]
+    @test target_family(L_inelastic) === ϕ
+    @test target_family(L) === ϕ
 end
 
 @testset "Correctness first order" begin
     GF1 = DressedPropagator(L, Val(1), Val(3); simplify=false)
-    GF1_elastic = arguments(GF1)[g]
-    GF1_inelastic = arguments(GF1)[Γ]
+    GF1_targeted = DressedPropagator(L, Val(1), Val(3); target=ϕ, simplify=false)
+    @test isequal(arguments(GF1_targeted), arguments(GF1))
+
+    GF1_elastic = GF1[g]
+    GF1_inelastic = GF1[Γ]
 
     trued_elastic = DressedPropagator(L_elastic, Val(1), Val(3); simplify=false)
+    targeted_elastic = DressedPropagator(
+        L_elastic, Val(1), Val(3); target=ϕ, simplify=false
+    )
+    @test isequal(targeted_elastic.keldysh, trued_elastic.keldysh)
+    @test isequal(targeted_elastic.retarded, trued_elastic.retarded)
+    @test isequal(targeted_elastic.advanced, trued_elastic.advanced)
     @test isequal(trued_elastic.keldysh, GF1_elastic.keldysh)
     @test isequal(trued_elastic.retarded, GF1_elastic.retarded)
     @test isequal(trued_elastic.advanced, GF1_elastic.advanced)
@@ -46,8 +64,8 @@ end
 
 @testset "Correctness second order" begin
     GF2 = DressedPropagator(L, Val(2), Val(5); simplify=false)
-    GF2_elastic = arguments(GF2)[g ^ 2]
-    GF2_inelastic = arguments(GF2)[Γ ^ 2]
+    GF2_elastic = GF2[g ^ 2]
+    GF2_inelastic = GF2[Γ ^ 2]
 
     trued_elastic = DressedPropagator(L_elastic, Val(2), Val(5); simplify=false)
     @test isequal(trued_elastic.keldysh, GF2_elastic.keldysh)
@@ -63,8 +81,8 @@ end
         term12 = L_elastic(1).lagrangian * L_inelastic(2).lagrangian
         term21 = L_elastic(2).lagrangian * L_inelastic(1).lagrangian
         regularise = KeldyshContraction.should_regularise(term12)
-        diagrams12 = Diagrams{5,1}()
-        diagrams21 = Diagrams{5,1}()
+        diagrams12 = Diagrams{ComplexF64,Boson,5,1}()
+        diagrams21 = Diagrams{ComplexF64,Boson,5,1}()
         for arg in arguments(term12)
             KeldyshContraction.wick_contraction!(
                 diagrams12, c(Out()) * bar(c)(In()) * arg; simplify=false, regularise
@@ -81,6 +99,8 @@ end
 
 @testset "SelfEnergy" begin
     GF2 = DressedPropagator(L, Val(2), Val(5))
-    Σ2 = @inferred SelfEnergy(GF2, Val(2))
-    @test Σ2 isa KC.SelfEnergySum{KC.SelfEnergy{3,1}}
+    Σ2 = @inferred SelfEnergy(GF2)
+    @test KC.order(Σ2) == 2
+    @test all(Σ -> typeof(Σ).parameters[4] == 3, values(arguments(Σ2)))
+    @test all(Σ -> typeof(Σ).parameters[5] == 1, values(arguments(Σ2)))
 end

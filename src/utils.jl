@@ -29,14 +29,17 @@ make_real(x::Real) = x
 
 bool_to_index(x::Bool) = 2 * x - 1
 
+# Numeric coefficients are part of the canonical symbolic representation.  In
+# particular, IEEE signed zero must not leak into `isequal`/`hash` semantics:
+# `-0.0` and `0.0` are algebraically identical even though `isequal` distinguishes
+# their bit patterns.  Normalize zero components while preserving the concrete
+# coefficient type.
+_simplify(x::Number) = x
+_simplify(x::T) where {T<:AbstractFloat} = iszero(x) ? zero(T) : x
 function _simplify(x::Complex{T}) where {T}
-    if iszero(x.im)
-        return complex(x.re)
-    elseif iszero(x.re)
-        return complex(zero(x.re), x.im)
-    else
-        return x
-    end
+    re = iszero(x.re) ? zero(x.re) : x.re
+    im = iszero(x.im) ? zero(x.im) : x.im
+    return complex(re, im)
 end
 
 """

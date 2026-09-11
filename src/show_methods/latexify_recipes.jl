@@ -37,7 +37,8 @@ end
 end
 
 function _to_expression(op::Field)
-    base = is_barred(op) ? :(dagger($(name(op)))) : :($(name(op)))
+    symbol = field_symbol(op)
+    base = is_barred(op) ? :(dagger($symbol)) : :($symbol)
     reg = Int(regularisation(op))
     if iszero(reg)
         return base

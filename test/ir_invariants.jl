@@ -5,15 +5,20 @@ using Test
 const KC = KeldyshContraction
 
 @testset "isequal/hash contract across symbolic representations" begin
-    @qfields ϕ::Boson(Classical)
+    @qfields ϕ::Boson
+    field = ϕ[Classical]
 
-    scalar_one = one(ϕ)
-    scalar_zero = zero(ϕ)
-    single_field_mul = KC.QMul(1, Field{Boson}[ϕ])
+    scalar_one = one(field)
+    scalar_zero = zero(field)
+    single_field_mul = KC.QMul(1, Field{Boson}[field])
     single_field_add = KC.QAdd(KC.QMul{Int,Boson}[single_field_mul])
 
-    for (a, b) in
-        ((scalar_one, 1), (scalar_zero, 0), (single_field_mul, ϕ), (single_field_add, ϕ))
+    for (a, b) in (
+        (scalar_one, 1),
+        (scalar_zero, 0),
+        (single_field_mul, field),
+        (single_field_add, field),
+    )
         @test isequal(a, b)
         @test isequal(b, a)
         @test hash(a) == hash(b)
@@ -21,15 +26,16 @@ const KC = KeldyshContraction
 
     # The contract must also hold in hashed collections.
     @test Dict{Any,Int}(scalar_one => 1)[1] == 1
-    @test Dict{Any,Int}(single_field_mul => 1)[ϕ] == 1
-    @test Set{Any}([single_field_add]) == Set{Any}([ϕ])
+    @test Dict{Any,Int}(single_field_mul => 1)[field] == 1
+    @test Set{Any}([single_field_add]) == Set{Any}([field])
 end
 
 @testset "QAdd owns its storage" begin
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields ϕ::Boson ψ::Boson
+    ϕc, ψq = ϕ[Classical], ψ[Quantum]
 
     caller_owned = KC.QMul{Int,Boson}[
-        KC.QMul(1, Field{Boson}[ϕ]), KC.QMul(1, Field{Boson}[ψ])
+        KC.QMul(1, Field{Boson}[ϕc]), KC.QMul(1, Field{Boson}[ψq])
     ]
     q = KC.QAdd(caller_owned)
 

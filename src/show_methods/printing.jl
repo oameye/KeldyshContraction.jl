@@ -1,9 +1,12 @@
+field_symbol(f::Field) = name(f)
+field_symbol(f::Field{Boson}) = Symbol(string(name(f), is_classical(f) ? "ᶜ" : "ᴾ"))
+
 function Base.show(io::IO, x::Field)
     reg = Int(regularisation(x))
     if is_barred(x)
         write(io, "̄")
     end
-    write(io, string(name(x)))
+    write(io, string(field_symbol(x)))
     if reg == 1
         write(io, "⁺")
     elseif reg == -1
@@ -48,11 +51,17 @@ end
 
 function Base.show(io::IO, L::InteractionLagrangian)
     write(io, "Interaction Lagrangian with fields ")
-    show(io, L.cfield)
-    write(io, " and ")
-    show(io, L.qfield)
+    for (i, family) in enumerate(L.families)
+        i > 1 && write(io, ", ")
+        write(io, string(name(family)))
+    end
     write(io, ":\n")
-    show(io, L.lagrangian)
+    lagrangian_terms = terms(L.lagrangian)
+    if length(lagrangian_terms) == 1
+        show(io, only(lagrangian_terms))
+    else
+        show(io, L.lagrangian)
+    end
     return nothing
 end
 

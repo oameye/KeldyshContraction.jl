@@ -20,17 +20,18 @@ function Base.hash(h::Union{KeldyshIndex.T,Orientation.T,Regularisation.T}, i::U
     return hash(Int(h), i)
 end
 
+function Base.hash(f::FieldFamily{S}, h::UInt) where {S<:Statistics}
+    return hash(FieldFamily{S}, hash(name(f), hash(field_indices(f), h)))
+end
+
 function Base.hash(f::Field{S}, h::UInt) where {S<:Statistics}
     return hash(
         Field{S},
         hash(
-            name(f),
+            field_family(f),
             hash(
                 orientation(f),
-                hash(
-                    keldysh_index(f),
-                    hash(position(f), hash(regularisation(f), hash(field_indices(f), h))),
-                ),
+                hash(keldysh_index(f), hash(position(f), hash(regularisation(f), h))),
             ),
         ),
     )

@@ -14,7 +14,7 @@ struct QMul{C<:Number,S<:Statistics} <: QTerm
             return new{C,S}(zero(C), Field{S}[])
         end
         sign = canonicalize_fields!(args_nc)
-        coeff = sign == 1 ? arg_c : -arg_c
+        coeff = _simplify(sign == 1 ? arg_c : -arg_c)
         return new{C,S}(coeff, args_nc)
     end
 
@@ -24,7 +24,7 @@ struct QMul{C<:Number,S<:Statistics} <: QTerm
         if iszero(arg_c)
             return new{C,S}(zero(C), Field{S}[])
         end
-        return new{C,S}(arg_c, args_nc)
+        return new{C,S}(_simplify(arg_c), args_nc)
     end
 end
 

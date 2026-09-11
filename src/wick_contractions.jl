@@ -1,44 +1,61 @@
 #################################
-#       Contraction
+#       Wick pairing
 #################################
 
+"""A fixed-size Wick pairing with its statistics-dependent exchange sign."""
+struct WickPairing{S<:Statistics,E}
+    contractions::FixedVector{E,Contraction{S}}
+    sign::Int8
+end
+
+function WickPairing(
+    contractions::Vector{Contraction{S}}, sign::Int8, ::Val{E}
+) where {S<:Statistics,E}
+    @assert length(contractions) == E "The supplied Val{edges} must match the pairing size"
+    fixed = FixedVector{E,Contraction{S}}(c for c in contractions)
+    return WickPairing{S,E}(fixed, sign)
+end
+
+Base.length(::WickPairing{S,E}) where {S,E} = E
+Base.iterate(p::WickPairing) = iterate(p.contractions)
+Base.iterate(p::WickPairing, state) = iterate(p.contractions, state)
+Base.eltype(::Type{WickPairing{S,E}}) where {S,E} = Contraction{S}
+
+function Diagram(pairing::WickPairing{S,E}, ::Val{E}, ::Val{E2}) where {S<:Statistics,E,E2}
+    contractions = Contraction{S}[contraction for contraction in pairing.contractions]
+    return Diagram(contractions, Val(E), Val(E2))
+end
+
+pairing_sign(::Type{Boson}, perm) = Int8(1)
+
+function wick_prefactor(::Type{C}, ::Val{O}) where {C<:Number,O}
+    exact = convert(ComplexRationals, -im * im^O) / factorial(O)
+    return convert(C, exact)
+end
+
 """
-    wick_contraction(in_out::QMul, L::InteractionLagrangian, ::Val{order}, ::Val{edges}; kwargs...)
-    wick_contraction(in_out::QMul, Ls::LagrangianSum, ::Val{order}, ::Val{edges}; simplify, kwargs...)
+    wick_contraction(in_out, L, ::Val{order}, ::Val{edges}; kwargs...)
 
-Compute all possible Wick contractions of the interaction Lagrangian with the external
-fields in `in_out`.
-
-Wick contractions decompose products of quantum field operators into sums of products
-of propagators (two-point correlation functions). The rules of the contraction are:
-  - Conservation (equal numbers of creation/annihilation operators)
-  - Physicality (proper time ordering)
-  - No quantum-quantum contractions
-  - If the fields have a [`Regularisation`](@ref) applied, the contractions are
-    regularised.
-
-The function returns a new expression of propagators as `Diagrams`. For a
-`LagrangianSum`, one parameter/diagram pair is returned for each parameter monomial.
+Compute Wick-contracted diagrams of an interaction with the supplied external fields.
 """
 function wick_contraction(
-    in_out::QMul, L::InteractionLagrangian, ::Val{O}, ::Val{E}; kwargs...
-) where {O,E}
+    in_out::QMul{CI,S}, L::InteractionLagrangian{CL,S}, ::Val{O}, ::Val{E}; kwargs...
+) where {CI<:Number,CL<:Number,S<:Statistics,O,E}
     @assert number_of_propagators(L) * O + 1 == E "The supplied Val{edges} must equal the interaction's propagator count times Val{order}, plus the external propagator"
     return _wick_contraction(in_out, L, Val(E), Val(O); kwargs...)
 end
 
 @inline function _wick_contraction(
-    in_out::QMul, L::InteractionLagrangian, ::Val{E}, ::Val{O}; kwargs...
-) where {E,O}
+    in_out::QMul{CI,S}, L::InteractionLagrangian{CL,S}, ::Val{E}, ::Val{O}; kwargs...
+) where {CI<:Number,CL<:Number,S<:Statistics,E,O}
     l = length(L.lagrangian)
-
-    diagrams = Diagrams{E,max_edges(O)}()
-    prefactor = -1 * im * im^O // factorial(O)
+    C = diagram_coefficient_type(CI, CL)
+    diagrams = Diagrams{C,S,E,max_edges(O)}()
+    prefactor = wick_prefactor(C, Val(O))
 
     regularise = should_regularise(L.lagrangian)
     for coefficients in Combinatorics.multiexponents(l, O)
-        # TODO: remove complex conjugate to go from 10 to only 6 terms
-        idxs = indices_from_counts(coefficients) # will be of length order
+        idxs = indices_from_counts(coefficients)
         mult = Combinatorics.multinomial(coefficients...)
         qmul = mult * prod(L(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
         term = prefactor * in_out * qmul
@@ -48,15 +65,20 @@ end
 end
 
 function wick_contraction(
-    in_out::QMul, Ls::LagrangianSum, ::Val{O}, ::Val{E}; simplify::Vector{Bool}, kwargs...
-) where {O,E}
+    in_out::QMul{CI,S},
+    Ls::LagrangianSum{CL,S},
+    ::Val{O},
+    ::Val{E};
+    simplify::Vector{Bool},
+    kwargs...,
+) where {CI<:Number,CL<:Number,S<:Statistics,O,E}
     @assert all(number_of_propagators(L) * O + 1 == E for L in arguments(Ls)) "All LagrangianSum terms must produce the supplied number of propagator edges"
     ps = parameters(Ls)
     exponents = Combinatorics.multiexponents(length(Ls), O)
     L_args = arguments(Ls)
 
     pairs = map(exponents) do coefficients
-        idxs = indices_from_counts(coefficients) # will be of length order
+        idxs = indices_from_counts(coefficients)
 
         diagrams = if allequal(idxs)
             idx = first(idxs)
@@ -76,10 +98,11 @@ function wick_contraction(
 end
 
 @inline function _wick_contraction(
-    in_out::QMul, a::QAdd, ::Val{E}, ::Val{O}; kwargs...
-) where {E,O}
-    diagrams = Diagrams{E,max_edges(O)}()
-    prefactor = -1 * im * im^O / factorial(O)
+    in_out::QMul{CI,S}, a::QAdd{CA,S}, ::Val{E}, ::Val{O}; kwargs...
+) where {CI<:Number,CA<:Number,S<:Statistics,E,O}
+    C = diagram_coefficient_type(CI, CA)
+    diagrams = Diagrams{C,S,E,max_edges(O)}()
+    prefactor = wick_prefactor(C, Val(O))
 
     regularise = should_regularise(a)
     for arg in terms(a)
@@ -89,32 +112,32 @@ end
 end
 
 function wick_contraction!(
-    diagrams::Diagrams{E1,E2},
-    a::QMul;
+    diagrams::Diagrams{C,S,E1,E2},
+    a::QMul{A,S};
     regularise=true,
     simplify=false,
     _set_reg_to_zero=false,
-) where {E1,E2}
+) where {C<:Number,A<:Number,S<:Statistics,E1,E2}
     @assert is_conserved(a)
     @assert is_physical(a)
 
-    contractions = _wick_contraction(a.args_nc; regularise, _set_reg_to_zero)
-    make_diagram!(diagrams, contractions, a.arg_c, simplify)
+    pairings = _wick_contraction(
+        a.args_nc, Val(E1), Val(E2); regularise, _set_reg_to_zero, simplify
+    )
+    make_diagram!(diagrams, pairings, a.arg_c)
     return nothing
 end
 
 function make_diagram!(
-    diagrams::Diagrams{E1,E2}, contractions, arg_c, simplify::Bool
-) where {E1,E2}
-    if isempty(contractions)
-        return nothing
-    end
-    number_of_contractions = length(first(contractions))
-    imag_factor = im^(number_of_contractions) # Contraction becomes propagator
-    # foreach(contractions) do c
-    for c in contractions
+    diagrams::Diagrams{C,S,E1,E2},
+    pairings::Vector{Tuple{WickPairing{S,E1},FixedVector{E2,Int},Int}},
+    arg_c,
+) where {C<:Number,S<:Statistics,E1,E2}
+    isempty(pairings) && return nothing
+    imag_factor = convert(C, im^E1)
+    for (pairing, topology, multiplicity) in pairings
         diagram, prefactor = make_diagram_pair(
-            c, arg_c, imag_factor, simplify, Val(E1), Val(E2)
+            pairing, topology, multiplicity, arg_c, imag_factor, Val(E1), Val(E2)
         )
         push!(diagrams, diagram, prefactor)
     end
@@ -122,142 +145,273 @@ function make_diagram!(
 end
 
 function make_diagram_pair(
-    c, arg_c, imag_factor, simplify::Bool, ::Val{E}, ::Val{E2}
-) where {E,E2}
-    c′, prefactor = simplify ? advanced_to_retarded(c, arg_c) : (c, arg_c)
-    sort!(c′; by=sort_by_position_and_type)
-    edges = FixedVector{E,Edge}(Edge(contraction) for contraction in c′)
-    return Diagram(edges, Val(E2)) => imag_factor * prefactor
+    pairing::WickPairing{S,E},
+    topology::FixedVector{E2,Int},
+    multiplicity::Int,
+    arg_c,
+    imag_factor,
+    ::Val{E},
+    ::Val{E2},
+) where {S<:Statistics,E,E2}
+    contractions = Contraction{S}[contraction for contraction in pairing.contractions]
+    sort!(contractions; by=sort_by_position_and_type)
+    edges = FixedVector{E,Edge{S}}(Edge(contraction) for contraction in contractions)
+    prefactor = arg_c * pairing.sign * multiplicity
+    return Diagram{S,E,E2}(edges, topology) => imag_factor * prefactor
 end
 
 """
-We split up the fields into two groups, `destroys` and `creates`. We can can combute all
-possible pairs by permutating the create vector. To avoid pairing up the In() and Out()
-fields, we have made sure that the destroy and create vectors are ordered with the in and
-out fields first. Computing the permutatins in lexicographic order, we can skip the first
-(n-1)! permutations.
+    prepare_args(args, ::Val{E})
+
+Split a canonical field product into `E` unbarred fields and the reversed sequence of
+`E` barred fields. Wick permutations act on indices of that reversed partner sequence.
+This ordering is the parity reference used by statistics-dependent `pairing_sign` methods.
 """
-function _wick_contraction(
-    args_nc::Vector{<:QField}; regularise=true, _set_reg_to_zero=false
-)::Vector{Vector{Contraction}}
-    destroys, creates, n_destroy = prepare_args(args_nc)
-
-    number_of_combinations = factorial(n_destroy)
-    ps = map(position, args_nc)
-    skip = has_in(ps) && has_out(ps)
-
-    wick_contractions = Vector{Contraction}[]
-
-    for (i, perm) in enumerate(SmallCombinatorics.permutations(n_destroy))
-        if skip && isone(first(perm))
-            continue # skip the in-out contraction
-        end
-        contraction, fail = _wick_contract(
-            destroys, creates, perm; regularise, _set_reg_to_zero
-        )
-
-        # TODO ∨ You can probably cache this
-        if fail || !is_connected(contraction) || has_zero_loop(contraction)
-            continue
-        else
-            canonical_ordered_contraction = canonicalize(contraction)
-            push!(wick_contractions, canonical_ordered_contraction)
-        end
-    end
-
-    return wick_contractions
+function prepare_args(args::Vector{Field{S}}, ::Val{E}) where {S<:Statistics,E}
+    @assert length(args) == 2E "Number of fields must be twice the pairing size"
+    destroys = args[1:E]
+    creates = reverse(args[(E + 1):end])
+    return destroys, creates
 end
-function _wick_contract(destroys, creates, perm; regularise=true, _set_reg_to_zero=false)
-    contraction = Contraction[]
-    fail = false
-    for (k, l) in pairs(perm)
-        potential_contraction = (destroys[k], creates[l])
-        if !contraction_filter(potential_contraction)
-            fail = true
-            break
-        end
-        if regularise
-            if !regular(potential_contraction)
-                fail = true
-                break
-            else
-                same_position = !allequal(position.(potential_contraction))
-                if _set_reg_to_zero && (same_position || is_keldysh(potential_contraction))
-                    potential_contraction = set_reg_to_zero.(potential_contraction)
+
+@inline function wick_contraction_isless(a::Contraction{S}, b::Contraction{S}) where {S}
+    isequal(a.out, b.out) || return isless(a.out, b.out)
+    return isless(a.in, b.in)
+end
+
+function sorted_wick_key(
+    contractions::Vector{Contraction{S}}, ::Val{E}
+) where {S<:Statistics,E}
+    sort!(contractions; lt=wick_contraction_isless)
+    return FixedVector{E,Contraction{S}}(contractions)
+end
+
+"""
+Build the locally admissible partners for each destroying field.
+
+Family/index compatibility, orientation, physicality, QQ exclusion, and regularisation are
+pair-local constraints. Applying them once here avoids constructing all `E!` permutations
+only to reject almost all of them later.
+"""
+function wick_candidates(
+    destroys::Vector{Field{S}},
+    creates::Vector{Field{S}},
+    ::Val{E};
+    regularise=true,
+    _set_reg_to_zero=false,
+    skip_external_pair=false,
+) where {S<:Statistics,E}
+    return ntuple(Val(E)) do k
+        candidates = Tuple{Int,Contraction{S}}[]
+        for l in 1:E
+            skip_external_pair && k == 1 && l == 1 && continue
+
+            potential = Contraction(destroys[k], creates[l])
+            contraction_filter(potential) || continue
+            regularise && !regular(potential) && continue
+
+            if regularise
+                different_position = !allequal(position.(potential))
+                if _set_reg_to_zero && (different_position || is_keldysh(potential))
+                    potential = map(set_reg_to_zero, potential)
                 end
             end
+            push!(candidates, (l, potential))
         end
-        push!(contraction, potential_contraction)
+        return candidates
     end
-    return contraction, fail
 end
-function prepare_args(args::Vector{<:QField})
-    _length = length(args)
-    @assert _length % 2 == 0 "Number of fields must be even"
 
-    n_destroy = _length ÷ 2
+function _foreach_wick_matching!(
+    f::F,
+    candidates::Tuple,
+    contractions::Vector{C},
+    permutation::Vector{Int},
+    used::Vector{Bool},
+    k::Int,
+) where {F,C<:Contraction}
+    if k > length(candidates)
+        f(contractions, permutation)
+        return nothing
+    end
 
-    destroys = args[1:n_destroy]
-    creates = reverse(args[(n_destroy + 1):end])
-    return destroys, creates, n_destroy
+    for (l, contraction) in candidates[k]
+        used[l] && continue
+        used[l] = true
+        contractions[k] = contraction
+        permutation[k] = l
+        _foreach_wick_matching!(f, candidates, contractions, permutation, used, k + 1)
+        used[l] = false
+    end
+    return nothing
+end
+
+function foreach_wick_matching(
+    f::F, candidates::Candidates, ::Val{E}
+) where {F,E,Candidates<:Tuple}
+    candidate_vector_type = fieldtype(Candidates, 1)
+    candidate_type = fieldtype(eltype(candidate_vector_type), 2)
+    contractions = Vector{candidate_type}(undef, E)
+    permutation = Vector{Int}(undef, E)
+    used = fill(false, E)
+    _foreach_wick_matching!(f, candidates, contractions, permutation, used, 1)
+    return nothing
+end
+
+function wick_matching_key(
+    contractions::Vector{C}, candidates::Candidates, ::Val{E}
+)::NTuple{E,UInt8} where {C<:Contraction,Candidates<:Tuple,E}
+    return ntuple(Val(E)) do k
+        idx = findfirst(candidates[k]) do candidate
+            return isequal(candidate[2], contractions[k])
+        end
+        isnothing(idx) &&
+            error("Wick matching contraction is not present in its candidate row")
+        return UInt8(idx)
+    end
+end
+
+function contractions_from_matching_key(
+    key::NTuple{E,UInt8}, candidates::Candidates, ::Type{Contraction{S}}
+) where {S<:Statistics,E,Candidates<:Tuple}
+    contractions = Vector{Contraction{S}}(undef, E)
+    @inbounds for k in 1:E
+        contractions[k] = candidates[k][Int(key[k])][2]
+    end
+    return contractions
+end
+
+function _wick_contraction(
+    args_nc::Vector{Field{S}}, ::Val{E}; regularise=true, _set_reg_to_zero=false
+)::Vector{WickPairing{S,E}} where {S<:Statistics,E}
+    destroys, creates = prepare_args(args_nc, Val(E))
+    ps = map(position, args_nc)
+    skip = has_in(ps) && has_out(ps)
+    candidates = wick_candidates(
+        destroys, creates, Val(E); regularise, _set_reg_to_zero, skip_external_pair=skip
+    )
+
+    wick_pairings = WickPairing{S,E}[]
+    foreach_wick_matching(candidates, Val(E)) do contractions, permutation
+        passes_wick_filters(contractions) || return nothing
+
+        canonical = canonicalize(contractions)
+        push!(wick_pairings, WickPairing(canonical, pairing_sign(S, permutation), Val(E)))
+        return nothing
+    end
+    return wick_pairings
+end
+
+"""
+Generate final physical Wick-pairing representatives together with their static legacy topology.
+
+Matching permutations are first merged by a compact exact raw-contraction signature, including the
+statistics-dependent signed multiplicity. The signature indexes the precomputed candidate rows and
+therefore avoids storing full fixed contraction tuples as dictionary keys. Connectivity, causal
+filtering, optional advanced-to-retarded simplification, and color-aware physical canonicalization
+are then paid once per unique raw pairing. Legacy uncolored topology is computed once per final
+physical diagram.
+"""
+function _wick_contraction(
+    args_nc::Vector{Field{S}},
+    ::Val{E},
+    ::Val{E2};
+    regularise=true,
+    _set_reg_to_zero=false,
+    simplify=false,
+)::Vector{Tuple{WickPairing{S,E},FixedVector{E2,Int},Int}} where {S<:Statistics,E,E2}
+    destroys, creates = prepare_args(args_nc, Val(E))
+    ps = map(position, args_nc)
+    skip = has_in(ps) && has_out(ps)
+    candidates = wick_candidates(
+        destroys, creates, Val(E); regularise, _set_reg_to_zero, skip_external_pair=skip
+    )
+
+    matching_weights = Dict{NTuple{E,UInt8},Int}()
+    foreach_wick_matching(candidates, Val(E)) do contractions, permutation
+        key = wick_matching_key(contractions, candidates, Val(E))
+        weight = Int(pairing_sign(S, permutation))
+        matching_weights[key] = get(matching_weights, key, 0) + weight
+        return nothing
+    end
+
+    canonical_weights = Dict{FixedVector{E,Contraction{S}},Int}()
+    for (key, weight) in matching_weights
+        iszero(weight) && continue
+        contractions = contractions_from_matching_key(key, candidates, Contraction{S})
+        passes_wick_filters(contractions) || continue
+
+        final_contractions, simplification_sign = if simplify
+            advanced_to_retarded(contractions, 1)
+        else
+            contractions, 1
+        end
+        canonical = canonicalize(final_contractions)
+        canonical_key = sorted_wick_key(canonical, Val(E))
+        final_weight = weight * Int(simplification_sign)
+        canonical_weights[canonical_key] =
+            get(canonical_weights, canonical_key, 0) + final_weight
+    end
+
+    wick_pairings = Tuple{WickPairing{S,E},FixedVector{E2,Int},Int}[]
+    sizehint!(wick_pairings, length(canonical_weights))
+    for (canonical, weight) in canonical_weights
+        iszero(weight) && continue
+        contractions = Contraction{S}[contraction for contraction in canonical]
+        topology = legacy_topology(contractions, Val(E2))
+        pairing = WickPairing(contractions, Int8(sign(weight)), Val(E))
+        push!(wick_pairings, (pairing, topology, abs(weight)))
+    end
+    return wick_pairings
+end
+
+######################
+# Explicit-shape contractions
+######################
+
+function _wick_contraction(
+    a::QAdd{C,S}, ::Val{E}, ::Val{E2}; kwargs...
+) where {C<:Number,S<:Statistics,E,E2}
+    args = terms(a)
+    @assert all(number_of_propagators(arg) == E for arg in args)
+
+    D = diagram_coefficient_type(C)
+    diagrams = Diagrams{D,S,E,E2}()
+    regularise = should_regularise(a)
+    for arg in args
+        wick_contraction!(diagrams, arg; regularise, kwargs...)
+    end
+    return diagrams
+end
+
+function _wick_contraction(
+    a::QMul{C,S}, ::Val{E}, ::Val{E2}; kwargs...
+) where {C<:Number,S<:Statistics,E,E2}
+    @assert is_conserved(a)
+    @assert is_physical(a)
+    @assert number_of_propagators(a) == E
+
+    D = diagram_coefficient_type(C)
+    diagrams = Diagrams{D,S,E,E2}()
+    regularise = should_regularise(a)
+    wick_contraction!(diagrams, a; regularise, kwargs...)
+    return diagrams
 end
 
 ######################
 # Vacuum Contractions
 ######################
 
-@unstable function _wick_contraction(a::QAdd, ::Val{E}; kwargs...) where {E}
-    args = terms(a)
-    @assert all(number_of_propagators(arg) == E for arg in args)
-    if is_bulk(a) # for vacuum calculations
-        diagrams = Diagrams{E,topology_length(E + 1)}()
-    else
-        @warn """
-        The private `_wick_contraction` helper is intended for vacuum calculations only.
-        Instead, use `wick_contraction` with InteractionLagrangian.
-        """
-        diagrams = Diagrams{E,topology_length(E)}()
-    end
+function _wick_contraction(
+    a::QAdd{C,S}, ::Val{E}; kwargs...
+) where {C<:Number,S<:Statistics,E}
+    @assert is_bulk(a) "The private two-argument _wick_contraction entry point is for vacuum terms"
+    return _wick_contraction(a, Val(E), Val(topology_length(E + 1)); kwargs...)
+end
 
-    regularise = should_regularise(a)
-    for arg in args
-        wick_contraction!(diagrams, arg; regularise, kwargs...)
-    end
-    return diagrams
-end # keep for vacuum calculations
-@unstable function _wick_contraction(a::QMul, ::Val{E}; kwargs...) where {E}
-    @assert is_conserved(a)
-    @assert is_physical(a)
-
-    @assert number_of_propagators(a) == E
-    if is_bulk(a) # for vacuum calculations
-        diagrams = Diagrams{E,topology_length(E + 1)}()
-    else
-        @warn """
-        The private `_wick_contraction` helper is intended for vacuum calculations only.
-        Instead, use `wick_contraction` with InteractionLagrangian.
-        """
-        diagrams = Diagrams{E,topology_length(E)}()
-    end
-
-    regularise = should_regularise(a)
-    wick_contraction!(diagrams, a; regularise, kwargs...)
-    return diagrams
-end # keep for vacuum calculations
-
-# The following were used to check for bugs, we leave them here for reference
-# but they are not used in the main code.
-# function check_sorted(args)
-#     args′ = sort(args; by=position)
-#     args′′ = sort(args′; by=ladder)
-#     @assert isequal(args, args′′) "Arguments are not sorted"
-# end
-# function check_to_many_bulk(contraction, args_nc)
-#     pos = map(x -> Int(position(x)), Iterators.flatten(contraction))
-#     for i in unique(pos)
-#         if count(x -> x == i, pos) > 4
-#             @show args_nc
-#             error("Contraction is not unique")
-#         end
-#     end
-# end
+function _wick_contraction(
+    a::QMul{C,S}, ::Val{E}; kwargs...
+) where {C<:Number,S<:Statistics,E}
+    @assert is_bulk(a) "The private two-argument _wick_contraction entry point is for vacuum terms"
+    return _wick_contraction(a, Val(E), Val(topology_length(E + 1)); kwargs...)
+end

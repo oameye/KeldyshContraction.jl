@@ -5,8 +5,9 @@ using KeldyshContraction: Regularisation.Minus as Minus
 import KeldyshContraction as KC
 
 @testset "concrete Field{Boson}" begin
-    c = @inferred Field{Boson}(:c, Classical)
-    q = @inferred Field{Boson}(:q, Quantum)
+    @qfields family::Boson
+    c = @inferred family[Classical]
+    q = @inferred family[Quantum]
 
     @test typeof(c) === Field{Boson}
     @test isconcretetype(typeof(c))
@@ -24,9 +25,9 @@ import KeldyshContraction as KC
     @test KC.regularisation(cbar) == KC.regularisation(c)
     @test @inferred(bar(cbar)) == c
 
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
-    @test typeof(ϕ) === Field{Boson}
-    @test typeof(ψ) === Field{Boson}
+    @test family isa FieldFamily{Boson}
+    @test field_family(c) === family
+    @test field_family(q) === family
 end
 
 @testset "concrete field metadata" begin
@@ -35,18 +36,21 @@ end
     spin = FieldIndex(:spin, 1)
     flavor = FieldIndex(:flavor, 2)
     indices = @inferred FieldIndices(spin, flavor)
-    f = @inferred Field{Boson}(
-        :ψ, Classical, KC.Orientation.Unbarred, KC.Regularisation.Zero, Bulk(), indices
+    family = FieldFamily{Boson}(:ψ, indices)
+    f = @inferred Field(
+        family, Classical, KC.Orientation.Unbarred, KC.Regularisation.Zero, Bulk()
     )
 
     @test isconcretetype(typeof(indices))
+    @test field_family(f) === family
     @test field_indices(f) == indices
     @test collect(field_indices(f)) == [spin, flavor]
     @test hash(f) == hash(f)
 end
 
 @testset "concrete QMul" begin
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields family::Boson
+    c, q = family[Classical], family[Quantum]
 
     mul = @inferred KC.QMul(1, Field{Boson}[c, q])
     @test typeof(mul) === KC.QMul{Int,Boson}
@@ -63,7 +67,8 @@ end
 end
 
 @testset "closed symbolic zero and one" begin
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields family::Boson
+    c, q = family[Classical], family[Quantum]
 
     z = @inferred zero(c)
     o = @inferred one(c)
@@ -87,7 +92,8 @@ end
 
 @testset "concrete QAdd and coefficient promotion" begin
     using KeldyshContraction: QAdd, QMul
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields family::Boson
+    c, q = family[Classical], family[Quantum]
 
     a = @inferred QAdd(Field{Boson}[c, q])
     @test typeof(a) === QAdd{Int,Boson}
@@ -107,7 +113,8 @@ end
 
 @testset "explicit coefficient conversion" begin
     using KeldyshContraction: QAdd, QMul
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields family::Boson
+    c, q = family[Classical], family[Quantum]
 
     expr = 0.5 * (c^2 + q^2) * bar(c) * bar(q)
     @test typeof(expr) === QAdd{Float64,Boson}
@@ -125,7 +132,8 @@ end
 
 @testset "SymbolicUtils / TermInterface interop" begin
     using TermInterface, SymbolicUtils
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     @test TermInterface.head(ϕ) == :call
     @test !SymbolicUtils.iscall(ϕ)
@@ -150,7 +158,8 @@ end
 end
 
 @testset "position and regularisation are value data" begin
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     @test typeof(@inferred(ϕ(Bulk(3)))) === Field{Boson}
     @test typeof(@inferred(ψ(In()))) === Field{Boson}
@@ -169,7 +178,8 @@ end
 end
 
 @testset "bosonic interaction expressions" begin
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     elastic = -0.5 * (bar(ϕ) * bar(ψ) * (ϕ^2 + ψ^2) + (bar(ϕ)^2 + bar(ψ)^2) * ϕ * ψ)
     loss =
@@ -205,7 +215,8 @@ function is_recursively_concrete(@nospecialize(T::Type), seen=Set{Type}())
 end
 
 @testset "recursively concrete storage" begin
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     @test is_recursively_concrete(Field{Boson})
     @test is_recursively_concrete(KC.FieldIndices)
@@ -227,7 +238,8 @@ end
 
 @testset "statistics-dispatched exchange sign" begin
     using KeldyshContraction: exchange_sign, is_exchange_sign_free, canonicalize_fields!
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     @test @inferred(exchange_sign(Boson)) === Int8(1)
     @test @inferred(exchange_sign(Boson, ϕ, ψ)) === Int8(1)
@@ -245,7 +257,8 @@ end
 end
 
 @testset "algebraic identities" begin
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     @test isequal(ϕ / 2, 0.5 * ϕ)
     @test isequal(ϕ // 2, (1 // 2) * ϕ)
@@ -285,7 +298,8 @@ end
 end
 
 @testset "ones, zeros, equality and hashing" begin
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     @test !isone(ϕ)
     @test !iszero(ϕ)
@@ -322,7 +336,8 @@ end
 
 @testset "simplification leaves like terms uncollected" begin
     using SymbolicUtils
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     # `QAdd` keeps every summand separately: like terms are never collected, and a sum
     # of one term never collapses to a `QMul`. Hence ϕ + ϕ stays a two-term `QAdd`.
@@ -340,7 +355,8 @@ end
 
 @testset "bar is the orientation operation" begin
     using KeldyshContraction: is_quantum, is_classical, is_barred, is_unbarred
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     @test is_quantum(ψ)
     @test is_classical(ϕ)
@@ -355,6 +371,7 @@ end
     @test KC.position(ϕ′) == KC.position(ϕ)
     @test KC.regularisation(ϕ′) === KC.regularisation(ϕ)
     @test KC.field_indices(ϕ′) == KC.field_indices(ϕ)
+    @test field_family(ϕ′) === field_family(ϕ)
     @test isequal(bar(bar(ϕ)), ϕ)
 
     @test isequal(bar(ϕ * ψ), bar(ϕ) * bar(ψ))
@@ -366,7 +383,8 @@ end
 
 @testset "conservation and physicality" begin
     using KeldyshContraction: is_conserved, is_physical
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     @test !is_conserved(Field{Boson}[])
     @test !is_conserved(Field{Boson}[ϕ])
@@ -387,7 +405,8 @@ end
 
 @testset "QMul equality and promotion" begin
     using KeldyshContraction: QMul, QAdd
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     @test isequal(ϕ, QMul(1, Field{Boson}[ϕ]))
     @test isequal(QMul(1, Field{Boson}[ϕ]), ϕ)
@@ -417,7 +436,8 @@ end
 
 @testset "conversion and promotion" begin
     using KeldyshContraction: QAdd, QMul
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     a = QAdd(Field{Boson}[ϕ, ψ])
     b = QAdd(QMul{Int,Boson}[QMul(1, Field{Boson}[ϕ]), QMul(1, Field{Boson}[ψ])])
@@ -438,7 +458,8 @@ end
 
 @testset "explicit rationalisation" begin
     using KeldyshContraction: QAdd
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     for coeff in (0.5, 0.3, 0.1)
         expr = coeff * (ϕ^2 + ψ^2) * bar(ϕ) * bar(ψ)
@@ -455,7 +476,8 @@ end
 
 @testset "SymbolicUtils promotion" begin
     using SymbolicUtils
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     @test SymbolicUtils.promote_symtype(+, typeof(ϕ), Float64) <: KC.QField
     @test SymbolicUtils.promote_symtype(*, typeof(ϕ), Int) <: KC.QField
@@ -465,7 +487,8 @@ end
 
 @testset "the IR has no empty sum" begin
     using KeldyshContraction: QAdd, QMul
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     # An empty `QAdd` would make `iszero` true, `isone` false and `first(terms(q))` throw.
     @test_throws ArgumentError QAdd(QMul{Int,Boson}[])
@@ -525,7 +548,8 @@ end
     @test KC.swap_in_out(Out()) == In()
     @test KC.swap_in_out(Bulk(2)) == Bulk(2)
 
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
     to_sort = [ϕ(Bulk(3)), ϕ(Bulk(1)), ϕ, ψ(In()), ψ(Out())]
     sorted = [ψ(Out()), ϕ, ϕ(Bulk(1)), ϕ(Bulk(3)), ψ(In())]
     @test isequal(sort(to_sort; by=KC.position), sorted)
@@ -533,7 +557,8 @@ end
 
 @testset "printing covers every expression shape" begin
     using KeldyshContraction: QAdd, QMul, Momenta, Momentum
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     # `QAdd` prints through the generic `QTerm` method; `QMul` has its own.
     @test occursin("+", repr(ϕ + ψ))
@@ -561,7 +586,8 @@ end
 @testset "interop and scalar predicates on QField" begin
     using TermInterface, SymbolicUtils
     using KeldyshContraction: QField, QSym, QTerm, QMul, QAdd, Position
-    @qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+    @qfields family::Boson
+    ϕ, ψ = family[Classical], family[Quantum]
 
     # Type-level `iscall` is used by SymbolicUtils rewriting.
     @test SymbolicUtils.iscall(QMul{Int,Boson})

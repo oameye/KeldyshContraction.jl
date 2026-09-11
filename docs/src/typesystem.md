@@ -29,26 +29,37 @@ Field{S} <: QSym
 where `S <: Statistics` is static because statistics changes the algebraic exchange law.
 For example, a bosonic field has the concrete type `Field{Boson}`.
 
-All other field properties are value data rather than type parameters. A `Field{S}` stores:
+Physical field identity is represented separately by a concrete family:
+
+```julia
+struct FieldFamily{S<:Statistics}
+    name::Symbol
+    indices::FieldIndices
+end
+```
+
+A `Field{S}` stores its `FieldFamily{S}` together with the component-specific value data:
 
 - an `Orientation` (`Unbarred` or `Barred`),
 - a neutral `KeldyshIndex`,
-- a `Position`,
-- a `Regularisation`, and
-- concrete fixed-capacity `FieldIndices` metadata.
+- a `Position`, and
+- a `Regularisation`.
+
+The family stores the physical name/species and concrete fixed-capacity `FieldIndices`.
+Thus classical and quantum components, barred and unbarred fields, and fields at different
+positions or regularisations can all retain one shared physical identity.
 
 For bosons, the public names `Quantum` and `Classical` are semantic aliases for the two
-neutral Keldysh-index values. Consequently, changing a position, regularisation, or Keldysh
-component does not create another Julia field family.
-
-Barred path-integral fields are represented explicitly with `bar`:
+neutral Keldysh-index values. Declare a physical family with `@qfields`, then construct its
+components by indexing the family:
 
 ```@example interface
 using KeldyshContraction
 
-@qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]
 
-(typeof(ϕ), typeof(bar(ϕ)), bar(bar(ϕ)) == ϕ)
+(field_family(c) == field_family(q), typeof(c), typeof(q), bar(bar(c)) == c)
 ```
 
 `bar` is intentionally distinct from Hermitian adjoint. At the fundamental path-integral
@@ -105,12 +116,13 @@ participate in the surrounding Julia symbolic ecosystem:
 using KeldyshContraction
 using KeldyshContraction: SymbolicUtils, TermInterface
 
-@qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
-expr = 2 * ϕ * ψ
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]
+expr = 2 * c * q
 
 (
-    TermInterface.head(ϕ),
-    SymbolicUtils.iscall(ϕ),
+    TermInterface.head(c),
+    SymbolicUtils.iscall(c),
     SymbolicUtils.iscall(expr),
     SymbolicUtils.operation(expr),
     SymbolicUtils.arguments(expr),
