@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/GCWickAdapter.yml'
       - 'benchmarks/gc_wick_adapter.jl'
+      - 'benchmarks/gc_wick_adapter_extended.jl'
   workflow_dispatch:
 
 concurrency:
@@ -40,7 +41,7 @@ jobs:
           '
       - name: Validate GC Wick adapter
         run: |
-          julia --project=benchmarks benchmarks/gc_wick_adapter.jl | tee gc-wick-adapter.txt
+          julia --project=benchmarks benchmarks/gc_wick_adapter_extended.jl | tee gc-wick-adapter.txt
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
