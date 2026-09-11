@@ -1,14 +1,30 @@
 using KeldyshContraction
 using KeldyshContraction:
-    MomentumBasis, RoutingEdge, basis_momentum, matrix, momentum_routing, routing_matrix
+    Bulk,
+    Contraction,
+    Diagram,
+    FourierDiagram,
+    In,
+    MomentumBasis,
+    Out,
+    RoutingEdge,
+    basis_momentum,
+    edge_momenta,
+    matrix,
+    momentum_basis,
+    momentum_routing,
+    routing_matrix
 using Test
 using JET
 
 @qfields jet_ψ_raw::Fermion jet_χ_raw::Fermion
+@qfields jet_ϕ_raw::Boson
 const jet_ψ = jet_ψ_raw
 const jet_χ = jet_χ_raw
 const jet_ψ₁ = jet_ψ[One]
 const jet_χ₂ = jet_χ[Two]
+const jet_ϕc = jet_ϕ_raw[Classical]
+const jet_ϕq = jet_ϕ_raw[Quantum]
 
 function fermionic_jet_workload()
     interaction = jet_ψ₁ * jet_χ₂ * bar(jet_ψ₁) * bar(jet_χ₂)
@@ -46,6 +62,17 @@ function momentum_routing_jet_workload()
     return linear, length(routing.basis), routing_matrix(routing)
 end
 
+function fourier_diagram_jet_workload()
+    contractions = Contraction{Boson}[
+        Contraction(jet_ϕc(Out()), bar(jet_ϕq)(Bulk(1))),
+        Contraction(jet_ϕc(Bulk(1)), bar(jet_ϕq)(Bulk(1))),
+        Contraction(jet_ϕc(Bulk(1)), bar(jet_ϕq)(In())),
+    ]
+    diagram = Diagram(contractions, Val(3), Val(0))
+    routed = FourierDiagram(diagram)
+    return length(momentum_basis(routed)), edge_momenta(routed)
+end
+
 @static if isempty(VERSION.prerelease)
     @testset "JET report_package" begin
         rep = JET.report_package(KeldyshContraction; target_modules=(KeldyshContraction,))
@@ -67,5 +94,9 @@ end
 
     @testset "JET exact momentum-routing workload" begin
         JET.@test_opt target_modules=(KeldyshContraction,) momentum_routing_jet_workload()
+    end
+
+    @testset "JET Fourier-diagram routing workload" begin
+        JET.@test_opt target_modules=(KeldyshContraction,) fourier_diagram_jet_workload()
     end
 end

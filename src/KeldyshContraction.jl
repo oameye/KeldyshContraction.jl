@@ -35,8 +35,10 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("propagator_algebra/propagator.jl")
     include("propagator_algebra/momentum_algebra.jl")
     include("propagator_algebra/momentum_routing.jl")
+    include("propagator_algebra/momentum_affine_routing.jl")
     include("propagator_algebra/canonicalize.jl")
     include("propagator_algebra/diagram.jl")
+    include("propagator_algebra/fourier_diagram.jl")
     include("dressed_propagator.jl")
 
     include("wick_contractions.jl")
