@@ -206,10 +206,14 @@ end
     @test shifted_nonisolated_trotter == 0
     @test dependent_shifted_isolated == 12
     @test nondependent_shifted_isolated == 20
+    @test shifted_regular_results == 0
+    @test shifted_dependent_results == 12
+    @test shifted_zero_results == 16
     @test shifted_trotter_results == 0
-    @test shifted_causal_branches ==
-        coincident_causal_branches + zero_energy_causal_branches
-    @test shifted_causal_branches > 0
+    @test shifted_causal_source_results == 4
+    @test shifted_causal_branches == 8
+    @test coincident_causal_branches == 0
+    @test zero_energy_causal_branches == 8
 
     @test all(record -> record.topology == (2,), dependent_records)
     @test all(record -> record.topology == (2,), unshifted_dependent_records)

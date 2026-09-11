@@ -58,6 +58,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("spectral_dispersive_collision.jl")
     include("frequency_support.jl")
     include("causal_frequency_reduction.jl")
+    include("higher_order_causal_frequency_reduction.jl")
     include("full_rank_frequency_reduction.jl")
     include("dependent_shell_support.jl")
     include("partial_spectral_frequency_reduction.jl")
