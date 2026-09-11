@@ -10,6 +10,7 @@ on:
       - 'benchmarks/gc_wick_adapter_extended.jl'
       - 'benchmarks/gc_wick_timing.jl'
       - 'benchmarks/gc_wick_filter_split.jl'
+      - 'benchmarks/gc_wick_causal_pruning.jl'
   workflow_dispatch:
 
 concurrency:
@@ -38,7 +39,7 @@ jobs:
           julia --project=benchmarks -e '
             using Pkg
             Pkg.develop(PackageSpec(path=pwd()))
-            Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="30797bc370ab658cc822d2edf038690665b0d1ce"))
+            Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="19dbfcb26f69ec9d92522c8bad23a44192ed8696"))
             Pkg.instantiate()
           '
       - name: Validate GC Wick adapter
@@ -50,6 +51,9 @@ jobs:
       - name: Classify completed-state filter rejections
         run: |
           julia --project=benchmarks benchmarks/gc_wick_filter_split.jl | tee gc-wick-filter-split.txt
+      - name: Validate partial causal pruning
+        run: |
+          julia --project=benchmarks benchmarks/gc_wick_causal_pruning.jl | tee gc-wick-causal-pruning.txt
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
@@ -58,3 +62,4 @@ jobs:
             gc-wick-adapter.txt
             gc-wick-timing.txt
             gc-wick-filter-split.txt
+            gc-wick-causal-pruning.txt
