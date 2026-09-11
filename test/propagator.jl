@@ -79,6 +79,35 @@ end
 
     p = Edge(c(Minus), bar(c)(In()))
     @test KeldyshContraction.regular(p)
+
+    # Endpoint Trotter labels remain exact Edge provenance. Equivalent equal-position causal
+    # spellings are identified only by the explicit physical comparison canonicalizer.
+    retarded_out_shift = Edge(c(Plus), bar(q))
+    retarded_in_shift = Edge(c, bar(q)(Minus))
+    @test !isequal(retarded_out_shift, retarded_in_shift)
+    @test isequal(
+        KeldyshContraction.canonicalize_equal_time_regularisation(retarded_out_shift),
+        KeldyshContraction.canonicalize_equal_time_regularisation(retarded_in_shift),
+    )
+
+    advanced_out_shift = Edge(q(Minus), bar(c))
+    advanced_in_shift = Edge(q, bar(c)(Plus))
+    @test !isequal(advanced_out_shift, advanced_in_shift)
+    @test isequal(
+        KeldyshContraction.canonicalize_equal_time_regularisation(advanced_out_shift),
+        KeldyshContraction.canonicalize_equal_time_regularisation(advanced_in_shift),
+    )
+
+    @test !isequal(retarded_out_shift, Edge(c, bar(q)))
+
+    # Keldysh/statistical edges retain the exact endpoint regularisations and are untouched by
+    # the causal spelling canonicalizer.
+    keldysh_shifted = Edge(c(Plus), bar(c)(Plus))
+    @test !isequal(keldysh_shifted, Edge(c, bar(c)))
+    @test isequal(
+        KeldyshContraction.canonicalize_equal_time_regularisation(keldysh_shifted),
+        keldysh_shifted,
+    )
 end
 
 @testset "propagator type" begin

@@ -2,12 +2,12 @@ import KeldyshContraction as KC
 
 @qfields benchmark_frequency_ϕ::Boson
 
-function benchmark_frequency_line(routed::KC.LinearMomentum)
+function benchmark_frequency_line(routed::KC.LinearMomentum; shift::Integer=0)
     return KineticLine{Boson}(
         benchmark_frequency_ϕ,
         KC.Bulk(1),
         KC.Bulk(2),
-        Int8(0),
+        convert(Int8, shift),
         routed,
         KineticSpectral,
         NoStatisticalWeight,
@@ -43,6 +43,7 @@ function benchmark_frequency_reduction!(suite)
     line₁ = benchmark_frequency_line(q₁)
     line₂ = benchmark_frequency_line(q₂)
     line₃ = benchmark_frequency_line(q₃)
+    shifted_line₁ = benchmark_frequency_line(q₁; shift=1)
 
     full_rank = benchmark_frequency_term(
         basis,
@@ -71,6 +72,9 @@ function benchmark_frequency_reduction!(suite)
         ],
         Val(3),
     )
+    isolated_trotter = benchmark_frequency_term(
+        basis, [shifted_line₁ => CollisionDispersive, line₂ => CollisionSpectral], Val(2)
+    )
 
     suite["Frequency reduction"]["full-rank fast path"] = @benchmarkable KC.general_frequency_reduction(
         $full_rank, $benchmark_frequency_ϕ
@@ -80,6 +84,9 @@ function benchmark_frequency_reduction!(suite)
     ) seconds = 10
     suite["Frequency reduction"]["dependent affine path"] = @benchmarkable KC.reduce_frequency_term(
         $dependent_shell, $benchmark_frequency_ϕ
+    ) seconds = 10
+    suite["Frequency reduction"]["isolated Trotter path"] = @benchmarkable KC.reduce_frequency_term(
+        $isolated_trotter, $benchmark_frequency_ϕ
     ) seconds = 10
     return suite
 end
