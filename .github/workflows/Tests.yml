@@ -6,6 +6,7 @@ on:
       - 'main'
     paths:
       - '.github/workflows/Tests.yml'
+      - 'codecov.yml'
       - 'src/**'
       - 'ext/**'
       - 'test/**'
@@ -16,6 +17,7 @@ on:
       - 'main'
     paths:
       - '.github/workflows/Tests.yml'
+      - 'codecov.yml'
       - 'src/**'
       - 'ext/**'
       - 'test/**'
@@ -70,7 +72,7 @@ jobs:
       - uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: lcov.info
+          files: lcov.info
           name: codecov-umbrella
-          fail_ci_if_error: false
+          fail_ci_if_error: true
         if: ${{ matrix.version == 'lts' }}

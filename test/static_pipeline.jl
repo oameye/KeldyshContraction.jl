@@ -22,6 +22,9 @@ end
     L = @inferred InteractionLagrangian(elastic)
     G = @inferred DressedPropagator(L, Val(1), Val(3); simplify=false)
     Σ = @inferred SelfEnergy(G)
+    Gk = @inferred wigner_transform(G)
+    Σk = @inferred wigner_transform(Σ)
+    collision = @inferred KC.CollisionIntegral(Σk)
 
     GT = typeof(G)
     ΣT = typeof(Σ)
@@ -34,9 +37,14 @@ end
     @test ΣT.parameters[4] == 1
     @test ΣT.parameters[5] == 0
 
+    @test typeof(Gk) === typeof(G)
+    @test typeof(Σk) === typeof(Σ)
     @test recursively_concrete(typeof(L))
     @test recursively_concrete(typeof(G))
     @test recursively_concrete(typeof(Σ))
+    @test recursively_concrete(typeof(Gk))
+    @test recursively_concrete(typeof(Σk))
+    @test recursively_concrete(typeof(collision))
     @test parameters(G) isa ParameterMonomial
     @test parameters(Σ) == parameters(G)
 
