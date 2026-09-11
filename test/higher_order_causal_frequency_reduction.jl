@@ -105,7 +105,7 @@ end
     lower_at_simple = higher_order_denominator(0, 2 * E_q - Eₖ, 2)
     minus_i = convert(KC.ComplexRationals, -im)
     plus_i = convert(KC.ComplexRationals, im)
-    expected = Set([
+    expected = [
         KC.CausalFrequencyTerm(
             minus_i, [simple_at_double, simple_at_double, lower_at_double]
         ),
@@ -115,8 +115,11 @@ end
         KC.CausalFrequencyTerm(
             plus_i, [double_at_simple, double_at_simple, lower_at_simple]
         ),
-    ])
-    @test Set(result) == expected
+    ]
+    @test length(result) == length(expected)
+    @test all(
+        expected_term -> any(result_term -> result_term == expected_term, result), expected
+    )
 end
 
 @testset "repeated differentiation combines identical causal monomials" begin
