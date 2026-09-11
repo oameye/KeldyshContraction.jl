@@ -35,7 +35,7 @@ jobs:
           julia --project=benchmarks -e '
             using Pkg
             Pkg.develop(PackageSpec(path=pwd()))
-            Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="19dbfcb26f69ec9d92522c8bad23a44192ed8696"))
+            Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="62858aa4324f1edce1d63db73cfca43b013c08fd"))
             Pkg.instantiate()
           '
       - name: Validate incremental causal pruning
