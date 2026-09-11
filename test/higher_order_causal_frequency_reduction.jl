@@ -90,6 +90,37 @@ end
     @test only(result) == expected
 end
 
+@testset "multiple upper pole classes contribute exactly once" begin
+    Eₖ, E_q = higher_order_causal_energies()
+    upper_double = higher_order_denominator(1, -E_q, -1)
+    upper_simple = higher_order_denominator(1, -2 * E_q, -1)
+    lower = higher_order_denominator(1, -Eₖ, 1)
+    term = KC.CausalFrequencyTerm(
+        1 // 1, [upper_double, upper_double, upper_simple, lower]
+    )
+
+    result = @inferred KC.integrate_causal_frequency_exact(term, 1)
+
+    simple_at_double = higher_order_denominator(0, -E_q, 0)
+    lower_at_double = higher_order_denominator(0, E_q - Eₖ, 2)
+    double_at_simple = higher_order_denominator(0, E_q, 0)
+    lower_at_simple = higher_order_denominator(0, 2 * E_q - Eₖ, 2)
+    minus_i = convert(KC.ComplexRationals, -im)
+    plus_i = convert(KC.ComplexRationals, im)
+    expected = Set([
+        KC.CausalFrequencyTerm(
+            minus_i, [simple_at_double, simple_at_double, lower_at_double]
+        ),
+        KC.CausalFrequencyTerm(
+            minus_i, [simple_at_double, lower_at_double, lower_at_double]
+        ),
+        KC.CausalFrequencyTerm(
+            plus_i, [double_at_simple, double_at_simple, lower_at_simple]
+        ),
+    ])
+    @test Set(result) == expected
+end
+
 @testset "repeated differentiation combines identical causal monomials" begin
     Eₖ, E_q = higher_order_causal_energies()
     upper = higher_order_denominator(1, -E_q, -1)
