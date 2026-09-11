@@ -126,3 +126,39 @@ end
     )
     @test general == expected
 end
+
+@testset "dependent shell retains independent residual support" begin
+    basis = KC.MomentumBasis(2)
+    q = KC.basis_momentum(basis, 2)
+
+    line_ϕ = partial_frequency_line(partial_ϕ, q)
+    line_χ = partial_frequency_line(partial_χ, q)
+    term = partial_frequency_term(
+        basis,
+        [
+            line_ϕ => CollisionSpectral,
+            line_ϕ => CollisionSpectral,
+            line_χ => CollisionSpectral,
+        ],
+        Val(3),
+    )
+
+    analysis = @inferred KC.analyze_spectral_dependencies(term, partial_ϕ)
+    @test KC.has_dependent_shell_support(analysis)
+    @test KC.constraint_rank(analysis) == 2
+    @test KC.constraint_count(analysis) == 3
+
+    reduction = @inferred KC.dependent_spectral_frequency_reduction(term, partial_ϕ)
+    @test partial_reduction_recursively_concrete(typeof(reduction))
+    @test reduction.factor == 1 // 1
+    @test length(reduction.support.shells) == 1
+    @test isempty(reduction.support.principal_values)
+
+    reduced = @inferred KC.reduce_partial_spectral_frequency(reduction)
+    εϕ = EnergyForm(DispersionAtom(partial_ϕ, q))
+    εχ = EnergyForm(DispersionAtom(partial_χ, q))
+    shell, shell_factor = energy_shell(εϕ - εχ)
+    @test shell_factor == 1 // 1
+    expected_support = FrequencySupport([shell], PrincipalValueSupport{Boson}[])
+    @test reduced == Dict(expected_support => one(KC.ComplexRationals))
+end

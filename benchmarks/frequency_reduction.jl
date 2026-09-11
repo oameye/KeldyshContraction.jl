@@ -62,12 +62,24 @@ function benchmark_frequency_reduction!(suite)
         ],
         Val(3),
     )
+    dependent_shell = benchmark_frequency_term(
+        basis,
+        [
+            line₁ => CollisionSpectral,
+            line₁ => CollisionSpectral,
+            line₂ => CollisionSpectral,
+        ],
+        Val(3),
+    )
 
     suite["Frequency reduction"]["full-rank fast path"] = @benchmarkable KC.general_frequency_reduction(
         $full_rank, $benchmark_frequency_ϕ
     ) seconds = 10
     suite["Frequency reduction"]["partial causal path"] = @benchmarkable KC.general_frequency_reduction(
         $partial_causal, $benchmark_frequency_ϕ
+    ) seconds = 10
+    suite["Frequency reduction"]["dependent affine path"] = @benchmarkable KC.reduce_frequency_term(
+        $dependent_shell, $benchmark_frequency_ϕ
     ) seconds = 10
     return suite
 end
