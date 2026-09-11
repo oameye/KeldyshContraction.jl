@@ -9,6 +9,7 @@ on:
       - 'benchmarks/gc_wick_adapter.jl'
       - 'benchmarks/gc_wick_adapter_extended.jl'
       - 'benchmarks/gc_wick_timing.jl'
+      - 'benchmarks/gc_wick_filter_split.jl'
   workflow_dispatch:
 
 concurrency:
@@ -46,6 +47,9 @@ jobs:
       - name: Measure matcher-only crossover
         run: |
           julia --project=benchmarks benchmarks/gc_wick_timing.jl | tee gc-wick-timing.txt
+      - name: Classify completed-state filter rejections
+        run: |
+          julia --project=benchmarks benchmarks/gc_wick_filter_split.jl | tee gc-wick-filter-split.txt
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
@@ -53,3 +57,4 @@ jobs:
           path: |
             gc-wick-adapter.txt
             gc-wick-timing.txt
+            gc-wick-filter-split.txt
