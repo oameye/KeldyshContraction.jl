@@ -48,7 +48,8 @@ end
 $(DocStringExtensions.TYPEDEF)
 
 Self-energy components in the Retarded-Advanced-Keldysh basis. Coefficient representation,
-statistics, perturbation order, and diagram shape are encoded in the type.
+statistics, perturbation order, and diagram shape are encoded in the type. The physical
+external field family is retained from the dressed propagator through amputation.
 
 # Fields
 $(DocStringExtensions.FIELDS)
@@ -62,11 +63,14 @@ struct SelfEnergy{C<:Number,S<:Statistics,O,E1,E2}
     advanced::Diagrams{C,S,E1,E2}
     "Canonical perturbation-parameter monomial"
     parameter::ParameterMonomial
+    "Physical field family of the amputated external two-point function"
+    target::FieldFamily{S}
 end
 
 order(::SelfEnergy{C,S,O}) where {C,S,O} = O
 statistics(::SelfEnergy{C,S}) where {C,S} = S
 parameters(Σ::SelfEnergy) = Σ.parameter
+target_family(Σ::SelfEnergy) = Σ.target
 
 function self_energy_result_type(
     ::Type{DressedPropagator{C,S,O,E1,E2}}
@@ -93,6 +97,7 @@ function _self_energy(G::DressedPropagator{C,Boson,O,E1,E2}) where {C<:Number,O,
         self_energy[PropagatorType.Retarded],
         self_energy[PropagatorType.Advanced],
         G.parameter,
+        G.target,
     )
 end
 
