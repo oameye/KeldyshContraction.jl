@@ -125,7 +125,7 @@ function fast_causal_pruned_adapter_weights(
                 (edge.source, edge.source_color, edge.target, edge.target_color)
             ]
         end
-        KC.passes_wick_filters(contractions) || continue
+        KC.is_connected(contractions) || continue
         filter_survivors += 1
         final_contractions, sign = simplify ?
             KC.advanced_to_retarded(contractions, 1) : (contractions, 1)
