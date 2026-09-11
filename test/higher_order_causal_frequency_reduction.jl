@@ -95,9 +95,7 @@ end
     upper_double = higher_order_denominator(1, -E_q, -1)
     upper_simple = higher_order_denominator(1, -2 * E_q, -1)
     lower = higher_order_denominator(1, -Eₖ, 1)
-    term = KC.CausalFrequencyTerm(
-        1 // 1, [upper_double, upper_double, upper_simple, lower]
-    )
+    term = KC.CausalFrequencyTerm(1 // 1, [upper_double, upper_double, upper_simple, lower])
 
     result = @inferred KC.integrate_causal_frequency_exact(term, 1)
 
