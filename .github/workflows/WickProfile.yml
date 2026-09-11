@@ -1,0 +1,42 @@
+name: Wick Generation Profile
+
+on:
+  push:
+    branches:
+      - 'perf/profile-wick-generation-redundancy'
+    paths:
+      - '.github/workflows/WickProfile.yml'
+      - 'benchmarks/wick_generation_profile.jl'
+      - 'benchmarks/wick_generation_extended_profile.jl'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: 'lts'
+          show-versioninfo: true
+      - uses: julia-actions/cache@v3
+      - name: Instantiate benchmark environment
+        run: |
+          julia --project=benchmarks -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
+      - name: Profile Wick generation
+        run: |
+          julia --project=benchmarks benchmarks/wick_generation_extended_profile.jl | tee wick-generation-profile.txt
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: wick-generation-profile
+          path: wick-generation-profile.txt
