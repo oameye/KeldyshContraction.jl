@@ -6,6 +6,7 @@ pages = [
     "Keldysh Conventions" => "conventions.md",
     "Fourier routing IR" => "fourier_ir.md",
     "Wigner representation" => "wigner.md",
+    "Spectral/statistical kinetic IR" => "spectral_statistical.md",
     "Literature" => "literature.md",
     "Examples" => [
         "Elastic two body scattering" => "examples/elastic_two_body.md",
