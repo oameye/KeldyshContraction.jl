@@ -8,6 +8,7 @@ on:
       - '.github/workflows/GCWickAdapter.yml'
       - 'benchmarks/gc_wick_adapter.jl'
       - 'benchmarks/gc_wick_adapter_extended.jl'
+      - 'benchmarks/gc_wick_timing.jl'
   workflow_dispatch:
 
 concurrency:
@@ -42,8 +43,13 @@ jobs:
       - name: Validate GC Wick adapter
         run: |
           julia --project=benchmarks benchmarks/gc_wick_adapter_extended.jl | tee gc-wick-adapter.txt
+      - name: Measure matcher-only crossover
+        run: |
+          julia --project=benchmarks benchmarks/gc_wick_timing.jl | tee gc-wick-timing.txt
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
           name: gc-wick-adapter
-          path: gc-wick-adapter.txt
+          path: |
+            gc-wick-adapter.txt
+            gc-wick-timing.txt
