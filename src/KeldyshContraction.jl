@@ -27,6 +27,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("keldysh_algebra/QTerm.jl")
     include("keldysh_algebra/field_math.jl")
     include("keldysh_algebra/hashing.jl")
+    include("fermionic_keldysh.jl")
     include("parameters.jl")
     include("InteractionLagrangian.jl")
 
@@ -56,10 +57,13 @@ const ComplexRationals = Complex{Rational{Int64}}
         ParameterMonomial,
         parameter_monomial,
         Boson,
+        Fermion,
         bar,
         wick_contraction,
         Quantum,
         Classical,
+        One,
+        Two,
         DressedPropagator,
         SelfEnergy,
         InteractionLagrangian,
