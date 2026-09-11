@@ -251,7 +251,7 @@ struct CollisionIntegral{C<:Number,E}
 end
 function CollisionIntegral(Σ::SelfEnergy{C,S,O,E1,E2}) where {C<:Number,S,O,E1,E2}
     D = _distribution_coefficient_type(C)
-    Σk = wigner_transform(Σ)
+    Σk = _legacy_momentum_transform(Σ)
 
     tmp = reduce_to_spectral(Σk.keldysh)
     ΣkF = kelysh_to_distribution(tmp)

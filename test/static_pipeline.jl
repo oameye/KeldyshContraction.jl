@@ -22,9 +22,9 @@ end
     L = @inferred InteractionLagrangian(elastic)
     G = @inferred DressedPropagator(L, Val(1), Val(3); simplify=false)
     Σ = @inferred SelfEnergy(G)
-    Gk = @inferred wigner_transform(G)
-    Σk = @inferred wigner_transform(Σ)
-    collision = @inferred KC.CollisionIntegral(Σk)
+    Gk = @inferred fourier_transform(G)
+    Σk = @inferred SelfEnergy(Gk)
+    collision = @inferred KC.CollisionIntegral(Σ)
 
     GT = typeof(G)
     ΣT = typeof(Σ)
@@ -37,8 +37,8 @@ end
     @test ΣT.parameters[4] == 1
     @test ΣT.parameters[5] == 0
 
-    @test typeof(Gk) === typeof(G)
-    @test typeof(Σk) === typeof(Σ)
+    @test Gk isa FourierDressedPropagator{ComplexF64,Boson,1,3,0}
+    @test Σk isa FourierSelfEnergy{ComplexF64,Boson,1,1,0}
     @test recursively_concrete(typeof(L))
     @test recursively_concrete(typeof(G))
     @test recursively_concrete(typeof(Σ))
@@ -47,6 +47,8 @@ end
     @test recursively_concrete(typeof(collision))
     @test parameters(G) isa ParameterMonomial
     @test parameters(Σ) == parameters(G)
+    @test parameters(Gk) == parameters(G)
+    @test parameters(Σk) == parameters(Gk)
 
     Gm = @inferred KC.matrix(G)
     @test Gm[1, 1] === G.keldysh
@@ -59,4 +61,16 @@ end
     @test Σm[1, 2] === Σ.advanced
     @test Σm[2, 1] === Σ.retarded
     @test Σm[2, 2] === Σ.keldysh
+
+    Gkm = @inferred KC.matrix(Gk)
+    @test Gkm[1, 1] === Gk.keldysh
+    @test Gkm[1, 2] === Gk.retarded
+    @test Gkm[2, 1] === Gk.advanced
+    @test iszero(Gkm[2, 2])
+
+    Σkm = @inferred KC.matrix(Σk)
+    @test iszero(Σkm[1, 1])
+    @test Σkm[1, 2] === Σk.advanced
+    @test Σkm[2, 1] === Σk.retarded
+    @test Σkm[2, 2] === Σk.keldysh
 end

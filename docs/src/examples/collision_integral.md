@@ -23,11 +23,7 @@ GF = DressedPropagator(L_int, Val(2), Val(5))
 ````
 
 ````@example collision_integral
-Σk = wigner_transform(Σ)
-````
-
-````@example collision_integral
-ci = KeldyshContraction.CollisionIntegral(Σk)
+ci = KeldyshContraction.CollisionIntegral(Σ)
 ci.terms[[3]]
 ````
 

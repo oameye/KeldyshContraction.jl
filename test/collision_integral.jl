@@ -10,7 +10,7 @@ L_int = InteractionLagrangian(elasctic2boson)
 
 GF = @inferred DressedPropagator(L_int, Val(2), Val(5))
 Σ = @inferred SelfEnergy(GF)
-Σk = @inferred wigner_transform(Σ)
+Σk = @inferred KC._legacy_momentum_transform(Σ)
 
 @testset "distribution coefficient representation" begin
     using KeldyshContraction: BosonicDistributionTerm, BosonicDistributions, Momenta
@@ -108,7 +108,7 @@ end
 
 @testset "Collision Integral" begin
     using KeldyshContraction: CollisionIntegral
-    ci = @inferred CollisionIntegral(Σk)
+    ci = @inferred CollisionIntegral(Σ)
     @test ci isa CollisionIntegral{ComplexF64,1}
     @test isempty(ci.terms[[2]])
     Cint = ci.terms[[3]]
