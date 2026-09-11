@@ -4,7 +4,7 @@
     CausalZeroEnergyDenominator = 1
 end
 
-"""Deterministic witness that two causal factors form one unresolved higher-order pole."""
+"""Deterministic witness that two causal factors form one same-prescription higher-order pole."""
 struct CoincidentCausalPoleWitness
     frequency_index::Int
     pivot_denominator::Int
@@ -99,9 +99,10 @@ Exact unresolved causal contribution exposed by frequency reduction.
 `dependency` records any independent/dependent spectral-shell geometry already established.
 `support` contains finite shell/PV support accumulated before the exceptional causal factor.
 `causal_term` is the exact remaining causal product, with all previously generated residue and
-Trotter coefficients folded into its coefficient. `kind` distinguishes a same-prescription
-higher-order pole from a frequency-independent zero-energy causal denominator. No exceptional
-branch is assigned a numerical value here.
+Trotter coefficients folded into its coefficient. Same-prescription higher-order poles are now
+consumed by the exact derivative-residue layer; zero-energy causal denominators remain explicit.
+`CausalCoincidentPole` is retained as a representation-compatible kind for previously exposed
+states but is no longer emitted by the structured reducer.
 """
 struct CausalExceptionalFrequencyTerm{S<:Statistics,E1,E2}
     state::FrequencyIntegrationState{S,E1,E2}
@@ -189,13 +190,12 @@ function _push_zero_energy_causal_exception!(
 end
 
 """
-Reduce a partial causal problem while preserving singular causal structures explicitly.
+Reduce a partial causal problem while preserving only genuinely unresolved singular support.
 
-Regular simple-pole branches follow the frozen #299 residue/Plemelj machinery exactly. A
-same-prescription multiple pole is retained for the derivative-residue layer. A
-frequency-independent zero-energy denominator is retained as singular strict-QP support rather
-than lowered to `PV(1/0)` or `1/(±i0)`. Other branches continue to reduce normally, so one
-source term may contain both finite support and exceptional causal contributions.
+Simple poles follow the frozen #299 residue/Plemelj machinery exactly. Same-prescription pole
+multiplicities are consumed by the exact derivative-residue layer and then re-enter this same
+recursive reduction. A frequency-independent zero-energy denominator remains singular strict-QP
+support and is preserved rather than lowered to `PV(1/0)` or `1/(±i0)`.
 """
 function structured_causal_frequency_reduction(
     reduction::PartialSpectralFrequencyReduction{S},
@@ -226,20 +226,7 @@ function structured_causal_frequency_reduction(
                 continue
             end
 
-            coincident_witness = coincident_causal_pole_witness(term, frequency_index)
-            if has_coincident_causal_pole(coincident_witness)
-                _push_coincident_causal_exception!(
-                    exceptional,
-                    state,
-                    dependency,
-                    reduction.support,
-                    term,
-                    outer_factor,
-                    coincident_witness,
-                )
-                continue
-            end
-            append!(next, integrate_causal_frequency(term, frequency_index))
+            append!(next, integrate_causal_frequency_exact(term, frequency_index))
         end
         terms = next
         isempty(terms) && break
