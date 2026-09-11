@@ -90,11 +90,21 @@ end
         three_loop_terms = 0
         full_rank_reduced = 0
         partial_rank_reduced = 0
+        dependent_three_loop_terms = 0
+        dependent_geometries = Dict{Tuple{Int,Int},Int}()
         for expression in
             (collision_offset(spectral), collision_distribution_coefficient(spectral))
             for (term, _) in expression
                 loop_frequency_count(term) == 3 || continue
                 three_loop_terms += 1
+
+                analysis = @inferred KC.analyze_spectral_dependencies(term, ϕ)
+                if KC.has_dependent_shell_support(analysis)
+                    dependent_three_loop_terms += 1
+                    key = (KC.constraint_rank(analysis), KC.constraint_count(analysis))
+                    dependent_geometries[key] = get(dependent_geometries, key, 0) + 1
+                end
+
                 rank = spectral_frequency_rank(term)
                 reduction = try
                     @inferred KC.general_frequency_reduction(term, ϕ)
@@ -112,9 +122,12 @@ end
             end
         end
 
-        @test three_loop_terms > 0
+        @test three_loop_terms == 242
         @test full_rank_reduced > 0
         @test partial_rank_reduced > 0
+        @test dependent_three_loop_terms == 25
+        @test length(dependent_geometries) == 3
+        @test get(dependent_geometries, (3, 4), 0) == 7
     end
 
     GF4 = DressedPropagator(L_int, Val(4), Val(9))
