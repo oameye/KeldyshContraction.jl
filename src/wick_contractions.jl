@@ -82,7 +82,7 @@ end
     prefactor = -1 * im * im^O / factorial(O)
 
     regularise = should_regularise(a)
-    for arg in arguments(a)
+    for arg in terms(a)
         wick_contraction!(diagrams, prefactor * in_out * arg; regularise, kwargs...)
     end
     return diagrams
@@ -207,7 +207,7 @@ end
 ######################
 
 @unstable function _wick_contraction(a::QAdd, ::Val{E}; kwargs...) where {E}
-    args = SymbolicUtils.arguments(a)
+    args = terms(a)
     @assert all(number_of_propagators(arg) == E for arg in args)
     if is_bulk(a) # for vacuum calculations
         diagrams = Diagrams{E,topology_length(E + 1)}()

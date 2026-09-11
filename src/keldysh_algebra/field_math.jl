@@ -1,192 +1,159 @@
-# *,+,/,- math of the QField and QSym types
+# Arithmetic for Field{S}, QMul{C,S}, and QAdd{C,S}.
 
-"""
-    field_order(ϕ::QSym)
-
-Sorting key putting the noncommutative factors of a [`QMul`](@ref) in canonical order:
-ladder type first, then coordinate, then contour (classical before quantum), then name.
-The last two keys make the product commutative for fields that only differ in contour or
-name.
-"""
-field_order(ϕ::QSym) = (ladder(ϕ), index(ϕ), -Int(contour(ϕ)), name(ϕ))
-sort_fields!(args) = sort!(args; by=field_order)
-
-function Base.:*(a::QSym, b::QSym)
-    args = QSym[a, b]
-    sort_fields!(args)
-    return QMul(1, args)
+@inline function convert_mul(::Type{C}, q::QMul{D,S}) where {C<:Number,D<:Number,S}
+    return convert(QMul{C,S}, q)
 end
 
-function Base.:*(a::QSym, b::Number)
-    # SymbolicUtils._iszero(b) && return b
-    # SymbolicUtils._isone(b) && return a
-    return QMul(b, QSym[a])
-end
-Base.:*(b::Number, a::QField) = a * b
-
-function Base.:*(a::QMul, b::Number)
-    # SymbolicUtils._iszero(b) && return b
-    # SymbolicUtils._isone(b) && return a
-    arg_c = a.arg_c * b
-    return QMul(arg_c, a.args_nc)
+function normalized_add(args::Vector{QMul{C,S}}) where {C<:Number,S<:Statistics}
+    out = QMul{C,S}[term for term in args if !iszero(term)]
+    isempty(out) && push!(out, canonical_qmul(zero(C), Field{S}[]))
+    return owned_qadd(out)
 end
 
-function Base.:*(a::QSym, b::QMul)
-    args_nc = vcat(a, b.args_nc)
-    sort_fields!(args_nc)
-    return QMul(b.arg_c, args_nc)
-end
-Base.:*(a::QMul, b::QSym) = b * a
+########################
+# Multiplication
+########################
 
-function Base.:*(a::QMul, b::QMul)
-    args_nc = vcat(a.args_nc, b.args_nc)
-    sort_fields!(args_nc)
-    arg_c = a.arg_c * b.arg_c
-    return QMul(arg_c, args_nc)
+function Base.:*(a::Field{S}, b::Field{S}) where {S<:Statistics}
+    return canonical_qmul(1, Field{S}[a, b])
 end
 
-Base.:/(a::QField, b::Number) = (1 // b) * a ## TODO: maybe rationalize?
+Base.:*(a::Field{S}, b::C) where {S<:Statistics,C<:Number} = canonical_qmul(b, Field{S}[a])
+Base.:*(b::Number, a::Field) = a * b
+
+function Base.:*(a::QMul{C,S}, b::D) where {C<:Number,D<:Number,S<:Statistics}
+    coeff = a.arg_c * b
+    return presorted_qmul(coeff, a.args_nc)
+end
+Base.:*(b::Number, a::QMul) = a * b
+
+function Base.:*(a::Field{S}, b::QMul{C,S}) where {C<:Number,S<:Statistics}
+    return canonical_qmul(b.arg_c, vcat(Field{S}[a], b.args_nc))
+end
+Base.:*(a::QMul{C,S}, b::Field{S}) where {C<:Number,S<:Statistics} = b * a
+
+function Base.:*(a::QMul{C1,S}, b::QMul{C2,S}) where {C1,C2,S<:Statistics}
+    coeff = a.arg_c * b.arg_c
+    return canonical_qmul(coeff, vcat(a.args_nc, b.args_nc))
+end
+
+Base.:/(a::QField, b::Number) = a * inv(b)
 Base.://(a::QField, b::Number) = (1 // b) * a
 
-## Powers
+########################
+# Powers
+########################
+
 function Base.:^(a::QField, n::Integer)
-    # Type-stable implementation using Val
-    iszero(n) && return QMul(0, QSym[])
-    result = QMul(1, QSym[a])
-    for _ in 2:n
+    n < 0 && throw(DomainError(n, "negative field powers are not supported"))
+    result = one(a)
+    for _ in 1:n
         result *= a
     end
     return result
 end
 
-## Addition
+########################
+# Addition / subtraction
+########################
 
 Base.:-(a::QField) = -1 * a
+
 Base.:-(a::Number, b::QField) = a + (-b)
 Base.:-(a::QField, b::Number) = a + (-b)
 Base.:-(a::QField, b::QField) = a + (-b)
 
-function Base.:+(a::QField, b::Number)
-    SymbolicUtils._iszero(b) && return QAdd([a])
-    return QAdd([a, b])
+function Base.:+(a::Field{S}, b::D) where {S<:Statistics,D<:Number}
+    C = promote_type(Int, D)
+    terms = QMul{C,S}[
+        canonical_qmul(convert(C, 1), Field{S}[a]),
+        canonical_qmul(convert(C, b), Field{S}[]),
+    ]
+    return normalized_add(terms)
 end
-Base.:+(a::Number, b::QField) = +(b, a)
-function Base.:+(a::QAdd, b::Number)
-    SymbolicUtils._iszero(b) && return a
-    args = vcat(arguments(a), b)
-    return QAdd(args)
+Base.:+(b::Number, a::Field) = a + b
+
+function Base.:+(a::QMul{C,S}, b::D) where {C<:Number,D<:Number,S<:Statistics}
+    P = promote_type(C, D)
+    terms = QMul{P,S}[convert_mul(P, a), canonical_qmul(convert(P, b), Field{S}[])]
+    return normalized_add(terms)
+end
+Base.:+(b::Number, a::QMul) = a + b
+
+function Base.:+(a::QAdd{C,S}, b::D) where {C<:Number,D<:Number,S<:Statistics}
+    P = promote_type(C, D)
+    args = QMul{P,S}[convert_mul(P, term) for term in a.arguments]
+    push!(args, canonical_qmul(convert(P, b), Field{S}[]))
+    return normalized_add(args)
+end
+Base.:+(b::Number, a::QAdd) = a + b
+
+function Base.:+(a::Field{S}, b::Field{S}) where {S<:Statistics}
+    return normalized_add(
+        QMul{Int,S}[canonical_qmul(1, Field{S}[a]), canonical_qmul(1, Field{S}[b])]
+    )
 end
 
-function Base.:+(a::QSym, b::QSym)
-    args = [a, b]
-    return QAdd(args)
-end
-function Base.:+(a::QMul{T}, b::QMul{S}) where {T,S}
-    TT = promote_type(T, S)
-    args = QMul{TT}[a, b]
-    return QAdd(args)
-end
-function Base.:+(a::QMul{T}, b::QSym) where {T}
-    args = QMul{T}[a, QMul{T}(b)]
-    return QAdd(args)
-end
-function Base.:+(b::QSym, a::QMul{T}) where {T}
-    args = QMul{T}[a, QMul{T}(b)]
-    return QAdd(args)
+function Base.:+(a::QMul{C1,S}, b::QMul{C2,S}) where {C1,C2,S<:Statistics}
+    P = promote_type(C1, C2)
+    return normalized_add(QMul{P,S}[convert_mul(P, a), convert_mul(P, b)])
 end
 
-function Base.:+(a::QMul{T}, b::QAdd{S}) where {T,S}
-    TT = promote_type(T, S)
-    args = QMul{TT}[_b for _b in arguments(b)]
-    return QAdd(push!(args, a))
+function Base.:+(a::QMul{C,S}, b::Field{S}) where {C<:Number,S<:Statistics}
+    return normalized_add(QMul{C,S}[a, canonical_qmul(one(C), Field{S}[b])])
 end
-function Base.:+(b::QAdd{S}, a::QMul{T}) where {T,S}
-    TT = promote_type(T, S)
-    args = QMul{TT}[_b for _b in arguments(b)]
-    return QAdd(push!(args, a))
+Base.:+(b::Field{S}, a::QMul{C,S}) where {C<:Number,S<:Statistics} = a + b
+
+function Base.:+(a::QAdd{C,S}, b::Field{S}) where {C<:Number,S<:Statistics}
+    args = copy(a.arguments)
+    push!(args, canonical_qmul(one(C), Field{S}[b]))
+    return normalized_add(args)
+end
+Base.:+(b::Field{S}, a::QAdd{C,S}) where {C<:Number,S<:Statistics} = a + b
+
+function Base.:+(a::QMul{C1,S}, b::QAdd{C2,S}) where {C1,C2,S<:Statistics}
+    P = promote_type(C1, C2)
+    args = QMul{P,S}[convert_mul(P, term) for term in b.arguments]
+    push!(args, convert_mul(P, a))
+    return normalized_add(args)
+end
+Base.:+(b::QAdd{C2,S}, a::QMul{C1,S}) where {C1,C2,S<:Statistics} = a + b
+
+function Base.:+(a::QAdd{C1,S}, b::QAdd{C2,S}) where {C1,C2,S<:Statistics}
+    P = promote_type(C1, C2)
+    args = QMul{P,S}[]
+    append!(args, (convert_mul(P, term) for term in a.arguments))
+    append!(args, (convert_mul(P, term) for term in b.arguments))
+    return normalized_add(args)
 end
 
-function Base.:+(a::QAdd{T}, b::QSym) where {T}
-    args = arguments(a)
-    l = length(args)
-    args′ = QMul{T}[i>l ? QMul{T}(b) : args[i] for i in 1:(l + 1)]
-    return QAdd(args′)
-end
-function Base.:+(b::QSym, a::QAdd{T}) where {T}
-    args = arguments(a)
-    l = length(args)
-    args′ = QMul{T}[i>l ? QMul{T}(b) : args[i] for i in 1:(l + 1)]
-    return QAdd(args′)
-end
-function Base.:+(a::QAdd{T}, b::QAdd{S}) where {T,S}
-    TT = promote_type(T, S)
-    args1 = arguments(a)
-    args2 = arguments(b)
-    l1 = length(args1)
-    l2 = length(args2)
-    args′ = QMul{TT}[i>l1 ? args2[i - l1] : args1[i] for i in 1:(l1 + l2)]
-    return QAdd(args′)
-end
+########################
+# Distributive products
+########################
 
-function Base.:*(a::QAdd{T}, b::S) where {T,S<:Number}
-    TT = promote_type(T, S)
-    args = QMul{TT}[a_ * b for a_ in arguments(a)]
-    flatten_adds!(args)
-    isempty(args) && return QAdd{TT}()
-    return QAdd(args)
+function Base.:*(a::QAdd{C,S}, b::D) where {C<:Number,D<:Number,S<:Statistics}
+    P = promote_type(C, D)
+    args = QMul{P,S}[term * b for term in a.arguments]
+    return normalized_add(args)
 end
+Base.:*(b::Number, a::QAdd) = a * b
 
-function Base.:*(a::QMul{S}, b::QAdd{T}) where {T,S}
-    TT = promote_type(T, S)
-    args = QMul{TT}[b_ * a for b_ in arguments(b)]
-    flatten_adds!(args)
-    isempty(args) && return QAdd{TT}()
-    return QAdd(args)
+function Base.:*(a::QMul{C1,S}, b::QAdd{C2,S}) where {C1,C2,S<:Statistics}
+    P = promote_type(C1, C2)
+    return normalized_add(QMul{P,S}[a * term for term in b.arguments])
 end
-function Base.:*(b::QAdd{T}, a::QMul{S}) where {T,S}
-    TT = promote_type(T, S)
-    args = QMul{TT}[b_ * a for b_ in arguments(b)]
-    flatten_adds!(args)
-    isempty(args) && return QAdd{TT}()
-    return QAdd(args)
-end
+Base.:*(b::QAdd{C2,S}, a::QMul{C1,S}) where {C1,C2,S<:Statistics} = a * b
 
-function Base.:*(a::QSym, b::QAdd{T}) where {T}
-    args = QMul{T}[b_ * a for b_ in arguments(b)]
-    flatten_adds!(args)
-    isempty(args) && return QAdd{T}()
-    return QAdd(args)
+function Base.:*(a::Field{S}, b::QAdd{C,S}) where {C<:Number,S<:Statistics}
+    return normalized_add(QMul{C,S}[a * term for term in b.arguments])
 end
-function Base.:*(b::QAdd{T}, a::QSym) where {T}
-    args = QMul{T}[b_ * a for b_ in arguments(b)]
-    flatten_adds!(args)
-    isempty(args) && return QAdd{T}()
-    return QAdd(args)
-end
+Base.:*(b::QAdd{C,S}, a::Field{S}) where {C<:Number,S<:Statistics} = a * b
 
-function Base.:*(a::QAdd{S}, b::QAdd{T}) where {T,S}
-    TT = promote_type(T, S)
-    args = QMul{TT}[]
-    for a_ in arguments(a), b_ in arguments(b)
-        push!(args, a_ * b_)
+function Base.:*(a::QAdd{C1,S}, b::QAdd{C2,S}) where {C1,C2,S<:Statistics}
+    P = promote_type(C1, C2)
+    args = QMul{P,S}[]
+    for ta in a.arguments, tb in b.arguments
+        push!(args, ta * tb)
     end
-    flatten_adds!(args)
-    isempty(args) && return QAdd{TT}()
-    return QAdd(args)
-end
-
-function flatten_adds!(args)
-    i = 1
-    while i <= length(args)
-        x = args[i]
-        if x isa QAdd
-            append!(args, arguments(x))
-            deleteat!(args, i)
-        elseif SymbolicUtils._iszero(x) || isequal(x, 0)
-            deleteat!(args, i)
-        else
-            i += 1
-        end
-    end
-    return args
+    return normalized_add(args)
 end

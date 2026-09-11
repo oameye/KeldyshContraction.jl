@@ -1,173 +1,157 @@
 #########################
-# Destroy and Create
+#       Field{S}
 #########################
 
-"""
-    Destroy <: QSym
-
-Bosonic field representing the quantum field annihilation operator.
-"""
-struct Destroy <: QSym
+"""Fundamental Keldysh path-integral field with statistics `S`."""
+struct Field{S<:Statistics} <: QSym
     name::Symbol
-    contour::KeldyshContour.T
+    orientation::Orientation.T
+    keldysh::KeldyshIndex.T
     position::Position
     regularisation::Regularisation.T
+    indices::FieldIndices
 end
-function Destroy(
+
+"""Construct a Keldysh field with the remaining properties defaulted."""
+function Field{S}(
     name::Symbol,
-    contour::KeldyshContour.T,
+    keldysh::KeldyshIndex.T,
+    orientation::Orientation.T=Orientation.Unbarred,
     reg::Regularisation.T=Regularisation.Zero,
     pos::Position=Bulk(),
-)
-    return Destroy(name, contour, pos, reg)
+    indices::FieldIndices=FieldIndices(),
+) where {S<:Statistics}
+    return Field{S}(name, orientation, keldysh, pos, reg, indices)
 end
 
-"""
-    Create <: QSym
-
-Bosonic field representing the quantum field creation operator.
-"""
-struct Create <: QSym
-    name::Symbol
-    contour::KeldyshContour.T
-    position::Position
-    regularisation::Regularisation.T
-end
-function Create(
-    name::Symbol,
-    contour::KeldyshContour.T,
-    reg::Regularisation.T=Regularisation.Zero,
-    pos::Position=Bulk();
-)
-    return Create(name, contour, pos, reg)
+"""Copy a field, replacing the specified properties."""
+function reconstruct(
+    f::Field{S};
+    name::Symbol=name(f),
+    orientation::Orientation.T=orientation(f),
+    keldysh::KeldyshIndex.T=keldysh_index(f),
+    position::Position=position(f),
+    regularisation::Regularisation.T=regularisation(f),
+    indices::FieldIndices=field_indices(f),
+) where {S<:Statistics}
+    return Field{S}(name, orientation, keldysh, position, regularisation, indices)
 end
 
-for T in (:Create, :Destroy)
-    @eval Base.isequal(a::$T, b::$T) =
-        isequal(name(a), name(b)) &&
-        isequal(position(a), position(b)) &&
-        isequal(contour(a), contour(b)) &&
-        isequal(regularisation(a), regularisation(b))
-end
+statistics(::Field{S}) where {S<:Statistics} = S
+orientation(f::Field) = f.orientation
+keldysh_index(f::Field) = f.keldysh
+regularisation(f::Field) = f.regularisation
+position(f::Field) = f.position
+field_indices(f::Field) = f.indices
+index(f::Field) = index(position(f))
 
-for f in [:Destroy, :Create]
-    @eval function (ff::$f)(pos::Position)
-        return $(f)(name(ff), contour(ff), regularisation(ff), pos)
+is_unbarred(f::Field) = orientation(f) === Orientation.Unbarred
+is_barred(f::Field) = orientation(f) === Orientation.Barred
+ladder(f::Field) = Int(is_barred(f))
+
+is_quantum(f::Field{Boson}) = keldysh_index(f) === Quantum
+is_classical(f::Field{Boson}) = keldysh_index(f) === Classical
+
+is_bulk(f::Field) = is_bulk(position(f))
+is_in(f::Field) = is_in(position(f))
+is_out(f::Field) = is_out(position(f))
+
+(f::Field)(pos::Position) = reconstruct(f; position=pos)
+(f::Field)(reg::Regularisation.T) = reconstruct(f; regularisation=reg)
+
+set_reg_to_zero(f::Field) = reconstruct(f; regularisation=Regularisation.Zero)
+function set_reg_to_zero!(v::Vector{Field{S}}) where {S}
+    for i in eachindex(v)
+        v[i] = set_reg_to_zero(v[i])
     end
-    @eval function (ff::$f)(reg::Regularisation.T)
-        return $(f)(name(ff), contour(ff), reg, position(ff))
+    return v
+end
+
+contour_integers(v::Vector{Field{S}}) where {S} = Int[Int(keldysh_index(x)) for x in v]
+
+"""Toggle the path-integral orientation of a field."""
+function bar(f::Field)
+    o = is_unbarred(f) ? Orientation.Barred : Orientation.Unbarred
+    return reconstruct(f; orientation=o)
+end
+
+function Base.isequal(a::Field{S}, b::Field{S}) where {S}
+    return isequal(name(a), name(b)) &&
+           isequal(orientation(a), orientation(b)) &&
+           isequal(keldysh_index(a), keldysh_index(b)) &&
+           isequal(position(a), position(b)) &&
+           isequal(regularisation(a), regularisation(b)) &&
+           isequal(field_indices(a), field_indices(b))
+end
+Base.:(==)(a::Field{S}, b::Field{S}) where {S} = isequal(a, b)
+
+function Base.isless(a::Field{S}, b::Field{S}) where {S}
+    oa, ob = Int(orientation(a)), Int(orientation(b))
+    oa == ob || return oa < ob
+    pa, pb = index(a), index(b)
+    pa == pb || return pa < pb
+    ka, kb = Int(keldysh_index(a)), Int(keldysh_index(b))
+    ka == kb || return ka < kb
+    name(a) == name(b) || return isless(name(a), name(b))
+    ra, rb = Int(regularisation(a)), Int(regularisation(b))
+    ra == rb || return ra < rb
+    return isless(field_indices(a), field_indices(b))
+end
+
+"""Exchange sign for statistics `S`."""
+exchange_sign(::Type{Boson}) = Int8(1)
+
+"""Exchange sign for two fields with statistics `S`."""
+function exchange_sign(::Type{S}, ::Field{S}, ::Field{S}) where {S<:Statistics}
+    return exchange_sign(S)
+end
+
+"""Return whether all field exchanges have sign `+1`."""
+is_exchange_sign_free(::Type{S}) where {S<:Statistics} = isone(exchange_sign(S))
+
+"""Sort fields in place and return the accumulated exchange sign."""
+function canonicalize_fields!(args::Vector{Field{S}}) where {S<:Statistics}
+    if is_exchange_sign_free(S)
+        sort!(args)
+        return exchange_sign(S)
     end
-
-    @eval regularisation(ϕ::$(f)) = ϕ.regularisation
-    @eval contour(ϕ::$(f)) = ϕ.contour
-    @eval position(ϕ::$(f)) = ϕ.position
-    @eval index(ϕ::$(f)) = index(position(ϕ))
-    @eval is_bulk(ϕ::$(f)) = is_bulk(position(ϕ))
-    @eval is_in(ϕ::$(f)) = is_in(position(ϕ))
-    @eval is_out(ϕ::$(f)) = is_out(position(ϕ))
-
-    @eval set_reg_to_zero(ϕ::$(f)) =
-        $(f)(name(ϕ), contour(ϕ), Regularisation.Zero, position(ϕ))
-end
-function set_reg_to_zero!(v::Vector{QSym})
-    for (i, f) in pairs(v)
-        v[i] = set_reg_to_zero(f)
+    sign = Int8(1)
+    @inbounds for i in 2:length(args)
+        j = i
+        while j > 1 && isless(args[j], args[j - 1])
+            sign *= exchange_sign(S, args[j - 1], args[j])
+            args[j - 1], args[j] = args[j], args[j - 1]
+            j -= 1
+        end
     end
-end
-function contour_integers(v::Vector{QSym})
-    return Int[Int(contour(x)) for x in v]
-end
-ladder(::Destroy) = 0
-ladder(::Create) = 1
-
-"""
-    adjoint(op::Destroy)
-
-Adjoint of the operator [`Destroy`](@ref) annihilation field constructing the corresponding creation field [`Create`](@ref).
-"""
-function Base.adjoint(op::Destroy)
-    return Create(name(op), contour(op), regularisation(op), position(op))
+    return sign
 end
 
-"""
-    adjoint(op::Create)
+Base.one(f::Field{S}) where {S<:Statistics} = QMul{Int,S}(1, Field{S}[])
+Base.zero(f::Field{S}) where {S<:Statistics} = QMul{Int,S}(0, Field{S}[])
+Base.one(::Type{Field{S}}) where {S<:Statistics} = QMul{Int,S}(1, Field{S}[])
+Base.zero(::Type{Field{S}}) where {S<:Statistics} = QMul{Int,S}(0, Field{S}[])
 
-Adjoint of the [`Create`](@ref) creation field constructing the corresponding annihilation field [`Destroy`](@ref).
-"""
-function Base.adjoint(op::Create)
-    return Destroy(name(op), contour(op), regularisation(op), position(op))
-end
-
-# reverse normal ordered
-"Defines the reverse normal order for the creation and annihilation operators."
-function Base.:*(a::Create, b::Destroy)
-    pos_a = position(a)
-    pos_b = position(b)
-    if pos_a < pos_b
-        return QMul(1, [a, b])
-    else
-        return QMul(1, [b, a])
-    end
-end
-
-"""
-    is_creation(x::QSym)
-
-Returns if the field `x` is a creation operator.
-"""
-is_creation(x::Create) = true
-is_creation(x::Destroy) = false
-
-"""
-    is_annihilation(x::QSym)
-
-Returns if the field `x` is an annihilation operator.
-"""
-is_annihilation(x::Destroy) = true
-is_annihilation(x::Create) = false
-
-"""
-    @qfields
-
-Convenience macro for the construction of fields.
-
-Examples
-========
-```
-julia> using KeldyshContraction: Classical, Quantum
-
-julia> @qnumbers ψ::Destroy(Classical)
-(ψ,)
-```
-"""
+"""Construct Keldysh fields from a statistics type and Keldysh label."""
 macro qfields(qs...)
     defs = map(qs) do q
         nf = _name_field(q)
-        name, field_expr = nf.name, nf.field_expr
-
-        # Extract field type (Create or Destroy) and args
-        field_type = field_expr.args[1]
+        fname, field_expr = nf.name, nf.field_expr
+        statistics_expr = field_expr.args[1]
         field_args = field_expr.args[2:end]
 
-        # Build the field construction expression
-        field_construction = Expr(
-            :call,
-            esc(field_type),
-            Expr(:quote, name),  # Pass the name as a quoted symbol
-            map(esc, field_args)..., # Escape all other args
-        )
-
-        # Define the field variable
-        return :($(esc(name)) = $(field_construction))
+        construction = :(Field{$(esc(statistics_expr))}(
+            $(QuoteNode(fname)), $(map(esc, field_args)...), Orientation.Unbarred
+        ))
+        return :($(esc(fname)) = $construction)
     end
 
-    # Return both the definitions and the tuple of names
-    return Expr(:block, defs..., :(tuple($(map(q -> esc(_name_field(q).name), qs)...))))
+    names = map(q -> esc(_name_field(q).name), qs)
+    return Expr(:block, defs..., :(tuple($(names...))))
 end
 
-# Helper function to extract name and field constructor from expression
 function _name_field(expr)
-    @assert expr isa Expr && expr.head == :(::) "Expected expression of form name::Field(args...)"
+    @assert expr isa Expr && expr.head == :(::) "Expected expression of form name::Statistics(args...)"
     name = expr.args[1]
     @assert name isa Symbol "Left side of :: must be a symbol"
 

@@ -12,7 +12,7 @@ abstract type Lagrangian end
 """
 $(DocStringExtensions.TYPEDEF)
 
-Represents an interaction Lagrangian
+Represents an interaction Lagrangian.
 
 # Fields
 $(DocStringExtensions.FIELDS)
@@ -20,31 +20,32 @@ $(DocStringExtensions.FIELDS)
 # Constructor
 $(DocStringExtensions.TYPEDSIGNATURES)
 
-Constructs an InteractionLagrangian from a given [`QTerm`](@ref) expression.
+Constructs an `InteractionLagrangian` from a [`QTerm`](@ref) expression.
 
 # Requirements
-The constructor enforces several constraints on the input expression and throws `AssertionError` if any of them are not met:
-- Must be a bulk term ([`is_bulk`](@ref))
-- Must be conserved ([`is_conserved`](@ref))
-- Must be physical ([`is_physical`](@ref))
-- Can only contain up to two different fields
-- Fields must have opposite contours
-
+The expression must:
+- be a bulk term (`is_bulk`);
+- be conserved ([`is_conserved`](@ref));
+- be physical ([`is_physical`](@ref));
+- contain at most two different fields;
+- use opposite Keldysh components for those fields.
 """
 struct InteractionLagrangian{T} <: Lagrangian
     "The Lagrangian expression as a [`QTerm`](@ref)"
     lagrangian::T
-    "The quantum field destruction operator"
-    qfield::Destroy
-    "The classical field destruction operator"
-    cfield::Destroy
+    "The quantum field"
+    qfield::Field{Boson}
+    "The classical field"
+    cfield::Field{Boson}
     "The position of the interaction Lagrangian"
     position::Position
-    "Parameters of the perturbation series"
+    "Parameter of the perturbation series"
     parameter::CSym
 end
-# The normalization can change the QTerm coefficient type based on its values.
-@unstable function InteractionLagrangian(expr::QTerm, parameter=DEFAULT_PARAMETER)
+
+function InteractionLagrangian(
+    expr::Union{QMul{C,Boson},QAdd{C,Boson}}, parameter=DEFAULT_PARAMETER
+) where {C<:Number}
     fields = _extract_unique_fields(expr)
     contours = contour_integers(fields)
 
@@ -52,138 +53,152 @@ end
 
     q_idx = findfirst(iszero, contours)
     c_idx = findfirst(isone, contours)
-    maybe_rational_expr = maybe_rationalize(expr)
-    return InteractionLagrangian{typeof(maybe_rational_expr)}(
-        maybe_rational_expr,
-        fields[q_idx],
-        fields[c_idx],
-        position(fields[q_idx]),
-        parameter,
+    q_idx === nothing && throw(ArgumentError("interaction has no quantum field"))
+    c_idx === nothing && throw(ArgumentError("interaction has no classical field"))
+
+    return InteractionLagrangian{typeof(expr)}(
+        expr, fields[q_idx], fields[c_idx], position(fields[q_idx]), parameter
     )
 end
-function _extract_unique_fields(expr)
-    fields = allfields(expr)
-    set_reg_to_zero!(fields)
-    unique_fields = unique(fields)
-    return filter(is_annihilation, unique_fields)
+
+function _extract_unique_fields(expr::Union{QMul{C,Boson},QAdd{C,Boson}}) where {C<:Number}
+    fs = allfields(expr)
+    set_reg_to_zero!(fs)
+    unique_fields = unique(fs)
+    result = Field{Boson}[]
+    sizehint!(result, length(unique_fields))
+    for field in unique_fields
+        is_unbarred(field) && push!(result, field)
+    end
+    return result
 end
+
 function _assert_lagrangian(expr, fields, contours)
-    @assert is_bulk(expr) "An interaction Lagrangian only accepts bulk terms"
-    @assert is_conserved(expr) "An interaction Lagrangian only accepts conserved terms"
-    @assert is_physical(expr) "An interaction Lagrangian only accepts physical terms"
-    @assert length(fields) <= 2 "An interaction Lagrangian only accepts up to two different fields"
-    @assert unique(contours) == contours "An interaction Lagrangian only accepts fields with opposite contours"
+    is_bulk(expr) ||
+        throw(ArgumentError("an interaction Lagrangian only accepts bulk terms"))
+    is_conserved(expr) ||
+        throw(ArgumentError("an interaction Lagrangian only accepts conserved terms"))
+    is_physical(expr) ||
+        throw(ArgumentError("an interaction Lagrangian only accepts physical terms"))
+    length(fields) <= 2 || throw(
+        ArgumentError("an interaction Lagrangian only accepts up to two different fields"),
+    )
+    unique(contours) == contours || throw(
+        ArgumentError(
+            "an interaction Lagrangian only accepts fields with opposite contours"
+        ),
+    )
     return nothing
 end
 
-"get the position of the interaction lagrangian"
 position(L::InteractionLagrangian) = L.position
-
-"get parameter of the interaction lagrangian"
 parameters(L::InteractionLagrangian) = L.parameter
 
-"""
-    is_conserved(a::QTerm)
+# Keep tuple/vector methods separate so the statistics parameter remains bound.
+function balanced_orientation(args)
+    n_unbarred = count(is_unbarred, args)
+    return n_unbarred > 0 && n_unbarred == count(is_barred, args)
+end
 
-Checks if an expression [`QTerm`])(@ref) is conserved. A conserved expression is one that has equal numbers of creation and annihilation operators.
+"""
+    is_conserved(a)
+
+Checks whether a field expression is conserved. A conserved expression contains equal,
+nonzero numbers of barred and unbarred fields.
 
 See also: [`is_physical`](@ref)
 """
-function is_conserved(args_nc_::Union{Tuple{<:QSym,<:QSym},Vector{QSym}})
-    n_destroy = Bool[arg isa Destroy for arg in args_nc_]
-    if length(args_nc_) == 0 || iszero(sum(n_destroy))
-        return false
-    else
-        length(args_nc_) == 1
-        return length(args_nc_) ÷ sum(n_destroy) == 2
-    end
+is_conserved(args::Vector{Field{S}}) where {S<:Statistics} = balanced_orientation(args)
+is_conserved(::Tuple{}) = false
+function is_conserved(args::Tuple{Field{S},Vararg{Field{S}}}) where {S<:Statistics}
+    return balanced_orientation(args)
 end
 is_conserved(a::QMul) = is_conserved(a.args_nc)
-is_conserved(a::QAdd) = all(is_conserved(arg) for arg in arguments(a))
-is_conserved(a::QSym) = false
+is_conserved(a::QAdd) = all(is_conserved, a.arguments)
+is_conserved(::Field) = false
 
 """
-    is_physical(a::QTerm)
+    is_physical(a)
 
-Checks if an expression [`QTerm`])(@ref) is physical. A physical expression is one that if it has an `In` position field it also has an `Out` position field and vice versa ([`Position`])(@ref). Furthermore, `In` position field can only creation fields ([`Create`](@ref)) and `Out` position field can only have annihilation fields ([`Destroy`](@ref)).
+Checks whether a field expression is physical. If an expression contains an [`In`](@ref)
+field, it must also contain an [`Out`](@ref) field and vice versa. An `In` field must be
+barred, while an `Out` field must be unbarred.
 
 See also: [`is_conserved`](@ref)
 """
-function is_physical(args_nc_::Vector{<:QField})
-    positions = [position(f) for f in args_nc_]
-    # checks if a mul has both in-out in a lagrangian
-    in_out = has_in(positions) ? (has_out(positions) ? true : false) : true
-    out_in = has_out(positions) ? (has_in(positions) ? true : false) : true
-    itr = map(is_physical, args_nc_)
-    physical = all(itr) # individual field are physical
-    return physical && in_out && out_in
+function is_physical(args::Vector{Field{S}}) where {S<:Statistics}
+    positions = Position[position(f) for f in args]
+    in_out = !has_in(positions) || has_out(positions)
+    out_in = !has_out(positions) || has_in(positions)
+    return all(is_physical, args) && in_out && out_in
 end
-@inline is_physical(a::QMul) = is_physical(a.args_nc)
-is_physical(a::QAdd) = all(is_physical(arg) for arg in arguments(a))
-is_physical(a::Destroy) = !is_in(a)
-is_physical(a::Create) = !is_out(a)
+is_physical(a::QMul) = is_physical(a.args_nc)
+is_physical(a::QAdd) = all(is_physical, a.arguments)
+is_physical(f::Field) = is_unbarred(f) ? !is_in(f) : !is_out(f)
 
 function (L::InteractionLagrangian)(i::Int)
     new_lagrangian = set_position(L.lagrangian, Bulk(i))
-    return InteractionLagrangian(new_lagrangian)
+    return InteractionLagrangian(new_lagrangian, parameters(L))
 end
 
-# function Base.:*(L::InteractionLagrangian{T}, K::InteractionLagrangian{T}) where {T}
-#     @assert L.qfield == K.qfield "InteractionLagrangian must have the same quantum field"
-#     @assert L.cfield == K.cfield "InteractionLagrangian must have the same classical field"
-#     new_lagrangian = L.lagrangian * K.lagrangian
-#     a = parameters(L)
-#     b = parameters(K)
-#     p = SymbolicUtils.Mul(Number, 1, Dict(a =>1, b => 1))
-#     return InteractionLagrangian(new_lagrangian, p)
-# end
+###########################
+#      LagrangianSum
+###########################
 
 """
 $(DocStringExtensions.TYPEDEF)
 
-Represents a sum of interaction Lagrangians, each representing a different process.
+Represents a sum of interaction Lagrangians, each describing a different process.
+All terms must use the same quantum and classical fields.
 
 # Fields
 $(DocStringExtensions.FIELDS)
 
 # Constructor
 $(DocStringExtensions.TYPEDSIGNATURES)
-
 """
 struct LagrangianSum{T} <: Lagrangian
+    "Interaction Lagrangians in the sum"
     arguments::Vector{InteractionLagrangian{T}}
     function LagrangianSum(args::Vector{InteractionLagrangian{T}}, ::Val{:raw}) where {T}
         return new{T}(args)
     end
 end
-@unstable function LagrangianSum(args::Vector{<:InteractionLagrangian})
-    @assert allequal(getfield.(args, :qfield)) "All InteractionLagrangian must have the same quantum field"
-    @assert allequal(getfield.(args, :cfield)) "All InteractionLagrangian must have the same classical field"
 
+@unstable function LagrangianSum(args::Vector{<:InteractionLagrangian})
+    check_common_fields(args)
     vs = promote(args...)
     return LagrangianSum(collect(vs))
 end
 function LagrangianSum(args::Vector{InteractionLagrangian{T}}) where {T}
-    @assert allequal(getfield.(args, :qfield)) "All InteractionLagrangian must have the same quantum field"
-    @assert allequal(getfield.(args, :cfield)) "All InteractionLagrangian must have the same classical field"
+    check_common_fields(args)
     return LagrangianSum(args, Val(:raw))
+end
+
+function check_common_fields(args::AbstractVector{<:InteractionLagrangian})
+    allequal(getfield.(args, :qfield)) ||
+        throw(ArgumentError("all InteractionLagrangian must have the same quantum field"))
+    allequal(getfield.(args, :cfield)) ||
+        throw(ArgumentError("all InteractionLagrangian must have the same classical field"))
+    return nothing
 end
 
 SymbolicUtils.arguments(Ls::LagrangianSum) = Ls.arguments
 parameters(Ls::LagrangianSum) = [L.parameter for L in arguments(Ls)]
 Base.length(a::LagrangianSum) = length(arguments(a))
-SymbolicUtils.operation(::LagrangianSum) = (+) # TODO needed?
+SymbolicUtils.operation(::LagrangianSum) = (+)
 
 function Base.:+(a::InteractionLagrangian{T}, b::InteractionLagrangian{S}) where {T,S}
-    TT = promote_type(T, S)
-    args = InteractionLagrangian{TT}[a]
-    return LagrangianSum(push!(args, b))
+    P = promote_type(T, S)
+    args = InteractionLagrangian{P}[convert(InteractionLagrangian{P}, a)]
+    push!(args, convert(InteractionLagrangian{P}, b))
+    return LagrangianSum(args)
 end
 
 function Base.promote_rule(
     ::Type{InteractionLagrangian{S}}, ::Type{InteractionLagrangian{T}}
 ) where {S,T}
-    return InteractionLagrangian{promote_rule(S, T)}
+    return InteractionLagrangian{promote_type(S, T)}
 end
 function Base.convert(
     ::Type{InteractionLagrangian{T}}, L::InteractionLagrangian{S}
@@ -191,42 +206,42 @@ function Base.convert(
     return InteractionLagrangian(convert(T, L.lagrangian), parameters(L))
 end
 
-maybe_rationalize(q::QAdd{T}) where {T<:Rational} = q
-maybe_rationalize(q::QAdd{ComplexRationals}) = q
-@unstable function maybe_rationalize(q::QAdd{T}) where {T<:Number}
-    if T <: Rational
-        return q
-    else
-        args = map(q.arguments) do term
-            return maybe_rationalize(term)
-        end
-        return QAdd(args)
-    end
+#############################
+# Explicit coefficient APIs
+#############################
+
+"""Convert all numeric coefficients in `q` to type `C`."""
+function convert_coefficients(
+    ::Type{C}, q::QMul{D,S}
+) where {C<:Number,D<:Number,S<:Statistics}
+    return QMul(convert(C, q.arg_c), copy(q.args_nc))
+end
+function convert_coefficients(
+    ::Type{C}, q::QAdd{D,S}
+) where {C<:Number,D<:Number,S<:Statistics}
+    return QAdd(QMul{C,S}[convert_coefficients(C, term) for term in q.arguments])
 end
 
-maybe_rationalize(q::QMul{T}) where {T<:Rational} = q
-maybe_rationalize(q::QMul{ComplexRationals}) = q
-@unstable function maybe_rationalize(q::QMul{T}) where {T<:Number}
-    if T <: Rational
-        return q
-    else
-        rational = rationalize(q.arg_c)
-        check = T(rational)
-        if isequal(check, q.arg_c)
-            return QMul(rational, q.args_nc)
-        else
-            return q
-        end
-    end
+"""Rationalize floating-point coefficients in `q`."""
+rationalize_coefficients(q::QMul{C,S}) where {C<:Integer,S<:Statistics} = q
+rationalize_coefficients(q::QMul{C,S}) where {C<:Rational,S<:Statistics} = q
+rationalize_coefficients(q::QMul{Complex{C},S}) where {C<:Rational,S<:Statistics} = q
+
+function rationalize_coefficients(q::QMul{C,S}) where {C<:AbstractFloat,S<:Statistics}
+    R = typeof(rationalize(zero(C)))
+    return QMul{R,S}(rationalize(q.arg_c), copy(q.args_nc))
 end
-@unstable function maybe_rationalize(q::QMul{ComplexF64})
-    rational_re = rationalize(real(q.arg_c))
-    rational_im = rationalize(imag(q.arg_c))
-    check_re = float(rational_re)
-    check_me = float(rational_im)
-    if iszero(check_re - real(q.arg_c)) && iszero(check_me - imag(q.arg_c))
-        return QMul(rational_re + im*rational_im, q.args_nc)
-    else
-        return q
-    end
+function rationalize_coefficients(
+    q::QMul{Complex{C},S}
+) where {C<:AbstractFloat,S<:Statistics}
+    R = typeof(rationalize(zero(C)))
+    CR = Complex{R}
+    c = complex(rationalize(real(q.arg_c)), rationalize(imag(q.arg_c)))
+    return QMul{CR,S}(convert(CR, c), copy(q.args_nc))
+end
+rationalize_coefficients(q::QMul{C,S}) where {C<:Number,S<:Statistics} = q
+
+function rationalize_coefficients(q::QAdd{C,S}) where {C<:Number,S<:Statistics}
+    converted = map(rationalize_coefficients, q.arguments)
+    return QAdd(converted)
 end

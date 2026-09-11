@@ -3,21 +3,20 @@ using KeldyshContraction: In, Out, Edge, Bulk
 using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus
 
-@qfields ϕ::Destroy(Classical) ψ::Destroy(Quantum)
-
-@qfields ϕᶜ::Destroy(Classical) ϕᴾ::Destroy(Quantum)
+@qfields ϕ::Boson(Classical) ψ::Boson(Quantum)
+@qfields ϕᶜ::Boson(Classical) ϕᴾ::Boson(Quantum)
 
 @testset "Symbols" begin
     input = [
         ϕ,
-        ϕ',
-        ϕ(Plus)',
-        ϕ(Minus)',
-        Edge(ϕ, ϕ'(In())),
-        Edge(ϕ(Out()), ϕ'),
-        Edge(ϕ(Out()), ψ'),
-        Edge(ψ(Out()), ϕ'),
-        Edge(ψ(Bulk(2)), ϕ'),
+        bar(ϕ),
+        bar(ϕ(Plus)),
+        bar(ϕ(Minus)),
+        Edge(ϕ, bar(ϕ)(In())),
+        Edge(ϕ(Out()), bar(ϕ)),
+        Edge(ϕ(Out()), bar(ψ)),
+        Edge(ψ(Out()), bar(ϕ)),
+        Edge(ψ(Bulk(2)), bar(ϕ)),
     ]
     output = [
         "ϕ",
@@ -35,7 +34,7 @@ using KeldyshContraction: Regularisation.Minus as Minus
         @test repr(i) == o
     end
     s = IOBuffer(sizehint=0)
-    @inferred show(s, ϕ*ϕ')
+    @inferred show(s, ϕ * bar(ϕ))
 
     output_latex = [
         "\$\\phi\$",
@@ -55,12 +54,12 @@ using KeldyshContraction: Regularisation.Minus as Minus
 end
 
 @testset "Term" begin
-    @qfields ϕᶜ::Destroy(Classical) ϕᴾ::Destroy(Quantum)
+    @qfields ϕᶜ::Boson(Classical) ϕᴾ::Boson(Quantum)
 
-    L_int = im*(0.5 * ϕᶜ' * ϕᴾ' * (ϕᶜ * ϕᶜ))
-    @test repr(L_int) == "(0.0 + 0.5im)*(ϕᶜ*ϕᶜ*̄ϕᶜ*̄ϕᴾ)"
+    L_int = im * (0.5 * bar(ϕᶜ) * bar(ϕᴾ) * (ϕᶜ * ϕᶜ))
+    @test repr(L_int) == "(0.0 + 0.5im)*(ϕᶜ*ϕᶜ*̄ϕᴾ*̄ϕᶜ)"
     @test repr(MIME"text/latex"(), L_int) ==
-        "\$0.5 i \\phi^c \\phi^c \\bar{\\phi^c} \\bar{\\phi^P}\$"
+        "\$0.5 i \\phi^c \\phi^c \\bar{\\phi^P} \\bar{\\phi^c}\$"
 end
 
 @testset "Structs" begin
@@ -68,13 +67,13 @@ end
     using SymbolicUtils
     @syms g::Number
 
-    L = InteractionLagrangian(ϕ * ψ * ϕ' * ψ')
+    L = InteractionLagrangian(ϕ * ψ * bar(ϕ) * bar(ψ))
     @test repr(MIME"text/plain"(), L) ==
-        "Interaction Lagrangian with fields ϕ and ψ:\n(ϕ*ψ*̄ϕ*̄ψ)"
+        "Interaction Lagrangian with fields ϕ and ψ:\n(ψ*ϕ*̄ψ*̄ϕ)"
 
-    @test repr(MIME"text/latex"(), L) == "\$\\phi \\psi \\bar{\\phi} \\bar{\\psi}\$"
+    @test repr(MIME"text/latex"(), L) == "\$\\psi \\phi \\bar{\\psi} \\bar{\\phi}\$"
 
-    ds = Diagrams([Diagram([Edge(ϕ, ϕ')], Val(1), Val(0))], Complex{Rational{Int}}(1.0))
+    ds = Diagrams([Diagram([Edge(ϕ, bar(ϕ))], Val(1), Val(0))], Complex{Rational{Int}}(1.0))
     DP = DressedPropagator(ds, ds, ds, 1, g)
     @test repr(MIME"text/plain"(), DP) ==
         "Dressed Propagator:\nkeldysh:  Gᴷ(y₁,y₁)\nretarded: Gᴷ(y₁,y₁)\nadvanced: Gᴷ(y₁,y₁)"
@@ -90,7 +89,7 @@ end
     ms = Momenta([1, 1, -1], [Momentum(1), Momentum(2), Momentum(0)])
     @test repr(ms) == "q₁ + q₂ - k"
 
-    e = Edge(ψ(Bulk(2)), ϕ')
+    e = Edge(ψ(Bulk(2)), bar(ϕ))
     e0 = Edge(e, Momenta(0))
     e1 = Edge(e, Momenta(1))
     e2 = Edge(e, Momenta(2))
