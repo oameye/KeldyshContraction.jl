@@ -128,4 +128,51 @@ end
     @test get(grouped, (:offset, q_signature), zero(KC.ComplexRationals)) == 2 // 1
     @test get(grouped, (:distribution, ()), zero(KC.ComplexRationals)) == 2 // 1
     @test get(grouped, (:distribution, q_signature), zero(KC.ComplexRationals)) == -2 // 1
+
+    # Collision-level assembly must now recover the same oracle without presentation-layer
+    # grouping and without using topology as part of the physical term identity.
+    reduced = @inferred reduce_frequency_collision(collision)
+    @test parameters(reduced) == KC.ParameterMonomial(:γ)
+    @test target_family(reduced) === generated_loss1_ϕ
+    @test isempty(reduced_dependent_terms(reduced))
+    @test isempty(reduced_causal_terms(reduced))
+    @test isempty(reduced_trotter_terms(reduced))
+    @test length(reduced_regular_terms(reduced)) == 1
+
+    sector, statistical = only(reduced_regular_terms(reduced))
+    @test parameters(sector) == KC.ParameterMonomial(:γ)
+    @test isempty(frequency_support(sector).shells)
+    @test isempty(frequency_support(sector).principal_values)
+
+    basis = KC.momentum_basis(sector)
+    external_variable = external_wigner_momentum(sector)
+    external_index = only(
+        i for (i, variable) in enumerate(basis) if variable == external_variable
+    )
+    k_momentum = KC.basis_momentum(basis, external_index)
+    Fk_atom = StatisticalAtom(generated_loss1_ϕ, k_momentum)
+
+    atoms = Set(atom for (monomial, _) in statistical for atom in monomial)
+    @test Fk_atom in atoms
+    internal_atoms = [atom for atom in atoms if atom != Fk_atom]
+    @test length(internal_atoms) == 1
+    Fq_atom = only(internal_atoms)
+
+    Fk = StatisticalPolynomial(Fk_atom, one(KC.ComplexRationals))
+    Fq = StatisticalPolynomial(Fq_atom, one(KC.ComplexRationals))
+    expected_F = 2 * (Fk - one(typeof(Fk))) * (one(typeof(Fq)) - Fq)
+    @test statistical == expected_F
+
+    occupation = @inferred occupation_reduced_expression(reduced)
+    @test length(occupation_reduced_terms(occupation)) == 1
+    occupation_sector, occupation_polynomial = only(occupation_reduced_terms(occupation))
+    @test occupation_sector == sector
+
+    nk = OccupationPolynomial(
+        OccupationAtom(generated_loss1_ϕ, k_momentum), one(KC.ComplexRationals)
+    )
+    nq = OccupationPolynomial(
+        OccupationAtom(generated_loss1_ϕ, KC.momentum(Fq_atom)), one(KC.ComplexRationals)
+    )
+    @test occupation_polynomial == -4 * nk * nq
 end

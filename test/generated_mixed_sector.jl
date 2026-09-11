@@ -226,3 +226,48 @@ end
     @test reduced_coefficient(sunset, :distribution, qp_signature) == -4
     @test reduced_coefficient(sunset, :distribution, q_signature) == 4
 end
+
+@testset "collision-level mixed gγ assembly" begin
+    collision = @inferred spectral_dispersive_collision(
+        generated_mixed_off_shell_collision()
+    )
+    reduced = @inferred reduce_frequency_collision(collision)
+
+    @test isempty(reduced_dependent_terms(reduced))
+    @test isempty(reduced_causal_terms(reduced))
+    @test isempty(reduced_trotter_terms(reduced))
+    @test length(reduced_regular_terms(reduced)) == 1
+
+    sector, statistical = only(reduced_regular_terms(reduced))
+    @test parameters(sector) == KC.ParameterMonomial(:g) * KC.ParameterMonomial(:γ)
+    @test isempty(frequency_support(sector).shells)
+    @test length(frequency_support(sector).principal_values) == 1
+
+    basis = KC.momentum_basis(sector)
+    external_variable = external_wigner_momentum(sector)
+    external_index = only(
+        i for (i, variable) in enumerate(basis) if variable == external_variable
+    )
+    loop_indices = [i for i in eachindex(basis.variables) if i != external_index]
+    @test length(loop_indices) == 2
+
+    k = KC.basis_momentum(basis, external_index)
+    q = KC.basis_momentum(basis, loop_indices[1])
+    r = KC.basis_momentum(basis, loop_indices[2])
+    p = -k + q + r
+
+    coefficient = one(KC.ComplexRationals)
+    F(momentum) = StatisticalPolynomial(StatisticalAtom(mixed_ϕ, momentum), coefficient)
+    oneF = one(typeof(F(k)))
+    expected_F = 4 * F(q) * (F(p) - oneF) * (oneF - F(k))
+    @test statistical == expected_F
+
+    occupation = @inferred occupation_reduced_expression(reduced)
+    occupation_sector, polynomial = only(occupation_reduced_terms(occupation))
+    @test occupation_sector == sector
+
+    n(momentum) = OccupationPolynomial(OccupationAtom(mixed_ϕ, momentum), coefficient)
+    nk, np, nq = n(k), n(p), n(q)
+    expected_n = -8 * nk * np - 16 * nk * np * nq
+    @test polynomial == expected_n
+end

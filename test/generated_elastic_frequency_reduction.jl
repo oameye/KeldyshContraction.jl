@@ -176,4 +176,41 @@ end
     @test elastic_qr_symmetrized_coefficient(records, :distribution, pr) == -1 // 2
     @test elastic_qr_symmetrized_coefficient(records, :distribution, qr) == 1 // 2
     @test elastic_qr_symmetrized_coefficient(records, :distribution, none) == 1 // 2
+
+    # Collision-level assembly preserves the raw pre-quotient routing exactly.
+    reduced = @inferred reduce_frequency_collision(collision)
+    @test isempty(reduced_dependent_terms(reduced))
+    @test isempty(reduced_causal_terms(reduced))
+    @test isempty(reduced_trotter_terms(reduced))
+    @test length(reduced_regular_terms(reduced)) == 1
+
+    sector, statistical = only(reduced_regular_terms(reduced))
+    @test frequency_support(sector) == expected_support
+    @test parameters(sector) == elastic_parameter
+
+    coefficient = one(KC.ComplexRationals)
+    atom(momentum) = StatisticalAtom(generated_elastic_ϕ, momentum)
+    F(momentum) = StatisticalPolynomial(atom(momentum), coefficient)
+    oneF = one(typeof(F(k)))
+    expected_raw_F =
+        (1 // 2) * F(p) * F(q) * F(r) + (1 // 2) * F(p) - F(q) +
+        F(k) * (-F(p) * F(q) + (1 // 2) * F(q) * F(r) + (1 // 2) * oneF)
+    @test statistical == expected_raw_F
+
+    occupation = @inferred occupation_reduced_expression(reduced)
+    occupation_sector, occupation_polynomial = only(occupation_reduced_terms(occupation))
+    @test occupation_sector == sector
+
+    n(momentum) =
+        OccupationPolynomial(OccupationAtom(generated_elastic_ϕ, momentum), coefficient)
+    nk, np, nq, nr = n(k), n(p), n(q), n(r)
+
+    # Independent expansion of the raw asymmetric F-polynomial with F=1+2n and C_n=I/2.
+    expected_raw_n =
+        -4 * nk * np * nq - 2 * nk * np + 2 * nk * nq * nr - nk * nq +
+        nk * nr +
+        2 * np * nq * nr - np * nq +
+        np * nr +
+        2 * nq * nr - nq + nr
+    @test occupation_polynomial == expected_raw_n
 end
