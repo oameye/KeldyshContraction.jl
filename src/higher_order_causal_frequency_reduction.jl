@@ -52,7 +52,9 @@ function _push_combined_causal_term!(
     denominators::Vector{CausalFrequencyDenominator{S}},
 ) where {S<:Statistics}
     iszero(coefficient) && return out
-    candidate = CausalFrequencyTerm(coefficient, denominators)
+    canonical_denominators = copy(denominators)
+    sort!(canonical_denominators)
+    candidate = CausalFrequencyTerm{ComplexRationals,S}(coefficient, canonical_denominators)
     for index in eachindex(out)
         isequal(out[index].denominators, candidate.denominators) || continue
         combined = out[index].coefficient + candidate.coefficient
