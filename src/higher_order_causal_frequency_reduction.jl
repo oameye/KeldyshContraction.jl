@@ -1,8 +1,6 @@
 """Return whether two causal factors define the same normalized pole in one frequency."""
 function _same_normalized_causal_pole(
-    a::CausalFrequencyDenominator{S},
-    b::CausalFrequencyDenominator{S},
-    frequency_index::Int,
+    a::CausalFrequencyDenominator{S}, b::CausalFrequencyDenominator{S}, frequency_index::Int
 ) where {S<:Statistics}
     coefficient_a = a.loop_coefficients[frequency_index]
     coefficient_b = b.loop_coefficients[frequency_index]
@@ -11,7 +9,7 @@ function _same_normalized_causal_pole(
 
     @inbounds for index in eachindex(a.loop_coefficients, b.loop_coefficients)
         a.loop_coefficients[index] * coefficient_b ==
-            b.loop_coefficients[index] * coefficient_a || return false
+        b.loop_coefficients[index] * coefficient_a || return false
     end
     a.energy * coefficient_b == b.energy * coefficient_a || return false
     return a.infinitesimal * coefficient_b == b.infinitesimal * coefficient_a
@@ -35,7 +33,7 @@ function causal_pole_classes(term::CausalFrequencyTerm, frequency_index::Int)
         iszero(denominator.loop_coefficients[frequency_index]) && continue
         class_index = findfirst(classes) do pole_class
             representative = term.denominators[first(pole_class)]
-            _same_normalized_causal_pole(
+            return _same_normalized_causal_pole(
                 denominator, representative, frequency_index
             )
         end
@@ -88,14 +86,12 @@ function _differentiate_causal_product_once(
 end
 
 function _differentiate_causal_product(
-    denominators::Vector{CausalFrequencyDenominator{S}},
-    frequency_index::Int,
-    order::Int,
+    denominators::Vector{CausalFrequencyDenominator{S}}, frequency_index::Int, order::Int
 ) where {S<:Statistics}
     order >= 0 || throw(ArgumentError("causal derivative order must be nonnegative"))
-    terms = CausalFrequencyTerm{ComplexRationals,S}[
-        CausalFrequencyTerm(one(ComplexRationals), denominators)
-    ]
+    terms = CausalFrequencyTerm{ComplexRationals,S}[CausalFrequencyTerm(
+        one(ComplexRationals), denominators
+    )]
     for _ in 1:order
         terms = _differentiate_causal_product_once(terms, frequency_index)
         isempty(terms) && break
@@ -114,13 +110,12 @@ function _higher_order_pole_residue(
     coefficient_product = one(EnergyCoefficient)
     for denominator_index in pole_class
         class_mask[denominator_index] = true
-        coefficient_product *=
-            term.denominators[denominator_index].loop_coefficients[frequency_index]
+        coefficient_product *= term.denominators[denominator_index].loop_coefficients[frequency_index]
     end
 
     complement = CausalFrequencyDenominator{S}[
-        term.denominators[index] for index in eachindex(term.denominators) if
-        !class_mask[index]
+        term.denominators[index] for
+        index in eachindex(term.denominators) if !class_mask[index]
     ]
     multiplicity = length(pole_class)
     derivatives = _differentiate_causal_product(
