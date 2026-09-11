@@ -76,6 +76,13 @@ function benchmark_frequency_reduction!(suite)
         basis, [shifted_line₁ => CollisionDispersive, line₂ => CollisionSpectral], Val(2)
     )
 
+    target_energy = EnergyForm(DispersionAtom(benchmark_frequency_ϕ, k))
+    loop_energy = EnergyForm(DispersionAtom(benchmark_frequency_ϕ, q₁))
+    upper = KC.CausalFrequencyDenominator([1 // 1], -loop_energy, -1 // 1)
+    lower = KC.CausalFrequencyDenominator([1 // 1], -target_energy, 1 // 1)
+    simple_causal = KC.CausalFrequencyTerm(1 // 1, [upper, lower])
+    higher_order_causal = KC.CausalFrequencyTerm(1 // 1, [upper, upper, lower])
+
     suite["Frequency reduction"]["full-rank fast path"] = @benchmarkable KC.general_frequency_reduction(
         $full_rank, $benchmark_frequency_ϕ
     ) seconds = 10
@@ -87,6 +94,12 @@ function benchmark_frequency_reduction!(suite)
     ) seconds = 10
     suite["Frequency reduction"]["isolated Trotter path"] = @benchmarkable KC.reduce_frequency_term(
         $isolated_trotter, $benchmark_frequency_ϕ
+    ) seconds = 10
+    suite["Frequency reduction"]["simple causal residue"] = @benchmarkable KC.integrate_causal_frequency_exact(
+        $simple_causal, 1
+    ) seconds = 10
+    suite["Frequency reduction"]["higher-order causal residue"] = @benchmarkable KC.integrate_causal_frequency_exact(
+        $higher_order_causal, 1
     ) seconds = 10
     return suite
 end
