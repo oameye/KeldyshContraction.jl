@@ -229,3 +229,79 @@ end
     @test any(record -> record.topology == (2,), shifted_records)
     @test any(record -> record.topology == (3,), records)
 end
+
+@testset "collision-level γ² regular occupation and singular separation" begin
+    collision = generated_loss_spectral_collision()
+    reduced = @inferred reduce_frequency_collision(collision)
+
+    @test isempty(reduced_trotter_terms(reduced))
+    @test !isempty(reduced_dependent_terms(reduced))
+    # Eight termwise zero-energy source branches canonicalize to two physical collision sectors.
+    causal = reduced_causal_terms(reduced)
+    @test length(causal) == 2
+    @test all(
+        sector -> causal_exceptional_kind(sector) === KC.CausalZeroEnergyDenominator,
+        keys(causal),
+    )
+    @test all(!iszero, values(causal))
+    @test length(reduced_regular_terms(reduced)) == 1
+
+    occupation = @inferred occupation_reduced_expression(reduced)
+    @test length(occupation_reduced_terms(occupation)) == 1
+    sector, polynomial = only(occupation_reduced_terms(occupation))
+    @test parameters(sector) == KC.ParameterMonomial(:γ)^2
+    @test length(frequency_support(sector).shells) == 1
+    @test isempty(frequency_support(sector).principal_values)
+
+    basis = KC.momentum_basis(sector)
+    external_variable = external_wigner_momentum(sector)
+    external_index = only(
+        i for (i, variable) in enumerate(basis) if variable == external_variable
+    )
+    loop_indices = [i for i in eachindex(basis.variables) if i != external_index]
+    @test length(loop_indices) == 2
+
+    k = KC.basis_momentum(basis, external_index)
+    q1 = KC.basis_momentum(basis, loop_indices[1])
+    q2 = KC.basis_momentum(basis, loop_indices[2])
+    q = -k + q1 + q2
+
+    coefficient = one(KC.ComplexRationals)
+    n(momentum) =
+        OccupationPolynomial(OccupationAtom(dependent_loss_ϕ, momentum), coefficient)
+    nk, nq, nq1, nq2 = n(k), n(q), n(q1), n(q2)
+
+    symmetric_oracle =
+        2 * (
+            nq1 * nq2 +
+            nq1 * nq2 * nq +
+            nq1 * nq2 * nk +
+            nq * nk +
+            nq1 * nq * nk +
+            nq2 * nq * nk
+        )
+
+    # Before the physical dummy-loop quotient, the generated routing retains an antisymmetric
+    # q1 <-> q2 representative. The next layer will identify these two loop bases. #307 must
+    # preserve this raw routing rather than silently quotient it.
+    raw_oracle =
+        nq * nq2 + 2 * nq1 * nq2 * nq - nq1 * nq +
+        4 * nq1 * nq * nk +
+        2 * nq * nk +
+        nq2 +
+        2 * nq1 * nq2 +
+        2 * nq1 * nq2 * nk +
+        nq2 * nk - nq1 - nq1 * nk
+    swapped_raw_oracle =
+        nq * nq1 + 2 * nq1 * nq2 * nq - nq2 * nq +
+        4 * nq2 * nq * nk +
+        2 * nq * nk +
+        nq1 +
+        2 * nq1 * nq2 +
+        2 * nq1 * nq2 * nk +
+        nq1 * nk - nq2 - nq2 * nk
+
+    @test polynomial == raw_oracle
+    @test polynomial != symmetric_oracle
+    @test polynomial + swapped_raw_oracle == 2 * symmetric_oracle
+end
