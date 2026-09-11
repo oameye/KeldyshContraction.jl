@@ -9,6 +9,7 @@ using KeldyshContraction:
     RoutingEdge,
     exact_affine_momentum_routing,
     exact_momentum_routing,
+    lower_fourier_derivatives,
     momentum_routing
 
 @qfields benchmark_fourier_ϕ::Boson
@@ -42,6 +43,16 @@ function benchmark_momentum_routing!(SUITE)
     ]
     diagram = Diagram(contractions, Val(5), Val(1))
 
+    derivative_contractions = Contraction{Boson}[
+        Contraction(
+            partial(benchmark_fourier_c, :x)(Out()), bar(benchmark_fourier_q)(Bulk(1))
+        ),
+        Contraction(benchmark_fourier_c(Bulk(1)), bar(benchmark_fourier_q)(Bulk(1))),
+        Contraction(benchmark_fourier_c(Bulk(1)), bar(benchmark_fourier_q)(In())),
+    ]
+    derivative_diagram = Diagram(derivative_contractions, Val(3), Val(0))
+    routed_derivative = FourierDiagram(derivative_diagram)
+
     SUITE["Momentum routing"]["one loop graph"] = @benchmarkable momentum_routing($triangle) seconds =
         10
     SUITE["Momentum routing"]["two loop graph"] = @benchmarkable momentum_routing($two_loop) seconds =
@@ -54,5 +65,8 @@ function benchmark_momentum_routing!(SUITE)
     ) seconds = 10
     SUITE["Momentum routing"]["Fourier diagram"] = @benchmarkable FourierDiagram($diagram) seconds =
         10
+    SUITE["Momentum routing"]["derivative lowering"] = @benchmarkable lower_fourier_derivatives(
+        $routed_derivative
+    ) seconds = 10
     return nothing
 end
