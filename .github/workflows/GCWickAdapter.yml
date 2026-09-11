@@ -37,7 +37,7 @@ jobs:
           julia --project=benchmarks -e '
             using Pkg
             Pkg.develop(PackageSpec(path=pwd()))
-            Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="3ca80dcfa1c34e78145d4e90b8733c15eaa5c1ae"))
+            Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="1c0ac4278ec9db5c28eb01dc9e721e067511d2a3"))
             Pkg.instantiate()
           '
       - name: Validate GC Wick adapter
