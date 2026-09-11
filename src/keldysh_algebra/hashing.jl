@@ -25,14 +25,14 @@ function Base.hash(f::FieldFamily{S}, h::UInt) where {S<:Statistics}
 end
 
 function Base.hash(f::Field{S}, h::UInt) where {S<:Statistics}
+    derivative = derivative_multiindex(f)
+    tail = hash(regularisation(f), h)
+    isempty(derivative) || (tail = hash(derivative, tail))
     return hash(
         Field{S},
         hash(
             field_family(f),
-            hash(
-                orientation(f),
-                hash(keldysh_index(f), hash(position(f), hash(regularisation(f), h))),
-            ),
+            hash(orientation(f), hash(keldysh_index(f), hash(position(f), tail))),
         ),
     )
 end

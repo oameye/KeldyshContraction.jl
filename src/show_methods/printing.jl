@@ -1,8 +1,16 @@
 field_symbol(f::Field) = name(f)
 field_symbol(f::Field{Boson}) = Symbol(string(name(f), is_classical(f) ? "ᶜ" : "ᴾ"))
 
+function write_derivatives(io::IO, field::Field)
+    for axis in derivative_multiindex(field)
+        write(io, "∂", string(axis))
+    end
+    return nothing
+end
+
 function Base.show(io::IO, x::Field)
     reg = Int(regularisation(x))
+    write_derivatives(io, x)
     if is_barred(x)
         write(io, "̄")
     end
