@@ -1,6 +1,7 @@
 pages = [
     "Home" => "index.md",
     "API" => "API.md",
+    "Public API policy" => "public_api.md",
     "Symbolic fields" => "typesystem.md",
     "Type-stability guarantee" => "type_stability.md",
     "Keldysh Conventions" => "conventions.md",
