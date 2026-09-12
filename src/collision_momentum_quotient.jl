@@ -656,13 +656,29 @@ function _push_kernel_polynomial!(
     return terms
 end
 
+function _kinematic_atom_sector(
+    sector::ReducedCollisionSector{S}, monomial::MomentumMonomial
+) where {S<:Statistics}
+    kinematic = MomentumPolynomial(monomial, one(ComplexRationals))
+    return ReducedCollisionSector{S}(
+        parameters(sector),
+        momentum_basis(sector),
+        external_wigner_momentum(sector),
+        kinematic,
+        frequency_support(sector),
+    )
+end
+
 """
     quotient_loop_momenta(expression)
 
 Canonicalize each regular integrand atom under signed permutations of dummy loop coordinates and
-merge equivalent classes exactly. Occupation factors, derivative kinematics, and shell/PV support
-are transformed coherently. The canonical gauge is obtained by graph canonicalization rather than
-an explicit factorial search.
+merge equivalent classes exactly. Before choosing the loop gauge, each derivative kinematic
+polynomial is distributed into unit-coefficient momentum monomials. Scalar kinematic coefficients
+are folded into the occupation coefficient, so factored and expanded phase-space expressions have
+the same canonical representation. Occupation factors, derivative kinematics, and shell/PV
+support are transformed coherently. The canonical gauge is obtained by graph canonicalization
+rather than an explicit factorial search.
 
 General exact unimodular transforms and external-momentum shifts remain available through
 `LoopMomentumTransform`; automatic quotienting currently uses the universally safe signed-
@@ -671,19 +687,29 @@ permutation subgroup.
 function quotient_loop_momenta(
     expression::OccupationReducedExpression{C,S,O,G,Ctx}
 ) where {C<:Number,S<:Statistics,O,G,Ctx<:AbstractWignerContext}
-    D = promote_type(C, Rational{Int})
+    D = promote_type(C, ComplexRationals, Rational{Int})
     out = Dict{CollisionKernelSector{S},OccupationPolynomial{D,S}}()
 
     for (sector, polynomial) in occupation_reduced_terms(expression)
-        for (monomial, coefficient) in polynomial
-            transform = _canonical_loop_transform(sector, monomial)
-            transformed_sector, support_factor = _transform_kernel_sector(sector, transform)
-            transformed_monomial = transform_loop_momenta(monomial, transform)
-            transformed_coefficient = convert(D, coefficient) * convert(D, support_factor)
-            contribution = Pair{OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
-            _push_kernel_polynomial!(
-                out, transformed_sector, OccupationPolynomial{D,S}(contribution)
-            )
+        for (occupation_monomial, occupation_coefficient) in polynomial
+            for (kinematic_monomial, kinematic_coefficient) in kinematic_factor(sector)
+                atom_sector = _kinematic_atom_sector(sector, kinematic_monomial)
+                transform = _canonical_loop_transform(atom_sector, occupation_monomial)
+                transformed_sector, support_factor = _transform_kernel_sector(
+                    atom_sector, transform
+                )
+                transformed_monomial = transform_loop_momenta(
+                    occupation_monomial, transform
+                )
+                transformed_coefficient =
+                    convert(D, occupation_coefficient) *
+                    convert(D, kinematic_coefficient) *
+                    convert(D, support_factor)
+                contribution = Pair{OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
+                _push_kernel_polynomial!(
+                    out, transformed_sector, OccupationPolynomial{D,S}(contribution)
+                )
+            end
         end
     end
 
