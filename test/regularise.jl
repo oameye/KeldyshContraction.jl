@@ -28,14 +28,14 @@ end
     L_reg = InteractionLagrangian(elasctic2boson_reguralisation)
     L_no_reg = InteractionLagrangian(elasctic2boson)
 
-    GF_reg = DressedPropagator(L_reg, Val(1), Val(3); simplify=true, _set_reg_to_zero=true)
+    GF_reg = DressedPropagator(L_reg, Val(1), Val(3); simplify=true)
     GF_no_reg = DressedPropagator(L_no_reg, Val(1), Val(3); simplify=true)
 
     @test isequal(set_reg_to_zero(GF_reg.keldysh), GF_no_reg.keldysh)
     @test isequal(set_reg_to_zero(GF_reg.retarded), GF_no_reg.retarded)
     @test isequal(set_reg_to_zero(GF_reg.advanced), GF_no_reg.advanced)
 
-    GF_reg2 = DressedPropagator(L_reg, Val(2), Val(5); simplify=true, _set_reg_to_zero=true)
+    GF_reg2 = DressedPropagator(L_reg, Val(2), Val(5); simplify=true)
     GF_no_reg2 = DressedPropagator(L_no_reg, Val(2), Val(5); simplify=true)
 
     @test isequal(set_reg_to_zero(GF_reg2.keldysh), GF_no_reg2.keldysh)
@@ -62,10 +62,8 @@ end
     L_reg = InteractionLagrangian(loss2boson)
     L_no_reg = InteractionLagrangian(loss2boson_unregular)
 
-    GF_reg2 = DressedPropagator(L_reg, Val(2), Val(5); simplify=true, _set_reg_to_zero=true)
-    GF_no_reg2 = DressedPropagator(
-        L_no_reg, Val(2), Val(5); simplify=true, _set_reg_to_zero=true
-    )
+    GF_reg2 = DressedPropagator(L_reg, Val(2), Val(5); simplify=true)
+    GF_no_reg2 = DressedPropagator(L_no_reg, Val(2), Val(5); simplify=true)
 
     topology_reg = topologies(GF_reg2.keldysh)
     topology_no_reg = topologies(GF_no_reg2.keldysh)
