@@ -20,7 +20,7 @@ function DressedPropagator(
         order,
         edges;
         simplify,
-        _set_reg_to_zero=!preserve_regularisation,
+        _set_reg_to_zero=(!preserve_regularisation),
         kwargs...,
     )
 end
@@ -44,7 +44,7 @@ function DressedPropagator(
         order,
         edges;
         simplify,
-        _set_reg_to_zero=!preserve_regularisation,
+        _set_reg_to_zero=(!preserve_regularisation),
         kwargs...,
     )
 end
