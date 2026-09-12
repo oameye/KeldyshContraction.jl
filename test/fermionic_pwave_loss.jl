@@ -113,7 +113,7 @@ function fermionic_pwave_generated_kernel()
     # is required to infer concretely.
     L = fermionic_pwave_loss_lagrangian()
     G = @inferred DressedPropagator(
-        L, Val(1), Val(3); simplify=true, _set_reg_to_zero=false
+        L, Val(1), Val(3); simplify=true, preserve_regularisation=true
     )
     GF = @inferred fourier_transform(G)
     ΣF = @inferred SelfEnergy(GF)
