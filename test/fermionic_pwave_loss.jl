@@ -139,7 +139,7 @@ end
 
 function expected_pwave_loss_kernel(occupation, sector)
     basis = KC.momentum_basis(sector)
-    external = external_wigner_momentum(sector)
+    external = KC.external_wigner_momentum(sector)
     external_index = only(i for (i, variable) in enumerate(basis) if variable == external)
     loop_index = only(i for i in eachindex(basis.variables) if i != external_index)
     k = KC.basis_momentum(basis, external_index)
@@ -155,13 +155,13 @@ function expected_pwave_loss_kernel(occupation, sector)
     )
 
     C = KC.ComplexRationals
-    n(momentum) = OccupationPolynomial(OccupationAtom(pwave_loss_ψ, momentum), one(C))
+    n(momentum) = KC.OccupationPolynomial(KC.OccupationAtom(pwave_loss_ψ, momentum), one(C))
     expected_polynomial = -n(k) * n(q)
     expected = typeof(occupation)(
         Dict(expected_sector => expected_polynomial),
-        target_family(occupation),
-        parameters(occupation),
-        wigner_context(occupation),
+        KC.target_family(occupation),
+        KC.parameters(occupation),
+        KC.wigner_context(occupation),
     )
     return @inferred collision_kernel(expected)
 end
@@ -174,9 +174,9 @@ end
 @testset "fermionic p-wave loss contour vertex" begin
     L = fermionic_pwave_loss_lagrangian()
     @test L isa InteractionLagrangian{KC.ComplexRationals,Fermion}
-    @test field_families(L) == [pwave_loss_ψ]
-    @test target_family(L) === pwave_loss_ψ
-    @test parameters(L) == KC.ParameterMonomial(:γp)
+    @test KC.field_families(L) == [pwave_loss_ψ]
+    @test KC.target_family(L) === pwave_loss_ψ
+    @test KC.parameters(L) == KC.ParameterMonomial(:γp)
 end
 
 @testset "end-to-end fermionic p-wave two-body loss" begin
@@ -186,26 +186,26 @@ end
         G, GF, ΣF, ΣW, kinetic, off_shell, collision, reduced, occupation, quotient, kernel
     )
     @test all(x -> KC.statistics(x) === Fermion, shared)
-    @test all(x -> target_family(x) === pwave_loss_ψ, (L, shared...))
-    @test all(x -> parameters(x) == KC.ParameterMonomial(:γp), (L, shared...))
+    @test all(x -> KC.target_family(x) === pwave_loss_ψ, (L, shared...))
+    @test all(x -> KC.parameters(x) == KC.ParameterMonomial(:γp), (L, shared...))
     @test KC.order(G) == 1
     @test KC.order(ΣF) == 1
     @test KC.order(ΣW) == 1
-    @test gradient_order(ΣW) == Val(0)
-    @test gradient_order(kernel) == Val(0)
+    @test KC.gradient_order(ΣW) == Val(0)
+    @test KC.gradient_order(kernel) == Val(0)
 
-    @test isempty(reduced_dependent_terms(reduced))
-    @test isempty(reduced_causal_terms(reduced))
-    @test isempty(reduced_trotter_terms(reduced))
-    regular = occupation_reduced_terms(occupation)
+    @test isempty(KC.reduced_dependent_terms(reduced))
+    @test isempty(KC.reduced_causal_terms(reduced))
+    @test isempty(KC.reduced_trotter_terms(reduced))
+    regular = KC.occupation_reduced_terms(occupation)
     @test !isempty(regular)
     for (sector, _) in regular
-        @test isempty(frequency_support(sector).shells)
-        @test isempty(frequency_support(sector).principal_values)
+        @test isempty(KC.frequency_support(sector).shells)
+        @test isempty(KC.frequency_support(sector).principal_values)
     end
 
     sector = first(keys(regular))
     expected = expected_pwave_loss_kernel(occupation, sector)
-    @test collision_kernel_terms(kernel) == collision_kernel_terms(expected)
-    @test parameters(kernel) == KC.ParameterMonomial(:γp)
+    @test KC.collision_kernel_terms(kernel) == KC.collision_kernel_terms(expected)
+    @test KC.parameters(kernel) == KC.ParameterMonomial(:γp)
 end
