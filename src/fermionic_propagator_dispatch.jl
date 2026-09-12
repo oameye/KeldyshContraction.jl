@@ -7,7 +7,7 @@ function DressedPropagator(
     edges::Val{E};
     target=nothing,
     simplify=true,
-    _set_reg_to_zero=true,
+    preserve_regularisation=false,
     kwargs...,
 ) where {C<:Number,O,E}
     fields = propagator_fields(L, target)
@@ -20,7 +20,7 @@ function DressedPropagator(
         order,
         edges;
         simplify,
-        _set_reg_to_zero,
+        _set_reg_to_zero=!preserve_regularisation,
         kwargs...,
     )
 end
@@ -31,7 +31,7 @@ function DressedPropagator(
     edges::Val{E};
     target=nothing,
     simplify=true,
-    _set_reg_to_zero=true,
+    preserve_regularisation=false,
     kwargs...,
 ) where {C<:Number,O,E}
     fields = propagator_fields(first(arguments(Ls)), target)
@@ -44,7 +44,7 @@ function DressedPropagator(
         order,
         edges;
         simplify,
-        _set_reg_to_zero,
+        _set_reg_to_zero=!preserve_regularisation,
         kwargs...,
     )
 end
