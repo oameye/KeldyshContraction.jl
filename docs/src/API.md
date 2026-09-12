@@ -211,6 +211,12 @@ classification but remain attached to their exact contraction endpoints.
 wick_contraction
 ```
 
+The coordinate-space result representation is stable but intentionally qualified:
+`KeldyshContraction.Diagrams` is an iterable collection of `KeldyshContraction.Diagram`
+objects, whose propagator edges are `KeldyshContraction.Edge` values. Use the public
+`contractions`, `topology`, `fields`, and `propagator_type` accessors for inspection rather
+than depending on storage fields. `topologies` remains the exported grouping helper.
+
 ### Propagator
 
 Propagator edges carry their retarded, advanced, Keldysh, or spectral component as concrete
@@ -220,13 +226,19 @@ value data. `DressedPropagator` stores semantic R/A/K components independently o
 
 For a `LagrangianSum`, `DressedPropagator` returns a parameter-keyed
 `DressedPropagatorSum`. Each stored value is the same concrete `DressedPropagator{C,S,...}`
-used by the single-interaction path.
+used by the single-interaction path. Use `keldysh_component`, `retarded_component`, and
+`advanced_component` rather than depending on the storage fields. The qualified `order`,
+`statistics`, `parameters`, and `target_family` accessors expose provenance without widening
+the default namespace.
 
 ```@docs
 DressedPropagator
 KeldyshContraction.DressedPropagatorSum
 KeldyshContraction.PropagatorType
 KeldyshContraction.matrix(::DressedPropagator)
+KeldyshContraction.keldysh_component
+KeldyshContraction.retarded_component
+KeldyshContraction.advanced_component
 ```
 
 ### Self-energy
@@ -237,7 +249,8 @@ is `[[R,K],[0,A]]`; the bosonic self-energy uses `[[0,A],[R,K]]`.
 Applying `SelfEnergy` to a `DressedPropagatorSum` preserves the parameter-monomial keys and
 returns a concrete `SelfEnergySum`. Derivative endpoint decoration is preserved through
 self-energy extraction and remains coordinate-space metadata until the later Fourier layer
-converts it to a momentum polynomial.
+converts it to a momentum polynomial. The same component and provenance accessors used by
+`DressedPropagator` apply to `SelfEnergy`.
 
 ```@docs
 KeldyshContraction.SelfEnergy
