@@ -42,7 +42,7 @@ end
 
 function benchmark_fermionic_pwave_fixtures()
     L = benchmark_fermionic_pwave_lagrangian()
-    G = DressedPropagator(L, Val(1), Val(3); simplify=true, _set_reg_to_zero=false)
+    G = DressedPropagator(L, Val(1), Val(3); simplify=true, preserve_regularisation=true)
     GF = fourier_transform(G)
     ΣF = SelfEnergy(GF)
     ΣW = wigner_transform(ΣF; gradient_order=Val(0))
@@ -62,7 +62,7 @@ function benchmark_fermionic_pwave_loss!(suite)
     group["InteractionLagrangian"] = @benchmarkable benchmark_fermionic_pwave_lagrangian() seconds =
         10 evals = 1
     group["DressedPropagator"] = @benchmarkable DressedPropagator(
-        $L, Val(1), Val(3); simplify=true, _set_reg_to_zero=false
+        $L, Val(1), Val(3); simplify=true, preserve_regularisation=true
     ) seconds = 10 evals = 1
     group["Fourier"] = @benchmarkable fourier_transform($G) seconds = 10 evals = 1
     group["SelfEnergy"] = @benchmarkable SelfEnergy($GF) seconds = 10 evals = 1
@@ -83,7 +83,9 @@ function benchmark_fermionic_pwave_loss!(suite)
     group["CollisionKernel"] = @benchmarkable collision_kernel($quotient) seconds = 10 evals =
         1
     group["complete pipeline"] = @benchmarkable begin
-        Gp = DressedPropagator($L, Val(1), Val(3); simplify=true, _set_reg_to_zero=false)
+        Gp = DressedPropagator(
+            $L, Val(1), Val(3); simplify=true, preserve_regularisation=true
+        )
         GFp = fourier_transform(Gp)
         ΣFp = SelfEnergy(GFp)
         ΣWp = wigner_transform(ΣFp; gradient_order=Val(0))
