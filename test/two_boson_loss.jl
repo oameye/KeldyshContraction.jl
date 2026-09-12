@@ -124,23 +124,21 @@ end
         end
 
         L = InteractionLagrangian(L_int)
-        GF = DressedPropagator(L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true)
+        GF = DressedPropagator(L, Val(1), Val(3); simplify=false)
         @test isequal(GF.keldysh, diagrams_result)
     end
 
     @testset "quantum-quantum Green's function" begin
         expr = q(Out()) * bar(q)(In()) * L_int
-
         @test is_conserved(expr)
         @test is_physical(expr)
-
         @test !iszero(_wick_contraction(expr, Val(3), Val(0); regularise=false))
         @test iszero(_wick_contraction(expr, Val(3), Val(0); regularise=true))
     end
 
     @testset "R/A Green's function first order" begin
         L = InteractionLagrangian(L_int)
-        GF = DressedPropagator(L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true)
+        GF = DressedPropagator(L, Val(1), Val(3); simplify=false)
 
         truth_retarded = Diagrams(
             Dict(
@@ -168,12 +166,8 @@ end
 
     @testset "simplification" begin
         L = InteractionLagrangian(L_int)
-        GF_not_simplified = DressedPropagator(
-            L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true
-        )
-        GF_simplified = DressedPropagator(
-            L, Val(1), Val(3); simplify=true, _set_reg_to_zero=true
-        )
+        GF_not_simplified = DressedPropagator(L, Val(1), Val(3); simplify=false)
+        GF_simplified = DressedPropagator(L, Val(1), Val(3); simplify=true)
         collect(keys(GF_simplified.keldysh.diagrams))
         collect(values(GF_simplified.keldysh.diagrams))
         collect(keys(GF_not_simplified.keldysh.diagrams))
@@ -187,7 +181,7 @@ end
 
     @testset "correctness check" begin
         @testset "first order" begin
-            GF = DressedPropagator(L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true)
+            GF = DressedPropagator(L, Val(1), Val(3); simplify=false)
             Σ = SelfEnergy(GF)
 
             kp = Diagram([(c, bar(c))], Val(1), Val(0))
@@ -209,9 +203,7 @@ end
             )
 
             @testset "simplified" begin
-                GF = DressedPropagator(
-                    L, Val(1), Val(3); simplify=true, _set_reg_to_zero=true
-                )
+                GF = DressedPropagator(L, Val(1), Val(3); simplify=true)
                 Σ = SelfEnergy(GF)
                 keldysh_truth = Diagrams(
                     Dict(kp => ComplexF64(2.0), rp => ComplexF64(-2.0))
@@ -235,7 +227,7 @@ end
         using KeldyshContraction: construct_self_energy!, PropagatorType, Diagrams
 
         L = InteractionLagrangian(L_int)
-        GF = DressedPropagator(L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true)
+        GF = DressedPropagator(L, Val(1), Val(3); simplify=false)
         Σ = SelfEnergy(GF)
 
         expr_K = c(Out()) * bar(c)(In()) * L_int
@@ -257,7 +249,7 @@ end
 
 @testset "second order" begin
     L = InteractionLagrangian(L_int)
-    GF = DressedPropagator(L, Val(2), Val(5); _set_reg_to_zero=true, simplify=true)
+    GF = DressedPropagator(L, Val(2), Val(5); simplify=true)
 
     @testset "vacuum" begin
         using KeldyshContraction: filter_nonzero!
