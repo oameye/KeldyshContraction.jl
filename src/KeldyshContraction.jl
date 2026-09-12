@@ -6,6 +6,7 @@ module KeldyshContraction
 using DocStringExtensions: DocStringExtensions
 using LinearAlgebra: LinearAlgebra
 using EnumX: @enumx
+using SciMLPublic: @public
 
 using TermInterface: TermInterface
 using SymbolicUtils: SymbolicUtils, @syms, arguments
@@ -80,6 +81,44 @@ const ComplexRationals = Complex{Rational{Int64}}
     # show methods
     include("show_methods/latexify_recipes.jl")
     include("show_methods/printing.jl")
+
+    # Stable qualified API. These names are intentionally public without being imported by
+    # `using KeldyshContraction`; SciMLPublic backports Julia's `public` declaration to 1.10.
+    @public Statistics,
+        QField,
+        QSym,
+        KeldyshIndex,
+        Orientation,
+        Regularisation,
+        Position,
+        IndexKind,
+        Bulk,
+        In,
+        Out,
+        reconstruct,
+        position,
+        QTerm,
+        QMul,
+        QAdd,
+        coefficient,
+        fields,
+        terms,
+        exchange_sign,
+        is_conserved,
+        is_physical,
+        LagrangianSum,
+        DressedPropagatorSum,
+        PropagatorType,
+        matrix,
+        SelfEnergySum,
+        MomentumVariable,
+        LinearMomentum,
+        MomentumBasis,
+        MomentumComponent,
+        MomentumMonomial,
+        MomentumPolynomial,
+        momentum_basis,
+        kinematic_factor
 
     export @qfields,
         FieldFamily,
