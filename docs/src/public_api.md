@@ -28,4 +28,8 @@ Field / partial / bar
 
 The intermediate stages remain explicit because they correspond to distinct mathematical operations and approximation boundaries. Public inspection accessors may be used to examine those results, but internal canonicalization, exceptional-frequency algorithms, and loop-coordinate machinery are not themselves part of the stable user API.
 
+Coordinate-space Wick results are part of the qualified inspection surface through `Diagram`, `Diagrams`, `Edge`, `contractions`, `topology`, and `propagator_type`. Dressed propagators and self-energies expose their semantic R/A/K pieces through `retarded_component`, `advanced_component`, and `keldysh_component`; callers should not depend on representation storage fields.
+
+Equal-time/Trotter provenance is controlled at the high-level propagator boundary with `DressedPropagator(...; preserve_regularisation=true)`. The underscored Wick-contraction control remains an implementation detail and is not part of the supported API.
+
 The pre-rewrite `CollisionIntegral` path is legacy implementation code and is not part of the supported public API.
