@@ -26,8 +26,20 @@ import KeldyshContraction as KC
     for name in (
         :QTerm,
         :Regularisation,
-        :MomentumBasis,
+        :Edge,
+        :Diagram,
+        :Diagrams,
+        :contractions,
+        :topology,
+        :propagator_type,
+        :DressedPropagatorSum,
         :matrix,
+        :order,
+        :statistics,
+        :keldysh_component,
+        :retarded_component,
+        :advanced_component,
+        :MomentumBasis,
         :FourierSelfEnergy,
         :WignerSelfEnergy,
         :KineticSelfEnergy,
@@ -59,4 +71,23 @@ import KeldyshContraction as KC
 
     @test !isdefined(KC, :Destroy)
     @test !isdefined(KC, :Create)
+end
+
+@testset "stable RAK accessors" begin
+    @qfields api_ϕ::Boson
+    c, q = api_ϕ[Classical], api_ϕ[Quantum]
+    interaction = -(
+        (1 // 2) * (c^2 + q^2) * bar(c) * bar(q) +
+        (1 // 2) * c * q * (bar(c)^2 + bar(q)^2)
+    )
+    L = InteractionLagrangian(interaction, :g)
+    G = DressedPropagator(L, Val(1), Val(3))
+    Σ = SelfEnergy(G)
+
+    @test KC.keldysh_component(G) === G.keldysh
+    @test KC.retarded_component(G) === G.retarded
+    @test KC.advanced_component(G) === G.advanced
+    @test KC.keldysh_component(Σ) === Σ.keldysh
+    @test KC.retarded_component(Σ) === Σ.retarded
+    @test KC.advanced_component(Σ) === Σ.advanced
 end
