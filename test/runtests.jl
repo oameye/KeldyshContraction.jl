@@ -131,4 +131,6 @@ internal_test_imports = quote
         collision_kernel_terms
 end
 
-ParallelTestRunner.runtests(KeldyshContraction, args; testsuite, init_code=internal_test_imports)
+ParallelTestRunner.runtests(
+    KeldyshContraction, args; testsuite, init_code=internal_test_imports
+)
