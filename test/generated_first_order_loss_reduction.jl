@@ -18,7 +18,9 @@ function generated_first_order_loss_collision()
         )
 
     L = InteractionLagrangian(loss, :γ)
-    G = DressedPropagator(L, Val(1), Val(3); simplify=true, _set_reg_to_zero=false)
+    G = DressedPropagator(
+        L, Val(1), Val(3); simplify=true, preserve_regularisation=true
+    )
     GF = fourier_transform(G)
     ΣW = wigner_transform(SelfEnergy(GF); gradient_order=Val(0))
     return spectral_dispersive_collision(
