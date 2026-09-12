@@ -15,5 +15,6 @@ pages = [
     "Examples" => [
         "Elastic two body scattering" => "examples/elastic_two_body.md",
         "Two boson loss" => "examples/two_particle_loss.md",
+        "Fermionic p-wave loss" => "examples/fermionic_pwave_loss.md",
     ],
 ]
