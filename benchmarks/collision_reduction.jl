@@ -45,11 +45,51 @@ function benchmark_statistical_terms()
     ]
 end
 
+function benchmark_loop_quotient_fixture(nloops::Int=2)
+    C = KC.ComplexRationals
+    basis = KC.MomentumBasis(nloops + 1)
+    external = basis[1]
+    k = KC.basis_momentum(basis, 1)
+    loops = [KC.basis_momentum(basis, i) for i in 2:(nloops + 1)]
+    q = loops[1]
+    r = loops[min(2, nloops)]
+    p = -k + q + r
+
+    energy(momentum) = KC.EnergyForm(KC.DispersionAtom(benchmark_collision_ϕ, momentum))
+    shell, factor = KC.energy_shell(energy(k) + energy(p) - energy(q) - energy(r))
+    factor == 1 || error("benchmark shell unexpectedly changed normalization")
+    support = KC.FrequencySupport([shell], KC.PrincipalValueSupport{Boson}[])
+
+    qx = KC.MomentumComponent(q, :x)
+    rx = KC.MomentumComponent(r, :x)
+    kinematic = KC.MomentumPolynomial(KC.MomentumMonomial([qx, rx]), one(C))
+    sector = KC.ReducedCollisionSector{Boson}(
+        KC.ParameterMonomial(:g)^2, basis, external, kinematic, support
+    )
+
+    n(momentum) =
+        OccupationPolynomial(OccupationAtom(benchmark_collision_ϕ, momentum), one(C))
+    nk, np, nq, nr = n(k), n(p), n(q), n(r)
+    raw = -4 * nk * np * nq - 2 * nk * np + 2 * nk * nq * nr + 2 * nq * nr + nr - nq
+    for loop in Iterators.drop(loops, 2)
+        raw += n(loop) + n(q + loop)
+    end
+    return KC.OccupationReducedExpression{C,Boson,2,0,KC.HomogeneousWignerContext}(
+        Dict(sector => raw),
+        benchmark_collision_ϕ,
+        KC.ParameterMonomial(:g)^2,
+        KC.HomogeneousWignerContext(),
+    )
+end
+
 function benchmark_collision_reduction!(suite)
     collision = benchmark_collision_fixture()
     reduced = reduce_frequency_collision(collision)
     statistical = only(values(reduced_regular_terms(reduced)))
     raw_terms = benchmark_statistical_terms()
+    occupation2 = benchmark_loop_quotient_fixture(2)
+    occupation4 = benchmark_loop_quotient_fixture(4)
+    quotient = quotient_loop_momenta(occupation2)
 
     suite["Collision reduction"]["collision-level assembly"] = @benchmarkable reduce_frequency_collision(
         $collision
@@ -61,6 +101,15 @@ function benchmark_collision_reduction!(suite)
     ) seconds = 10
     suite["Collision reduction"]["occupation expansion"] = @benchmarkable occupation_collision_polynomial(
         $statistical
+    ) seconds = 10
+    suite["Collision reduction"]["loop-momentum quotient 2-loop"] = @benchmarkable quotient_loop_momenta(
+        $occupation2
+    ) seconds = 10
+    suite["Collision reduction"]["loop-momentum quotient 4-loop"] = @benchmarkable quotient_loop_momenta(
+        $occupation4
+    ) seconds = 10
+    suite["Collision reduction"]["CollisionKernel lowering"] = @benchmarkable collision_kernel(
+        $quotient
     ) seconds = 10
     return suite
 end

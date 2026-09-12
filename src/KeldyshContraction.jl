@@ -70,6 +70,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("reduced_frequency_result.jl")
     include("collision_statistical_algebra.jl")
     include("collision_frequency_assembly.jl")
+    include("collision_momentum_quotient.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
     include("propagator_algebra/legacy_momentum_routing.jl")
@@ -211,6 +212,18 @@ const ComplexRationals = Complex{Rational{Int64}}
         OccupationReducedExpression,
         occupation_reduced_expression,
         occupation_reduced_terms,
+        LoopMomentumTransform,
+        loop_transform_matrix,
+        external_momentum_index,
+        loop_permutation_transform,
+        transform_loop_momenta,
+        CollisionKernelSector,
+        LoopQuotientedExpression,
+        loop_quotient_terms,
+        CollisionKernel,
+        quotient_loop_momenta,
+        collision_kernel,
+        collision_kernel_terms,
         parameters
 end
 
