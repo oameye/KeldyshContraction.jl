@@ -18,50 +18,50 @@ L_elastic = InteractionLagrangian(elastic_terms, g)
 
 L = L_inelastic + L_elastic</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">KeldyshContraction.LagrangianSum{ComplexF64, Boson}(InteractionLagrangian{ComplexF64, Boson}[Interaction Lagrangian with fields ϕ:
 ((0.0 + 0.5im)*(ϕᶜ⁻*ϕᶜ⁻*̄ϕᴾ*̄ϕᶜ)+(0.0 + 0.5im)*(ϕᴾ⁻*ϕᴾ⁻*̄ϕᴾ*̄ϕᶜ)+(0.0 - 0.5im)*(ϕᴾ⁺*ϕᶜ⁺*̄ϕᶜ*̄ϕᶜ)+(0.0 - 0.5im)*(ϕᴾ⁺*ϕᶜ⁺*̄ϕᴾ*̄ϕᴾ)+(0.0 + 1.0im)*(ϕᴾ⁺*ϕᶜ⁺*̄ϕᴾ*̄ϕᶜ)+(0.0 + 1.0im)*(ϕᴾ⁻*ϕᶜ⁻*̄ϕᴾ*̄ϕᶜ)), Interaction Lagrangian with fields ϕ:
-(-0.5*(ϕᶜ*ϕᶜ*̄ϕᴾ*̄ϕᶜ)+-0.5*(ϕᴾ*ϕᴾ*̄ϕᴾ*̄ϕᶜ)+-0.5*(ϕᴾ*ϕᶜ*̄ϕᶜ*̄ϕᶜ)+-0.5*(ϕᴾ*ϕᶜ*̄ϕᴾ*̄ϕᴾ))])</code></pre><pre><code class="language-julia hljs">GF1 = DressedPropagator(L, Val(1), Val(3); _set_reg_to_zero=true)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">KeldyshContraction.DressedPropagatorSum{DressedPropagator{ComplexF64, Boson, 1, 3, 0}, 1}(Dict{ParameterMonomial, DressedPropagator{ComplexF64, Boson, 1, 3, 0}}(g =&gt; DressedPropagator{ComplexF64, Boson, 1, 3, 0}((0.0 + 1.0im)*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂) + (0.0 + 1.0im)*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂), (0.0 + 1.0im)*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,x₂), (0.0 + 1.0im)*Gᴬ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂), g, FieldFamily{Boson}(:ϕ, KeldyshContraction.FieldIndices(-32768, -32768, -32768, -32768))), Γ =&gt; DressedPropagator{ComplexF64, Boson, 1, 3, 0}(-1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴷ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴬ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + 2.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂), Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴿ(y₁,x₂), Gᴬ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1.0*Gᴬ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂), Γ, FieldFamily{Boson}(:ϕ, KeldyshContraction.FieldIndices(-32768, -32768, -32768, -32768)))))</code></pre><pre><code class="language-julia hljs">GF1_elastic = GF1[g]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Dressed Propagator:
-keldysh:  (0.0 + 1.0im)*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂) + (0.0 + 1.0im)*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)
+(-0.5*(ϕᶜ*ϕᶜ*̄ϕᴾ*̄ϕᶜ)+-0.5*(ϕᴾ*ϕᴾ*̄ϕᴾ*̄ϕᶜ)+-0.5*(ϕᴾ*ϕᶜ*̄ϕᶜ*̄ϕᶜ)+-0.5*(ϕᴾ*ϕᶜ*̄ϕᴾ*̄ϕᴾ))])</code></pre><pre><code class="language-julia hljs">GF1 = DressedPropagator(L, Val(1), Val(3); _set_reg_to_zero=true)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">KeldyshContraction.DressedPropagatorSum{DressedPropagator{ComplexF64, Boson, 1, 3, 0}, 1}(Dict{ParameterMonomial, DressedPropagator{ComplexF64, Boson, 1, 3, 0}}(Γ =&gt; DressedPropagator{ComplexF64, Boson, 1, 3, 0}(-1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴷ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴬ(y₁,x₂) + 2.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂), Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴿ(y₁,x₂), -1.0*Gᴬ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + Gᴬ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂), Γ, FieldFamily{Boson}(:ϕ, KeldyshContraction.FieldIndices(-32768, -32768, -32768, -32768))), g =&gt; DressedPropagator{ComplexF64, Boson, 1, 3, 0}((0.0 + 1.0im)*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + (0.0 + 1.0im)*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂), (0.0 + 1.0im)*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,x₂), (0.0 + 1.0im)*Gᴬ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂), g, FieldFamily{Boson}(:ϕ, KeldyshContraction.FieldIndices(-32768, -32768, -32768, -32768)))))</code></pre><pre><code class="language-julia hljs">GF1_elastic = GF1[g]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Dressed Propagator:
+keldysh:  (0.0 + 1.0im)*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + (0.0 + 1.0im)*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂)
 retarded: (0.0 + 1.0im)*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,x₂)
 advanced: (0.0 + 1.0im)*Gᴬ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)</code></pre><pre><code class="language-julia hljs">GF1_inelastic = GF1[Γ]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Dressed Propagator:
-keldysh:  -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴷ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴬ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + 2.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂) + -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)
+keldysh:  -1.0*Gᴷ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴷ(y₁,x₂) + Gᴷ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴬ(y₁,x₂) + 2.0*Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)
 retarded: Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,x₂) + -1.0*Gᴿ(x₁,y₁)*Gᴿ(y₁,y₁⁻)*Gᴿ(y₁,x₂)
-advanced: Gᴬ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂) + -1.0*Gᴬ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂)</code></pre><pre><code class="language-julia hljs">GF2 = DressedPropagator(L, Val(2), Val(5); _set_reg_to_zero=true, simplify=true)
+advanced: -1.0*Gᴬ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴬ(y₁,x₂) + Gᴬ(x₁,y₁)*Gᴿ(y₁⁺,y₁)*Gᴬ(y₁,x₂)</code></pre><pre><code class="language-julia hljs">GF2 = DressedPropagator(L, Val(2), Val(5); _set_reg_to_zero=true, simplify=true)
 topo = topologies(GF2[g * Γ].keldysh)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Dict{SmallCollections.FixedVector{1, Int64}, Vector{KeldyshContraction.Diagram{Boson, 5, 1}}} with 3 entries:
-  [3] =&gt; [Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂), Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂…
-  [1] =&gt; [Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₂⁺,y₂)*Gᴬ(y₂,x₂), Gᴿ(x₁,y₁)*Gᴷ(y₁,y…
-  [2] =&gt; [Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂), Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂…</code></pre><pre><code class="language-julia hljs">[key =&gt; GF2[g * Γ].keldysh.diagrams[key] for key in topo[[2]]]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">14-element Vector{Pair{KeldyshContraction.Diagram{Boson, 5, 1}, ComplexF64}}:
-  Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂) =&gt; 0.0 + 2.0im
- Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴬ(y₁,x₂) =&gt; 0.0 + 1.0im
-  Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) =&gt; 0.0 + 2.0im
- Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴷ(y₁,x₂) =&gt; 0.0 - 1.0im
-  Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) =&gt; 0.0 - 2.0im
+  [3] =&gt; [Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,x₂), Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂…
+  [1] =&gt; [Gᴿ(x₁,y₁)*Gᴷ(y₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₂)*Gᴬ(y₂,x₂), Gᴷ(x₁,y₁)*Gᴿ(y₁⁺,y…
+  [2] =&gt; [Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂), Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂…</code></pre><pre><code class="language-julia hljs">[key =&gt; GF2[g * Γ].keldysh.diagrams[key] for key in topo[[2]]]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">14-element Vector{Pair{KeldyshContraction.Diagram{Boson, 5, 1}, ComplexF64}}:
   Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂) =&gt; 0.0 + 2.0im
- Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴬ(y₁,x₂) =&gt; 0.0 - 1.0im
   Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) =&gt; 0.0 + 2.0im
  Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴷ(y₁,x₂) =&gt; 0.0 + 1.0im
- Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴬ(y₁,x₂) =&gt; 0.0 - 1.0im
+ Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴬ(y₁,x₂) =&gt; 0.0 - 1.0im
+ Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴬ(y₁,x₂) =&gt; 0.0 + 1.0im
+  Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) =&gt; 0.0 - 2.0im
  Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴷ(y₁,x₂) =&gt; 0.0 - 1.0im
   Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) =&gt; 0.0 + 2.0im
- Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴬ(y₁,x₂) =&gt; 0.0 - 1.0im
- Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴷ(y₁,x₂) =&gt; 0.0 - 1.0im</code></pre><pre><code class="language-julia hljs">[key =&gt; GF2[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">8-element Vector{Pair{KeldyshContraction.Diagram{Boson, 5, 1}, ComplexF64}}:
- Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0.0 + 2.0im
- Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0.0 - 2.0im
+ Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴷ(y₁,x₂) =&gt; 0.0 - 1.0im
+  Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴬ(y₁,x₂) =&gt; 0.0 + 2.0im
+  Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂)*Gᴷ(y₁,x₂) =&gt; 0.0 + 2.0im
+ Gᴿ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴷ(y₁,x₂) =&gt; 0.0 - 1.0im
+ Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂)*Gᴬ(y₁,x₂) =&gt; 0.0 - 1.0im
+ Gᴷ(x₁,y₁)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂⁻)*Gᴬ(y₁,x₂) =&gt; 0.0 - 1.0im</code></pre><pre><code class="language-julia hljs">[key =&gt; GF2[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">8-element Vector{Pair{KeldyshContraction.Diagram{Boson, 5, 1}, ComplexF64}}:
  Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,x₂) =&gt; 0.0 + 2.0im
- Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0.0 + 2.0im
- Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0.0 - 2.0im
  Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0.0 + 2.0im
  Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0.0 + 2.0im
- Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,x₂) =&gt; 0.0 + 2.0im</code></pre><pre><code class="language-julia hljs">Σ2 = SelfEnergy(GF2)
-Σ2[g * Γ].keldysh</code></pre><p class="math-container">\[-2.0 i G^K\left( y_1, y_2 \right) G^A\left( y_1, y_2 \right) G^R\left( y_2, y_1 \right) + 2.0 i G^K\left( y_1, y_2 \right) G^A\left( y_1, y_2 \right) G^K\left( y_2, y_1 \right) + 2.0 i G^K\left( y_1, y_2 \right) G^R\left( y_1, y_2 \right) G^K\left( y_2, y_1 \right) + 2.0 i G^K\left( y_1, y_2 \right) G^R\left( y_1, y_2 \right) G^A\left( y_2, y_1 \right) + 2.0 i G^R\left( y_1, y_2 \right) G^K\left( y_2, y_1 \right) G^K\left( y_2, y_2 \right) + 2.0 i G^K\left( y_1, y_2 \right) G^A\left( y_2, y_1 \right) G^K\left( y_2, y_2 \right)\]</p><pre><code class="language-julia hljs">topo = topologies(Σ2[g * Γ].retarded)
+ Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0.0 - 2.0im
+ Gᴷ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0.0 + 2.0im
+ Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0.0 + 2.0im
+ Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,x₂) =&gt; 0.0 + 2.0im
+ Gᴿ(x₁,y₁)*Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁)*Gᴬ(y₂,x₂) =&gt; 0.0 - 2.0im</code></pre><pre><code class="language-julia hljs">Σ2 = SelfEnergy(GF2)
+Σ2[g * Γ].keldysh</code></pre><p class="math-container">\[2.0 i G^K\left( y_1, y_2 \right) G^R\left( y_1, y_2 \right) G^A\left( y_2, y_1 \right) + 2.0 i G^R\left( y_1, y_2 \right) G^K\left( y_2, y_1 \right) G^K\left( y_2, y_2 \right) + 2.0 i G^K\left( y_1, y_2 \right) G^A\left( y_1, y_2 \right) G^K\left( y_2, y_1 \right) + 2.0 i G^K\left( y_1, y_2 \right) G^A\left( y_2, y_1 \right) G^K\left( y_2, y_2 \right) + -2.0 i G^K\left( y_1, y_2 \right) G^A\left( y_1, y_2 \right) G^R\left( y_2, y_1 \right) + 2.0 i G^K\left( y_1, y_2 \right) G^R\left( y_1, y_2 \right) G^K\left( y_2, y_1 \right)\]</p><pre><code class="language-julia hljs">topo = topologies(Σ2[g * Γ].retarded)
 
 [key =&gt; Σ2[g * Γ].retarded.diagrams[key] for key in topo[[2]]]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">6-element Vector{Pair{KeldyshContraction.Diagram{Boson, 3, 1}, ComplexF64}}:
- Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂⁻) =&gt; 0.0 - 1.0im
- Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂) =&gt; 0.0 - 1.0im
- Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂) =&gt; 0.0 + 1.0im
- Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂⁻) =&gt; 0.0 - 1.0im
   Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴷ(y₂,y₂) =&gt; 0.0 + 2.0im
-  Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂) =&gt; 0.0 + 2.0im</code></pre><pre><code class="language-julia hljs">topo = topologies(Σ2[g * Γ].keldysh)
+  Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴷ(y₂,y₂) =&gt; 0.0 + 2.0im
+ Gᴷ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂) =&gt; 0.0 + 1.0im
+ Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂⁺,y₂) =&gt; 0.0 - 1.0im
+ Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁)*Gᴿ(y₂,y₂⁻) =&gt; 0.0 - 1.0im
+ Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁)*Gᴿ(y₂,y₂⁻) =&gt; 0.0 - 1.0im</code></pre><pre><code class="language-julia hljs">topo = topologies(Σ2[g * Γ].keldysh)
 [key =&gt; Σ2[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{Pair{KeldyshContraction.Diagram{Boson, 3, 1}, ComplexF64}}:
- Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁) =&gt; 0.0 - 2.0im
+ Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁) =&gt; 0.0 + 2.0im
  Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴷ(y₂,y₁) =&gt; 0.0 + 2.0im
- Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁) =&gt; 0.0 + 2.0im
- Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴬ(y₂,y₁) =&gt; 0.0 + 2.0im</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Saturday 12 September 2026 09:10">Saturday 12 September 2026</span>. Using Julia version 1.10.12.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ Gᴷ(y₁,y₂)*Gᴬ(y₁,y₂)*Gᴿ(y₂,y₁) =&gt; 0.0 - 2.0im
+ Gᴷ(y₁,y₂)*Gᴿ(y₁,y₂)*Gᴷ(y₂,y₁) =&gt; 0.0 + 2.0im</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Saturday 12 September 2026 09:13">Saturday 12 September 2026</span>. Using Julia version 1.10.12.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
