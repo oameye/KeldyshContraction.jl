@@ -35,9 +35,7 @@ end
     @test vacuum_diagrams isa Diagrams{KC.ComplexRationals,Boson,2,0}
     @test_throws MethodError KC._wick_contraction(L.lagrangian)
 
-    propagator = @inferred DressedPropagator(
-        L, Val(1), Val(3); simplify=false, _set_reg_to_zero=true
-    )
+    propagator = @inferred DressedPropagator(L, Val(1), Val(3); simplify=false)
     @test propagator isa DressedPropagator{KC.ComplexRationals,Boson,1,3,0}
     @test @inferred(matrix(propagator)) isa Matrix{Diagrams{KC.ComplexRationals,Boson,3,0}}
 
