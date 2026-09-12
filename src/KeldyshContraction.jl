@@ -82,6 +82,9 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("show_methods/latexify_recipes.jl")
     include("show_methods/printing.jl")
 
+    # Stable public inspection helpers defined after the full representation stack exists.
+    include("public_api_accessors.jl")
+
     # Stable qualified API. These names are intentionally public without being imported by
     # `using KeldyshContraction`; SciMLPublic backports Julia's `public` declaration to 1.10.
     @public Statistics,
@@ -112,9 +115,20 @@ const ComplexRationals = Complex{Rational{Int64}}
     is_conserved,
     is_physical,
     LagrangianSum,
+    Edge,
+    Diagram,
+    Diagrams,
+    contractions,
+    topology,
+    propagator_type,
     DressedPropagatorSum,
     PropagatorType,
     matrix,
+    order,
+    statistics,
+    keldysh_component,
+    retarded_component,
+    advanced_component,
     SelfEnergySum,
     MomentumVariable,
     LinearMomentum,
