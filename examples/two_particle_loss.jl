@@ -1,90 +1,50 @@
-# ## Two Body Loss
+# ## Two-Body Loss
 using KeldyshContraction
-using KeldyshContraction: Regularisation.Plus as Plus
-using KeldyshContraction: Regularisation.Minus as Minus
+using KeldyshContraction: Regularisation
 
-# ## System and regularization
+# ## System and equal-time regularisation
 
-# The interaction action of two body loss, is defined as
-# ```math
-# S_\mathrm{int} = i\Gamma \int d^d x \, [\frac{1}{2}(\bar{\phi}_+\phi_+)^2 +\frac{1}{2} (\bar{\phi}_-\phi_-)^2 -\bar{\phi}_-^2\phi_+^2]
-# ```
-
-# In the RAK basis, this gives
-# ```math
-# S_\mathrm{int} = i\Gamma\int d^d x \, [\frac{1}{2}\bar{\phi}_c\bar{\phi}_q(\phi_c^2+\phi_q^2)-\frac{1}{2}\phi_c\phi_q(\bar{\phi}_c^2+\bar{\phi}_q^2)+2\bar{\phi}_c\bar{\phi}_q\phi_c\phi_q)]
-# ```
-
-# A good check if the interaction Lagrangian is a valid physical process, is to check if the
-# normalization identity $Z=1$ holds. We can do this perturbatively in $g$ by expanding
-# $\exp(i S_\mathrm{int})$  and showing the average of the linear part of the system is zero
-# ```math
-# \langle S_\mathrm{int}\rangle =  \langle S_\mathrm{int}^2\rangle  =\ldots = 0
-# ```
-# In computing the average, one performs Wick contractions to describe the average in terms
-# of the two-point correlators of the linear part of the system. However, in this case we
-# don't find that the vacuum expectation value of the interaction Lagrangian is zero:
+# For local two-body loss with jump ``L=\sqrt{\gamma}\,\phi^2``, the dissipative interaction
+# action requires the finite Trotter shifts inherited from the discrete-time coherent-state
+# construction. In the RAK basis we keep those shifts explicitly until the frequency reduction
+# has used their equal-time information.
 
 @qfields ϕ::Boson
 c, q = ϕ[Classical], ϕ[Quantum]
-
-loss2boson_unregular =
-    im * (
-        0.5 * bar(c) * bar(q) * (c^2 + q^2) - 0.5 * c * q * (bar(c)^2 + bar(q)^2) +
-        bar(c) * bar(q) * (c * q + c * q)
-    )
-
-KeldyshContraction._wick_contraction(loss2boson_unregular, Val(2))
-
-# To make the interaction Lagrangian physically meaningful, we must regularize it by properly
-# handling equal-space-time propagators. These equal-time arguments emerge from the continuum
-# limit of the field theory but are naturally absent in discrete-time formulations
-# [(Gerbino et al, 2024)](https://arxiv.org/abs/2406.20028).
-# In the discrete picture, operators act on coherent states at adjacent (but distinct) time
-# slices during path integral construction via Trotter decomposition. To ensure all disconnected
-# diagrams vanish identically, we introduce a finite time-shift regularization ε > 0 for the
-# quantum jump operators, motivated by the underlying discrete Trotter structure. One gets:
-# ```math
-# \bar{L}_+(t)L_+(t) \to \bar{L}_+(t)L_+(t-\epsilon) \quad, \bar{L}_-(t)L_-(t) \to \bar{L}_-(t)L_-(t+\epsilon)
-# \quad \text{and} \quad
-# \bar{L}_-(t)L_+(t) \to \frac{1}{2}(\bar{L}_-(t)L_+(t+\epsilon) + \bar{L}_-(t)L_+(t-\epsilon))
-# ```
-# Applying this regularization to the interaction Lagrangian, we get:
+plus = Regularisation.Plus
+minus = Regularisation.Minus
 
 loss2boson =
-    im * (
-        0.5 * bar(c) * bar(q) * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
-        0.5 * c(Plus) * q(Plus) * (bar(c) * bar(c) + bar(q) * bar(q)) +
-        bar(c) * bar(q) * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
+    (1 // 2) *
+    im *
+    (
+        bar(c) * bar(q) * (c(minus)^2 + q(minus)^2) -
+        c(plus) * q(plus) * (bar(c)^2 + bar(q)^2) +
+        2 * bar(c) * bar(q) * (c(plus) * q(plus) + c(minus) * q(minus))
     )
-L_int = InteractionLagrangian(loss2boson)
 
-# Indeed, the vacuum expectation value of the interaction Lagrangian is now zero:
+L_int = InteractionLagrangian(loss2boson, :γ)
 
-KeldyshContraction._wick_contraction(loss2boson, Val(2))
+# `preserve_regularisation=true` is the public control for equal-time/Trotter-sensitive
+# calculations. The default high-level propagator construction removes these shifts after the
+# Wick contraction, which is appropriate when no later reduction needs their provenance.
 
-# ## First order Green's function
+# ## End-to-end first-order loss kernel
 
-GF = DressedPropagator(L_int, Val(1), Val(3))
+G = DressedPropagator(
+    L_int, Val(1), Val(3); simplify=true, preserve_regularisation=true
+)
+GF = fourier_transform(G)
+ΣF = SelfEnergy(GF)
+ΣW = wigner_transform(ΣF; gradient_order=Val(0))
+kinetic = kinetic_expression(ΣW)
+off_shell = off_shell_collision_expression(kinetic)
+spectral = spectral_dispersive_collision(off_shell)
+reduced = reduce_frequency_collision(spectral)
+occupation = occupation_reduced_expression(reduced)
+quotiented = quotient_loop_momenta(occupation)
+kernel = collision_kernel(quotiented)
 
-#
-
-Σ = SelfEnergy(GF)
-
-# The following indeed corresponds with what is reported in [(Gerbino et al, 2024)](https://arxiv.org/abs/2406.20028).
-
-# ## Second order Green's function
-
-GF = DressedPropagator(L_int, Val(2), Val(5))
-
-#
-
-Σ = SelfEnergy(GF)
-
-#
-
-[key => Σ.advanced.diagrams[key] for key in topologies(Σ.advanced)[[2]]]
-
-#
-
-[key => Σ.retarded.diagrams[key] for key in topologies(Σ.retarded)[[2]]]
+# The resulting occupation kernel is the generated two-body-loss law. In the package's
+# normalization its first-order integrand is ``-4γ n_k n_q``.
+kernel
