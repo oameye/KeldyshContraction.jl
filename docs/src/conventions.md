@@ -1,84 +1,161 @@
 # Keldysh-Schwinger Field Theory Conventions
 
-This document outlines the conventions used in Keldysh-Schwinger field theory, including the system's action, Green's functions, and the self-consistent Born approximation. These conventions are essential for understanding the mathematical framework and methods employed in the package.
+This document fixes the Keldysh conventions used by KeldyshContraction.jl. Bosons use the
+classical/quantum Retarded-Advanced-Keldysh basis. Fermions use the asymmetric
+Larkin-Ovchinnikov rotation and the `One`/`Two` labels described below.
 
-## System
+## Bosonic convention
 
-The system is described by the action $S$, which governs the dynamics of the bosonic fields $\psi_+$ and $\psi_-$ on the forward $(+)$ and backward $(-)$ contours, respectively. The action is given by:
-
-```math
-\begin{aligned}
-S & \left[\psi_{+},\left(\psi_{+}\right)^*, \psi_{-},\left(\psi_{-}\right)^*\right]\\
-& =\int \mathrm{d}^d x \mathrm{~d} t^{\prime} 
-\left(\psi_{+}\right)^*\left[i \partial_t+D \nabla^2-V(x)\right] \psi_{+} -\left(\psi_{-}\right)^*\left[i \partial_t+D \nabla^2-V(x)\right] \psi_{-}
-\\
-&
-\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad\quad+i\left[L_{+}\left(L_{-}\right)^*-\frac{1}{2}\left(\left(L_{+}\right)^* L_{+}-\left(L_{-}\right)^* L_{-}\right)\right]
-\end{aligned}
-```
-
-Here, $\psi_+$ and $\psi_-$ are the bosonic fields on the forward $(+)$ and backward $(-)$ contours, respectively.
-
-We can rewrite this in the Retarded-Advanced-Keldysh (RAK) basis by defining:
-
-- $\psi_c = (\psi_+ + \psi_-)/\sqrt{2}$ (classical field)
-- $\psi_q = (\psi_+ - \psi_-)/\sqrt{2}$ (quantum field)
-
-In this basis, the diffusion part of the action becomes:
+The system is described by an action on the forward $(+)$ and backward $(-)$ contours. For
+a bosonic field $\psi$ the contour fields are rotated to classical and quantum components,
 
 ```math
-S_{\mathrm{diff}}^{R A K}=\int d t d^d x\left\{\bar{\psi}_q\left[i \partial_t+D \nabla^2-V(\vec{x})\right] \psi_c+\bar{\psi}_c\left[i \partial_t+D \nabla^2-V(\vec{x})\right] \psi_q\right\}.
+\psi_c = \frac{\psi_+ + \psi_-}{\sqrt{2}},\qquad
+\psi_q = \frac{\psi_+ - \psi_-}{\sqrt{2}}.
 ```
 
-## Green's Functions
-
-Green's functions describe the propagation of fields and encode information about the system's response to perturbations. In the RAK basis, the Green's function is represented as a matrix:
+The corresponding barred fields use the same rotation. For the quadratic diffusion sector,
 
 ```math
-\begin{aligned}
-\hat{G}^{R A K}\left(x_1, x_2\right)
-&=\left(\begin{array}{cc}G^K\left(x_1, x_2\right) & G^R\left(x_1, x_2\right) \\ G^A\left(x_1, x_2\right) & 0\end{array}\right) \\
-&=-i\left(\begin{array}{cc}\left\langle\phi_c\left(x_1\right) \bar{\phi}_c\left(x_2\right)\right\rangle & \left\langle\phi_c\left(x_1\right) \bar{\phi}_q\left(x_2\right)\right\rangle \\ \left\langle\phi_a cornerstone
+S_{\mathrm{diff}}^{RAK}
+=\int dt\,d^dx\left\{
+\bar\psi_q\left[i\partial_t+D\nabla^2-V(\mathbf{x})\right]\psi_c
++\bar\psi_c\left[i\partial_t+D\nabla^2-V(\mathbf{x})\right]\psi_q
+\right\}.
 ```
 
-Here, $G^R$, $G^A$, and $G^K$ are the retarded, advanced, and Keldysh Green's functions, respectively.
-
-
-The two-point dressed Green's function $G^{\mu \nu}$, labeled by indices $\mu=c,q$ and $\nu=c,q$, is defined as:
+The bosonic Green-function matrix is
 
 ```math
-i G^{\mu \nu}\left(x_1, x_2\right)=\int \mathcal{D}\left[\phi_c, \bar{\phi}_c, \phi_q, \bar{\phi}_q\right] \phi_\mu\left(x_1\right) \bar{\phi}_\nu\left(x_2\right) e^{i S_0+i S_{\mathrm{int}}}.
+\hat G_B(x_1,x_2)
+=
+\begin{pmatrix}
+G^K(x_1,x_2) & G^R(x_1,x_2)\\
+G^A(x_1,x_2) & 0
+\end{pmatrix}
+=-i
+\begin{pmatrix}
+\langle\phi_c(x_1)\bar\phi_c(x_2)\rangle &
+\langle\phi_c(x_1)\bar\phi_q(x_2)\rangle\\
+\langle\phi_q(x_1)\bar\phi_c(x_2)\rangle &
+\langle\phi_q(x_1)\bar\phi_q(x_2)\rangle
+\end{pmatrix}.
 ```
 
-Here, $S_\mathrm{int} = \int d^{d}x d t \mathcal{L}_\mathrm{int}$ is the interaction part of the action.
-
-## Self-Consistent Born Approximation
-
-The self-consistent Born approximation is a perturbative method used to compute the Green's function by expanding it in terms of the interaction part of the action. The expansion is given by:
+The package uses the corresponding bosonic self-energy placement
 
 ```math
-\begin{aligned}
-& i G^{\mu \nu}\left(x_1, x_2\right)=\int \mathcal{D}\left[\phi_c, \bar{\phi}_c, \phi_q, \bar{\phi}_q\right] \phi_\mu\left(x_1\right) \bar{\phi}_\nu\left(x_2\right) \sum_{k=0}^{\infty} \frac{i^k S_{\mathrm{int}}^k}{k!} e^{i S_0}= \\ 
-& \quad=i G_0^{\mu \nu}\left(x_1, x_2\right)+i \int d^d y d t_y\left\langle\phi_\mu\left(x_1\right) \bar{\phi}_\nu\left(x_2\right) \mathcal{L}_{\mathrm{int}}(y)\right\rangle_0+\sum_{k=2}^{\infty}\left\langle\phi_\mu\left(x_1\right) \bar{\phi}_\nu\left(x_2\right) \frac{i^k S_{\mathrm{int}}^k}{k!}\right\rangle_0 .
-\end{aligned}
+\hat\Sigma_B=
+\begin{pmatrix}
+0 & \Sigma^A\\
+\Sigma^R & \Sigma^K
+\end{pmatrix}.
 ```
 
-The perturbative expansion of the Green's function has the structure:
+`Classical` and `Quantum` are semantic aliases over the same neutral two-valued index stored
+inside `Field{Boson}`; they do not create different Julia field types.
+
+## Fermionic Larkin-Ovchinnikov convention
+
+Fermions use the asymmetric Larkin-Ovchinnikov rotation. The unbarred and barred Grassmann
+variables are rotated differently:
 
 ```math
-\hat{G}=\hat{G}_0+\hat{G}_0 \circ \hat{\Sigma} \circ \hat{G}_0+\hat{G}_0 \circ \hat{\Sigma} \circ \hat{G}_0 \circ \hat{\Sigma} \circ \hat{G}_0+\ldots=\hat{G}_0+\hat{G}_0 \circ \hat{\Sigma} \circ \hat{G}.
+\psi_1=\frac{\psi_+ + \psi_-}{\sqrt{2}},\qquad
+\psi_2=\frac{\psi_+ - \psi_-}{\sqrt{2}},
 ```
-
-Here, $\circ$ denotes space-time convolution and Keldysh-matrix multiplication. The self-energy $\hat{\Sigma}$ is defined as:
 
 ```math
-\hat{\Sigma}\left(y_1, y_2\right)=\left(\begin{array}{cc}0 & \Sigma^A\left(y_1, y_2\right) \\ \Sigma^R\left(y_1, y_2\right) & \Sigma^K\left(y_1, y_2\right)\end{array}\right).
+\bar\psi_1=\frac{\bar\psi_+ - \bar\psi_-}{\sqrt{2}},\qquad
+\bar\psi_2=\frac{\bar\psi_+ + \bar\psi_-}{\sqrt{2}}.
 ```
 
-This leads to the Dyson equation, which relates the full Green's function $\hat{G}$ to the non-interacting Green's function $\hat{G}_0$ and the self-energy $\hat{\Sigma}$:
+The public labels `One` and `Two` denote these two components while reusing the same neutral
+stored Keldysh index as the bosonic representation. Therefore a fermionic field remains a
+`Field{Fermion}` regardless of its LO component.
+
+With row index on the unbarred field and column index on the barred field, the package uses
 
 ```math
-[\hat{G}_0^{-1} -\hat{\Sigma} ]\hat{G}=\mathbb{1}.
+\hat G_F=
+\begin{pmatrix}
+G^R & G^K\\
+0 & G^A
+\end{pmatrix}_{1,2}.
 ```
 
-The Dyson equation is central of many-body physics, providing a framework for systematically incorporating interactions.
+Equivalently,
+
+```text
+(One, One) -> Retarded
+(One, Two) -> Keldysh
+(Two, One) -> structural zero
+(Two, Two) -> Advanced
+```
+
+The fermionic self-energy uses the same upper-triangular LO placement,
+
+```math
+\hat\Sigma_F=
+\begin{pmatrix}
+\Sigma^R & \Sigma^K\\
+0 & \Sigma^A
+\end{pmatrix}.
+```
+
+This placement is part of the convention, not a relabeling of the bosonic classical/quantum
+matrix. In particular, triangular matrices are closed under the Dyson product
+$G_0\Sigma G_0$, so the structural-zero lower-left entry remains zero.
+
+### `bar(psi)` and Grassmann variables
+
+For fermions, `bar(psi)` denotes the independent barred Grassmann path-integral variable. It
+toggles field orientation while preserving the physical field family, internal indices, LO
+component, position, and regularisation.
+
+It is deliberately not identified with the operator adjoint $\psi^\dagger$. The package does
+not define `adjoint(::Field{Fermion}) = bar(field)`. Contraction- and edge-level adjoints are
+separate operations used to relate retarded and advanced propagators.
+
+### Fermionic Wick signs
+
+Canonical fermionic products obey Grassmann algebra,
+
+```math
+A B=-B A,\qquad A^2=0
+```
+
+for distinct and identical fermionic generators, respectively. Generator identity includes
+the field family and all identity-defining metadata, so different species or internal indices
+do not vanish spuriously.
+
+For Wick contraction, the package pairs the canonical unbarred sequence against the reversed
+barred sequence. The pairing weight carries the parity of that permutation. This permutation
+parity is the fermionic sign convention used by the implementation. No additional
+$(-1)$ factor is applied per closed fermion loop; doing so would double-count a sign already
+contained in the explicit Wick permutation parity.
+
+## Perturbative Green functions and Dyson equation
+
+For either statistics, the two-point dressed Green function is generated perturbatively from
+an interaction action $S_{\mathrm{int}}=\int d^dx\,dt\,\mathcal L_{\mathrm{int}}$. Schematically,
+
+```math
+\hat G
+=\hat G_0
++\hat G_0\circ\hat\Sigma\circ\hat G_0
++\hat G_0\circ\hat\Sigma\circ\hat G_0\circ\hat\Sigma\circ\hat G_0
++\cdots
+=\hat G_0+\hat G_0\circ\hat\Sigma\circ\hat G.
+```
+
+Here $\circ$ denotes space-time convolution and Keldysh-matrix multiplication. The equivalent
+Dyson equation is
+
+```math
+[\hat G_0^{-1}-\hat\Sigma]\hat G=\mathbb{1}.
+```
+
+Statistics dispatch determines the matrix placement of the stored retarded, advanced, and
+Keldysh components; the shared `DressedPropagator` and `SelfEnergy` result types themselves
+store those semantic components without duplicating the statistics-specific matrix layout.

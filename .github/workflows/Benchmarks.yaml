@@ -4,7 +4,7 @@ on:
     branches:
       - 'main'
     paths:
-      - '.github/workflows/Benchmarks.yml'
+      - '.github/workflows/Benchmarks.yaml'
       - 'src/**'
       - 'ext/**'
       - 'test/runtests.jl'
@@ -15,7 +15,7 @@ on:
     branches:
       - 'main'
     paths:
-      - '.github/workflows/Benchmarks.yml'
+      - '.github/workflows/Benchmarks.yaml'
       - 'src/**'
       - 'ext/**'
       - 'test/**'
@@ -31,6 +31,7 @@ permissions:
     actions: write
     contents: write
     deployments: write
+    pull-requests: write
 
 jobs:
   benchmark:
@@ -51,6 +52,9 @@ jobs:
             Pkg.develop(PackageSpec(path=joinpath(pwd(), "..")));
             Pkg.instantiate();
             include("runbenchmarks.jl")'
+
+      - name: Restore benchmark project metadata
+        run: git restore benchmarks/Project.toml
 
       # this will update benchmarks/data.js in gh-pages branch
       - name: Parse & Upload Benchmark Results

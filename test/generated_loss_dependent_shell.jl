@@ -1,0 +1,307 @@
+using KeldyshContraction, Test
+import KeldyshContraction as KC
+
+@qfields dependent_loss_ϕ::Boson
+
+function generated_loss_spectral_collision()
+    c = dependent_loss_ϕ[Classical]
+    q = dependent_loss_ϕ[Quantum]
+    plus = KC.Regularisation.Plus
+    minus = KC.Regularisation.Minus
+    loss =
+        (1 // 2) *
+        im *
+        (
+            bar(c) * bar(q) * (c(minus)^2 + q(minus)^2) -
+            c(plus) * q(plus) * (bar(c)^2 + bar(q)^2) +
+            2 * bar(c) * bar(q) * (c(plus) * q(plus) + c(minus) * q(minus))
+        )
+
+    L = InteractionLagrangian(loss, :γ)
+    G = DressedPropagator(L, Val(2), Val(5); simplify=true, _set_reg_to_zero=false)
+    GF = fourier_transform(G)
+    ΣW = wigner_transform(SelfEnergy(GF); gradient_order=Val(0))
+    collision = off_shell_collision_expression(kinetic_expression(ΣW))
+    return spectral_dispersive_collision(collision)
+end
+
+function generated_loss_record(part, term, coefficient)
+    analysis = @inferred KC.analyze_spectral_dependencies(term, dependent_loss_ϕ)
+    support = KC.dependent_shell_support(analysis)
+    all_shifts = Tuple(regularisation_shift(line) for line in kinetic_lines(term.carrier))
+    return (;
+        part,
+        topology=Tuple(KC.topology(term)),
+        kinds=Tuple(spectral_dispersive_kinds(term)),
+        coefficient,
+        rank=KC.constraint_rank(analysis),
+        count=KC.constraint_count(analysis),
+        dependent=KC.has_dependent_shell_support(analysis),
+        multiplicity=KC.repeated_shell_multiplicity(analysis),
+        dependencies=Tuple(Tuple(row) for row in support.dependency_rows),
+        spectral_shifts=Tuple(analysis.regularisation_shifts),
+        all_shifts,
+    )
+end
+
+function generated_loss_causal_exception_signature(exception)
+    term = exception.causal_term
+    coincident = KC.coincident_causal_pole_witness(exception)
+    zero_energy = KC.zero_energy_causal_denominator_witness(exception)
+    return (;
+        kind=exception.kind,
+        topology=Tuple(KC.topology(exception.state.term)),
+        dependent=KC.has_dependent_shell_support(exception),
+        active_lines=Tuple(exception.state.active_line_indices),
+        active_frequencies=Tuple(exception.state.active_loop_basis_indices),
+        state_factor=exception.state.factor,
+        support=exception.support,
+        causal_coefficient=term.coefficient,
+        coincident_frequency=coincident.frequency_index,
+        pivot=coincident.pivot_denominator,
+        coincident=coincident.coincident_denominator,
+        zero_energy_denominator=zero_energy.denominator_index,
+        denominators=Tuple(
+            (
+                Tuple(denominator.loop_coefficients),
+                denominator.energy,
+                denominator.infinitesimal,
+            ) for denominator in term.denominators
+        ),
+    )
+end
+
+@testset "generated γ² dependent shell and Trotter structure" begin
+    collision = generated_loss_spectral_collision()
+    @test parameters(collision) == KC.ParameterMonomial(:γ)^2
+    @test target_family(collision) === dependent_loss_ϕ
+
+    records = NamedTuple[]
+    unshifted_dependent_reduced = 0
+    regular_sunset_results = 0
+    shifted_isolated_trotter = 0
+    shifted_nonisolated_trotter = 0
+    dependent_shifted_isolated = 0
+    nondependent_shifted_isolated = 0
+
+    shifted_regular_results = 0
+    shifted_dependent_results = 0
+    shifted_zero_results = 0
+    shifted_trotter_results = 0
+    shifted_causal_source_results = 0
+    shifted_causal_branches = 0
+    coincident_causal_branches = 0
+    zero_energy_causal_branches = 0
+
+    for (part, expression) in (
+        (:offset, collision_offset(collision)),
+        (:distribution, collision_distribution_coefficient(collision)),
+    )
+        for (term, coefficient) in expression
+            record = generated_loss_record(part, term, coefficient)
+            push!(records, record)
+            shifted = any(shift -> !iszero(shift), record.all_shifts)
+
+            if shifted
+                witness = @inferred KC.trotter_frequency_witness(term)
+                if KC.has_isolated_trotter_frequency(witness)
+                    shifted_isolated_trotter += 1
+                    if record.dependent
+                        dependent_shifted_isolated += 1
+                    else
+                        nondependent_shifted_isolated += 1
+                    end
+                    line = KC.trotter_frequency_line(term, witness)
+                    @test statistical_weight(line) === NoStatisticalWeight
+                    @test @inferred(KC.trotter_equal_time_factor(term, witness)) isa
+                        KC.ComplexRationals
+                else
+                    shifted_nonisolated_trotter += 1
+                end
+            end
+
+            result = @inferred KC.reduce_frequency_term(term, dependent_loss_ϕ)
+
+            if shifted
+                !isempty(result.regular) && (shifted_regular_results += 1)
+                !isempty(result.dependent) && (shifted_dependent_results += 1)
+                !isempty(result.trotter) && (shifted_trotter_results += 1)
+                isempty(result) && (shifted_zero_results += 1)
+                if !isempty(result.causal)
+                    shifted_causal_source_results += 1
+                    shifted_causal_branches += length(result.causal)
+                    for exception in result.causal
+                        if exception.kind === KC.CausalCoincidentPole
+                            coincident_causal_branches += 1
+                            @test KC.has_coincident_causal_pole(
+                                KC.coincident_causal_pole_witness(exception)
+                            )
+                            @test !KC.has_zero_energy_causal_denominator(
+                                KC.zero_energy_causal_denominator_witness(exception)
+                            )
+                        elseif exception.kind === KC.CausalZeroEnergyDenominator
+                            zero_energy_causal_branches += 1
+                            @test KC.has_zero_energy_causal_denominator(
+                                KC.zero_energy_causal_denominator_witness(exception)
+                            )
+                            @test !KC.has_coincident_causal_pole(
+                                KC.coincident_causal_pole_witness(exception)
+                            )
+                        else
+                            error("unknown generated causal exceptional kind")
+                        end
+                        @info "post-Trotter causal exception" part coefficient signature=generated_loss_causal_exception_signature(
+                            exception
+                        )
+                    end
+                end
+
+                for dependent_term in result.dependent
+                    @test !KC.requires_trotter_regularisation(dependent_term)
+                    @test !isempty(KC.dependent_residual_support(dependent_term))
+                end
+                @test isempty(result.trotter)
+            elseif record.dependent
+                @test isempty(result.regular)
+                @test length(result.dependent) == 1
+                @test isempty(result.causal)
+                @test isempty(result.trotter)
+                dependent_term = only(result.dependent)
+                @test !KC.requires_trotter_regularisation(dependent_term)
+                @test !isempty(KC.dependent_residual_support(dependent_term))
+                @test KC.dependent_shell_support(dependent_term) ==
+                    KC.dependent_shell_support(
+                    KC.analyze_spectral_dependencies(term, dependent_loss_ϕ)
+                )
+                unshifted_dependent_reduced += 1
+            elseif record.topology == (3,) && all(==(CollisionSpectral), record.kinds)
+                @test !isempty(result.regular)
+                @test isempty(result.dependent)
+                @test isempty(result.causal)
+                @test isempty(result.trotter)
+                regular_sunset_results += 1
+            end
+        end
+    end
+
+    dependent_records = filter(record -> record.dependent, records)
+    shifted_records = filter(
+        record -> any(shift -> !iszero(shift), record.all_shifts), records
+    )
+    unshifted_dependent_records = filter(
+        record -> record.dependent && all(iszero, record.all_shifts), records
+    )
+
+    @info "second-order pre-Trotter census" shifted_isolated_trotter shifted_nonisolated_trotter dependent_shifted_isolated nondependent_shifted_isolated
+    @info "second-order post-Trotter outcomes" shifted_regular_results shifted_dependent_results shifted_zero_results shifted_trotter_results shifted_causal_source_results shifted_causal_branches coincident_causal_branches zero_energy_causal_branches
+
+    @test length(records) == 62
+    @test length(dependent_records) == 18
+    @test length(shifted_records) == 32
+    @test length(unshifted_dependent_records) == 6
+    @test unshifted_dependent_reduced == 6
+    @test regular_sunset_results == 8
+
+    @test shifted_isolated_trotter == 32
+    @test shifted_nonisolated_trotter == 0
+    @test dependent_shifted_isolated == 12
+    @test nondependent_shifted_isolated == 20
+    @test shifted_regular_results == 0
+    @test shifted_dependent_results == 12
+    @test shifted_zero_results == 16
+    @test shifted_trotter_results == 0
+    @test shifted_causal_source_results == 4
+    @test shifted_causal_branches == 8
+    @test coincident_causal_branches == 0
+    @test zero_energy_causal_branches == 8
+
+    @test all(record -> record.topology == (2,), dependent_records)
+    @test all(record -> record.topology == (2,), unshifted_dependent_records)
+    @test all(record -> record.rank == 2, unshifted_dependent_records)
+    @test all(record -> record.count == 3, unshifted_dependent_records)
+    @test all(record -> record.multiplicity == 0, unshifted_dependent_records)
+    @test all(
+        record -> record.dependencies == ((0 // 1, 1 // 1),), unshifted_dependent_records
+    )
+    @test all(
+        record -> all(==(CollisionSpectral), record.kinds), unshifted_dependent_records
+    )
+    @test any(record -> record.topology == (2,), shifted_records)
+    @test any(record -> record.topology == (3,), records)
+end
+
+@testset "collision-level γ² regular occupation and singular separation" begin
+    collision = generated_loss_spectral_collision()
+    reduced = @inferred reduce_frequency_collision(collision)
+
+    @test isempty(reduced_trotter_terms(reduced))
+    @test !isempty(reduced_dependent_terms(reduced))
+    # Eight termwise zero-energy source branches canonicalize to two physical collision sectors.
+    causal = reduced_causal_terms(reduced)
+    @test length(causal) == 2
+    @test all(
+        sector -> causal_exceptional_kind(sector) === KC.CausalZeroEnergyDenominator,
+        keys(causal),
+    )
+    @test all(!iszero, values(causal))
+    @test length(reduced_regular_terms(reduced)) == 1
+
+    occupation = @inferred occupation_reduced_expression(reduced)
+    @test length(occupation_reduced_terms(occupation)) == 1
+    sector, polynomial = only(occupation_reduced_terms(occupation))
+    @test parameters(sector) == KC.ParameterMonomial(:γ)^2
+    @test length(frequency_support(sector).shells) == 1
+    @test isempty(frequency_support(sector).principal_values)
+
+    basis = KC.momentum_basis(sector)
+    external_variable = external_wigner_momentum(sector)
+    external_index = only(
+        i for (i, variable) in enumerate(basis) if variable == external_variable
+    )
+    loop_indices = [i for i in eachindex(basis.variables) if i != external_index]
+    @test length(loop_indices) == 2
+
+    k = KC.basis_momentum(basis, external_index)
+    q1 = KC.basis_momentum(basis, loop_indices[1])
+    q2 = KC.basis_momentum(basis, loop_indices[2])
+    q = -k + q1 + q2
+
+    coefficient = one(KC.ComplexRationals)
+    n(momentum) =
+        OccupationPolynomial(OccupationAtom(dependent_loss_ϕ, momentum), coefficient)
+    nk, nq, nq1, nq2 = n(k), n(q), n(q1), n(q2)
+
+    symmetric_oracle =
+        2 * (
+            nq1 * nq2 +
+            nq1 * nq2 * nq +
+            nq1 * nq2 * nk +
+            nq * nk +
+            nq1 * nq * nk +
+            nq2 * nq * nk
+        )
+
+    # Before the physical dummy-loop quotient, the generated routing retains an antisymmetric
+    # q1 <-> q2 representative. The next layer will identify these two loop bases. #307 must
+    # preserve this raw routing rather than silently quotient it.
+    raw_oracle =
+        nq * nq2 + 2 * nq1 * nq2 * nq - nq1 * nq +
+        4 * nq1 * nq * nk +
+        2 * nq * nk +
+        nq2 +
+        2 * nq1 * nq2 +
+        2 * nq1 * nq2 * nk +
+        nq2 * nk - nq1 - nq1 * nk
+    swapped_raw_oracle =
+        nq * nq1 + 2 * nq1 * nq2 * nq - nq2 * nq +
+        4 * nq2 * nq * nk +
+        2 * nq * nk +
+        nq1 +
+        2 * nq1 * nq2 +
+        2 * nq1 * nq2 * nk +
+        nq1 * nk - nq2 - nq2 * nk
+
+    @test polynomial == raw_oracle
+    @test polynomial != symmetric_oracle
+    @test polynomial + swapped_raw_oracle == 2 * symmetric_oracle
+end

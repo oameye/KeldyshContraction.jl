@@ -1,23 +1,17 @@
 """
-    advanced_to_retarded(x::T) where {T<:SymbolicUtils.BasicSymbolic}
+    advanced_to_retarded(x, prefactor)
 
-Apply the transformation to change the advanced propagator to retarded:
-
-``G^A(y, y)=-G^R(y, y)``
-
-with ``y =(\\vec{y},t)``.
-Note the expression is only valid for equal space-time coordinates.
+Apply the transformation ``G^A(y,y)=-G^R(y,y)`` to equal-position contractions.
 """
 function advanced_to_retarded(
-    x::Vector{Contraction}, prefactor::Number
-)::Tuple{Vector{Contraction},Number}
-    ff(x::Contraction) = is_advanced(x) && same_position(x)
+    x::Vector{Contraction{S}}, prefactor::Number
+) where {S<:Statistics}
+    ff(c::Contraction{S}) = is_advanced(c) && same_position(c)
     adv_idx = findall(ff, x)
     if isempty(adv_idx)
         return x, prefactor
     end
-    x′ = deepcopy(x)
-    # TODO or make x immutable or change in place
+    x′ = copy(x)
     for i in adv_idx
         prefactor *= -1
         x′[i] = adjoint(x[i])
@@ -33,63 +27,372 @@ function sort_by_position_and_type(p::Contraction)::Float64
     else
         i, j = integer_positions(p)
         type = Int(propagator_type(p...))
-        return float(pairing(i, j) * 3 + type)
+        return float(pairing(i, j) * 4 + type)
     end
 end
-sort_by_position_and_type(p::Edge)::Float64 = sort_by_position_and_type(fields(p))
+function sort_by_position_and_type(
+    p::Tuple{Field{S},Field{S}}
+)::Float64 where {S<:Statistics}
+    return sort_by_position_and_type(Contraction(p))
+end
+sort_by_position_and_type(p::Edge)::Float64 =
+    sort_by_position_and_type(Contraction(fields(p)))
 
-function make_NautyDiGraph(vs)
-    ps_int = map(integer_positions, vs)
-    flattened_int = Iterators.flatten(ps_int)
-    max_label = length(unique(flattened_int))
-    has_in = any(==(typemin(Int8)), flattened_int) # for vacuum diagram
+@inline function field_state_color(f::Field)::UInt64
+    derivative = UInt64(derivative_multiindex(f).orders)
+    orientation_bits = UInt64(Int(orientation(f))) << 63
+    keldysh_bits = UInt64(Int(keldysh_index(f))) << 62
+    regularisation_bits = UInt64(Int(regularisation(f)) + 1) << 60
+    return orientation_bits | keldysh_bits | regularisation_bits | derivative
+end
 
-    _edges = map(ps_int) do int_pair
-        tt = if typemin(Int8) in int_pair
-            (1, last(int_pair) + Int(has_in))
-        elseif typemax(Int8) in int_pair
-            (first(int_pair) + Int(has_in), max_label)
-        else
-            int_pair .+ Int(has_in)
+@inline function field_color(f::Field)
+    return (name(f), slots(field_indices(f)), field_state_color(f))
+end
+
+@inline function propagator_color(c::Contraction)
+    return (field_color(c.out), field_color(c.in), Int(propagator_type(c...)))
+end
+@inline function propagator_color(e::Edge)
+    return (field_color(e.out), field_color(e.in), Int(propagator_type(e)))
+end
+
+function canonicalization_positions(vs)
+    result = Position[]
+    sizehint!(result, 2 * length(vs))
+    for item in vs
+        for p in positions(item)
+            p in result || push!(result, p)
         end
-        return Graphs.Edge(tt)
     end
-    return NautyGraphs.NautyDiGraph(_edges), max_label, has_in
+    sort!(result)
+    return result
 end
-function make_permutation_dict(perm, max_label, has_in)
-    if has_in
-        l = length(perm)
+
+# Uniform-color detection is on the canonicalization hot path. Cache the reference field
+# families, packed state colors, and propagator type once, then compare each remaining edge
+# against those concrete values. Derivative decoration remains part of the packed state while
+# the derivative-free path avoids rebuilding nested color tuples or decoding the reference
+# fields on every comparison.
+function uniform_coloring(vs)
+    isempty(vs) && return true
+    reference = first(vs)
+    reference_out_family = field_family(reference.out)
+    reference_in_family = field_family(reference.in)
+    reference_out_state = field_state_color(reference.out)
+    reference_in_state = field_state_color(reference.in)
+    reference_type = propagator_type(reference)
+
+    @inbounds for i in (firstindex(vs) + 1):lastindex(vs)
+        item = vs[i]
+        isequal(field_family(item.out), reference_out_family) || return false
+        isequal(field_family(item.in), reference_in_family) || return false
+        field_state_color(item.out) == reference_out_state || return false
+        field_state_color(item.in) == reference_in_state || return false
+        propagator_type(item) === reference_type || return false
+    end
+    return true
+end
+
+function simple_position_pairs(vs)
+    for i in eachindex(vs)
+        item_positions = positions(vs[i])
+        for j in firstindex(vs):(i - 1)
+            isequal(positions(vs[j]), item_positions) && return false
+        end
+    end
+    return true
+end
+
+function position_labels(graph_positions::Vector{Position})
+    labels = Vector{Int}(undef, length(graph_positions))
+    for (i, p) in enumerate(graph_positions)
+        labels[i] = if is_out(p)
+            1
+        elseif is_in(p)
+            2
+        else
+            3
+        end
+    end
+    return labels
+end
+
+@inline position_vertex(graph_positions::Vector{Position}, p::Position) =
+    searchsortedfirst(graph_positions, p)
+
+# Build the direct position graph and report whether every directed position pair
+# was unique. Detecting multiplicity while inserting edges avoids an O(E^2)
+# duplicate-edge pre-scan on the canonicalization hot path.
+function _make_simple_NautyDiGraph(vs, graph_positions::Vector{Position})
+    graph = NautyGraphs.NautyDiGraph(
+        length(graph_positions); vertex_labels=position_labels(graph_positions)
+    )
+    simple = true
+    for item in vs
+        out, in = positions(item)
+        source = position_vertex(graph_positions, out)
+        target = position_vertex(graph_positions, in)
+        simple &= !Graphs.has_edge(graph, source, target)
+        Graphs.add_edge!(graph, source, target)
+    end
+    return graph, simple
+end
+
+function make_simple_NautyDiGraph(vs, graph_positions::Vector{Position})
+    graph, _ = _make_simple_NautyDiGraph(vs, graph_positions)
+    return graph
+end
+
+function propagator_colors(vs)
+    C = typeof(propagator_color(first(vs)))
+    colors = C[]
+    sizehint!(colors, length(vs))
+    for item in vs
+        color = propagator_color(item)
+        color in colors || push!(colors, color)
+    end
+    sort!(colors)
+    return colors
+end
+
+function make_colored_NautyDiGraph(vs, graph_positions::Vector{Position})
+    colors = propagator_colors(vs)
+    npositions = length(graph_positions)
+    labels = Vector{Int}(undef, npositions + length(vs))
+    copyto!(labels, 1, position_labels(graph_positions), 1, npositions)
+
+    for (i, item) in enumerate(vs)
+        color_index = searchsortedfirst(colors, propagator_color(item))
+        labels[npositions + i] = 3 + color_index
+    end
+
+    graph = NautyGraphs.NautyDiGraph(length(labels); vertex_labels=labels)
+    for (i, item) in enumerate(vs)
+        out, in = positions(item)
+        edge_vertex = npositions + i
+        Graphs.add_edge!(graph, position_vertex(graph_positions, out), edge_vertex)
+        Graphs.add_edge!(graph, edge_vertex, position_vertex(graph_positions, in))
+    end
+    return graph
+end
+
+"""
+Construct the vertex-colored directed graph used for canonicalization.
+
+A uniform simple propagator set uses the original position graph directly: when every edge
+has the same physical color and no directed position-pair is repeated, edge colors carry no
+additional isomorphism information. Mixed-color and multiedge graphs use labeled subdivision
+vertices so field family/index, propagator type, orientation, regularisation, and derivative
+endpoint decoration remain part of the canonical form. `Out()` and `In()` always have fixed,
+distinct vertex colors.
+"""
+function make_NautyDiGraph(vs::Vector{T}) where {T<:Union{Contraction,Edge}}
+    isempty(vs) && return NautyGraphs.NautyDiGraph(0), Position[]
+
+    graph_positions = canonicalization_positions(vs)
+    simple_graph, simple = _make_simple_NautyDiGraph(vs, graph_positions)
+    graph = if simple && uniform_coloring(vs)
+        simple_graph
+    else
+        make_colored_NautyDiGraph(vs, graph_positions)
+    end
+    return graph, graph_positions
+end
+function make_NautyDiGraph(vs::Vector{Tuple{Field{S},Field{S}}}) where {S<:Statistics}
+    contractions = Contraction{S}[Contraction(v) for v in vs]
+    return make_NautyDiGraph(contractions)
+end
+
+"""
+Return physical and uncolored canonicalization metadata from one direct-graph Nauty call.
+
+The direct position graph defines topology. Its canonical permutation is retained independently
+of physical edge colors. The same permutation is sufficient for physical canonicalization
+when the direct graph has no nontrivial automorphism, or when a simple graph has uniform
+physical coloring. Only genuinely ambiguous colored graphs require the subdivision fallback.
+"""
+function canonicalization_permutations(vs, graph_positions::Vector{Position})
+    graph, simple = _make_simple_NautyDiGraph(vs, graph_positions)
+    topology_permutation, automorphisms = NautyGraphs.nauty(graph)
+
+    physical_permutation = if isone(automorphisms.n) || (simple && uniform_coloring(vs))
+        topology_permutation
+    else
+        colored_graph = make_colored_NautyDiGraph(vs, graph_positions)
+        NautyGraphs.canonical_permutation(colored_graph)
+    end
+    return physical_permutation, topology_permutation, simple, automorphisms
+end
+
+function canonicalization_permutation(vs, graph_positions::Vector{Position})
+    physical_permutation, _, _, _ = canonicalization_permutations(vs, graph_positions)
+    return physical_permutation
+end
+
+function out_bulk_positions(vs)
+    result = Position[]
+    for item in vs
+        p1, p2 = positions(item)
+        if is_out(p1) && is_bulk(p2)
+            p2 in result || push!(result, p2)
+        elseif is_out(p2) && is_bulk(p1)
+            p1 in result || push!(result, p1)
+        end
+    end
+    return result
+end
+
+function make_permutation_dict(
+    perm::AbstractVector{<:Integer}, graph_positions::Vector{Position}, vs
+)
+    npositions = length(graph_positions)
+    canonical_bulk = Position[]
+    for original_vertex in perm
+        original_vertex <= npositions || continue
+        old_position = graph_positions[original_vertex]
+        is_bulk(old_position) && push!(canonical_bulk, old_position)
+    end
+
+    # Preserve the package's external-anchor convention: bulk vertices attached to Out()
+    # receive the first canonical labels, ordered by their Nauty canonical rank.
+    anchors = out_bulk_positions(vs)
+    mapping = Dict{Position,Position}()
+    bulk_index = 0
+    for old_position in canonical_bulk
+        old_position in anchors || continue
+        bulk_index += 1
+        mapping[old_position] = Bulk(bulk_index)
+    end
+    for old_position in canonical_bulk
+        old_position in anchors && continue
+        bulk_index += 1
+        mapping[old_position] = Bulk(bulk_index)
+    end
+    return mapping
+end
+
+function relabel_bulk_position(f::Field, mapping::Dict{Position,Position})
+    p = position(f)
+    return is_bulk(p) && haskey(mapping, p) ? f(mapping[p]) : f
+end
+function relabel_bulk_positions(
+    c::Contraction{S}, mapping::Dict{Position,Position}
+) where {S}
+    return Contraction(
+        relabel_bulk_position(c.out, mapping), relabel_bulk_position(c.in, mapping)
+    )
+end
+function relabel_bulk_positions(e::Edge{S}, mapping::Dict{Position,Position}) where {S}
+    return Edge(
+        relabel_bulk_position(e.out, mapping),
+        relabel_bulk_position(e.in, mapping),
+        e.edgetype,
+        e.momenta,
+    )
+end
+
+"""
+Build the uncolored direct position graph exactly as the pre-static implementation did.
+
+This helper is intentionally separate from physical canonicalization. Its sole purpose is to
+preserve the historical topology-label contract used by the analytical `1 / 3 / 11 / 59`
+regressions: external vertices are encoded by their legacy graph positions, bulk vertices are
+interchangeable, edge colors are ignored, and duplicate directed edges do not affect the vertex
+canonical permutation.
+"""
+function legacy_topology_graph(vs)
+    position_pairs = Tuple{Int8,Int8}[integer_positions(item) for item in vs]
+    flattened = collect(Iterators.flatten(position_pairs))
+    max_label = length(unique(flattened))
+    has_out = typemin(Int8) in flattened
+
+    graph_edges = map(position_pairs) do pair
+        vertices = if typemin(Int8) in pair
+            (1, last(pair) + Int(has_out))
+        elseif typemax(Int8) in pair
+            (first(pair) + Int(has_out), max_label)
+        else
+            pair .+ Int(has_out)
+        end
+        return Graphs.Edge(vertices)
+    end
+    return NautyGraphs.NautyDiGraph(graph_edges), max_label, has_out
+end
+
+function legacy_topology_permutation_dict(
+    permutation::AbstractVector{<:Integer}, max_label::Int, has_out::Bool
+)
+    if has_out
         tracker = 0
-        last_index = findfirst(==(max_label), perm)
-        first_index = findfirst(==(1), perm)
-        dict = Dict{Position,Position}()
-        for i in 1:l
-            if i == first_index || i == last_index
+        in_index = findfirst(==(max_label), permutation)
+        out_index = findfirst(==(1), permutation)
+        mapping = Dict{Position,Position}()
+        for i in eachindex(permutation)
+            if i == out_index || i == in_index
                 tracker += 1
             else
-                dict[Bulk(perm[i] - 1)] = Bulk(i - tracker)
+                mapping[Bulk(permutation[i] - 1)] = Bulk(i - tracker)
             end
         end
-    else # vacuum diagram
-        dict = Dict{Position,Position}(Bulk(perm[i]) => Bulk(i) for i in 1:length(perm))
+        return mapping
     end
 
-    return dict
+    return Dict{Position,Position}(
+        Bulk(permutation[i]) => Bulk(i) for i in eachindex(permutation)
+    )
 end
-function canonicalize(vs)
-    graph, max_label, has_in = make_NautyDiGraph(vs)
-    perm = NautyGraphs.canonical_permutation(graph)
-    permutation_map = make_permutation_dict(perm, max_label, has_in)
 
-    canonical_vs = map(vs) do c
-        map(c) do ψ
-            pos = position(ψ)
-            if is_bulk(pos) && haskey(permutation_map, pos)
-                ψ(permutation_map[pos])
-            else
-                ψ
-            end
-        end
-    end
-    return canonical_vs
+function legacy_topology(vs, ::Val{E2}) where {E2}
+    isempty(vs) && return bulk_multiplicity(Tuple{Int8,Int8}[], Val(E2))
+    graph, max_label, has_out = legacy_topology_graph(vs)
+    permutation = NautyGraphs.canonical_permutation(graph)
+    mapping = legacy_topology_permutation_dict(permutation, max_label, has_out)
+    topology_edges = Tuple{Int8,Int8}[
+        integer_positions(relabel_bulk_positions(item, mapping)) for item in vs
+    ]
+    return bulk_multiplicity(topology_edges, Val(E2))
+end
+
+function _canonicalize_typed(vs::Vector{T}) where {T}
+    isempty(vs) && return copy(vs)
+    graph_positions = canonicalization_positions(vs)
+    physical_permutation, _, _, _ = canonicalization_permutations(vs, graph_positions)
+    permutation_map = make_permutation_dict(physical_permutation, graph_positions, vs)
+    return T[relabel_bulk_positions(item, permutation_map) for item in vs]
+end
+
+canonicalize(vs::Vector{Contraction{S}}) where {S<:Statistics} = _canonicalize_typed(vs)
+canonicalize(vs::Vector{Edge{S}}) where {S<:Statistics} = _canonicalize_typed(vs)
+
+"""
+Canonicalize physical contractions and compute the established uncolored topology signature.
+
+The physical canonical form uses the new color-aware graph representation. Topology metadata is
+computed independently with the pre-static uncolored graph and relabeling convention, so physical
+field colors cannot fragment topology classes and the historical topology labels remain exact.
+"""
+function _canonicalize_with_topology_typed(vs::Vector{T}, ::Val{E2}) where {T,E2}
+    isempty(vs) && return copy(vs), bulk_multiplicity(Tuple{Int8,Int8}[], Val(E2))
+
+    graph_positions = canonicalization_positions(vs)
+    physical_permutation, _, _, _ = canonicalization_permutations(vs, graph_positions)
+    physical_map = make_permutation_dict(physical_permutation, graph_positions, vs)
+    canonical_vs = T[relabel_bulk_positions(item, physical_map) for item in vs]
+    topology = legacy_topology(vs, Val(E2))
+    return canonical_vs, topology
+end
+
+function canonicalize_with_topology(
+    vs::Vector{Contraction{S}}, ::Val{E2}
+) where {S<:Statistics,E2}
+    return _canonicalize_with_topology_typed(vs, Val(E2))
+end
+function canonicalize_with_topology(vs::Vector{Edge{S}}, ::Val{E2}) where {S<:Statistics,E2}
+    return _canonicalize_with_topology_typed(vs, Val(E2))
+end
+
+function canonicalize(vs::Vector{Tuple{Field{S},Field{S}}}) where {S<:Statistics}
+    contractions = Contraction{S}[Contraction(v) for v in vs]
+    return Tuple{Field{S},Field{S}}[Tuple(c) for c in canonicalize(contractions)]
 end
