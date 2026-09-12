@@ -139,7 +139,8 @@ function _dressed_propagator(
 end
 
 """
-    DressedPropagator(L::InteractionLagrangian, ::Val{order}, ::Val{edges}; target, kwargs...)
+    DressedPropagator(L::InteractionLagrangian, ::Val{order}, ::Val{edges};
+        target=nothing, simplify=true, preserve_regularisation=false, kwargs...)
 
 For a single field family, the target propagator is inferred. Multi-family interactions
 require `target` to select the physical field family. The selected family is retained in the
@@ -147,7 +148,9 @@ returned propagator. Statistics dispatch selects the external K/R/A field produc
 generation then shares one implementation.
 
 All the same-coordinate advanced propagators are converted to retarded propagators when
-`simplify=true`.
+`simplify=true`. Set `preserve_regularisation=true` when equal-time/Trotter shifts must
+remain attached to the generated diagrams; the default removes those shifts after the Wick
+contraction, preserving the historical high-level behavior.
 """
 function DressedPropagator(
     L::InteractionLagrangian{C,Boson},
@@ -155,7 +158,7 @@ function DressedPropagator(
     edges::Val{E};
     target=nothing,
     simplify=true,
-    _set_reg_to_zero=true,
+    preserve_regularisation=false,
     kwargs...,
 ) where {C<:Number,O,E}
     fields = propagator_fields(L, target)
@@ -168,7 +171,7 @@ function DressedPropagator(
         order,
         edges;
         simplify,
-        _set_reg_to_zero,
+        _set_reg_to_zero=!preserve_regularisation,
         kwargs...,
     )
 end
@@ -244,12 +247,14 @@ function _dressed_propagator_sum(
 end
 
 """
-    DressedPropagator(Ls::LagrangianSum, ::Val{order}, ::Val{edges}; target, kwargs...)
+    DressedPropagator(Ls::LagrangianSum, ::Val{order}, ::Val{edges};
+        target=nothing, simplify=true, preserve_regularisation=false, kwargs...)
 
 Construct a perturbative propagator for a sum of interactions with common field families.
 Statistics dispatch selects the R/A/K external products while diagram generation and
 parameter-monomial accumulation share one implementation. The selected external family is
-retained by every propagator in the sum.
+retained by every propagator in the sum. Set `preserve_regularisation=true` to retain
+finite equal-time/Trotter shifts in every generated component.
 """
 function DressedPropagator(
     Ls::LagrangianSum{C,Boson},
@@ -257,7 +262,7 @@ function DressedPropagator(
     edges::Val{E};
     target=nothing,
     simplify=true,
-    _set_reg_to_zero=true,
+    preserve_regularisation=false,
     kwargs...,
 ) where {C<:Number,O,E}
     fields = propagator_fields(first(arguments(Ls)), target)
@@ -270,7 +275,7 @@ function DressedPropagator(
         order,
         edges;
         simplify,
-        _set_reg_to_zero,
+        _set_reg_to_zero=!preserve_regularisation,
         kwargs...,
     )
 end
