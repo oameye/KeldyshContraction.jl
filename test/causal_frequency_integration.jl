@@ -166,14 +166,11 @@ end
 
         terms = KC.causal_frequency_terms(KC.causal_frequency_reduction_expression(forward))
         @test length(terms) == 1
-        term = only(terms)
-        @test KC.causal_frequency_coefficient(term) == -1
-        denominators = KC.causal_frequency_denominators(term)
-        @test length(denominators) == 1
-        residual = only(denominators)
-        @test all(iszero, residual.loop_coefficients)
-        @test residual.energy == Eₐ + Eᵦ - Eᵧ
-        @test residual.infinitesimal == 3
+        expected = KC.CausalFrequencyTerm(
+            -1 // 1,
+            [causal_expression_denominator((0, 0), Eₐ + Eᵦ - Eᵧ, 3)],
+        )
+        @test only(terms) == expected
     end
 
     @testset "reduction plan preserves typed blocker provenance" begin
