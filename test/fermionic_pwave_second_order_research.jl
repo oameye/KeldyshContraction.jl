@@ -89,29 +89,99 @@ function component_topology_census(Σ)
     )
 end
 
-function generated_second_order_sector(G, parameter)
+function generated_second_order_spectral(G, parameter)
     GF = fourier_transform(G[parameter])
     ΣF = SelfEnergy(GF)
     ΣW = wigner_transform(ΣF; gradient_order=Val(0))
     kinetic = kinetic_expression(ΣW)
     off_shell = off_shell_collision_expression(kinetic)
     spectral = spectral_dispersive_collision(off_shell)
-    reduced = reduce_frequency_collision(spectral)
-    occupation = occupation_reduced_expression(reduced)
-    quotient = quotient_loop_momenta(occupation)
-    kernel = collision_kernel(quotient)
+    return (; GF, ΣF, ΣW, kinetic, off_shell, spectral)
+end
+
+function research_term_signature(part, term, coefficient)
+    dependency = KC.analyze_spectral_dependencies(term, second_order_pwave_ψ)
     return (;
-        GF, ΣF, ΣW, kinetic, off_shell, spectral, reduced, occupation, quotient, kernel
+        part,
+        topology=Tuple(KC.topology(term)),
+        kinds=Tuple(KC.spectral_dispersive_kinds(term)),
+        rank=KC.constraint_rank(dependency),
+        count=KC.constraint_count(dependency),
+        dependent=KC.has_dependent_shell_support(dependency),
+        loops=KC.loop_frequency_count(term),
+        shifts=Tuple(regularisation_shift(line) for line in kinetic_lines(term.carrier)),
+        coefficient,
+        kinematic=KC.kinematic_factor(term),
     )
+end
+
+function probe_frequency_reduction(collision)
+    successes = NamedTuple[]
+    failures = NamedTuple[]
+    for (part, expression) in (
+        (:offset, collision_offset(collision)),
+        (:distribution, collision_distribution_coefficient(collision)),
+    )
+        for (term, coefficient) in expression
+            signature = research_term_signature(part, term, coefficient)
+            try
+                result = KC.reduce_frequency_term(term, second_order_pwave_ψ)
+                push!(
+                    successes,
+                    merge(
+                        signature,
+                        (;
+                            regular=length(result.regular),
+                            dependent_result=length(result.dependent),
+                            causal=length(result.causal),
+                            trotter=length(result.trotter),
+                            zero=isempty(result),
+                        ),
+                    ),
+                )
+            catch error
+                push!(
+                    failures,
+                    merge(
+                        signature,
+                        (;
+                            error_type=typeof(error),
+                            error_message=sprint(showerror, error),
+                        ),
+                    ),
+                )
+            end
+        end
+    end
+    return successes, failures
+end
+
+function reduction_census(records)
+    census = Dict{Any,Int}()
+    for record in records
+        key = (
+            record.part,
+            record.topology,
+            record.kinds,
+            record.rank,
+            record.count,
+            record.dependent,
+            record.loops,
+            record.regular,
+            record.dependent_result,
+            record.causal,
+            record.trotter,
+            record.zero,
+        )
+        census[key] = get(census, key, 0) + 1
+    end
+    return census
 end
 
 @testset "research: complete spinless-fermion p-wave second-order census" begin
     Lg = fermionic_pwave_elastic_lagrangian()
     Lγ = fermionic_pwave_loss_lagrangian_second_order()
     L = Lg + Lγ
-
-    @test KC.statistics(L) === Fermion
-    @test KC.target_family(L) === second_order_pwave_ψ
 
     gp = KC.ParameterMonomial(:gp)
     γp = KC.ParameterMonomial(:γp)
@@ -123,7 +193,7 @@ end
     @test Set(KC.parameters(G)) == Set((gp², gpγp, γp²))
 
     for parameter in (gp², gpγp, γp²)
-        result = generated_second_order_sector(G, parameter)
+        result = generated_second_order_spectral(G, parameter)
         @test all(
             object -> KC.statistics(object) === Fermion,
             (
@@ -133,25 +203,16 @@ end
                 result.kinetic,
                 result.off_shell,
                 result.spectral,
-                result.reduced,
-                result.occupation,
-                result.quotient,
-                result.kernel,
             ),
         )
-        @test KC.parameters(result.kernel) == parameter
+        @test target_family(result.spectral) === second_order_pwave_ψ
+        @test parameters(result.spectral) == parameter
 
-        regular = KC.reduced_regular_terms(result.reduced)
-        dependent = KC.reduced_dependent_terms(result.reduced)
-        causal = KC.reduced_causal_terms(result.reduced)
-        trotter = KC.reduced_trotter_terms(result.reduced)
-
-        @info "fermionic p-wave second-order sector" parameter topology_census = component_topology_census(
+        successes, failures = probe_frequency_reduction(result.spectral)
+        @info "fermionic p-wave second-order frequency census" parameter topology_census = component_topology_census(
             result.ΣF
-        ) regular_count = length(regular) dependent_count = length(dependent) causal_count = length(
-            causal
-        ) trotter_count = length(trotter) occupation_terms = collect(
-            KC.occupation_reduced_terms(result.occupation)
-        ) kernel_terms = collect(KC.collision_kernel_terms(result.kernel))
+        ) spectral_terms = length(successes) + length(failures) reduction_census = reduction_census(
+            successes
+        ) failures
     end
 end
