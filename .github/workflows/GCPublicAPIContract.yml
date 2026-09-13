@@ -1,0 +1,49 @@
+name: GC Public API Contract
+
+on:
+  push:
+    branches:
+      - 'research/gc-public-api-contract'
+    paths:
+      - '.github/workflows/GCPublicAPIContract.yml'
+      - 'benchmarks/gc_wick_adapter.jl'
+      - 'benchmarks/gc_wick_adapter_extended.jl'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: 'lts'
+          show-versioninfo: true
+      - uses: julia-actions/cache@v3
+      - name: Instantiate public-API contract environment
+        run: |
+          julia --project=benchmarks -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="552a45a828c1099bf7cb7691335e0d155db099a8"))
+            Pkg.instantiate()
+          '
+      - name: Validate public GC Wick adapter through g4
+        run: |
+          julia --project=benchmarks benchmarks/gc_wick_adapter_extended.jl | tee gc-public-api-contract.txt
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: gc-public-api-contract
+          path: gc-public-api-contract.txt
