@@ -77,18 +77,6 @@ function fermionic_pwave_loss_lagrangian_second_order()
     return InteractionLagrangian(loss, :γp)
 end
 
-function component_topology_census(Σ)
-    census(component) = Dict(
-        Tuple(topology) => length(diagrams) for
-        (topology, diagrams) in topologies(component)
-    )
-    return (
-        keldysh=census(KC.keldysh_component(Σ)),
-        retarded=census(KC.retarded_component(Σ)),
-        advanced=census(KC.advanced_component(Σ)),
-    )
-end
-
 function generated_second_order_spectral(G, parameter)
     GF = fourier_transform(G[parameter])
     ΣF = SelfEnergy(GF)
@@ -208,10 +196,8 @@ end
         @test parameters(result.spectral) == parameter
 
         successes, failures = probe_frequency_reduction(result.spectral)
-        @info "fermionic p-wave second-order frequency census" parameter topology_census = component_topology_census(
-            result.ΣF
-        ) spectral_terms = length(successes) + length(failures) reduction_census = reduction_census(
+        @info "fermionic p-wave second-order frequency census" parameter spectral_terms = length(
             successes
-        ) failures
+        ) + length(failures) reduction_census = reduction_census(successes) failures
     end
 end
