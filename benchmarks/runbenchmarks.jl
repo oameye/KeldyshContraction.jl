@@ -1,6 +1,119 @@
 using BenchmarkTools
 using KeldyshContraction
-using KeldyshContraction: Classical, Quantum
+using KeldyshContraction:
+    field_families,
+    target_family,
+    ParameterMonomial,
+    parameter_monomial,
+    parameters,
+    FourierDiagram,
+    FourierDiagrams,
+    FourierDressedPropagator,
+    FourierSelfEnergy,
+    WignerDiagram,
+    WignerDiagrams,
+    WignerDressedPropagator,
+    WignerSelfEnergy,
+    HomogeneousWignerContext,
+    gradient_order,
+    external_wigner_momentum,
+    wigner_context,
+    KineticLineKind,
+    KineticRetarded,
+    KineticAdvanced,
+    KineticSpectral,
+    StatisticalWeight,
+    NoStatisticalWeight,
+    DistributionWeight,
+    KineticLine,
+    KineticMonomial,
+    KineticTerm,
+    KineticExpression,
+    KineticSelfEnergy,
+    kinetic_lines,
+    kinetic_line_kind,
+    statistical_weight,
+    regularisation_shift,
+    retarded_minus_advanced,
+    spectral_self_energy,
+    statistical_occupation_coefficients,
+    statistical_from_occupation,
+    OffShellCollisionExpression,
+    collision_offset,
+    collision_distribution_coefficient,
+    SpectralDispersiveKind,
+    CollisionDispersive,
+    CollisionSpectral,
+    SpectralDispersiveTerm,
+    SpectralDispersiveExpression,
+    SpectralDispersiveCollision,
+    spectral_dispersive_kinds,
+    DispersionAtom,
+    EnergyForm,
+    energy_terms,
+    energy_basis_size,
+    EnergyShell,
+    energy_shell,
+    PrincipalValueSupport,
+    principal_value_support,
+    FrequencySupport,
+    FullRankFrequencyReduction,
+    loop_frequency_count,
+    spectral_frequency_rank,
+    full_rank_frequency_reduction,
+    loop_frequency_basis_indices,
+    loop_frequency_energies,
+    spectral_pivot_lines,
+    frequency_support,
+    frequency_factor,
+    ExceptionalFrequencyKind,
+    FrequencyUnresolved,
+    FrequencyKramersKronigZero,
+    FrequencyTrotterRequired,
+    ExceptionalFrequencyClassification,
+    classify_exceptional_frequency,
+    exceptional_frequency_kind,
+    exceptional_frequency_term,
+    exceptional_frequency_witness_lines,
+    exceptional_frequency_loop_basis_index,
+    StatisticalAtom,
+    StatisticalMonomial,
+    StatisticalPolynomial,
+    statistical_family,
+    OccupationAtom,
+    OccupationMonomial,
+    OccupationPolynomial,
+    occupation_family,
+    occupation_statistics_sign,
+    occupation_collision_factor,
+    occupation_substitute,
+    occupation_collision_polynomial,
+    ReducedCollisionSector,
+    ReducedDependentCollisionSector,
+    ReducedCausalCollisionSector,
+    ReducedTrotterCollisionTerm,
+    ReducedFrequencyCollision,
+    reduced_regular_terms,
+    reduced_dependent_terms,
+    reduced_causal_terms,
+    reduced_trotter_terms,
+    active_loop_basis_indices,
+    causal_exceptional_kind,
+    causal_denominators,
+    source_coefficient,
+    statistical_monomial,
+    frequency_branch,
+    OccupationReducedExpression,
+    occupation_reduced_terms,
+    LoopMomentumTransform,
+    loop_transform_matrix,
+    external_momentum_index,
+    loop_permutation_transform,
+    transform_loop_momenta,
+    CollisionKernelSector,
+    LoopQuotientedExpression,
+    loop_quotient_terms,
+    collision_kernel_terms
 
 const SUITE = BenchmarkGroup()
 
@@ -8,11 +121,31 @@ include("two_body_loss.jl")
 include("two_body_scattering.jl")
 include("canonicalize.jl")
 include("irreducible.jl")
+include("fermionic_lagrangian_sum.jl")
+include("fermionic_pwave_loss.jl")
+include("derivative_fields.jl")
+include("momentum_routing.jl")
+include("wigner.jl")
+include("spectral_statistical.jl")
+include("off_shell_collision.jl")
+include("exceptional_frequency_classification.jl")
+include("frequency_reduction.jl")
+include("collision_reduction.jl")
 
 benchmark_two_body_loss!(SUITE)
 benchmark_two_body_scattering!(SUITE)
 benchmark_canonicalize!(SUITE)
 benchmark_irreducible!(SUITE)
+benchmark_fermionic_lagrangian_sum!(SUITE)
+benchmark_fermionic_pwave_loss!(SUITE)
+benchmark_derivative_fields!(SUITE)
+benchmark_momentum_routing!(SUITE)
+benchmark_wigner!(SUITE)
+benchmark_spectral_statistical!(SUITE)
+benchmark_off_shell_collision!(SUITE)
+benchmark_exceptional_frequency_classification!(SUITE)
+benchmark_frequency_reduction!(SUITE)
+benchmark_collision_reduction!(SUITE)
 
 BenchmarkTools.tune!(SUITE)
 results = BenchmarkTools.run(SUITE; verbose=true)

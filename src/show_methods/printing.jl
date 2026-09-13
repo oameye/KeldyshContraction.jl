@@ -1,43 +1,48 @@
-# Base.show(io::IO, x::QSym) = write(io, name(x))
-function Base.show(io::IO, x::Create)
-    reg = Int(regularisation(x))
-    if iszero(reg)
-        s = string("̄", name(x))
-    elseif reg == 1
-        s = string("̄", name(x), "⁺")
-    else
-        s = string("̄", name(x), "⁻")
+field_symbol(f::Field) = name(f)
+field_symbol(f::Field{Boson}) = Symbol(string(name(f), is_classical(f) ? "ᶜ" : "ᴾ"))
+
+function write_derivatives(io::IO, field::Field)
+    for axis in derivative_multiindex(field)
+        write(io, "∂", string(axis))
     end
-    write(io, s)
     return nothing
 end
-function Base.show(io::IO, x::Destroy)
+
+function Base.show(io::IO, x::Field)
     reg = Int(regularisation(x))
-    if iszero(reg)
-        s = string(name(x))
-    elseif reg == 1
-        s = string(name(x), "⁺")
-    else
-        s = string(name(x), "⁻")
+    write_derivatives(io, x)
+    if is_barred(x)
+        write(io, "̄")
     end
-    write(io, s)
+    write(io, string(field_symbol(x)))
+    if reg == 1
+        write(io, "⁺")
+    elseif reg == -1
+        write(io, "⁻")
+    end
     return nothing
 end
 
 const show_brackets = Ref(true)
 function Base.show(io::IO, x::QTerm)
+    args = terms(x)
+    isempty(args) && return nothing
     show_brackets[]::Bool && write(io, "(")
-    show(io, arguments(x)[1])
+    show(io, args[1])
     f = SymbolicUtils.operation(x)
-    for i in 2:length(arguments(x))
+    for i in 2:length(args)
         show(io, f)
-        show(io, arguments(x)[i])
+        show(io, args[i])
     end
     show_brackets[]::Bool && write(io, ")")
     return nothing
 end
 
 function Base.show(io::IO, x::QMul)
+    if isempty(x.args_nc)
+        show(io, x.arg_c)
+        return nothing
+    end
     if !SymbolicUtils._isone(x.arg_c)
         print_number(io, x.arg_c)
         show(io, *)
@@ -54,31 +59,33 @@ end
 
 function Base.show(io::IO, L::InteractionLagrangian)
     write(io, "Interaction Lagrangian with fields ")
-    show(io, L.cfield)
-    write(io, " and ")
-    show(io, L.qfield)
+    for (i, family) in enumerate(L.families)
+        i > 1 && write(io, ", ")
+        write(io, string(name(family)))
+    end
     write(io, ":\n")
-    show(io, L.lagrangian)
+    lagrangian_terms = terms(L.lagrangian)
+    if length(lagrangian_terms) == 1
+        show(io, only(lagrangian_terms))
+    else
+        show(io, L.lagrangian)
+    end
     return nothing
 end
 
-const T_LATEX = Union{<:QField,Diagrams,Diagram,Edge}
+const T_LATEX = Union{QField,Diagrams,Diagram,Edge}
 function Base.show(io::IO, ::MIME"text/latex", x::T_LATEX)
-    write(io, latexify(x))
+    write(io, "\$")
+    write_latex(io, x)
+    write(io, "\$")
     return nothing
 end
 function Base.show(io::IO, ::MIME"text/latex", L::InteractionLagrangian)
-    # write(io, "Interaction Lagrangian with fields ")
-    # write(io, latexify(L.cfield))
-    # write(io, " and ")
-    # write(io, latexify(L.qfield))
-    # println(io, ": \\newline")
-    write(io, latexify(L.lagrangian))
+    write(io, "\$")
+    write_latex(io, L)
+    write(io, "\$")
     return nothing
 end
-# function Base.show(io::IO, ::MIME"text/latex", L::DressedPropagator)
-#     return write(io,latexify([L.retarded,L.advanced, L.keldysh]))
-# end
 
 const prop_type = Dict(
     PropagatorType.Retarded => "ᴿ",
@@ -118,7 +125,6 @@ end
 function construct_momentum_basis(x::Edge)
     type = propagator_type(x)
     m = repr(x.momenta)
-    (r2, r1) = regularisations(x)
     return string(is_spectral(type) ? "A" : "G", prop_type[type], "(", m, ")")
 end
 
@@ -148,7 +154,7 @@ function Base.show(io::IO, ds::Diagrams)
     end
     return nothing
 end
-function show_key(io, terms::Dict, key)
+function show_key(io::IO, terms::AbstractDict{K,C}, key::K) where {K,C}
     prefactor = terms[key]
     print_number(io, prefactor)
     if !isempty(key)
@@ -158,12 +164,27 @@ function show_key(io, terms::Dict, key)
     return nothing
 end
 
-function print_number(io, x::Number)
+function print_number(io::IO, x::Real)
     if !SymbolicUtils._isone(x)
-        x = make_real(x)
-        x isa Complex ? write(io, "(") : write(io, "")
         show(io, x)
-        x isa Complex ? write(io, ")") : write(io, "")
+    end
+    return nothing
+end
+function print_number(io::IO, x::Complex)
+    if !SymbolicUtils._isone(x)
+        if iszero(imag(x))
+            show(io, real(x))
+        else
+            write(io, "(")
+            show(io, x)
+            write(io, ")")
+        end
+    end
+    return nothing
+end
+function print_number(io::IO, x::Number)
+    if !SymbolicUtils._isone(x)
+        show(io, x)
     end
     return nothing
 end
@@ -241,10 +262,10 @@ end
 
 function Base.show(io::IO, bds::BosonicDistributionTerm)
     for (i, ms) in enumerate(bds.momenta)
-        if i > 1
-            write(io, "*")
-        end
-        write(io, string("F(", ms, ")"))
+        i > 1 && write(io, "*")
+        write(io, "F(")
+        show(io, ms)
+        write(io, ")")
     end
     return nothing
 end

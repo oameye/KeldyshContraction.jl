@@ -1,122 +1,214 @@
 using KeldyshContraction, Test
+import KeldyshContraction as KC
 using KeldyshContraction:
-    construct_linear_system, solve_linear_system, construct_momenta, momenta
+    Bulk, Contraction, Diagram, In, LinearMomentum, MomentumVariable, Out
 
-@qfields c::Destroy(Classical) q::Destroy(Quantum)
-elasctic2boson = -(0.5 * (c^2 + q^2) * c' * q' + 0.5 * c * q * ((c')^2 + (q')^2))
-L_int = InteractionLagrangian(elasctic2boson)
-
-@testset "Green's function" begin
-    using KeldyshContraction: construct_momenta_from_gf
-    @testset "Topology []" begin
-        using KeldyshContraction: Momenta, FixedVector
-        GF = DressedPropagator(L_int, Val(1), Val(3))
-        diagram = first(first(GF.keldysh))
-
-        d′ = construct_momenta_from_gf(diagram)
-
-        @test isequal(momenta(d′), FixedVector([Momenta(0), Momenta(1), Momenta(0)]))
+function wigner_recursively_concrete(@nospecialize(T::Type), seen=Set{Type}())
+    isconcretetype(T) || return false
+    T in seen && return true
+    push!(seen, T)
+    if T <: AbstractArray
+        wigner_recursively_concrete(eltype(T), seen) || return false
+    elseif T <: AbstractDict
+        wigner_recursively_concrete(keytype(T), seen) || return false
+        wigner_recursively_concrete(valtype(T), seen) || return false
     end
-
-    GF = DressedPropagator(L_int, Val(2), Val(5))
-
-    topologies = KeldyshContraction.topologies(GF.keldysh)
-
-    @testset "Topology [3]" begin
-        diagram3 = first(topologies[[3]])
-        A = construct_linear_system(diagram3.contractions)
-        dep_idx, free_idx, P = solve_linear_system(A)
-        @test dep_idx == [1, 4]
-        @test free_idx == [2, 3, 5]
-        @test P == [0.0 0.0 1.0; 1.0 1.0 -1.0]
-        construct_momenta(dep_idx, free_idx, P)
-
-        construct_momenta_from_gf(diagram3)
+    for FT in fieldtypes(T)
+        wigner_recursively_concrete(FT, seen) || return false
     end
+    return true
+end
 
-    @testset "Topology [2]" begin
-        diagram2 = first(topologies[[2]])
-        A = construct_linear_system(diagram2.contractions)
-        dep_idx, free_idx, P = solve_linear_system(A)
-        @test dep_idx == [1, 3]
-        @test free_idx == [2, 4, 5]
-        @test P == [0.0 0.0 1.0; 1.0 0.0 0.0]
-        construct_momenta(dep_idx, free_idx, P)
+function assert_wigner_preserves_fourier(wigner, fourier)
+    @test length(wigner) == length(fourier)
+    @test wigner_context(wigner) == HomogeneousWignerContext()
+    @test gradient_order(wigner) == Val(0)
 
-        construct_momenta_from_gf(diagram2)
-    end
+    fourier_by_graph = Dict(graph => contributions for (graph, contributions) in fourier)
+    for (wigner_graph, wigner_contributions) in wigner
+        fourier_graph = wigner_graph.fourier
+        @test haskey(fourier_by_graph, fourier_graph)
+        @test gradient_order(wigner_graph) == Val(0)
+        @test KC.external_momentum_count(wigner_graph) == 1
+        @test external_wigner_momentum(wigner_graph) == KC.momentum_basis(fourier_graph)[1]
+        @test KC.momentum_basis(wigner_graph) == KC.momentum_basis(fourier_graph)
+        @test KC.edge_momenta(wigner_graph) == KC.edge_momenta(fourier_graph)
+        @test KC.loop_momentum_count(wigner_graph) == KC.loop_momentum_count(fourier_graph)
+        @test KC.coordinate_diagram(wigner_graph) == KC.coordinate_diagram(fourier_graph)
 
-    @testset "Topology [1]" begin
-        diagram1 = first(topologies[[1]])
-        A = construct_linear_system(diagram1.contractions)
-        dep_idx, free_idx, P = solve_linear_system(A)
-        @test dep_idx == [1, 3]
-        @test free_idx == [2, 4, 5]
-        @test P == [0.0 0.0 1.0; 0.0 0.0 1.0]
-
-        construct_momenta_from_gf(diagram1)
+        fourier_contributions = fourier_by_graph[fourier_graph]
+        @test length(wigner_contributions) == length(fourier_contributions)
+        for (wc, fc) in zip(wigner_contributions, fourier_contributions)
+            @test wc.coefficient == fc.coefficient
+            @test wc.kinematic == fc.kinematic
+        end
     end
 end
 
-@testset "Self-energy" begin
-    using KeldyshContraction: construct_momenta_from_self_energy
+@qfields wigner_pwave_ψ::Fermion
 
-    @testset "Topology []" begin
-        using KeldyshContraction: Momenta, FixedVector
-        GF = DressedPropagator(L_int, Val(1), Val(3))
-        SE = SelfEnergy(GF, Val(1))
-        @test @inferred(SelfEnergy(GF, Val(1))) isa SelfEnergy{1,0}
+@testset "homogeneous Wigner self-energy preserves exact Fourier data" begin
+    ψ₁ = wigner_pwave_ψ[One]
+    ψ₂ = wigner_pwave_ψ[Two]
+    ∂xψ₂ = partial(ψ₂, :x)
+    vertex = @inferred ψ₁ * ∂xψ₂ * bar(ψ₁) * bar(∂xψ₂)
 
-        diagram = first(first(SE.retarded))
+    L = @inferred InteractionLagrangian(vertex, :γ)
+    G = @inferred DressedPropagator(L, Val(1), Val(3); simplify=false)
+    Gk = @inferred fourier_transform(G)
+    Σk = @inferred SelfEnergy(Gk)
+    ΣW = @inferred wigner_transform(Σk; gradient_order=Val(0))
+    ΣW_default = @inferred wigner_transform(Σk)
 
-        d′ = construct_momenta_from_self_energy(diagram)
-        @test isequal(momenta(d′), FixedVector([Momenta(1)]))
-    end
+    @test ΣW isa WignerSelfEnergy
+    @test ΣW_default == ΣW
+    @test KC.statistics(ΣW) === Fermion
+    @test KC.order(ΣW) == 1
+    @test parameters(ΣW) == parameters(Σk)
+    @test gradient_order(ΣW) == Val(0)
+    @test wigner_recursively_concrete(typeof(ΣW))
+    @test wigner_context(ΣW) == HomogeneousWignerContext()
+    @test wigner_context(ΣW).center_coordinate === nothing
 
-    GF = DressedPropagator(L_int, Val(2), Val(5))
-    SE = SelfEnergy(GF, Val(2))
+    assert_wigner_preserves_fourier(ΣW.retarded, Σk.retarded)
+    assert_wigner_preserves_fourier(ΣW.keldysh, Σk.keldysh)
+    assert_wigner_preserves_fourier(ΣW.advanced, Σk.advanced)
 
-    topologies = KeldyshContraction.topologies(SE.retarded)
+    ΣW_again = @inferred wigner_transform(Σk; gradient_order=Val(0))
+    @test ΣW == ΣW_again
+    @test isequal(ΣW, ΣW_again)
+    @test hash(ΣW) == hash(ΣW_again)
 
-    @testset "Topology [3]" begin
-        using KeldyshContraction: Momenta, FixedVector, Momentum
-        diagram3 = first(topologies[[3]])
-        d′ = construct_momenta_from_self_energy(diagram3)
-        @test isequal(
-            momenta(d′),
-            FixedVector([
-                Momenta(1),
-                Momenta(2),
-                Momenta([1, 1, -1], [Momentum(1), Momentum(2), Momentum(0)]),
-            ]),
-        )
-    end
-
-    @testset "Topology [2]" begin
-        using KeldyshContraction: Momenta, FixedVector, Momentum
-        diagram2 = first(topologies[[2]])
-        d′ = construct_momenta_from_self_energy(diagram2)
-        @test isequal(momenta(d′), FixedVector([
-            Momenta(1),
-            Momenta(1),
-            Momenta(3), # rather have seen it to be Momenta(2)
-        ]))
-    end
+    @test_throws ArgumentError wigner_transform(Σk; gradient_order=Val(1))
+    @test_throws ArgumentError wigner_transform(@inferred(SelfEnergy(G)))
 end
 
-@testset "Wigner transform" begin
-    @testset "first order" begin
-        GF = DressedPropagator(L_int, Val(1), Val(3))
-        SE = SelfEnergy(GF, Val(1))
+@testset "homogeneous Wigner dressed propagator public path" begin
+    ψ₁ = wigner_pwave_ψ[One]
+    ψ₂ = wigner_pwave_ψ[Two]
+    ∂xψ₂ = partial(ψ₂, :x)
+    L = @inferred InteractionLagrangian(ψ₁ * ∂xψ₂ * bar(ψ₁) * bar(∂xψ₂), :γ)
+    G = @inferred DressedPropagator(L, Val(1), Val(3); simplify=false)
+    Gk = @inferred fourier_transform(G)
 
-        wigner_transform(GF)
-        wigner_transform(SE)
-    end
-    @testset "second order" begin
-        GF = DressedPropagator(L_int, Val(2), Val(5))
-        SE = SelfEnergy(GF, Val(2))
+    GW = @inferred wigner_transform(Gk; gradient_order=Val(0))
+    GW_default = @inferred wigner_transform(Gk)
+    GW_coordinate = @inferred wigner_transform(G; gradient_order=Val(0))
 
-        wigner_transform(GF)
-        wigner_transform(SE)
-    end
+    @test GW isa WignerDressedPropagator
+    @test GW_default == GW
+    @test GW == GW_coordinate
+    @test KC.statistics(GW) === Fermion
+    @test KC.order(GW) == 1
+    @test parameters(GW) == parameters(Gk)
+    @test gradient_order(GW) == Val(0)
+    @test wigner_recursively_concrete(typeof(GW))
+
+    assert_wigner_preserves_fourier(GW.retarded, Gk.retarded)
+    assert_wigner_preserves_fourier(GW.keldysh, Gk.keldysh)
+    assert_wigner_preserves_fourier(GW.advanced, Gk.advanced)
+
+    @test KC.matrix(GW)[1, 1] == GW.retarded
+    @test KC.matrix(GW)[1, 2] == GW.keldysh
+    @test KC.matrix(GW)[2, 2] == GW.advanced
+    @test_throws ArgumentError wigner_transform(Gk; gradient_order=Val(2))
+end
+
+@qfields wigner_boson_ϕ::Boson
+@qfields wigner_fermion_ψ::Fermion
+
+function routing_parity_diagram(::Type{Boson})
+    c = wigner_boson_ϕ[Classical]
+    q = wigner_boson_ϕ[Quantum]
+    contractions = Contraction{Boson}[
+        Contraction(c(Out()), bar(q)(Bulk(1))),
+        Contraction(c(Bulk(1)), bar(q)(Bulk(1))),
+        Contraction(c(Bulk(1)), bar(q)(In())),
+    ]
+    return Diagram(contractions, Val(3), Val(0))
+end
+
+function routing_parity_diagram(::Type{Fermion})
+    one = wigner_fermion_ψ[One]
+    two = wigner_fermion_ψ[Two]
+    contractions = Contraction{Fermion}[
+        Contraction(one(Out()), bar(two)(Bulk(1))),
+        Contraction(one(Bulk(1)), bar(two)(Bulk(1))),
+        Contraction(one(Bulk(1)), bar(two)(In())),
+    ]
+    return Diagram(contractions, Val(3), Val(0))
+end
+
+@testset "Wigner routing is statistics-neutral" begin
+    boson_fourier = @inferred fourier_transform(routing_parity_diagram(Boson))
+    fermion_fourier = @inferred fourier_transform(routing_parity_diagram(Fermion))
+    boson_wigner = @inferred wigner_transform(boson_fourier; gradient_order=Val(0))
+    fermion_wigner = @inferred wigner_transform(fermion_fourier; gradient_order=Val(0))
+
+    @test KC.momentum_basis(boson_wigner) == KC.momentum_basis(fermion_wigner)
+    @test KC.edge_momenta(boson_wigner) == KC.edge_momenta(fermion_wigner)
+    @test KC.external_momentum_count(boson_wigner) == 1
+    @test KC.external_momentum_count(fermion_wigner) == 1
+    @test KC.loop_momentum_count(boson_wigner) == KC.loop_momentum_count(fermion_wigner)
+    @test external_wigner_momentum(boson_wigner) == MomentumVariable(1)
+    @test external_wigner_momentum(fermion_wigner) == MomentumVariable(1)
+    @test KC.statistics(boson_wigner) === Boson
+    @test KC.statistics(fermion_wigner) === Fermion
+end
+
+@qfields wigner_order2_ϕ::Boson
+
+@testset "representative second-order homogeneous Wigner self-energy" begin
+    c = wigner_order2_ϕ[Classical]
+    q = wigner_order2_ϕ[Quantum]
+    interaction = -(
+        1 // 2 * (c^2 + q^2) * bar(c) * bar(q) + 1 // 2 * c * q * (bar(c)^2 + bar(q)^2)
+    )
+    L = InteractionLagrangian(interaction)
+    G = DressedPropagator(L, Val(2), Val(5); simplify=false)
+    Σk = SelfEnergy(fourier_transform(G))
+    ΣW = @inferred wigner_transform(Σk; gradient_order=Val(0))
+
+    @test ΣW isa WignerSelfEnergy
+    @test KC.statistics(ΣW) === Boson
+    @test KC.order(ΣW) == 2
+    @test wigner_recursively_concrete(typeof(ΣW))
+    assert_wigner_preserves_fourier(ΣW.retarded, Σk.retarded)
+    assert_wigner_preserves_fourier(ΣW.keldysh, Σk.keldysh)
+    assert_wigner_preserves_fourier(ΣW.advanced, Σk.advanced)
+
+    M = KC.matrix(ΣW)
+    @test iszero(M[1, 1])
+    @test M[1, 2] == ΣW.advanced
+    @test M[2, 1] == ΣW.retarded
+    @test M[2, 2] == ΣW.keldysh
+end
+
+function higher_order_wigner_diagram()
+    c = wigner_boson_ϕ[Classical]
+    q = wigner_boson_ϕ[Quantum]
+    contractions = Contraction{Boson}[
+        Contraction(c(Out()), bar(q)(Bulk(1))),
+        Contraction(c(Bulk(2)), bar(q)(Bulk(1))),
+        Contraction(c(Bulk(2)), bar(q)(Bulk(1))),
+        Contraction(c(Bulk(3)), bar(q)(Bulk(2))),
+        Contraction(c(Bulk(3)), bar(q)(Bulk(2))),
+        Contraction(c(Bulk(1)), bar(q)(Bulk(3))),
+        Contraction(c(Bulk(3)), bar(q)(In())),
+    ]
+    return Diagram(contractions, Val(7), Val(3))
+end
+
+@testset "higher-order loop routing survives Wigner representation" begin
+    fourier = @inferred fourier_transform(higher_order_wigner_diagram())
+    wigner = @inferred wigner_transform(fourier; gradient_order=Val(0))
+
+    @test KC.loop_momentum_count(fourier) == 3
+    @test KC.loop_momentum_count(wigner) == 3
+    @test KC.fourier_diagram(wigner) == fourier
+    @test KC.momentum_basis(wigner) == KC.momentum_basis(fourier)
+    @test KC.edge_momenta(wigner) == KC.edge_momenta(fourier)
+    @test external_wigner_momentum(wigner) == KC.momentum_basis(fourier)[1]
+    @test gradient_order(wigner) == Val(0)
+    @test wigner_recursively_concrete(typeof(wigner))
 end

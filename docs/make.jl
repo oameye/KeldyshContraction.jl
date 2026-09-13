@@ -3,8 +3,8 @@ CI = get(ENV, "CI", nothing) == "true" || get(ENV, "GITHUB_TOKEN", nothing) !== 
 using KeldyshContraction
 using Documenter
 
-using Plots
-default(; fmt=:png)
+using Plots: Plots
+Plots.default(; fmt=:png)
 # Gotta set this environment variable when using the GR run-time on CI machines.
 # This happens as examples will use Plots.jl to make plots and movies.
 # See: https://github.com/jheinen/GR.jl/issues/278
@@ -36,7 +36,7 @@ makedocs(;
     warnonly=:missing_docs,
     draft=false,#,(!CI),
     doctest=false,  # We test it in the CI, no need to run it here
-    checkdocs=:exports,
+    checkdocs=:public,
 )
 
 if CI

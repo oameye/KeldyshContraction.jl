@@ -1,0 +1,108 @@
+using KeldyshContraction, Test
+import KeldyshContraction as KC
+
+function recursively_concrete(@nospecialize(T::Type), seen=Set{Type}())
+    isconcretetype(T) || return false
+    T in seen && return true
+    push!(seen, T)
+    if T <: AbstractArray
+        recursively_concrete(eltype(T), seen) || return false
+    end
+    for FT in fieldtypes(T)
+        recursively_concrete(FT, seen) || return false
+    end
+    return true
+end
+
+@testset "static computational spine" begin
+    @qfields ϕ::Boson
+    c, q = ϕ[Classical], ϕ[Quantum]
+    elastic = -0.5 * ((c^2 + q^2) * bar(c) * bar(q) + c * q * (bar(c)^2 + bar(q)^2))
+
+    L = @inferred InteractionLagrangian(elastic)
+    G = @inferred DressedPropagator(L, Val(1), Val(3); simplify=false)
+    Σ = @inferred SelfEnergy(G)
+    Gk = @inferred fourier_transform(G)
+    Σk = @inferred SelfEnergy(Gk)
+    GW = @inferred wigner_transform(Gk; gradient_order=Val(0))
+    ΣW = @inferred wigner_transform(Σk; gradient_order=Val(0))
+    KΣ = @inferred kinetic_expression(ΣW)
+    ΔΣ = @inferred retarded_minus_advanced(KΣ)
+    AΣ = @inferred spectral_self_energy(KΣ)
+    collision = @inferred KC.CollisionIntegral(Σ)
+
+    GT = typeof(G)
+    ΣT = typeof(Σ)
+    @test GT.parameters[2] === Boson
+    @test GT.parameters[3] == 1
+    @test GT.parameters[4] == 3
+    @test GT.parameters[5] == 0
+    @test ΣT.parameters[2] === Boson
+    @test ΣT.parameters[3] == 1
+    @test ΣT.parameters[4] == 1
+    @test ΣT.parameters[5] == 0
+
+    @test Gk isa FourierDressedPropagator{ComplexF64,Boson,1,3,0}
+    @test Σk isa FourierSelfEnergy{ComplexF64,Boson,1,1,0}
+    @test GW isa WignerDressedPropagator{ComplexF64,Boson,1,3,0,0,HomogeneousWignerContext}
+    @test ΣW isa WignerSelfEnergy{ComplexF64,Boson,1,1,0,0,HomogeneousWignerContext}
+    @test KΣ isa KineticSelfEnergy{ComplexF64,Boson,1,1,0,0,HomogeneousWignerContext}
+    @test gradient_order(GW) == Val(0)
+    @test gradient_order(ΣW) == Val(0)
+    @test gradient_order(KΣ) == Val(0)
+    @test AΣ == im * ΔΣ
+    @test recursively_concrete(typeof(L))
+    @test recursively_concrete(typeof(G))
+    @test recursively_concrete(typeof(Σ))
+    @test recursively_concrete(typeof(Gk))
+    @test recursively_concrete(typeof(Σk))
+    @test recursively_concrete(typeof(GW))
+    @test recursively_concrete(typeof(ΣW))
+    @test recursively_concrete(typeof(KΣ))
+    @test recursively_concrete(typeof(ΔΣ))
+    @test recursively_concrete(typeof(AΣ))
+    @test recursively_concrete(typeof(collision))
+    @test parameters(G) isa ParameterMonomial
+    @test parameters(Σ) == parameters(G)
+    @test parameters(Gk) == parameters(G)
+    @test parameters(Σk) == parameters(Gk)
+    @test parameters(GW) == parameters(Gk)
+    @test parameters(ΣW) == parameters(Σk)
+    @test parameters(KΣ) == parameters(ΣW)
+
+    Gm = @inferred KC.matrix(G)
+    @test Gm[1, 1] === G.keldysh
+    @test Gm[1, 2] === G.retarded
+    @test Gm[2, 1] === G.advanced
+    @test iszero(Gm[2, 2])
+
+    Σm = @inferred KC.matrix(Σ)
+    @test iszero(Σm[1, 1])
+    @test Σm[1, 2] === Σ.advanced
+    @test Σm[2, 1] === Σ.retarded
+    @test Σm[2, 2] === Σ.keldysh
+
+    Gkm = @inferred KC.matrix(Gk)
+    @test Gkm[1, 1] === Gk.keldysh
+    @test Gkm[1, 2] === Gk.retarded
+    @test Gkm[2, 1] === Gk.advanced
+    @test iszero(Gkm[2, 2])
+
+    Σkm = @inferred KC.matrix(Σk)
+    @test iszero(Σkm[1, 1])
+    @test Σkm[1, 2] === Σk.advanced
+    @test Σkm[2, 1] === Σk.retarded
+    @test Σkm[2, 2] === Σk.keldysh
+
+    GWm = @inferred KC.matrix(GW)
+    @test GWm[1, 1] === GW.keldysh
+    @test GWm[1, 2] === GW.retarded
+    @test GWm[2, 1] === GW.advanced
+    @test iszero(GWm[2, 2])
+
+    ΣWm = @inferred KC.matrix(ΣW)
+    @test iszero(ΣWm[1, 1])
+    @test ΣWm[1, 2] === ΣW.advanced
+    @test ΣWm[2, 1] === ΣW.retarded
+    @test ΣWm[2, 2] === ΣW.keldysh
+end
