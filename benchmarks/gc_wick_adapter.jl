@@ -133,9 +133,7 @@ function build_gc_problem(
             end
         end
     end
-    problem = GC._PortMatchingProblem(
-        colors, source_ports, target_ports, compatibility, num_fixed
-    )
+    problem = GC.ColoredPortProblem(colors, source_ports, target_ports, compatibility, num_fixed)
     return problem, lookup
 end
 
@@ -168,10 +166,12 @@ function adapter_weights(
     simplify=false,
 ) where {S<:KC.Statistics,E}
     problem, lookup = build_gc_problem(args_nc, Val(E); regularise, _set_reg_to_zero)
-    results, search = GC._weighted_port_matchings_with_stats(problem)
+    results, search = GC.generate_weighted_with_stats(problem)
     weights = Dict{FixedVector{E,KC.Contraction{S}},BigInt}()
     filter_survivors = 0
-    for (edges, multiplicity) in results
+    for completion in results
+        edges = completion.edges
+        multiplicity = completion.weight
         contractions = Vector{KC.Contraction{S}}(undef, E)
         for i in eachindex(edges)
             edge = edges[i]
@@ -205,7 +205,7 @@ function validate_fields(
 ) where {E,E2}
     expected = expected_weights(args_nc, Val(E), Val(E2); kwargs...)
     actual, stats = adapter_weights(args_nc, Val(E); kwargs...)
-    actual == expected || error("GC adapter disagrees with the KC bosonic Wick oracle")
+    actual == expected || error("GC public adapter disagrees with the KC bosonic Wick oracle")
     return stats
 end
 
