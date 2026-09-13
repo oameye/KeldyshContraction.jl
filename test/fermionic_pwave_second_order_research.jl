@@ -168,6 +168,14 @@ function reduction_census(records)
     return census
 end
 
+function assemble_second_order_collision(collision)
+    reduced = reduce_frequency_collision(collision)
+    occupation = occupation_reduced_expression(reduced)
+    quotient = quotient_loop_momenta(occupation)
+    kernel = collision_kernel(quotient)
+    return (; reduced, occupation, quotient, kernel)
+end
+
 @testset "research: complete spinless-fermion p-wave second-order census" begin
     Lg = fermionic_pwave_elastic_lagrangian()
     Lγ = fermionic_pwave_loss_lagrangian_second_order()
@@ -202,6 +210,31 @@ end
         @info "fermionic p-wave second-order frequency census" parameter spectral_terms =
             length(successes) + length(failures) reduction_census = reduction_census(
             successes
-        ) failures
+        ) failure_count = length(failures)
+        for failure in failures
+            @info "fermionic p-wave second-order reduction failure" parameter failure
+        end
+        @test isempty(failures)
+        isempty(failures) || continue
+
+        assembled = assemble_second_order_collision(result.spectral)
+        regular = KC.reduced_regular_terms(assembled.reduced)
+        dependent = KC.reduced_dependent_terms(assembled.reduced)
+        causal = KC.reduced_causal_terms(assembled.reduced)
+        trotter = KC.reduced_trotter_terms(assembled.reduced)
+        occupation_terms = KC.occupation_reduced_terms(assembled.occupation)
+        kernel_terms = KC.collision_kernel_terms(assembled.kernel)
+
+        @info "fermionic p-wave second-order collision assembly" parameter regular_count = length(
+            regular
+        ) dependent_count = length(dependent) causal_count = length(causal) trotter_count = length(
+            trotter
+        ) occupation_count = length(occupation_terms) kernel_count = length(kernel_terms)
+        for (sector, polynomial) in occupation_terms
+            @info "fermionic p-wave second-order occupation term" parameter sector polynomial
+        end
+        for (sector, polynomial) in kernel_terms
+            @info "fermionic p-wave second-order kernel term" parameter sector polynomial
+        end
     end
 end
