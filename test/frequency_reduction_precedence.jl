@@ -43,9 +43,7 @@ function kk_precedence_term()
         basis[1],
         KC._kinematic_identity(),
     )
-    return SpectralDispersiveTerm(
-        carrier, KC.FixedVector{4,SpectralDispersiveKind}(kinds)
-    )
+    return SpectralDispersiveTerm(carrier, KC.FixedVector{4,SpectralDispersiveKind}(kinds))
 end
 
 @testset "Kramers-Kronig zero precedes dependent shell preservation" begin
