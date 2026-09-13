@@ -59,6 +59,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("full_rank_frequency_reduction.jl")
     include("canonical_frequency_expression.jl")
     include("exceptional_frequency_classification.jl")
+    include("statistical_frequency_algebra.jl")
+    include("canonical_frequency_collision.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
     include("propagator_algebra/legacy_momentum_routing.jl")
