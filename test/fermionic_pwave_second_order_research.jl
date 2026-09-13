@@ -13,19 +13,25 @@ function pwave_branch_pairs(; shifted::Bool)
     minus = KC.Regularisation.Minus
 
     ψplus = shifted ? ψ₁(minus) + ψ₂(minus) : ψ₁ + ψ₂
-    ∂ψplus = shifted ?
-        partial(ψ₁(minus), :x) + partial(ψ₂(minus), :x) :
+    ∂ψplus = if shifted
+        partial(ψ₁(minus), :x) + partial(ψ₂(minus), :x)
+    else
         partial(ψ₁, :x) + partial(ψ₂, :x)
+    end
 
     ψplus_forward = shifted ? ψ₁(plus) + ψ₂(plus) : ψ₁ + ψ₂
-    ∂ψplus_forward = shifted ?
-        partial(ψ₁(plus), :x) + partial(ψ₂(plus), :x) :
+    ∂ψplus_forward = if shifted
+        partial(ψ₁(plus), :x) + partial(ψ₂(plus), :x)
+    else
         partial(ψ₁, :x) + partial(ψ₂, :x)
+    end
 
     ψminus = shifted ? ψ₁(plus) - ψ₂(plus) : ψ₁ - ψ₂
-    ∂ψminus = shifted ?
-        partial(ψ₁(plus), :x) - partial(ψ₂(plus), :x) :
+    ∂ψminus = if shifted
+        partial(ψ₁(plus), :x) - partial(ψ₂(plus), :x)
+    else
         partial(ψ₁, :x) - partial(ψ₂, :x)
+    end
 
     bψplus = bψ₁ + bψ₂
     bψminus = bψ₂ - bψ₁
@@ -42,9 +48,7 @@ function pwave_branch_pairs(; shifted::Bool)
 end
 
 function fermionic_pwave_elastic_lagrangian()
-    Pplus, _, Pminus, Pplus_dagger, Pminus_dagger = pwave_branch_pairs(
-        shifted=false
-    )
+    Pplus, _, Pminus, Pplus_dagger, Pminus_dagger = pwave_branch_pairs(; shifted=false)
 
     # Physical convention:
     #
@@ -58,8 +62,9 @@ function fermionic_pwave_elastic_lagrangian()
 end
 
 function fermionic_pwave_loss_lagrangian_second_order()
-    Pplus_minus, Pplus_plus, Pminus_plus, Pplus_dagger, Pminus_dagger =
-        pwave_branch_pairs(; shifted=true)
+    Pplus_minus, Pplus_plus, Pminus_plus, Pplus_dagger, Pminus_dagger = pwave_branch_pairs(;
+        shifted=true
+    )
 
     # Same finite-Trotter Lindblad convention as the frozen O(γp) oracle in #312.
     loss =
@@ -74,7 +79,8 @@ end
 
 function component_topology_census(Σ)
     census(component) = Dict(
-        Tuple(topology) => length(diagrams) for (topology, diagrams) in topologies(component)
+        Tuple(topology) => length(diagrams) for
+        (topology, diagrams) in topologies(component)
     )
     return (
         keldysh=census(KC.keldysh_component(Σ)),
@@ -94,7 +100,9 @@ function generated_second_order_sector(G, parameter)
     occupation = occupation_reduced_expression(reduced)
     quotient = quotient_loop_momenta(occupation)
     kernel = collision_kernel(quotient)
-    return (; GF, ΣF, ΣW, kinetic, off_shell, spectral, reduced, occupation, quotient, kernel)
+    return (;
+        GF, ΣF, ΣW, kinetic, off_shell, spectral, reduced, occupation, quotient, kernel
+    )
 end
 
 @testset "research: complete spinless-fermion p-wave second-order census" begin
@@ -111,9 +119,7 @@ end
     gpγp = gp * γp
     γp² = γp^2
 
-    G = DressedPropagator(
-        L, Val(2), Val(5); simplify=true, preserve_regularisation=true
-    )
+    G = DressedPropagator(L, Val(2), Val(5); simplify=true, preserve_regularisation=true)
     @test Set(KC.parameters(G)) == Set((gp², gpγp, γp²))
 
     for parameter in (gp², gpγp, γp²)
