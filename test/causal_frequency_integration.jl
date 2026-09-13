@@ -147,6 +147,35 @@ end
         @test KC.causal_frequency_coefficient(only(terms)) == -1
     end
 
+    @testset "coupled affine poles are order invariant" begin
+        upper_1 = causal_expression_denominator((1, 0), -Eₐ, -1)
+        upper_2 = causal_expression_denominator((0, 1), -Eᵦ, -1)
+        coupled_lower = causal_expression_denominator((1, 1), -Eᵧ, 1)
+        expression = one_term_expression(1 // 1, [upper_1, upper_2, coupled_lower])
+
+        forward = @inferred KC.reduce_causal_frequency_expression(
+            expression, KC.CausalFrequencyReductionPlan((1, 2))
+        )
+        reverse = @inferred KC.reduce_causal_frequency_expression(
+            expression, KC.CausalFrequencyReductionPlan((2, 1))
+        )
+        @test KC.causal_frequency_reduction_kind(forward) === KC.CausalFrequencyIntegrated
+        @test KC.causal_frequency_reduction_kind(reverse) === KC.CausalFrequencyIntegrated
+        @test KC.causal_frequency_reduction_expression(forward) ==
+            KC.causal_frequency_reduction_expression(reverse)
+
+        terms = KC.causal_frequency_terms(KC.causal_frequency_reduction_expression(forward))
+        @test length(terms) == 1
+        term = only(terms)
+        @test KC.causal_frequency_coefficient(term) == -1
+        denominators = KC.causal_frequency_denominators(term)
+        @test length(denominators) == 1
+        residual = only(denominators)
+        @test all(iszero, residual.loop_coefficients)
+        @test residual.energy == Eₐ + Eᵦ - Eᵧ
+        @test residual.infinitesimal == 3
+    end
+
     @testset "reduction plan preserves typed blocker provenance" begin
         marginal = one_term_expression(
             1 // 1, [causal_expression_denominator((1, 0), -Eₐ, 1)]
