@@ -168,6 +168,26 @@ function reduction_census(records)
     return census
 end
 
+function failure_census(records)
+    census = Dict{Any,Int}()
+    for record in records
+        key = (
+            record.part,
+            record.topology,
+            record.kinds,
+            record.rank,
+            record.count,
+            record.dependent,
+            record.classification,
+            record.loops,
+            record.error_type,
+            record.error_message,
+        )
+        census[key] = get(census, key, 0) + 1
+    end
+    return census
+end
+
 function assemble_second_order_collision(collision)
     reduced = reduce_frequency_collision(collision)
     occupation = occupation_reduced_expression(reduced)
@@ -214,7 +234,8 @@ end
         for failure in failures
             @info "fermionic p-wave second-order reduction failure" parameter failure
         end
-        @test isempty(failures)
+        failures_by_geometry = failure_census(failures)
+        @test failures_by_geometry == Dict{Any,Int}()
         isempty(failures) || continue
 
         assembled = assemble_second_order_collision(result.spectral)
