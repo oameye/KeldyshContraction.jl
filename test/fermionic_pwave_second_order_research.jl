@@ -145,8 +145,7 @@ function probe_frequency_reduction(collision)
                     merge(
                         signature,
                         (;
-                            error_type=typeof(error),
-                            error_message=sprint(showerror, error),
+                            error_type=typeof(error), error_message=sprint(showerror, error)
                         ),
                     ),
                 )
