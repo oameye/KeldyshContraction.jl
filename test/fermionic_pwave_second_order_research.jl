@@ -89,6 +89,7 @@ end
 
 function research_term_signature(part, term, coefficient)
     dependency = KC.analyze_spectral_dependencies(term, second_order_pwave_ψ)
+    classification = KC.classify_exceptional_frequency(term)
     return (;
         part,
         topology=Tuple(KC.topology(term)),
@@ -96,6 +97,7 @@ function research_term_signature(part, term, coefficient)
         rank=KC.constraint_rank(dependency),
         count=KC.constraint_count(dependency),
         dependent=KC.has_dependent_shell_support(dependency),
+        classification=KC.exceptional_frequency_kind(classification),
         loops=KC.loop_frequency_count(term),
         shifts=Tuple(regularisation_shift(line) for line in kinetic_lines(term.carrier)),
         coefficient,
@@ -153,6 +155,7 @@ function reduction_census(records)
             record.rank,
             record.count,
             record.dependent,
+            record.classification,
             record.loops,
             record.regular,
             record.dependent_result,
