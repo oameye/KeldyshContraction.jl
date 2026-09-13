@@ -43,6 +43,14 @@ function benchmark_causal_frequency_integration!(suite)
     ])
     plan = KC.CausalFrequencyReductionPlan((1, 2))
 
+    repeated_upper = KC.CausalFrequencyDenominator([1 // 1], -Eₐ, -1 // 1)
+    repeated_lower = KC.CausalFrequencyDenominator([1 // 1], -Eᵦ, 1 // 1)
+    higher_order_expression = KC.CausalFrequencyExpression([
+        KC.CausalFrequencyTerm(
+            1 // 1, [repeated_upper, repeated_upper, repeated_upper, repeated_lower]
+        ),
+    ])
+
     zero_energy = KC.EnergyForm{Boson}(3)
     support_denominators = KC.CausalFrequencyDenominator{Boson}[
         KC.CausalFrequencyDenominator([1 // 1, 0 // 1], zero_energy, -1 // 1),
@@ -60,6 +68,9 @@ function benchmark_causal_frequency_integration!(suite)
 
     suite["Frequency reduction"]["causal expression residue"] = @benchmarkable KC.integrate_causal_frequency_expression(
         $expression, 1
+    ) seconds = 10
+    suite["Frequency reduction"]["higher-order causal residue"] = @benchmarkable KC.integrate_causal_frequency_expression(
+        $higher_order_expression, 1
     ) seconds = 10
     suite["Frequency reduction"]["causal two-frequency plan"] = @benchmarkable KC.reduce_causal_frequency_expression(
         $expression, $plan
