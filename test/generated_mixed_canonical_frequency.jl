@@ -50,25 +50,50 @@ end
     @test all(!isempty, values(expressions))
 
     census = NamedTuple[]
+    reduction_census = NamedTuple[]
+    forward_plan = KC.CausalFrequencyReductionPlan((1, 2))
+    reverse_plan = KC.CausalFrequencyReductionPlan((2, 1))
     for (sector, expression) in expressions
         nfrequencies = length(KC.momentum_basis(sector)) - 1
+        @test nfrequencies == 2
         decay = Tuple(KC.frequency_decay_lower_bound(expression, i) for i in 1:nfrequencies)
+        statistical = Tuple(
+            Tuple(KC.momentum(atom).coefficients) for
+            atom in KC.statistical_monomial(sector)
+        )
         push!(
             census,
+            (; statistical, nterms=length(KC.causal_frequency_terms(expression)), decay),
+        )
+
+        forward = KC.reduce_causal_frequency_expression(expression, forward_plan)
+        reverse = KC.reduce_causal_frequency_expression(expression, reverse_plan)
+        @test KC.causal_frequency_reduction_kind(forward) === KC.CausalFrequencyIntegrated
+        @test KC.causal_frequency_reduction_kind(reverse) === KC.CausalFrequencyIntegrated
+        forward_expression = KC.causal_frequency_reduction_expression(forward)
+        reverse_expression = KC.causal_frequency_reduction_expression(reverse)
+        @test forward_expression == reverse_expression
+        @test all(KC.causal_frequency_terms(forward_expression)) do term
+            all(KC.causal_frequency_denominators(term)) do denominator
+                all(iszero, denominator.loop_coefficients)
+            end
+        end
+        push!(
+            reduction_census,
             (;
-                statistical=Tuple(
-                    Tuple(KC.momentum(atom).coefficients) for
-                    atom in KC.statistical_monomial(sector)
-                ),
-                nterms=length(KC.causal_frequency_terms(expression)),
-                decay,
+                statistical,
+                nterms=length(KC.causal_frequency_terms(forward_expression)),
+                expression=forward_expression,
             ),
         )
     end
     sort!(census; by=repr)
+    sort!(reduction_census; by=record -> repr(record.statistical))
     @info "generated mixed canonical frequency census" census
+    @info "generated mixed reduced causal census" reduction_census
 
     # At least one generated sector must demonstrate why contour safety is an expression-level
     # property: the complete grouped expression is O(ω^-2) or better in some loop frequency.
     @test any(record -> any(>=(2), record.decay), census)
+    @test any(record -> record.nterms > 0, reduction_census)
 end
