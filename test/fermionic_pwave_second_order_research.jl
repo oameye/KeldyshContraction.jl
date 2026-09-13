@@ -199,8 +199,9 @@ end
         @test parameters(result.spectral) == parameter
 
         successes, failures = probe_frequency_reduction(result.spectral)
-        @info "fermionic p-wave second-order frequency census" parameter spectral_terms = length(
+        @info "fermionic p-wave second-order frequency census" parameter spectral_terms =
+            length(successes) + length(failures) reduction_census = reduction_census(
             successes
-        ) + length(failures) reduction_census = reduction_census(successes) failures
+        ) failures
     end
 end
