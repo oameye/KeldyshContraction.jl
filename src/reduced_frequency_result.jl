@@ -112,10 +112,6 @@ function _reduce_unshifted_frequency_term!(
     target::FieldFamily{S},
 ) where {S<:Statistics,E1,E2}
     state = FrequencyIntegrationState(term)
-    dependency = analyze_spectral_dependencies(state, target)
-    if has_dependent_shell_support(dependency)
-        return _reduce_dependent_state!(result, state, target, dependency)
-    end
 
     classification = classify_exceptional_frequency(term)
     kind = exceptional_frequency_kind(classification)
@@ -123,6 +119,11 @@ function _reduce_unshifted_frequency_term!(
         return result
     elseif kind === FrequencyTrotterRequired
         error("unshifted frequency path received a Trotter-required term")
+    end
+
+    dependency = analyze_spectral_dependencies(state, target)
+    if has_dependent_shell_support(dependency)
+        return _reduce_dependent_state!(result, state, target, dependency)
     end
 
     return _reduce_regular_state!(result, state, target, dependency)
@@ -139,12 +140,13 @@ function _reduce_shifted_frequency_term!(
         return result
     end
 
+    has_active_kramers_kronig_zero(state) && return result
+
     dependency = analyze_spectral_dependencies(state, target)
     if has_dependent_shell_support(dependency)
         return _reduce_dependent_state!(result, state, target, dependency)
     end
 
-    has_active_kramers_kronig_zero(state) && return result
     return _reduce_regular_state!(result, state, target, dependency)
 end
 
@@ -157,16 +159,19 @@ unresolved causal singularities explicit.
 
 A shifted term first eliminates every structurally isolated equal-time loop using the exact
 one-sided Trotter rule. Those frequency integrations remove only active frequency variables and
-propagator factors; their spatial loop momenta remain in the original momentum basis. Dependency
-analysis is then repeated on the active shell system, so a spectral factor already collapsed at
-equal time cannot spuriously participate in a pinch relation.
+propagator factors; their spatial loop momenta remain in the original momentum basis. Any exact
+isolated Kramers--Kronig zero is then proved on the active frequency problem before shell
+singularities are classified, because the witnessed frequency integral annihilates the complete
+term independently of the remaining shell geometry. Dependency analysis is finally repeated on
+the surviving active shell system, so a spectral factor already collapsed at equal time cannot
+spuriously participate in a pinch relation.
 
 After Trotter elimination, shifted and originally unshifted terms share the same active-state
-frequency reducer. Full-rank regular support retains the exact fast path. Every rank-deficient
-causal problem goes through `structured_causal_frequency_reduction`, so same-prescription
-higher-order poles and frequency-independent zero-energy denominators are preserved identically
-regardless of whether a Trotter factor was present upstream. Isolated Kramers--Kronig zeros are
-proved before regular causal reduction. No Trotter shift is ever used as a mass-shell width.
+frequency reducer. Full-rank regular support retains the exact fast path. Every surviving
+rank-deficient causal problem goes through `structured_causal_frequency_reduction`, so
+same-prescription higher-order poles and frequency-independent zero-energy denominators are
+preserved identically regardless of whether a Trotter factor was present upstream. No Trotter
+shift is ever used as a mass-shell width.
 """
 function reduce_frequency_term(
     term::SpectralDispersiveTerm{S,E1,E2}, target::FieldFamily{S}
