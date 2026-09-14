@@ -1,4 +1,5 @@
 using KeldyshContraction
+import KeldyshContraction as KC
 using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus
 
@@ -23,7 +24,7 @@ L = L_inelastic + L_elastic
 
 #
 
-GF1 = DressedPropagator(L, Val(1), Val(3); _set_reg_to_zero=true)
+GF1 = DressedPropagator(L, Val(1), Val(3))
 
 #
 
@@ -35,29 +36,33 @@ GF1_inelastic = GF1[Γ]
 
 #
 
-GF2 = DressedPropagator(L, Val(2), Val(5); _set_reg_to_zero=true, simplify=true)
-topo = topologies(GF2[g * Γ].keldysh)
+GF2 = DressedPropagator(L, Val(2), Val(5); simplify=true)
+mixed_G = GF2[g * Γ]
+mixed_K = KC.keldysh_component(mixed_G)
+topo = topologies(mixed_K)
 
 #
 
-[key => GF2[g * Γ].keldysh.diagrams[key] for key in topo[[2]]]
+[(diagram, coefficient) for (diagram, coefficient) in mixed_K if diagram in topo[[2]]]
 
 #
 
-[key => GF2[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]
+[(diagram, coefficient) for (diagram, coefficient) in mixed_K if diagram in topo[[3]]]
 
 #
 
 Σ2 = SelfEnergy(GF2)
-Σ2[g * Γ].keldysh
+mixed_Σ = Σ2[g * Γ]
+KC.keldysh_component(mixed_Σ)
 
 #
 
-topo = topologies(Σ2[g * Γ].retarded)
-
-[key => Σ2[g * Γ].retarded.diagrams[key] for key in topo[[2]]]
+mixed_R = KC.retarded_component(mixed_Σ)
+topo = topologies(mixed_R)
+[(diagram, coefficient) for (diagram, coefficient) in mixed_R if diagram in topo[[2]]]
 
 #
 
-topo = topologies(Σ2[g * Γ].keldysh)
-[key => Σ2[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]
+mixed_KΣ = KC.keldysh_component(mixed_Σ)
+topo = topologies(mixed_KΣ)
+[(diagram, coefficient) for (diagram, coefficient) in mixed_KΣ if diagram in topo[[3]]]

@@ -95,7 +95,32 @@ function write_latex_field(io::IO, field::Field{Boson}, ::Val{:expression})
     return nothing
 end
 
+function write_latex_field(io::IO, field::Field{Fermion}, ::Val{:standalone})
+    write_latex_derivatives(io, field)
+    component = is_one(field) ? "1" : "2"
+    if is_barred(field)
+        write(io, "\\bar{")
+        write_latex_symbol(io, name(field))
+        write(io, "^", component, "}")
+    else
+        write_latex_symbol(io, name(field))
+        write(io, "^", component)
+    end
+    write_latex_regularisation(io, field)
+    return nothing
+end
+
+function write_latex_field(io::IO, field::Field{Fermion}, ::Val{:expression})
+    write_latex_field(io, field, Val(:standalone))
+    return nothing
+end
+
 function write_latex(io::IO, field::Field{Boson})
+    write_latex_field(io, field, Val(:standalone))
+    return nothing
+end
+
+function write_latex(io::IO, field::Field{Fermion})
     write_latex_field(io, field, Val(:standalone))
     return nothing
 end

@@ -16,11 +16,11 @@ G^R = D-\frac{i}{2}A,
 G^A = D+\frac{i}{2}A.
 ```
 
-[`spectral_dispersive_collision`](@ref) applies these identities term by term to both affine pieces of an [`OffShellCollisionExpression`](@ref). Keldysh-derived spectral factors remain spectral and keep their statistical weight.
+[`spectral_dispersive_collision`](@ref) applies these identities term by term to both affine pieces of a [`KeldyshContraction.OffShellCollisionExpression`](@ref). Keldysh-derived spectral factors remain spectral and keep their statistical weight.
 
 This transformation is exact. In particular, it does **not** replace `A` by a quasiparticle delta function and it does **not** replace `D` by a principal-value energy denominator. Those operations require an explicit dispersion relation and frequency elimination and belong to the subsequent projection stage.
 
-The representation deliberately reuses the exact `KineticTerm` carrier for routed momenta, field families, equal-time regularisation shifts, topology and derivative-generated momentum polynomials. Original retarded/advanced line labels are normalized out of the carrier, while a fixed-size [`SpectralDispersiveKind`](@ref) vector records whether each physical factor is spectral or dispersive. This allows algebraically identical contributions coming from different R/A spellings to merge and cancel exactly.
+The representation deliberately reuses the exact `KineticTerm` carrier for routed momenta, field families, equal-time regularisation shifts, topology and derivative-generated momentum polynomials. Original retarded/advanced line labels are normalized out of the carrier, while an internal fixed-size spectral/dispersive tag vector records whether each physical factor is spectral or dispersive. Those term-level tags are implementation details; the stable result boundary is [`KeldyshContraction.SpectralDispersiveCollision`](@ref). This allows algebraically identical contributions coming from different R/A spellings to merge and cancel exactly without freezing the reducer's internal storage as public API.
 
 A basic consistency identity is therefore represented literally:
 
@@ -37,10 +37,6 @@ The separation matters for mixed elastic--inelastic sectors. A product involving
 Equal-time regularisation metadata also remains present at this stage. It must survive until the dedicated frequency/equal-time projection handles the regularised loss tadpole; no generic causal decomposition is allowed to erase it.
 
 ```@docs
-SpectralDispersiveKind
-SpectralDispersiveTerm
-SpectralDispersiveExpression
-SpectralDispersiveCollision
+KeldyshContraction.SpectralDispersiveCollision
 spectral_dispersive_collision
-spectral_dispersive_kinds
 ```

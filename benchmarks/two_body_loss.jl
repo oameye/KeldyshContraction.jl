@@ -12,17 +12,17 @@ function benchmark_two_body_loss!(SUITE)
         bar(c) * bar(q) * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
     L_int = InteractionLagrangian(loss2boson)
 
-    GF = DressedPropagator(L_int, Val(1), Val(3); simplify=true, _set_reg_to_zero=true)
+    GF = DressedPropagator(L_int, Val(1), Val(3); simplify=true)
     Σ = SelfEnergy(GF)
 
     SUITE["Two body loss"]["Green's function"] = @benchmarkable DressedPropagator(
-        $L_int, Val(1), Val(3); simplify=true, _set_reg_to_zero=true
+        $L_int, Val(1), Val(3); simplify=true
     ) seconds = 10
     SUITE["Two body loss"]["Self-energy"] = @benchmarkable SelfEnergy($GF) seconds = 10
 
     order = 2
     SUITE["Two body loss"]["Green's function second order"] = @benchmarkable DressedPropagator(
-        $L_int, Val($order), Val(5); simplify=true, _set_reg_to_zero=true
+        $L_int, Val($order), Val(5); simplify=true
     ) seconds = 50
     return nothing
 end
