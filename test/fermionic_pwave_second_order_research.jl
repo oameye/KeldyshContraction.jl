@@ -189,7 +189,8 @@ function certify_gp2_elastic(result)
     )
     expected_kernel = KC.collision_kernel(KC.quotient_loop_momenta(expected_occupation))
 
-    @test KC.collision_kernel_terms(result.kernel) == KC.collision_kernel_terms(expected_kernel)
+    @test KC.collision_kernel_terms(result.kernel) ==
+        KC.collision_kernel_terms(expected_kernel)
     @test all(
         sector ->
             length(KC.frequency_support(sector).shells) == 1 &&
