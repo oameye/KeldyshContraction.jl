@@ -33,6 +33,8 @@ const ComplexRationals = Complex{Rational{Int64}}
 
     # Propagators
     include("propagator_algebra/propagator.jl")
+    include("propagator_algebra/momentum_algebra.jl")
+    include("propagator_algebra/momentum_routing.jl")
     include("propagator_algebra/canonicalize.jl")
     include("propagator_algebra/diagram.jl")
     include("dressed_propagator.jl")
