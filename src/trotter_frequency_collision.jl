@@ -326,6 +326,82 @@ function _trotter_constant_coefficient(
     return causal_frequency_coefficient(only(causal_frequency_terms(expression)))
 end
 
+function _same_causal_asymptotic_key(
+    a::Vector{CausalFrequencyDenominator{S}}, b::Vector{CausalFrequencyDenominator{S}}
+) where {S<:Statistics}
+    return isequal(a, b)
+end
+
+"""
+Split a blocked complete causal stage into independently contour-safe and residual subblocks.
+
+The complete expression is still assembled before this operation. A term that contains a local
+zero-prescription, repeated-pole or pinch geometry never leaves the residual block. Terms with at
+least two incidences of the selected frequency are individually contour safe. Marginal one-pole
+terms may leave the blocker only in complete asymptotic groups whose exact leading spectator
+rational functions cancel, using the same canonical large-frequency semantics as #299.
+
+The split is therefore linear but not termwise contour integration: every cancellation needed to
+prove vanishing large-semicircle behavior is retained inside one contour-coupled subblock. The
+residual remains typed and unresolved. This operation is used only on an already blocked stage, so
+ordinary regular reduction pays no additional partitioning cost.
+"""
+function _split_contour_safe_frequency_block(
+    expression::CausalFrequencyExpression{C,S}, frequency_index::Int
+) where {C<:Number,S<:Statistics}
+    canonical = _complex_causal_frequency_expression(expression)
+    D = promote_type(C, ComplexRationals)
+    regular_terms = CausalFrequencyTerm{D,S}[]
+    residual_terms = CausalFrequencyTerm{D,S}[]
+    marginal_keys = Vector{Vector{CausalFrequencyDenominator{S}}}()
+    marginal_groups = Vector{Vector{CausalFrequencyTerm{D,S}}}()
+
+    for term in causal_frequency_terms(canonical)
+        singleton = CausalFrequencyExpression(CausalFrequencyTerm{D,S}[term])
+        if _causal_frequency_blocker(singleton, frequency_index) !==
+            CausalFrequencyIntegrated
+            push!(residual_terms, term)
+            continue
+        end
+
+        incidence = _frequency_incidence(term, frequency_index)
+        if incidence >= 2
+            push!(regular_terms, term)
+            continue
+        elseif iszero(incidence)
+            push!(residual_terms, term)
+            continue
+        end
+
+        leading = _leading_frequency_term(term, frequency_index)
+        group_index = findfirst(
+            key -> _same_causal_asymptotic_key(key, leading.denominators), marginal_keys
+        )
+        if group_index === nothing
+            push!(marginal_keys, copy(leading.denominators))
+            push!(marginal_groups, CausalFrequencyTerm{D,S}[term])
+        else
+            push!(marginal_groups[group_index], term)
+        end
+    end
+
+    for group in marginal_groups
+        candidate = CausalFrequencyExpression(group)
+        if causal_contour_safe_at_infinity(candidate, frequency_index)
+            append!(regular_terms, causal_frequency_terms(candidate))
+        else
+            append!(residual_terms, causal_frequency_terms(candidate))
+        end
+    end
+
+    regular = CausalFrequencyExpression(regular_terms)
+    residual = CausalFrequencyExpression(residual_terms)
+    recombined = _merge_trotter_causal_expression(regular, residual)
+    recombined == canonical ||
+        throw(ErrorException("causal blocker partition changed the complete expression"))
+    return regular, residual
+end
+
 """
     reduce_shifted_trotter_frequencies(collision)
 
@@ -383,6 +459,11 @@ recombination occurs before any further contour decision. This is the collision-
 of SSA/data-flow joining: a contour classification is made only after every contribution that
 can reach the same frequency stage has been merged.
 
+If a complete stage contains a genuine blocker together with an independently contour-safe
+subblock, only the singular residual is deferred. The regular subblock advances to the next stage
+and rejoins any contribution already present there. This preserves global asymptotic cancellations
+without allowing a pinch in one contour-coupled component to quarantine unrelated finite physics.
+
 Expressions with no remaining loop-frequency integration are retained canonically. Pure scalars
 are separated into `constants`; nontrivial causal energy-boundary expressions are preserved for
 #306. Deferred zero-prescription, repeated-pole and pinch results that still block a loop-frequency
@@ -433,6 +514,32 @@ function reduce_canonical_trotter_frequencies(
                 stages, next_key, causal_frequency_support_expression(result)
             )
             continue
+        end
+
+        regular, residual = _split_contour_safe_frequency_block(expression, frequency_index)
+        if !isempty(regular)
+            regular_result = reduce_causal_frequency_with_support(regular, plan)
+            causal_frequency_support_kind(regular_result) === CausalFrequencyIntegrated ||
+                throw(ErrorException("certified regular causal subblock did not integrate"))
+
+            next_active = Int[index for index in active if index != frequency_index]
+            next_key = TrotterFrequencyGroupKey(
+                canonical_frequency_sector(key), next_active
+            )
+            _merge_trotter_stage!(
+                stages, next_key, causal_frequency_support_expression(regular_result)
+            )
+
+            isempty(residual) && throw(
+                ErrorException(
+                    "blocked causal stage lost its singular residual after partition"
+                ),
+            )
+            result = reduce_causal_frequency_with_support(residual, plan)
+            kind = causal_frequency_support_kind(result)
+            kind === CausalFrequencyIntegrated && throw(
+                ErrorException("singular causal residual became regular after partition"),
+            )
         end
 
         blocked[key] = TrotterFrequencyBlockedContribution{D,S}(
