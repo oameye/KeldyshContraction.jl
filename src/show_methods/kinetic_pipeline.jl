@@ -48,9 +48,9 @@ function _write_latex_stage_metadata(io::IO, x)
 end
 
 function _latex_display(io::IO, writer)
-    write(io, "$$\n")
+    write(io, "\\[\n")
     writer()
-    write(io, "\n$$")
+    write(io, "\n\\]")
     return nothing
 end
 
