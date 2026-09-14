@@ -24,9 +24,6 @@ edges is used.
     return (i - 1) * n - ((i - 1) * i) ÷ 2 + (j - i)
 end
 
-make_real(x::Real) = x
-@unstable make_real(x::Number) = SymbolicUtils._isreal(x) ? real(x) : x
-
 bool_to_index(x::Bool) = 2 * x - 1
 
 # Numeric coefficients are part of the canonical symbolic representation.  In

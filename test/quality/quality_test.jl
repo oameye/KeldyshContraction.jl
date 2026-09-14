@@ -15,6 +15,8 @@ using ExplicitImports
     all_concrete(KeldyshContraction.QAdd)
     all_concrete(KeldyshContraction.InteractionLagrangian)
 
+    all_concrete(KeldyshContraction.Momentum)
+    all_concrete(KeldyshContraction.Momenta)
     all_concrete(KeldyshContraction.Contraction{KeldyshContraction.Boson})
     all_concrete(KeldyshContraction.Edge{KeldyshContraction.Boson})
     all_concrete(KeldyshContraction.Diagram{KeldyshContraction.Boson,5,3})
@@ -33,6 +35,21 @@ using ExplicitImports
             KeldyshContraction.ComplexRationals,KeldyshContraction.Boson,2,3,1
         },
     )
+
+    all_concrete(KeldyshContraction.BosonicDistributionTerm)
+    all_concrete(KeldyshContraction.BosonicDistributions{ComplexF64})
+    all_concrete(KeldyshContraction.CollisionIntegral{ComplexF64,1})
+end
+
+@testset "No DispatchDoctor exemptions" begin
+    src = joinpath(pkgdir(KeldyshContraction), "src")
+    for (root, _, files) in walkdir(src)
+        for file in files
+            endswith(file, ".jl") || continue
+            path = joinpath(root, file)
+            @test !occursin("@unstable", read(path, String))
+        end
+    end
 end
 
 @testset "ExplicitImports" begin
