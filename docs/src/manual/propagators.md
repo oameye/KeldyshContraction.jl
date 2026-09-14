@@ -19,6 +19,8 @@ KeldyshContraction.retarded_component
 KeldyshContraction.advanced_component
 KeldyshContraction.keldysh_component
 KeldyshContraction.matrix
+KeldyshContraction.order
+KeldyshContraction.statistics
 ```
 
 For direct diagrammatic work, `wick_contraction` exposes the underlying Wick expansion and `topologies` groups diagrams by graph topology.
