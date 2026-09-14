@@ -89,7 +89,7 @@ end
 #         Edge
 #########################
 
-"""Propagator type in the retarded-advanced-Keldysh basis."""
+# Internal propagator tag used by R/A/K/spectral edges.
 @enumx PropagatorType begin
     Keldysh
     Advanced
