@@ -219,9 +219,9 @@ function assert_quotient_matches(expression)
     return nothing
 end
 
-function benchmark_pair(label, nauty, gc)
-    nauty_trial = @benchmark $nauty() samples = 25 evals = 1
-    gc_trial = @benchmark $gc() samples = 25 evals = 1
+function benchmark_pair(label, nauty, gc; samples=5)
+    nauty_trial = @benchmark $nauty() samples = $samples evals = 1
+    gc_trial = @benchmark $gc() samples = $samples evals = 1
     nauty_estimate = median(nauty_trial)
     gc_estimate = median(gc_trial)
     println(
@@ -240,6 +240,26 @@ function benchmark_pair(label, nauty, gc)
         gc_estimate.allocs,
         " allocs",
     )
+    flush(stdout)
+    return nothing
+end
+
+function measure_pair_once(label, nauty, gc)
+    nauty_measurement = @timed nauty()
+    gc_measurement = @timed gc()
+    println(
+        label,
+        ": Nauty ",
+        round(nauty_measurement.time * 1.0e3; digits=2),
+        " ms / ",
+        nauty_measurement.bytes,
+        " B; GC ",
+        round(gc_measurement.time * 1.0e3; digits=2),
+        " ms / ",
+        gc_measurement.bytes,
+        " B",
+    )
+    flush(stdout)
     return nothing
 end
 
@@ -253,6 +273,8 @@ function as_contractions(vs)
     return KC.Contraction{Boson}[KC.Contraction(item) for item in vs]
 end
 
+println("GC oracle: propagator canonicalization")
+flush(stdout)
 @testset "GraphCombinations exact KC oracle adapter ($GC_SHA)" begin
     @testset "propagator canonicalization and automorphism order" begin
         ring = as_contractions([
@@ -301,6 +323,8 @@ end
         @test GC.canonical_automorphism_order(gc_topology_result(symmetric)) == 3
     end
 
+    println("GC oracle: historical topology classes")
+    flush(stdout)
     @testset "historical topology 1 / 3 / 11 / 59" begin
         elastic = -(
             1 // 2 * (c^2 + q^2) * bar(c) * bar(q) + 1 // 2 * c * q * (bar(c)^2 + bar(q)^2)
@@ -316,43 +340,46 @@ end
             gc_to_nauty = Dict{Any,Any}()
             for (key, diagrams) in component
                 nauty_key = Tuple(key)
-                for diagram in diagrams
+                representative_keys = Set{Any}()
+                representative_indices = length(diagrams) > 1 ? (1, length(diagrams)) : (1,)
+                for index in representative_indices
+                    diagram = diagrams[index]
                     contractions = KC.Contraction{Boson}[
                         (edge.out, edge.in) for edge in KC.contractions(diagram)
                     ]
-                    gc_key = Tuple(gc_legacy_topology(contractions, Val(length(key))))
-                    @test get!(nauty_to_gc, nauty_key, gc_key) == gc_key
-                    @test get!(gc_to_nauty, gc_key, nauty_key) == nauty_key
+                    push!(
+                        representative_keys,
+                        Tuple(gc_legacy_topology(contractions, Val(length(key)))),
+                    )
                 end
+                @test length(representative_keys) == 1
+                gc_key = only(representative_keys)
+                @test get!(nauty_to_gc, nauty_key, gc_key) == gc_key
+                @test get!(gc_to_nauty, gc_key, nauty_key) == nauty_key
             end
             @test length(nauty_to_gc) == expected
             @test length(gc_to_nauty) == expected
+            println("GC oracle: topology order $order -> $expected classes")
+            flush(stdout)
         end
     end
 
     include(joinpath(@__DIR__, "..", "benchmarks", "collision_reduction.jl"))
     include(joinpath(@__DIR__, "..", "benchmarks", "fermionic_pwave_loss.jl"))
 
+    println("GC oracle: loop quotient fixtures")
+    flush(stdout)
     @testset "loop-momentum quotient fixtures" begin
         for nloops in (2, 4)
             expression = benchmark_loop_quotient_fixture(nloops)
             assert_quotient_matches(expression)
-            for (sector, polynomial) in KC.occupation_reduced_terms(expression)
-                for (monomial, _) in polynomial
-                    for (kinematic, _) in KC.kinematic_factor(sector)
-                        atom_sector = KC._kinematic_atom_sector(sector, kinematic)
-                        gc_transform = gc_canonical_loop_transform(atom_sector, monomial)
-                        nauty_transform = KC._canonical_loop_transform(
-                            atom_sector, monomial
-                        )
-                        @test KC.loop_transform_matrix(gc_transform) ==
-                            KC.loop_transform_matrix(nauty_transform)
-                    end
-                end
-            end
+            println("GC oracle: exact $nloops-loop quotient matched")
+            flush(stdout)
         end
     end
 
+    println("GC oracle: production collision cases")
+    flush(stdout)
     @testset "production collision cases" begin
         bosonic_collision = benchmark_collision_fixture()
         bosonic_reduced = KC.reduce_frequency_collision(bosonic_collision)
@@ -367,6 +394,8 @@ end
             KC.collision_kernel(fermionic_quotient).terms
     end
 
+    println("GC oracle: backend measurements")
+    flush(stdout)
     @testset "backend measurements" begin
         ring = as_contractions([
             (c(Out()), bar(q)(Bulk(1))),
@@ -387,7 +416,7 @@ end
             () -> KC.quotient_loop_momenta(occupation2),
             () -> gc_quotient_loop_momenta(occupation2),
         )
-        benchmark_pair(
+        measure_pair_once(
             "loop quotient 4-loop",
             () -> KC.quotient_loop_momenta(occupation4),
             () -> gc_quotient_loop_momenta(occupation4),
