@@ -128,16 +128,6 @@ function pwave_axis_polynomial(momentum)
     return KC.MomentumPolynomial(monomial, one(C))
 end
 
-function occupation_scale(actual, reference)
-    reference_terms = Dict(collect(reference))
-    actual_terms = Dict(collect(actual))
-    reference_monomial, reference_coefficient = first(reference_terms)
-    @test haskey(actual_terms, reference_monomial)
-    scale = actual_terms[reference_monomial] / reference_coefficient
-    @test actual == scale * reference
-    return scale
-end
-
 function certify_gp2_elastic(result)
     terms = KC.occupation_reduced_terms(result.occupation)
     @test length(terms) == 9
@@ -164,30 +154,41 @@ function certify_gp2_elastic(result)
     )
 
     C = KC.ComplexRationals
-    n(momentum) = KC.OccupationPolynomial(
-        KC.OccupationAtom(second_order_pwave_ψ, momentum), one(C)
-    )
+    n(momentum) =
+        KC.OccupationPolynomial(KC.OccupationAtom(second_order_pwave_ψ, momentum), one(C))
     nk, np, nq, nr = n(k), n(p), n(q), n(r)
     one_n = one(typeof(nk))
     fermi_gain_loss =
-        (one_n - nk) * (one_n - np) * nq * nr -
-        nk * np * (one_n - nq) * (one_n - nr)
+        (one_n - nk) * (one_n - np) * nq * nr - nk * np * (one_n - nq) * (one_n - nr)
 
     relative_in = pwave_axis_polynomial(k) - pwave_axis_polynomial(p)
     relative_out = pwave_axis_polynomial(q) - pwave_axis_polynomial(r)
-    expected_weight =
-        (1 // 8) * (relative_in * relative_in) * (relative_out * relative_out)
+    expected_weight = (1 // 8) * (relative_in * relative_in) * (relative_out * relative_out)
 
-    generated_weight = KC.MomentumPolynomial{KC.ComplexRationals}()
+    Monomial = KC.OccupationMonomial{Fermion}
+    Polynomial = KC.MomentumPolynomial{KC.ComplexRationals}
+    zero_weight = Polynomial()
+    generated = Dict{Monomial,Polynomial}()
     for (sector, occupation) in terms
         @test KC.momentum_basis(sector) == basis
         @test KC.external_wigner_momentum(sector) == external
         @test KC.frequency_support(sector) == support
-        scale = occupation_scale(occupation, fermi_gain_loss)
-        generated_weight += scale * KC.kinematic_factor(sector)
+        kinematic = KC.kinematic_factor(sector)
+        for (monomial, coefficient) in occupation
+            generated[monomial] = get(generated, monomial, zero_weight) + coefficient * kinematic
+        end
     end
+    filter!(term -> !iszero(last(term)), generated)
 
-    @test generated_weight == expected_weight
+    expected = Dict{Monomial,Polynomial}(
+        monomial => coefficient * expected_weight for (monomial, coefficient) in fermi_gain_loss
+    )
+    filter!(term -> !iszero(last(term)), expected)
+
+    @test Set(keys(generated)) == Set(keys(expected))
+    for monomial in keys(expected)
+        @test generated[monomial] == expected[monomial]
+    end
     @test all(
         sector ->
             length(KC.frequency_support(sector).shells) == 1 &&
@@ -201,9 +202,7 @@ function log_gp2_kernel(result)
     for (sector, occupation) in KC.collision_kernel_terms(result.kernel)
         @info "fermionic p-wave gp² kernel term" basis = KC.momentum_basis(sector) external = KC.external_wigner_momentum(
             sector
-        ) kinematic = KC.kinematic_factor(sector) support = KC.frequency_support(
-            sector
-        ) occupation
+        ) kinematic = KC.kinematic_factor(sector) support = KC.frequency_support(sector) occupation
     end
     return nothing
 end
