@@ -67,24 +67,36 @@ function assert_supported_public_contract(
     Σ = @inferred SelfEnergy(G)
     Gk = @inferred fourier_transform(G)
     Σk = @inferred SelfEnergy(Gk)
+    GW = @inferred wigner_transform(Gk; gradient_order=Val(0))
+    ΣW = @inferred wigner_transform(Σk; gradient_order=Val(0))
 
     @test typeof(G).parameters[1] === D
     @test typeof(Σ).parameters[1] === D
     @test Gk isa FourierDressedPropagator{D,Boson,1,3,0}
     @test Σk isa FourierSelfEnergy{D,Boson,1,1,0}
+    @test GW isa WignerDressedPropagator{D,Boson,1,3,0,0,HomogeneousWignerContext}
+    @test ΣW isa WignerSelfEnergy{D,Boson,1,1,0,0,HomogeneousWignerContext}
     @test @inferred(parameters(G)) == parameters(L)
     @test @inferred(parameters(Σ)) == parameters(G)
     @test @inferred(parameters(Gk)) == parameters(G)
     @test @inferred(parameters(Σk)) == parameters(Gk)
+    @test @inferred(parameters(GW)) == parameters(Gk)
+    @test @inferred(parameters(ΣW)) == parameters(Σk)
+    @test @inferred(gradient_order(GW)) == Val(0)
+    @test @inferred(gradient_order(ΣW)) == Val(0)
 
     Gm = @inferred matrix(G)
     Σm = @inferred matrix(Σ)
     Gkm = @inferred matrix(Gk)
     Σkm = @inferred matrix(Σk)
+    GWm = @inferred matrix(GW)
+    ΣWm = @inferred matrix(ΣW)
     @test contract_recursively_concrete(typeof(Gm))
     @test contract_recursively_concrete(typeof(Σm))
     @test contract_recursively_concrete(typeof(Gkm))
     @test contract_recursively_concrete(typeof(Σkm))
+    @test contract_recursively_concrete(typeof(GWm))
+    @test contract_recursively_concrete(typeof(ΣWm))
     matrix_topologies = @inferred topologies(Gm[1, 1])
     @test contract_recursively_concrete(typeof(matrix_topologies))
 
@@ -93,6 +105,8 @@ function assert_supported_public_contract(
     @test contract_recursively_concrete(typeof(Σ))
     @test contract_recursively_concrete(typeof(Gk))
     @test contract_recursively_concrete(typeof(Σk))
+    @test contract_recursively_concrete(typeof(GW))
+    @test contract_recursively_concrete(typeof(ΣW))
 
     io = IOBuffer()
     @test @inferred(show(io, c)) === nothing
@@ -173,11 +187,25 @@ function assert_supported_fermion_contract(
     Ld = @inferred InteractionLagrangian(derivative_interaction, :d)
     Gd = @inferred(DressedPropagator(Ld, Val(1), Val(3); target=contract_ψ, simplify=false))
     Σd = @inferred SelfEnergy(Gd)
+    Gdk = @inferred fourier_transform(Gd)
+    Σdk = @inferred SelfEnergy(Gdk)
+    GdW = @inferred wigner_transform(Gdk; gradient_order=Val(0))
+    ΣdW = @inferred wigner_transform(Σdk; gradient_order=Val(0))
     @test typeof(Gd).parameters[1] === D
     @test typeof(Σd).parameters[1] === D
+    @test Gdk isa FourierDressedPropagator{D,Fermion,1,3,0}
+    @test Σdk isa FourierSelfEnergy{D,Fermion,1,1,0}
+    @test GdW isa WignerDressedPropagator{D,Fermion,1,3,0,0,HomogeneousWignerContext}
+    @test ΣdW isa WignerSelfEnergy{D,Fermion,1,1,0,0,HomogeneousWignerContext}
     @test contract_recursively_concrete(typeof(Ld))
     @test contract_recursively_concrete(typeof(Gd))
     @test contract_recursively_concrete(typeof(Σd))
+    @test contract_recursively_concrete(typeof(Gdk))
+    @test contract_recursively_concrete(typeof(Σdk))
+    @test contract_recursively_concrete(typeof(GdW))
+    @test contract_recursively_concrete(typeof(ΣdW))
+    @test contract_recursively_concrete(typeof(@inferred matrix(GdW)))
+    @test contract_recursively_concrete(typeof(@inferred matrix(ΣdW)))
 
     @test contract_recursively_concrete(typeof(L))
     @test contract_recursively_concrete(typeof(G))
