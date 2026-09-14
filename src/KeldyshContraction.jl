@@ -58,6 +58,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("frequency_support.jl")
     include("full_rank_frequency_reduction.jl")
     include("canonical_frequency_expression.jl")
+    include("causal_frequency_integration.jl")
     include("exceptional_frequency_classification.jl")
     include("statistical_frequency_algebra.jl")
     include("canonical_frequency_collision.jl")
