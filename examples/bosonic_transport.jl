@@ -1,7 +1,7 @@
 # # Bosonic scattering and two-body loss
 #
 # Consider one complex bosonic field with coherent contact scattering and Markovian
-# two-body loss.  The point of this example is twofold: first obtain the physical
+# two-body loss. The point of this example is twofold: first obtain the physical
 # collision kernel through the high-level API, then unpack exactly how the compiler
 # derives it.
 
@@ -20,7 +20,7 @@ elastic = -(
     (1 // 2) * (c^2 + q^2) * bar(c) * bar(q) + (1 // 2) * c * q * (bar(c)^2 + bar(q)^2)
 )
 
-# The dissipative vertex must retain its finite Trotter ordering.  The `+` and `-`
+# The dissipative vertex must retain its finite Trotter ordering. The `+` and `-`
 # labels distinguish the two sides of the equal-time contraction before the causal
 # reduction removes that regulator structurally.
 
@@ -36,15 +36,21 @@ loss =
     )
 
 @syms g γ
-L = InteractionLagrangian(elastic, g) + InteractionLagrangian(loss, γ)
+Lg = InteractionLagrangian(elastic, g)
+Lγ = InteractionLagrangian(loss, γ)
+L = Lg + Lγ
 
+# `L` is the full microscopic interaction and keeps the `g`, `γ`, `g^2`, `gγ`, ...
+# sectors distinct. When only one sector is required, it is cheaper to build the
+# corresponding propagator from the relevant process directly; no unrelated diagrams
+# then need to be generated.
+#
 # ## Ask for the collision kernel
 #
 # A user who wants the kinetic result does not need to drive the compiler manually.
-# Select the perturbative propagator sector and call `collision_kernel`.
+# Build the desired perturbative propagator and call `collision_kernel`.
 
-G1 = DressedPropagator(L, Val(1), Val(3); preserve_regularisation=true)
-Gγ = G1[γ]
+Gγ = DressedPropagator(Lγ, Val(1), Val(3); preserve_regularisation=true)
 Cγ = collision_kernel(Gγ)
 Cγ
 
@@ -54,8 +60,8 @@ Cγ
 # C_n^{(\gamma)}(k)=-4\gamma\int_q n_k n_q.
 # ```
 #
-# The compact call above is the ordinary API.  The rest of this section exposes the
-# same computation stage by stage.  Each returned value has a physics-facing LaTeX
+# The compact call above is the ordinary API. The rest of this section exposes the
+# same computation stage by stage. Each returned value has a physics-facing LaTeX
 # display, so the rendered documentation shows the represented equation rather than
 # an internal field dump.
 #
@@ -70,14 +76,14 @@ GF
 # ## 2. One-particle-irreducible self-energy
 #
 # `SelfEnergy` extracts the fixed-order 1PI contribution and amputates the external
-# propagators.  No self-consistent Dyson iteration is implied.
+# propagators. No self-consistent Dyson iteration is implied.
 
 ΣF = SelfEnergy(GF)
 ΣF
 
 # ## 3. Wigner representation
 #
-# Centre/relative coordinates are converted to Wigner variables.  The present kinetic
+# Centre/relative coordinates are converted to Wigner variables. The present kinetic
 # compiler uses the homogeneous zeroth-gradient collision term.
 
 ΣW = wigner_transform(ΣF; gradient_order=Val(0))
@@ -107,15 +113,15 @@ I
 # ## 6. Spectral/dispersive decomposition
 #
 # Retarded and advanced lines are decomposed as
-# `G^R=D-iA/2` and `G^A=D+iA/2`.  This keeps both shell and principal-value physics.
+# `G^R=D-iA/2` and `G^A=D+iA/2`. This keeps both shell and principal-value physics.
 
 SD = spectral_dispersive_collision(I)
 SD
 
 # ## 7. Causal frequency reduction
 #
-# Internal frequencies are eliminated exactly.  Finite sectors retain
-# `δ(ΔE)` and, when present, `PV(1/ΔE)`.  Genuine pinches remain explicit blockers.
+# Internal frequencies are eliminated exactly. Finite sectors retain
+# `δ(ΔE)` and, when present, `PV(1/ΔE)`. Genuine pinches remain explicit blockers.
 
 R = reduce_frequency_collision(SD)
 R
@@ -131,7 +137,7 @@ N
 # ## 9. Loop-momentum quotient
 #
 # Dummy loop variables related by signed permutations represent the same physical
-# integral.  They are quotiented only after the occupation polynomial is known.
+# integral. They are quotiented only after the occupation polynomial is known.
 
 Q = quotient_loop_momenta(N)
 Q
@@ -149,10 +155,11 @@ Cγ_explicit
 
 # ## Elastic two-body scattering
 #
-# The identical compiler applies at second order in the coherent coupling.
+# The identical compiler applies at second order in the coherent coupling. Two quartic
+# vertices plus the two external legs give five propagator edges at this order.
 
-G2 = DressedPropagator(L, Val(2), Val(3); preserve_regularisation=true)
-Cg2 = collision_kernel(G2[g ^ 2])
+Gg2 = DressedPropagator(Lg, Val(2), Val(5); preserve_regularisation=true)
+Cg2 = collision_kernel(Gg2)
 Cg2
 
 # Its Bose-enhanced gain/loss structure is
@@ -164,7 +171,7 @@ Cg2
 # ```
 #
 # with the exact momentum-routing and phase-space factors retained by the symbolic
-# kernel.  Mixed `g\gamma` sectors contain principal-value contributions; if a sector
-# also contains a genuine pinch, `collision_kernel(G)` refuses to hide it.  Follow the
-# explicit route through `R = reduce_frequency_collision(...)` and inspect
-# `reduced_blocked_terms(R)` instead.
+# kernel. In the full multi-process expansion, mixed `g\gamma` sectors can contain
+# principal-value contributions. If a selected sector also contains a genuine pinch,
+# `collision_kernel(G)` refuses to hide it: follow the explicit route through
+# `R = reduce_frequency_collision(...)` and inspect `reduced_blocked_terms(R)` instead.
