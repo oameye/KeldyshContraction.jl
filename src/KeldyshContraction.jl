@@ -38,6 +38,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("propagator_algebra/momentum_affine_routing.jl")
     include("propagator_algebra/canonicalize.jl")
     include("propagator_algebra/diagram.jl")
+    include("equal_time_regularisation.jl")
     include("propagator_algebra/fourier_diagram.jl")
     include("propagator_algebra/momentum_polynomial.jl")
     include("dressed_propagator.jl")
@@ -64,6 +65,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("exceptional_frequency_classification.jl")
     include("statistical_frequency_algebra.jl")
     include("canonical_frequency_collision.jl")
+    include("trotter_frequency_reduction.jl")
+    include("trotter_frequency_collision.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
     include("propagator_algebra/legacy_momentum_routing.jl")

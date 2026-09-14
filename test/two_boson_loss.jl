@@ -272,13 +272,15 @@ end
 
     Σ = SelfEnergy(GF)
 
-    # 9 of the 11 diagrams line up. The two that do not differ only in which leg carries
-    # the regularisation of an equal-time tadpole: Gᴿ(y⁺,y) against Gᴿ(y,y⁻), which have
-    # the same `subtraction` and so are the same propagator written two ways. Wick
-    # contraction emits both spellings, so closing this needs a canonical form for the
-    # regularisation of an equal-position edge, not a change to the adjoint.
-    @test_broken isequal(adjoint(Σ.advanced), Σ.retarded)
-    @test_broken isequal(adjoint(Σ.keldysh), -1 * Σ.keldysh)
+    # Endpoint Trotter provenance remains exact in stored diagrams. For physical adjoint
+    # comparison only, quotient equivalent equal-position causal spellings by their relative
+    # shift, e.g. Gᴿ(y⁺,y) ≡ Gᴿ(y,y⁻). This must not alter the original topology multiplicity.
+    adjoint_advanced = KC.canonicalize_equal_time_regularisation(adjoint(Σ.advanced))
+    canonical_retarded = KC.canonicalize_equal_time_regularisation(Σ.retarded)
+    adjoint_keldysh = KC.canonicalize_equal_time_regularisation(adjoint(Σ.keldysh))
+    canonical_keldysh = KC.canonicalize_equal_time_regularisation(-1 * Σ.keldysh)
+    @test isequal(adjoint_advanced, canonical_retarded)
+    @test isequal(adjoint_keldysh, canonical_keldysh)
 
     @test length(topologies(Σ.retarded)[[3]]) ==
         length(topologies(adjoint(Σ.advanced))[[3]])
