@@ -1,6 +1,7 @@
 pages = [
     "Home" => "index.md",
     "API" => "API.md",
+    "Public API policy" => "public_api.md",
     "Symbolic fields" => "typesystem.md",
     "Type-stability guarantee" => "type_stability.md",
     "Keldysh Conventions" => "conventions.md",
@@ -14,6 +15,6 @@ pages = [
     "Examples" => [
         "Elastic two body scattering" => "examples/elastic_two_body.md",
         "Two boson loss" => "examples/two_particle_loss.md",
-        "Collision integral (experimental)" => "examples/collision_integral.md",
+        "Fermionic p-wave loss" => "examples/fermionic_pwave_loss.md",
     ],
 ]
