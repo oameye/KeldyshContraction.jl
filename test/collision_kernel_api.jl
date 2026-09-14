@@ -70,9 +70,9 @@ end
 
     for (value, expected) in displays
         rendered = sprint(show, MIME"text/latex"(), value)
-        @test startswith(rendered, "\\[")
+        @test startswith(rendered, "$$")
         @test occursin(expected, rendered)
-        @test endswith(rendered, "\\]")
+        @test endswith(rendered, "$$")
     end
 
     @test occursin("Kadanoff-Baym", sprint(show, MIME"text/plain"(), stages.I))
