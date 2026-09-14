@@ -384,12 +384,14 @@ struct KineticSelfEnergy{C<:Number,S<:Statistics,O,E1,E2,G,Ctx<:AbstractWignerCo
     retarded::KineticExpression{C,S,E1,E2,G,Ctx}
     advanced::KineticExpression{C,S,E1,E2,G,Ctx}
     parameter::ParameterMonomial
+    target::FieldFamily{S}
     context::Ctx
 end
 
 order(::KineticSelfEnergy{C,S,O}) where {C,S,O} = O
 statistics(::KineticSelfEnergy{C,S}) where {C,S} = S
 parameters(Σ::KineticSelfEnergy) = Σ.parameter
+target_family(Σ::KineticSelfEnergy) = Σ.target
 gradient_order(::KineticSelfEnergy{C,S,O,E1,E2,G}) where {C,S,O,E1,E2,G} = Val(G)
 wigner_context(Σ::KineticSelfEnergy) = Σ.context
 
@@ -400,11 +402,12 @@ function Base.isequal(
            isequal(a.retarded, b.retarded) &&
            isequal(a.advanced, b.advanced) &&
            isequal(a.parameter, b.parameter) &&
+           isequal(a.target, b.target) &&
            isequal(a.context, b.context)
 end
 Base.:(==)(a::KineticSelfEnergy, b::KineticSelfEnergy) = isequal(a, b)
 function Base.hash(Σ::KineticSelfEnergy, h::UInt)
-    return hash((Σ.keldysh, Σ.retarded, Σ.advanced, Σ.parameter, Σ.context), h)
+    return hash((Σ.keldysh, Σ.retarded, Σ.advanced, Σ.parameter, Σ.target, Σ.context), h)
 end
 
 function kinetic_expression(
@@ -416,6 +419,7 @@ function kinetic_expression(
         kinetic_expression(Σ.retarded),
         kinetic_expression(Σ.advanced),
         Σ.parameter,
+        Σ.target,
         Σ.context,
     )
 end

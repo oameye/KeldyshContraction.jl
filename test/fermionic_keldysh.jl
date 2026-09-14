@@ -118,7 +118,7 @@ end
     A = KC.Diagrams([dA], ComplexF64(3))
     parameter = parameter_monomial(:g)
 
-    G = DressedPropagator(K, R, A, Val(1), parameter)
+    G = DressedPropagator(K, R, A, Val(1), parameter, ψ)
     Gm = @inferred KC.matrix(G)
     @test Gm[1, 1] == R
     @test Gm[1, 2] == K
@@ -126,7 +126,7 @@ end
     @test Gm[2, 2] == A
     @test eltype(Gm) === KC.Diagrams{ComplexF64,Fermion,1,0}
 
-    Σ = SelfEnergy{ComplexF64,Fermion,1,1,0}(K, R, A, parameter)
+    Σ = SelfEnergy{ComplexF64,Fermion,1,1,0}(K, R, A, parameter, ψ)
     Σm = @inferred KC.matrix(Σ)
     @test Σm[1, 1] == R
     @test Σm[1, 2] == K

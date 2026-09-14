@@ -4,14 +4,16 @@ function _legacy_momentum_transform(gf::DressedPropagator{C,S,O,E1,E2}) where {C
     keldysh = construct_momenta_from_gf(gf.keldysh)
     retarded = construct_momenta_from_gf(gf.retarded)
     advanced = construct_momenta_from_gf(gf.advanced)
-    return DressedPropagator{C,S,O,E1,E2}(keldysh, retarded, advanced, gf.parameter)
+    return DressedPropagator{C,S,O,E1,E2}(
+        keldysh, retarded, advanced, gf.parameter, gf.target
+    )
 end
 
 function _legacy_momentum_transform(se::SelfEnergy{C,S,O,E1,E2}) where {C,S,O,E1,E2}
     keldysh = construct_momenta_from_self_energy(se.keldysh)
     retarded = construct_momenta_from_self_energy(se.retarded)
     advanced = construct_momenta_from_self_energy(se.advanced)
-    return SelfEnergy{C,S,O,E1,E2}(keldysh, retarded, advanced, se.parameter)
+    return SelfEnergy{C,S,O,E1,E2}(keldysh, retarded, advanced, se.parameter, se.target)
 end
 
 function construct_momenta_from_gf(d::Diagram{S,E1,E2}) where {S,E1,E2}
