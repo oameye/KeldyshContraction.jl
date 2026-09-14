@@ -103,13 +103,16 @@ end
     end
 end
 
-@testset "Wigner transform" begin
+@testset "Legacy momentum compatibility" begin
+    @test !isdefined(KeldyshContraction, :wigner_transform)
+    @test :fourier_transform ∈ names(KeldyshContraction)
+
     @testset "first order" begin
         GF = DressedPropagator(L_int, Val(1), Val(3))
         SE = SelfEnergy(GF)
 
-        GFk = @inferred wigner_transform(GF)
-        SEk = @inferred wigner_transform(SE)
+        GFk = @inferred KeldyshContraction._legacy_momentum_transform(GF)
+        SEk = @inferred KeldyshContraction._legacy_momentum_transform(SE)
         @test typeof(GFk) === typeof(GF)
         @test typeof(SEk) === typeof(SE)
     end
@@ -117,8 +120,8 @@ end
         GF = DressedPropagator(L_int, Val(2), Val(5))
         SE = SelfEnergy(GF)
 
-        GFk = @inferred wigner_transform(GF)
-        SEk = @inferred wigner_transform(SE)
+        GFk = @inferred KeldyshContraction._legacy_momentum_transform(GF)
+        SEk = @inferred KeldyshContraction._legacy_momentum_transform(SE)
         @test typeof(GFk) === typeof(GF)
         @test typeof(SEk) === typeof(SE)
     end
