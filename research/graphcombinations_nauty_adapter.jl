@@ -286,7 +286,11 @@ end
         ])
 
         for fixture in (ring, self_loop, repeated, colored, symmetric)
-            @test gc_canonicalize(fixture) == KC.canonicalize(fixture)
+            gc_fixture = gc_canonicalize(fixture)
+            nauty_fixture = KC.canonicalize(fixture)
+            @test gc_canonicalize(nauty_fixture) == gc_fixture
+            @test KC.canonicalize(gc_fixture) == nauty_fixture
+
             graph_positions = KC.canonicalization_positions(fixture)
             gc_topology = gc_topology_result(fixture, graph_positions)
             _, _, _, nauty_automorphisms = KC.canonicalization_permutations(
@@ -307,13 +311,22 @@ end
             G = DressedPropagator(L, Val(order), Val(edge_count))
             component = KC.topologies(G.keldysh)
             @test length(keys(component)) == expected
+
+            nauty_to_gc = Dict{Any,Any}()
+            gc_to_nauty = Dict{Any,Any}()
             for (key, diagrams) in component
-                diagram = first(diagrams)
-                contractions = KC.Contraction{Boson}[
-                    (edge.out, edge.in) for edge in KC.contractions(diagram)
-                ]
-                @test gc_legacy_topology(contractions, Val(length(key))) == key
+                nauty_key = Tuple(key)
+                for diagram in diagrams
+                    contractions = KC.Contraction{Boson}[
+                        (edge.out, edge.in) for edge in KC.contractions(diagram)
+                    ]
+                    gc_key = Tuple(gc_legacy_topology(contractions, Val(length(key))))
+                    @test get!(nauty_to_gc, nauty_key, gc_key) == gc_key
+                    @test get!(gc_to_nauty, gc_key, nauty_key) == nauty_key
+                end
             end
+            @test length(nauty_to_gc) == expected
+            @test length(gc_to_nauty) == expected
         end
     end
 
