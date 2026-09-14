@@ -92,9 +92,9 @@ end
 
 @testset "diagnostic: spinless-fermion p-wave gamma2 sector" begin
     L = diagnostic_gamma2_loss_lagrangian()
-    γp2 = KC.ParameterMonomial(:γp)^2
     G = DressedPropagator(L, Val(2), Val(5); simplify=true, preserve_regularisation=true)
-    GF = fourier_transform(G[γp2])
+    @test KC.parameters(G) == KC.ParameterMonomial(:γp)^2
+    GF = fourier_transform(G)
     ΣW = wigner_transform(SelfEnergy(GF); gradient_order=Val(0))
     spectral = spectral_dispersive_collision(
         off_shell_collision_expression(kinetic_expression(ΣW))
