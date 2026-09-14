@@ -44,8 +44,8 @@ end
     @test collision_kernel_terms(reduced_direct) == collision_kernel_terms(stages.C)
     @test target_family(automatic) === target_family(stages.C)
     @test parameters(automatic) == parameters(stages.C)
-    @test order(automatic) == order(stages.C)
-    @test statistics(automatic) === statistics(stages.C)
+    @test KC.order(automatic) == KC.order(stages.C)
+    @test KC.statistics(automatic) === KC.statistics(stages.C)
     @test isempty(reduced_blocked_terms(stages.R))
     @test isempty(reduced_trotter_terms(stages.R))
 end
