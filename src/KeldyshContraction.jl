@@ -64,9 +64,11 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("causal_frequency_support_reduction.jl")
     include("exceptional_frequency_classification.jl")
     include("statistical_frequency_algebra.jl")
+    include("collision_statistical_algebra.jl")
     include("canonical_frequency_collision.jl")
     include("trotter_frequency_reduction.jl")
     include("trotter_frequency_collision.jl")
+    include("collision_frequency_assembly.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
     include("propagator_algebra/legacy_momentum_routing.jl")
@@ -177,6 +179,27 @@ const ComplexRationals = Complex{Rational{Int64}}
         exceptional_frequency_term,
         exceptional_frequency_witness_lines,
         exceptional_frequency_loop_basis_index,
+        StatisticalAtom,
+        StatisticalMonomial,
+        StatisticalPolynomial,
+        statistical_family,
+        OccupationAtom,
+        OccupationMonomial,
+        OccupationPolynomial,
+        occupation_family,
+        occupation_statistics_sign,
+        occupation_collision_factor,
+        occupation_substitute,
+        occupation_collision_polynomial,
+        ReducedCollisionSector,
+        ReducedFrequencyCollision,
+        reduce_frequency_collision,
+        reduced_regular_terms,
+        reduced_blocked_terms,
+        reduced_trotter_terms,
+        OccupationReducedExpression,
+        occupation_reduced_expression,
+        occupation_reduced_terms,
         parameters
 end
 
