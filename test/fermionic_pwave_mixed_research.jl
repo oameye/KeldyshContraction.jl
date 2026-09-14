@@ -13,17 +13,23 @@ function mixed_pwave_branch_pairs(; shifted::Bool)
     minus = KC.Regularisation.Minus
 
     ψplus = shifted ? ψ₁(minus) + ψ₂(minus) : ψ₁ + ψ₂
-    ∂ψplus = shifted ?
-        partial(ψ₁(minus), :x) + partial(ψ₂(minus), :x) :
+    ∂ψplus = if shifted
+        partial(ψ₁(minus), :x) + partial(ψ₂(minus), :x)
+    else
         partial(ψ₁, :x) + partial(ψ₂, :x)
+    end
     ψplus_forward = shifted ? ψ₁(plus) + ψ₂(plus) : ψ₁ + ψ₂
-    ∂ψplus_forward = shifted ?
-        partial(ψ₁(plus), :x) + partial(ψ₂(plus), :x) :
+    ∂ψplus_forward = if shifted
+        partial(ψ₁(plus), :x) + partial(ψ₂(plus), :x)
+    else
         partial(ψ₁, :x) + partial(ψ₂, :x)
+    end
     ψminus = shifted ? ψ₁(plus) - ψ₂(plus) : ψ₁ - ψ₂
-    ∂ψminus = shifted ?
-        partial(ψ₁(plus), :x) - partial(ψ₂(plus), :x) :
+    ∂ψminus = if shifted
+        partial(ψ₁(plus), :x) - partial(ψ₂(plus), :x)
+    else
         partial(ψ₁, :x) - partial(ψ₂, :x)
+    end
 
     bψplus = bψ₁ + bψ₂
     bψminus = bψ₂ - bψ₁
@@ -39,12 +45,14 @@ function mixed_pwave_branch_pairs(; shifted::Bool)
 end
 
 function mixed_pwave_lagrangian()
-    Pplus, _, Pminus, Pplus_dagger, Pminus_dagger =
-        mixed_pwave_branch_pairs(; shifted=false)
+    Pplus, _, Pminus, Pplus_dagger, Pminus_dagger = mixed_pwave_branch_pairs(;
+        shifted=false
+    )
     elastic = -(1 // 8) * (Pplus_dagger * Pplus - Pminus_dagger * Pminus)
 
-    Pplus_minus, Pplus_plus, Pminus_plus, Pplus_dagger_shifted, Pminus_dagger_shifted =
-        mixed_pwave_branch_pairs(; shifted=true)
+    Pplus_minus, Pplus_plus, Pminus_plus, Pplus_dagger_shifted, Pminus_dagger_shifted = mixed_pwave_branch_pairs(;
+        shifted=true
+    )
     loss =
         (1 // 8) *
         im *
