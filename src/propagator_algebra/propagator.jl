@@ -236,8 +236,8 @@ is_bulk(qs::Contraction) = all(is_bulk, qs)
 is_in(qs::Contraction) = any(is_in, qs)
 is_out(qs::Contraction) = any(is_out, qs)
 
-positions(p::Edge) = position.(fields(p))
-positions(p::Contraction) = position.(p)
+positions(p::Edge) = (position(p.out), position(p.in))
+positions(p::Contraction) = (position(p.out), position(p.in))
 integer_positions(p::Contraction) = index.(positions(p))
 integer_positions(p::Edge) = index.(positions(p))
 
