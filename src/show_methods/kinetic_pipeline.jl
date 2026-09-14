@@ -105,10 +105,7 @@ function _momentum_label(
 end
 
 function _linear_momentum_string(
-    momentum::LinearMomentum,
-    basis::MomentumBasis,
-    external::MomentumVariable,
-    latex::Bool,
+    momentum::LinearMomentum, basis::MomentumBasis, external::MomentumVariable, latex::Bool
 )
     terms = String[]
     for slot in eachindex(momentum.coefficients)
@@ -184,7 +181,7 @@ function _momentum_monomial_string(
     latex::Bool,
 )
     factors = _grouped_factor_strings(monomial.factors) do component
-        _component_string(component, basis, external, latex)
+        return _component_string(component, basis, external, latex)
     end
     return join(factors, latex ? "\\," : " ")
 end
@@ -214,7 +211,9 @@ function _statistical_monomial_string(
     latex::Bool,
 )
     factors = _grouped_factor_strings(monomial.factors) do atom
-        _distribution_atom_string("F", atom.family, atom.momentum, basis, external, latex)
+        return _distribution_atom_string(
+            "F", atom.family, atom.momentum, basis, external, latex
+        )
     end
     return join(factors, latex ? "\\," : " ")
 end
@@ -226,23 +225,23 @@ function _occupation_monomial_string(
     latex::Bool,
 )
     factors = _grouped_factor_strings(monomial.factors) do atom
-        _distribution_atom_string("n", atom.family, atom.momentum, basis, external, latex)
+        return _distribution_atom_string(
+            "n", atom.family, atom.momentum, basis, external, latex
+        )
     end
     return join(factors, latex ? "\\," : " ")
 end
 
 function _energy_form_string(
-    form::EnergyForm,
-    basis::MomentumBasis,
-    external::MomentumVariable,
-    latex::Bool,
+    form::EnergyForm, basis::MomentumBasis, external::MomentumVariable, latex::Bool
 )
     terms = String[]
     for (atom, coefficient) in form
         family_text = _family_string(atom.family, latex)
         momentum_text = _linear_momentum_string(atom.momentum, basis, external, latex)
         if latex
-            energy = "\\varepsilon_{" * family_text * "}\\!\\left(" * momentum_text * "\\right)"
+            energy =
+                "\\varepsilon_{" * family_text * "}\\!\\left(" * momentum_text * "\\right)"
         else
             energy = "ε_" * family_text * "(" * momentum_text * ")"
         end
@@ -268,10 +267,7 @@ function _energy_form_string(
 end
 
 function _frequency_support_string(
-    support::FrequencySupport,
-    basis::MomentumBasis,
-    external::MomentumVariable,
-    latex::Bool,
+    support::FrequencySupport, basis::MomentumBasis, external::MomentumVariable, latex::Bool
 )
     factors = String[]
     for shell in support.shells
@@ -285,10 +281,7 @@ function _frequency_support_string(
     for pv in support.principal_values
         energy = _energy_form_string(pv.energy, basis, external, latex)
         if latex
-            push!(
-                factors,
-                "\\operatorname{PV}\\!\\left(\\frac{1}{" * energy * "}\\right)",
-            )
+            push!(factors, "\\operatorname{PV}\\!\\left(\\frac{1}{" * energy * "}\\right)")
         else
             push!(factors, "PV(1/(" * energy * "))")
         end
@@ -358,9 +351,7 @@ function _physical_collision_string(terms, latex::Bool)
             frequency_support(sector), basis, external, latex
         )
         for (kinematic, kinematic_coefficient) in kinematic_factor(sector)
-            kinematic_text = _momentum_monomial_string(
-                kinematic, basis, external, latex
-            )
+            kinematic_text = _momentum_monomial_string(kinematic, basis, external, latex)
             for (monomial, polynomial_coefficient) in polynomial
                 coefficient = kinematic_coefficient * polynomial_coefficient
                 iszero(coefficient) && continue
@@ -398,8 +389,14 @@ function _sd_line_string(
             sign = shift > 0 ? "+" : ""
             decoration = "^{[\\Delta t=" * sign * string(shift) * "\\,0^+]}"
         end
-        return prefix * "_{" * family * "}" * decoration *
-               "\\!\\left(" * momentum_text * "\\right)"
+        return prefix *
+               "_{" *
+               family *
+               "}" *
+               decoration *
+               "\\!\\left(" *
+               momentum_text *
+               "\\right)"
     end
     decoration = ""
     if !iszero(shift)
@@ -449,10 +446,10 @@ function _sd_expression_terms(
         for (kinematic, kinematic_coefficient) in kinematic_factor(term)
             coefficient = source_coefficient * kinematic_coefficient
             iszero(coefficient) && continue
-            kinematic_text = _momentum_monomial_string(
-                kinematic, basis, external, latex
+            kinematic_text = _momentum_monomial_string(kinematic, basis, external, latex)
+            factors = vcat(
+                String[parameter_text, measure_text, kinematic_text], line_factors
             )
-            factors = vcat(String[parameter_text, measure_text, kinematic_text], line_factors)
             push!(rendered, _term_string(coefficient, factors, latex))
         end
     end
@@ -462,8 +459,7 @@ end
 function _spectral_dispersive_string(collision::SpectralDispersiveCollision, latex::Bool)
     rendered = String[]
     append!(
-        rendered,
-        _sd_expression_terms(collision, collision_offset(collision), false, latex),
+        rendered, _sd_expression_terms(collision, collision_offset(collision), false, latex)
     )
     append!(
         rendered,
@@ -478,11 +474,15 @@ function _blocked_summary(result::ReducedFrequencyCollision, latex::Bool)
     blocked = reduced_blocked_terms(result)
     unresolved = reduced_trotter_terms(result)
     if latex
-        return "N_{\\mathrm{blocked}}=" * string(length(blocked)) *
-               ",\\qquad N_{\\mathrm{Trotter}}=" * string(length(unresolved))
+        return "N_{\\mathrm{blocked}}=" *
+               string(length(blocked)) *
+               ",\\qquad N_{\\mathrm{Trotter}}=" *
+               string(length(unresolved))
     end
-    return "causal blockers: " * string(length(blocked)) *
-           "\n  unresolved Trotter states: " * string(length(unresolved))
+    return "causal blockers: " *
+           string(length(blocked)) *
+           "\n  unresolved Trotter states: " *
+           string(length(unresolved))
 end
 
 function Base.show(io::IO, ::MIME"text/latex", G::DressedPropagator)
