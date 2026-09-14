@@ -159,8 +159,7 @@ function certify_gp2_elastic(result)
     nk, np, nq, nr = n(k), n(p), n(q), n(r)
     one_n = one(typeof(nk))
     fermi_gain_loss =
-        (one_n - nk) * (one_n - np) * nq * nr -
-        nk * np * (one_n - nq) * (one_n - nr)
+        (one_n - nk) * (one_n - np) * nq * nr - nk * np * (one_n - nq) * (one_n - nr)
 
     relative_in = pwave_axis_polynomial(k) - pwave_axis_polynomial(p)
     relative_out = pwave_axis_polynomial(q) - pwave_axis_polynomial(r)
@@ -234,14 +233,12 @@ function certify_gamma2_loss(result)
     # The trace-preserving dissipative pair cut is fixed directly by the fermionic
     # greater/lesser pair weights, Π>=(1-n₁)(1-n₂) and Π<=n₁n₂.
     pair_cut =
-        (one_n - nk) * (one_n - np) * nq * nr +
-        nk * np * (one_n - nq) * (one_n - nr) -
+        (one_n - nk) * (one_n - np) * nq * nr + nk * np * (one_n - nq) * (one_n - nr) -
         2 * nk * np * nq * nr
 
     relative_in = pwave_axis_polynomial(k) - pwave_axis_polynomial(p)
     relative_out = pwave_axis_polynomial(q) - pwave_axis_polynomial(r)
-    expected_weight =
-        (1 // 8) * (relative_in * relative_in) * (relative_out * relative_out)
+    expected_weight = (1 // 8) * (relative_in * relative_in) * (relative_out * relative_out)
 
     Sector = typeof(first_sector)
     Occupation = typeof(pair_cut)
@@ -289,9 +286,9 @@ function certify_gamma2_loss(result)
     @test !isempty(reference_supports)
     @test all(KC.has_affine_singular_support, reference_supports)
     @test all(supports -> supports == reference_supports, blocked_supports)
-    @info "fermionic p-wave gamma2 blocked causal census" blocker_count = length(blocked) support_ranks =
-        [KC.affine_support_rank(support) for support in reference_supports] support_counts =
-        [KC.affine_support_count(support) for support in reference_supports]
+    @info "fermionic p-wave gamma2 blocked causal census" blocker_count = length(blocked) support_ranks = [
+        KC.affine_support_rank(support) for support in reference_supports
+    ] support_counts = [KC.affine_support_count(support) for support in reference_supports]
     return nothing
 end
 
