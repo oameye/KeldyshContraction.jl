@@ -23,13 +23,13 @@ abstract type Statistics end
 """Bosonic field statistics."""
 struct Boson <: Statistics end
 
-"""Orientation of a path-integral field."""
+# Internal orientation tag for barred/unbarred path-integral fields.
 @enumx Orientation::UInt8 begin
     Unbarred = 0
     Barred = 1
 end
 
-"""Two-valued Keldysh index stored by `Field`."""
+# Internal two-valued Keldysh index stored by `Field`.
 @enumx KeldyshIndex::UInt8 begin
     First = 0
     Second = 1
@@ -38,7 +38,7 @@ end
 const Quantum = KeldyshIndex.First
 const Classical = KeldyshIndex.Second
 
-"""Kind of internal field index."""
+# Internal field-index kind used by `FieldIndices`.
 @enumx IndexKind::UInt8 begin
     Spin = 0
     Flavor = 1
