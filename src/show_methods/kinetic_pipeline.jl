@@ -24,6 +24,9 @@ function _show_component_counts(io::IO, x)
     return nothing
 end
 
+# Extract the integer carried by Val without exposing it as user API.
+_val_parameter(::Val{G}) where {G} = G
+
 function _write_latex_parameter(io::IO, parameter::ParameterMonomial)
     if isempty(parameter.powers)
         write(io, "1")
@@ -38,7 +41,7 @@ function _write_latex_parameter(io::IO, parameter::ParameterMonomial)
 end
 
 function _write_latex_stage_metadata(io::IO, x)
-    write(io, "\\qquad \\left[O=", string(order(x)), ",\\; ")
+    write(io, "\\qquad \\left[O=", string(order(x)), ",\\;\\mathcal P=")
     _write_latex_parameter(io, parameters(x))
     write(io, "\\right]")
     return nothing
@@ -84,19 +87,21 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", G::WignerDressedPropagator)
     _show_stage_plain(io, "Wigner dressed propagator", G)
-    print(io, "\n  gradient order: ", gradient_order(G))
+    print(io, "\n  gradient order: ", _val_parameter(gradient_order(G)))
     _show_component_counts(io, G)
     return nothing
 end
 function Base.show(io::IO, ::MIME"text/latex", G::WignerDressedPropagator)
     return _latex_display(io) do
-        write(io, "G_W^{R,A,K}(X,k)\\big|_{\\nabla^{", string(order(gradient_order(G))), "}}")
+        write(
+            io,
+            "G_W^{R,A,K}(X,k)\\big|_{\\nabla^{",
+            string(_val_parameter(gradient_order(G))),
+            "}}",
+        )
         _write_latex_stage_metadata(io, G)
     end
 end
-
-# Extract the integer carried by Val without exposing it as user API.
-_val_parameter(::Val{G}) where {G} = G
 
 function Base.show(io::IO, ::MIME"text/plain", Σ::WignerSelfEnergy)
     _show_stage_plain(io, "Wigner 1PI self-energy", Σ)
@@ -179,7 +184,7 @@ function Base.show(io::IO, ::MIME"text/latex", result::ReducedFrequencyCollision
         write(
             io,
             "I_{\\mathrm{coll}}\\longrightarrow " *
-            "I_{\\mathrm{reg}}\\!\\left[\\delta(\\Delta E),\\operatorname{PV}\\frac{1}{\\Delta E}\\right]" *
+            "I_{\\mathrm{reg}}\\!\\left[\\delta(\\Delta E),\\operatorname{PV}\\!\\left(\\frac{1}{\\Delta E}\\right)\\right]" *
             "\\oplus I_{\\mathrm{blocked}}",
         )
         write(
