@@ -19,7 +19,7 @@ function generated_first_order_canonical_trotter_collision()
 
     L = @inferred InteractionLagrangian(loss, :γ)
     G = @inferred DressedPropagator(
-        L, Val(1), Val(3); simplify=true, _set_reg_to_zero=false
+        L, Val(1), Val(3); simplify=true, preserve_regularisation=true
     )
     GF = @inferred fourier_transform(G)
     ΣF = @inferred SelfEnergy(GF)
