@@ -22,7 +22,13 @@ L = InteractionLagrangian(elastic, :g) + InteractionLagrangian(loss, :γ)
 
 and remain separated into `g`, `γ`, `g^2`, `gγ`, and `γ^2` sectors at higher order.
 
-For interactions involving several physical field families, select the external family with the `target` keyword when constructing a propagator.
+For interactions involving several physical field families, select the external family with the `target` keyword when constructing a propagator. The stable provenance accessors are:
+
+```@docs
+KeldyshContraction.field_families
+KeldyshContraction.target_family
+KeldyshContraction.parameters
+```
 
 The ordinary user should not manipulate `LagrangianSum` or perturbative bookkeeping containers directly; addition, indexing by parameter expressions, and the high-level propagator constructors provide the supported interface.
 
