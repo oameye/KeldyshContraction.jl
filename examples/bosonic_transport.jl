@@ -17,8 +17,7 @@ c, q = ϕ[Classical], ϕ[Quantum]
 # (up to the overall coupling `g`).
 
 elastic = -(
-    (1 // 2) * (c^2 + q^2) * bar(c) * bar(q) +
-    (1 // 2) * c * q * (bar(c)^2 + bar(q)^2)
+    (1 // 2) * (c^2 + q^2) * bar(c) * bar(q) + (1 // 2) * c * q * (bar(c)^2 + bar(q)^2)
 )
 
 # The dissipative vertex must retain its finite Trotter ordering.  The `+` and `-`
@@ -146,14 +145,14 @@ Cγ_explicit = collision_kernel(Q)
 Cγ_explicit
 
 @assert KeldyshContraction.collision_kernel_terms(Cγ) ==
-        KeldyshContraction.collision_kernel_terms(Cγ_explicit)
+    KeldyshContraction.collision_kernel_terms(Cγ_explicit)
 
 # ## Elastic two-body scattering
 #
 # The identical compiler applies at second order in the coherent coupling.
 
 G2 = DressedPropagator(L, Val(2), Val(3); preserve_regularisation=true)
-Cg2 = collision_kernel(G2[g^2])
+Cg2 = collision_kernel(G2[g ^ 2])
 Cg2
 
 # Its Bose-enhanced gain/loss structure is
