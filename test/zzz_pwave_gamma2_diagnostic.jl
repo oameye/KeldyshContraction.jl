@@ -41,6 +41,13 @@ end
 
 momentum_tuple_gamma2(momentum) = Tuple(momentum.coefficients)
 
+function gamma2_axis(momentum)
+    C = KC.ComplexRationals
+    component = KC.MomentumComponent(momentum, :x)
+    monomial = KC.MomentumMonomial(KC.MomentumComponent[component])
+    return KC.MomentumPolynomial(monomial, one(C))
+end
+
 function kinematic_summary_gamma2(polynomial)
     return [
         (
@@ -90,6 +97,64 @@ function affine_support_summary_gamma2(support)
     )
 end
 
+function expected_gamma2_kernel(occupation)
+    terms = KC.occupation_reduced_terms(occupation)
+    first_sector = first(keys(terms))
+    basis = KC.momentum_basis(first_sector)
+    external = KC.external_wigner_momentum(first_sector)
+    external_index = only(i for (i, variable) in enumerate(basis) if variable == external)
+    loop_indices = Int[i for i in eachindex(basis.variables) if i != external_index]
+    @test length(loop_indices) == 2
+
+    k = KC.basis_momentum(basis, external_index)
+    q = KC.basis_momentum(basis, loop_indices[1])
+    r = KC.basis_momentum(basis, loop_indices[2])
+    p = -k + q + r
+
+    ε(momentum) = KC.EnergyForm(KC.DispersionAtom(diagnostic_gamma2_ψ, momentum))
+    shell, shell_factor = KC.energy_shell(ε(k) + ε(p) - ε(q) - ε(r))
+    @test shell_factor == 1 // 1
+    support = KC.FrequencySupport(
+        KC.EnergyShell{Fermion}[shell], KC.PrincipalValueSupport{Fermion}[]
+    )
+
+    C = KC.ComplexRationals
+    n(momentum) =
+        KC.OccupationPolynomial(KC.OccupationAtom(diagnostic_gamma2_ψ, momentum), one(C))
+    nk, np, nq, nr = n(k), n(p), n(q), n(r)
+    one_n = one(typeof(nk))
+
+    pair_cut =
+        (one_n - nk) * (one_n - np) * nq * nr +
+        nk * np * (one_n - nq) * (one_n - nr) -
+        2 * nk * np * nq * nr
+
+    relative_in = gamma2_axis(k) - gamma2_axis(p)
+    relative_out = gamma2_axis(q) - gamma2_axis(r)
+    expected_weight = (1 // 8) * (relative_in * relative_in) * (relative_out * relative_out)
+
+    Sector = typeof(first_sector)
+    Occupation = typeof(pair_cut)
+    expected_terms = Dict{Sector,Occupation}()
+    zero_occupation = zero(pair_cut)
+    for (monomial, coefficient) in expected_weight
+        kinematic = KC.MomentumPolynomial(monomial, one(C))
+        sector = KC.ReducedCollisionSector(
+            KC.ParameterMonomial(:γp)^2, basis, external, kinematic, support
+        )
+        contribution = coefficient * pair_cut
+        expected_terms[sector] = get(expected_terms, sector, zero_occupation) + contribution
+    end
+
+    expected_occupation = typeof(occupation)(
+        expected_terms,
+        KC.target_family(occupation),
+        KC.parameters(occupation),
+        KC.wigner_context(occupation),
+    )
+    return KC.collision_kernel(KC.quotient_loop_momenta(expected_occupation))
+end
+
 @testset "diagnostic: spinless-fermion p-wave gamma2 sector" begin
     L = diagnostic_gamma2_loss_lagrangian()
     G = DressedPropagator(L, Val(2), Val(5); simplify=true, preserve_regularisation=true)
@@ -103,6 +168,7 @@ end
     reduced = KC.reduce_frequency_collision(canonical)
     occupation = KC.occupation_reduced_expression(reduced)
     quotient = KC.quotient_loop_momenta(occupation)
+    kernel = KC.collision_kernel(quotient)
 
     regular = [
         (
@@ -115,6 +181,9 @@ end
     ]
     sort!(regular; by=repr)
     @info "PWAVE_GAMMA2_REGULAR" regular
+
+    expected = expected_gamma2_kernel(occupation)
+    @test KC.collision_kernel_terms(kernel) == KC.collision_kernel_terms(expected)
 
     blocked = collect(values(KC.reduced_blocked_terms(reduced)))
     kind_counts = Dict{String,Int}()
