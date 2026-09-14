@@ -1,0 +1,38 @@
+name: GC Compact Acceptance
+
+on:
+  push:
+    branches:
+      - research/gc-compact-acceptance
+    paths:
+      - '.github/workflows/GCCompactAcceptance.yml'
+      - 'benchmarks/gc_compact_acceptance.jl'
+      - 'benchmarks/gc_wick_adapter.jl'
+      - 'benchmarks/gc_wick_timing.jl'
+      - 'benchmarks/Project.toml'
+  workflow_dispatch:
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.10.12'
+          arch: x64
+      - uses: julia-actions/cache@v3
+      - name: Run exact KC oracle and timing acceptance
+        working-directory: benchmarks
+        run: |
+          julia --project=. --threads=2 --color=yes -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=".."))
+            Pkg.add(PackageSpec(
+                url="https://github.com/oameye/GraphCombinations.jl",
+                rev="96151883a7353587197cd4375f118db7c0dd797d",
+            ))
+            Pkg.instantiate()
+            include("gc_compact_acceptance.jl")
+          '
