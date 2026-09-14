@@ -131,7 +131,8 @@ function expected_gamma2_kernel(occupation)
 
     relative_in = gamma2_axis(k) - gamma2_axis(p)
     relative_out = gamma2_axis(q) - gamma2_axis(r)
-    expected_weight = (1 // 8) * (relative_in * relative_in) * (relative_out * relative_out)
+    expected_weight =
+        (1 // 8) * (relative_in * relative_in) * (relative_out * relative_out)
 
     Sector = typeof(first_sector)
     Occupation = typeof(pair_cut)
@@ -196,9 +197,7 @@ end
     support_counts = Dict{String,Int}()
     for contribution in blocked
         supports = KC.trotter_frequency_blocked_supports(contribution)
-        key = repr([
-            affine_support_summary_gamma2(support) for support in supports
-        ])
+        key = repr([affine_support_summary_gamma2(support) for support in supports])
         support_counts[key] = get(support_counts, key, 0) + 1
     end
     @info "PWAVE_GAMMA2_SUPPORT_COUNTS" support_counts
