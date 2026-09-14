@@ -178,11 +178,15 @@ end
 
     qx = KC.MomentumComponent(q, :x)
     rx = KC.MomentumComponent(r, :x)
-    p_wave = KC.MomentumPolynomial(KC.MomentumMonomial([qx, rx]), one(C))
+    derivative_kinematic = KC.MomentumPolynomial(
+        KC.MomentumMonomial([qx, qx, rx, rx]), one(C)
+    )
     support = KC.FrequencySupport(
         KC.EnergyShell{Fermion}[], KC.PrincipalValueSupport{Fermion}[]
     )
-    sector = KC.ReducedCollisionSector{Fermion}(parameter, basis, external, p_wave, support)
+    sector = KC.ReducedCollisionSector{Fermion}(
+        parameter, basis, external, derivative_kinematic, support
+    )
     n(momentum) = OccupationPolynomial(OccupationAtom(quotient_test_ψ, momentum), one(C))
     expression = quotient_expression(sector, n(q) + 3 * n(r), quotient_test_ψ, parameter)
 
@@ -206,6 +210,30 @@ end
         parameter,
     )
     @test collision_kernel(swapped_expression).terms == kernel.terms
+end
+
+@testset "reflection-odd derivative loop atoms vanish exactly" begin
+    C = KC.ComplexRationals
+    basis = KC.MomentumBasis(3)
+    external = basis[1]
+    q = KC.basis_momentum(basis, 2)
+    r = KC.basis_momentum(basis, 3)
+    parameter = KC.ParameterMonomial(:γp)
+
+    qx = KC.MomentumComponent(q, :x)
+    rx = KC.MomentumComponent(r, :x)
+    odd_kinematic = KC.MomentumPolynomial(KC.MomentumMonomial([qx, rx]), one(C))
+    support = KC.FrequencySupport(
+        KC.EnergyShell{Fermion}[], KC.PrincipalValueSupport{Fermion}[]
+    )
+    sector = KC.ReducedCollisionSector{Fermion}(
+        parameter, basis, external, odd_kinematic, support
+    )
+    n(momentum) = OccupationPolynomial(OccupationAtom(quotient_test_ψ, momentum), one(C))
+    expression = quotient_expression(sector, n(q) + 3 * n(r), quotient_test_ψ, parameter)
+
+    kernel = @inferred collision_kernel(expression)
+    @test isempty(collision_kernel_terms(kernel))
 end
 
 @testset "canonical quotient is not specialized to two loops" begin
