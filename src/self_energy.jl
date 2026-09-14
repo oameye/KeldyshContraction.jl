@@ -47,9 +47,14 @@ end
 """
 $(DocStringExtensions.TYPEDEF)
 
-Self-energy components in the Retarded-Advanced-Keldysh basis. Coefficient representation,
-statistics, perturbation order, and diagram shape are encoded in the type. The physical
-external field family is retained from the dressed propagator through amputation.
+Fixed-order one-particle-irreducible two-point self-energy in the
+Retarded-Advanced-Keldysh basis. The result stores semantic Keldysh, retarded, and advanced
+components and preserves the perturbative parameter and external physical field family of the
+input propagator.
+
+Use [`keldysh_component`](@ref), [`retarded_component`](@ref), and
+[`advanced_component`](@ref) for component access. `SelfEnergy` constructs the explicit
+perturbative 1PI kernel; it does not solve a self-consistent Dyson equation.
 
 # Fields
 $(DocStringExtensions.FIELDS)
@@ -101,6 +106,13 @@ function _self_energy(G::DressedPropagator{C,Boson,O,E1,E2}) where {C<:Number,O,
     )
 end
 
+"""
+    SelfEnergy(G::DressedPropagator)
+
+Extract the fixed-order 1PI self-energy from the perturbative dressed two-point function `G`.
+The two external propagator lines are amputated, reducible two-point diagrams are discarded,
+and the exact diagrammatic prefactors and statistics are retained.
+"""
 SelfEnergy(G::DressedPropagator) = _self_energy(G)
 
 """
@@ -134,6 +146,12 @@ Base.getindex(d::SelfEnergySum, parameter) = d.arguments[parameter_monomial(para
 order(::SelfEnergySum{ΣT,O}) where {ΣT,O} = O
 parameters(d::SelfEnergySum) = collect(keys(d.arguments))
 
+"""
+    SelfEnergy(G::DressedPropagatorSum)
+
+Extract the 1PI self-energy independently for every perturbative parameter sector in `G` and
+preserve the sector keys for downstream Fourier, Wigner, and kinetic transformations.
+"""
 function SelfEnergy(G::DressedPropagatorSum{GS,O}) where {GS,O}
     ΣT = self_energy_result_type(GS)
     dict = Dict{ParameterMonomial,ΣT}(key => SelfEnergy(val) for (key, val) in arguments(G))

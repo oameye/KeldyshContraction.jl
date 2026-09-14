@@ -17,13 +17,13 @@ $(DocStringExtensions.FIELDS)
 # Constructor
 $(DocStringExtensions.TYPEDSIGNATURES)
 
-Constructs an `InteractionLagrangian` from a [`QTerm`](@ref) expression.
+Constructs an `InteractionLagrangian` from a symbolic Keldysh field expression.
 
 # Requirements
 The expression must:
 - be a bulk term (`is_bulk`);
-- be conserved ([`is_conserved`](@ref));
-- be physical ([`is_physical`](@ref));
+- be conserved (`is_conserved`);
+- be physical (`is_physical`);
 - contain both Keldysh components.
 """
 struct InteractionLagrangian{C<:Number,S<:Statistics} <: Lagrangian
