@@ -75,13 +75,7 @@ end
         @test endswith(rendered, "\\]")
     end
 
-    @test occursin(
-        "Kadanoff-Baym", sprint(show, MIME"text/plain"(), stages.I)
-    )
-    @test occursin(
-        "causal blockers: 0", sprint(show, MIME"text/plain"(), stages.R)
-    )
-    @test occursin(
-        "canonical sectors:", sprint(show, MIME"text/plain"(), stages.C)
-    )
+    @test occursin("Kadanoff-Baym", sprint(show, MIME"text/plain"(), stages.I))
+    @test occursin("causal blockers: 0", sprint(show, MIME"text/plain"(), stages.R))
+    @test occursin("canonical sectors:", sprint(show, MIME"text/plain"(), stages.C))
 end
