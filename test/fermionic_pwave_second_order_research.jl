@@ -121,6 +121,17 @@ function research_second_order_census(result)
     )
 end
 
+function log_gp2_kernel(result)
+    for (sector, occupation) in KC.collision_kernel_terms(result.kernel)
+        @info "fermionic p-wave gp² kernel term" basis = KC.momentum_basis(sector) external = KC.external_wigner_momentum(
+            sector
+        ) kinematic = KC.kinematic_factor(sector) support = KC.frequency_support(
+            sector
+        ) occupation
+    end
+    return nothing
+end
+
 @testset "research: spinless-fermion p-wave second-order canonical compiler census" begin
     Lg = fermionic_pwave_elastic_lagrangian()
     Lγ = fermionic_pwave_loss_lagrangian_second_order()
@@ -159,6 +170,7 @@ end
 
         census = research_second_order_census(result)
         @info "fermionic p-wave second-order canonical compiler census" parameter census
+        parameter == gp^2 && log_gp2_kernel(result)
 
         # The research branch may retain genuine blocked/singular support, but every finite
         # strict-QP contribution must traverse the common occupation/loop/kernel path.
