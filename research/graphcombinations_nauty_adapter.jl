@@ -6,6 +6,11 @@ import GraphCombinations as GC
 import KeldyshContraction as KC
 
 const GC_SHA = "ec5f84d4b1b1f21b2dacdb00ce4ed9af6bd68fa8"
+const Out = KC.Out
+const In = KC.In
+const Bulk = KC.Bulk
+const OccupationPolynomial = KC.OccupationPolynomial
+const OccupationAtom = KC.OccupationAtom
 
 function gc_result(edges::Vector{Tuple{Int,Int}}, colors::Vector{Int})
     graph = GC.DirectedGCGraph(
@@ -307,7 +312,7 @@ end
                 contractions = KC.Contraction{Boson}[
                     (edge.out, edge.in) for edge in KC.contractions(diagram)
                 ]
-                @test gc_legacy_topology(contractions, Val(edge_count)) == key
+                @test gc_legacy_topology(contractions, Val(length(key))) == key
             end
         end
     end
