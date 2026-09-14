@@ -4,8 +4,8 @@
 """
 $(DocStringExtensions.TYPEDEF)
 
-A structure representing dressed propagator in the Retarded-Advanced-Keldysh basis
-([`PropagatorType`](@ref)).
+A structure representing a dressed propagator in the Retarded-Advanced-Keldysh basis.
+Its components are classified by `PropagatorType`.
 
 # Fields
 $(DocStringExtensions.FIELDS)
@@ -71,13 +71,13 @@ function DressedPropagator(
     ψ = L.cfield
 
     keldysh = wick_contraction(
-        ψ(Out()) * ψ'(In()), L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
+        ψ(Out()) * bar(ψ)(In()), L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
     retarded = wick_contraction(
-        ψ(Out()) * ϕ'(In()), L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
+        ψ(Out()) * bar(ϕ)(In()), L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
     advanced = wick_contraction(
-        ϕ(Out()) * ψ'(In()), L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
+        ϕ(Out()) * bar(ψ)(In()), L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
 
     for component in (keldysh, retarded, advanced)
@@ -87,7 +87,6 @@ function DressedPropagator(
     return DressedPropagator(keldysh, retarded, advanced, Int64(O), parameters(L)^O)
 end
 
-"get parameter of the interaction lagrangian"
 parameters(d::DressedPropagator) = d.parameter
 
 """
@@ -115,15 +114,7 @@ parameters(d::DressedPropagatorSum) = map(G -> G.parameter, arguments(d))
     DressedPropagator(Ls::LagrangianSum, ::Val{order}, ::Val{edges}; kwargs...)
 """
 function DressedPropagator(
-    Ls::LagrangianSum,
-    ::Val{O},
-    ::Val{E};
-    simplify=true,
-    _set_reg_to_zero=true,
-    # simplify::Union{Bool,Vector{Bool}}=Bool[
-    #     !should_regularise(L.lagrangian) for L in arguments(Ls)
-    # ],
-    kwargs...,
+    Ls::LagrangianSum, ::Val{O}, ::Val{E}; simplify=true, _set_reg_to_zero=true, kwargs...
 ) where {O,E}
     @assert all(number_of_propagators(L) * O + 1 == E for L in arguments(Ls)) "All LagrangianSum terms must produce the supplied number of propagator edges"
     ϕ = first(arguments(Ls)).qfield
@@ -131,18 +122,15 @@ function DressedPropagator(
 
     simplify = isa(simplify, Bool) ? fill(simplify, length(Ls)) : simplify
 
-    # Compute Wick contractions for each component
     keldysh_pairs = wick_contraction(
-        ψ(Out()) * ψ'(In()), Ls, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
+        ψ(Out()) * bar(ψ)(In()), Ls, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
     retarded_pairs = wick_contraction(
-        ψ(Out()) * ϕ'(In()), Ls, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
+        ψ(Out()) * bar(ϕ)(In()), Ls, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
     advanced_pairs = wick_contraction(
-        ϕ(Out()) * ψ'(In()), Ls, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
+        ϕ(Out()) * bar(ψ)(In()), Ls, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
-
-    # Apply filtering and simplification to all components
 
     dict = Dict(
         begin

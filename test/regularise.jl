@@ -2,15 +2,15 @@ using KeldyshContraction, Test
 using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus
 
-@qfields c::Destroy(Classical) q::Destroy(Quantum)
+@qfields c::Boson(Classical) q::Boson(Quantum)
 
 @testset "is regular" begin
     using KeldyshContraction: regular
-    @test !regular((q(Plus), c'))
-    @test regular((q(Minus), c'))
-    @test !regular((c(Minus), q'))
-    @test regular((c(Plus), q'))
-    @test regular((c, q'))
+    @test !regular((q(Plus), bar(c)))
+    @test regular((q(Minus), bar(c)))
+    @test !regular((c(Minus), bar(q)))
+    @test regular((c(Plus), bar(q)))
+    @test regular((c, bar(q)))
 end
 
 @testset "regularise vs no regularise in elastic setting" begin
@@ -18,8 +18,11 @@ end
     using KeldyshContraction: set_reg_to_zero
 
     elasctic2boson_reguralisation =
-        -0.5 * ((c(Minus)^2 + q(Minus)^2) * c' * q' + c(Plus) * q(Plus) * ((c')^2 + (q')^2))
-    elasctic2boson = -0.5 * ((c^2 + q^2) * c' * q' + c * q * ((c')^2 + (q')^2))
+        -0.5 * (
+            (c(Minus)^2 + q(Minus)^2) * bar(c) * bar(q) +
+            c(Plus) * q(Plus) * (bar(c)^2 + bar(q)^2)
+        )
+    elasctic2boson = -0.5 * ((c^2 + q^2) * bar(c) * bar(q) + c * q * (bar(c)^2 + bar(q)^2))
 
     L_reg = InteractionLagrangian(elasctic2boson_reguralisation)
     L_no_reg = InteractionLagrangian(elasctic2boson)
@@ -44,15 +47,15 @@ end
 
     loss2boson_unregular =
         im * (
-            0.5 * c' * q' * (c^2 + q^2) - 0.5 * c * q * ((c')^2 + (q')^2) +
-            c' * q' * (c * q + c * q)
+            0.5 * bar(c) * bar(q) * (c^2 + q^2) - 0.5 * c * q * (bar(c)^2 + bar(q)^2) +
+            bar(c) * bar(q) * (c * q + c * q)
         )
 
     loss2boson =
         im * (
-            0.5 * c' * q' * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
-            0.5 * c(Plus) * q(Plus) * (c' * c' + q' * q') +
-            c' * q' * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
+            0.5 * bar(c) * bar(q) * (c(Minus) * c(Minus) + q(Minus) * q(Minus)) -
+            0.5 * c(Plus) * q(Plus) * (bar(c) * bar(c) + bar(q) * bar(q)) +
+            bar(c) * bar(q) * (c(Plus) * q(Plus) + c(Minus) * q(Minus))
         )
 
     L_reg = InteractionLagrangian(loss2boson)
@@ -66,7 +69,8 @@ end
     topology_reg = topologies(GF_reg2.keldysh)
     topology_no_reg = topologies(GF_no_reg2.keldysh)
 
-    # The [3] multiplicity doesn't contain equal-time propagators, so the reguralisation shouldn't have any affect.
+    # The [3] multiplicity doesn't contain equal-time propagators, so the regularisation
+    # should not have any effect.
     @test isequal(Set(topology_reg[[3]]), Set(topology_no_reg[[3]]))
     @test !isequal(Set(topology_reg[[2]]), Set(topology_no_reg[[2]]))
     @test !isequal(Set(topology_reg[[1]]), Set(topology_no_reg[[1]]))
