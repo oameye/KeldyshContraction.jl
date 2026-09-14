@@ -11,19 +11,17 @@ Plots.default(; fmt=:png)
 ENV["GKSwstype"] = "100"
 
 include("pages.jl")
+include("make_md_examples.jl")
 
-# The README.md file is used index (home) page of the documentation.
+# The README.md file is used as the deployed documentation home page. Avoid copying it during
+# local LiveServer builds, where doing so would create a rebuild loop.
 if CI
-    include("make_md_examples.jl")
     cp(
         normpath(@__FILE__, "../../README.md"),
         normpath(@__FILE__, "../src/index.md");
         force=true,
     )
-else
-    nothing
 end
-# ^ when using LiveServer, this will generate a loop
 
 makedocs(;
     sitename="KeldyshContraction.jl",
@@ -34,8 +32,8 @@ makedocs(;
     pagesonly=true,
     clean=true,
     linkcheck=true,
-    draft=false,#,(!CI),
-    doctest=false,  # We test it in the CI, no need to run it here
+    draft=false,
+    doctest=false,  # Doctests are run in the test suite.
     checkdocs=:public,
 )
 
