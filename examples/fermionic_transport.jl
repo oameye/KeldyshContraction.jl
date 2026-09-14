@@ -1,7 +1,7 @@
 # # Fermionic p-wave scattering and two-body loss
 #
-# For identical spinless fermions the local s-wave channel vanishes.  A minimal
-# odd-wave process therefore carries one spatial derivative.  We use one Cartesian
+# For identical spinless fermions the local s-wave channel vanishes. A minimal
+# odd-wave process therefore carries one spatial derivative. We use one Cartesian
 # channel,
 #
 # ```math
@@ -15,55 +15,74 @@ using KeldyshContraction: Regularisation
 
 @qfields ψ::Fermion
 ψ1, ψ2 = ψ[One], ψ[Two]
+bψ1, bψ2 = bar(ψ1), bar(ψ2)
 
 # ## Interaction action
 #
-# Fermions use the asymmetric Larkin--Ovchinnikov rotation.  The barred fields are
-# independent Grassmann variables, and their branch reconstruction differs from the
-# unbarred one.
+# Fermions use the asymmetric Larkin--Ovchinnikov inverse rotation. It is convenient
+# to leave the common `1/√2` factors outside the branch sums. For the pair operator
+# each branch contains two such factors, so the exact coherent coefficient is `-1/8`.
+# Derivatives are taken on the fundamental fields before the branch sums are formed;
+# this is simply the linearity of `∂x` made explicit in the symbolic representation.
 
-sqrt2 = sqrt(2.0)
-ψplus = (ψ1 + ψ2) / sqrt2
-ψminus = (ψ1 - ψ2) / sqrt2
-barψplus = (bar(ψ2) + bar(ψ1)) / sqrt2
-barψminus = (bar(ψ2) - bar(ψ1)) / sqrt2
+ψplus = ψ1 + ψ2
+∂ψplus = partial(ψ1, :x) + partial(ψ2, :x)
+ψminus = ψ1 - ψ2
+∂ψminus = partial(ψ1, :x) - partial(ψ2, :x)
 
-Pplus = ψplus * partial(ψplus, :x)
-Pminus = ψminus * partial(ψminus, :x)
-barPplus = partial(barψplus, :x) * barψplus
-barPminus = partial(barψminus, :x) * barψminus
+bψplus = bψ1 + bψ2
+∂bψplus = partial(bψ1, :x) + partial(bψ2, :x)
+bψminus = bψ2 - bψ1
+∂bψminus = partial(bψ2, :x) - partial(bψ1, :x)
 
-# The coherent vertex is the contour difference of `P_x† P_x`.
+Pplus = ψplus * ∂ψplus
+Pminus = ψminus * ∂ψminus
+Pplus_dagger = ∂bψplus * bψplus
+Pminus_dagger = ∂bψminus * bψminus
 
-elastic = -(1 // 2) * (barPplus * Pplus - barPminus * Pminus)
+elastic = -(1 // 8) * (Pplus_dagger * Pplus - Pminus_dagger * Pminus)
 
-# The loss vertex keeps the finite-Trotter ordering inherited from the microscopic
-# Lindblad step.  The regulator is not an optional numerical convention: it fixes the
-# equal-time causal contractions before the strict kinetic reduction.
+# The loss vertex uses the same finite-Trotter contour ordering as the certified
+# first-order dissipative oracle. The incoming `+` branch is evaluated one step back,
+# while the forward branch difference carries the `+` regulator. The barred pair is
+# kept at the unshifted time in this convention.
 
 plus = Regularisation.Plus
 minus = Regularisation.Minus
-Pplus_prev = ψplus(minus) * partial(ψplus(minus), :x)
-Pminus_prev = ψminus(minus) * partial(ψminus(minus), :x)
-barPplus_next = partial(barψplus(plus), :x) * barψplus(plus)
-barPminus_next = partial(barψminus(plus), :x) * barψminus(plus)
+
+ψplus_minus = ψ1(minus) + ψ2(minus)
+∂ψplus_minus = partial(ψ1(minus), :x) + partial(ψ2(minus), :x)
+ψplus_plus = ψ1(plus) + ψ2(plus)
+∂ψplus_plus = partial(ψ1(plus), :x) + partial(ψ2(plus), :x)
+ψminus_plus = ψ1(plus) - ψ2(plus)
+∂ψminus_plus = partial(ψ1(plus), :x) - partial(ψ2(plus), :x)
+
+Pplus_minus = ψplus_minus * ∂ψplus_minus
+Pplus_plus = ψplus_plus * ∂ψplus_plus
+Pminus_plus = ψminus_plus * ∂ψminus_plus
+
 loss =
-    (1 // 2) *
+    (1 // 8) *
     im *
     (
-        (barPplus_next - barPminus_next) * (Pplus_prev + Pminus_prev) +
-        (barPplus_next + barPminus_next) * (Pplus_prev - Pminus_prev)
+        (Pplus_dagger - Pminus_dagger) * Pplus_minus -
+        (Pplus_plus - Pminus_plus) * Pminus_dagger
     )
 
 @syms gp γp
-L = InteractionLagrangian(elastic, gp) + InteractionLagrangian(loss, γp)
+Lg = InteractionLagrangian(elastic, gp)
+Lγ = InteractionLagrangian(loss, γp)
+L = Lg + Lγ
 
+# `L` is the full microscopic interaction. As in the bosonic example, a focused
+# calculation can compile one process directly and avoid generating unrelated sectors.
+#
 # ## Ask for the collision kernel
 #
-# As for bosons, the ordinary API is one call once the perturbative sector is selected.
+# The ordinary first-order loss calculation is therefore one high-level call after the
+# perturbative propagator has been constructed.
 
-G1 = DressedPropagator(L, Val(1), Val(3); preserve_regularisation=true)
-Gγp = G1[γp]
+Gγp = DressedPropagator(Lγ, Val(1), Val(3); preserve_regularisation=true)
 Cγp = collision_kernel(Gγp)
 Cγp
 
@@ -79,7 +98,7 @@ Cγp
 #
 # ## Inspecting the derivation
 #
-# We now unpack the same `collision_kernel(Gγp)` call.  The stages are identical to the
+# We now unpack the same `collision_kernel(Gγp)` call. The stages are identical to the
 # bosonic compiler; statistics enters through Grassmann signs and the final map
 # `F_F=1-2n`.
 #
@@ -96,7 +115,7 @@ GF
 ΣF = SelfEnergy(GF)
 ΣF
 
-# The result is a fixed-order 1PI self-energy.  No nonlinear Dyson iteration is hidden
+# The result is a fixed-order 1PI self-energy. No nonlinear Dyson iteration is hidden
 # in this constructor.
 #
 # ### 3. Wigner representation
@@ -126,7 +145,7 @@ I
 # \qquad A_\Sigma=i(\Sigma^R-\Sigma^A),
 # ```
 #
-# before any shell projection.  This ordering is essential for the cancellation and
+# before any shell projection. This ordering is essential for the cancellation and
 # survival of the correct causal sectors.
 #
 # ### 6. Spectral/dispersive decomposition
@@ -142,7 +161,7 @@ SD
 R = reduce_frequency_collision(SD)
 R
 
-# The first-order loss sector is regular.  At higher orders the same object also reports
+# The first-order loss sector is regular. At higher orders the same object also reports
 # genuine causal pinches explicitly instead of assigning them a finite value.
 #
 # ### 8. Occupation reduction
@@ -171,10 +190,11 @@ Cγp_explicit
 
 # ## Second-order p-wave scattering
 #
-# The regular coherent `g_p^2` sector can again be compiled directly.
+# The regular coherent `g_p^2` sector can again be compiled directly. Two quartic
+# vertices and the external two-point legs give five propagator edges.
 
-G2 = DressedPropagator(L, Val(2), Val(3); preserve_regularisation=true)
-Cgp2 = collision_kernel(G2[gp ^ 2])
+Ggp2 = DressedPropagator(Lg, Val(2), Val(5); preserve_regularisation=true)
+Cgp2 = collision_kernel(Ggp2)
 Cgp2
 
 # The certified shell contribution is
@@ -191,6 +211,10 @@ Cgp2
 #
 # ## Dissipative second order and mixed sectors
 #
+# Expanding the full `L = Lg + Lγ` interaction to second order produces the additional
+# `g_p\gamma_p` and `\gamma_p^2` sectors. These are deliberately described rather than
+# sent through the one-line API because both contain genuine blocked causal support.
+#
 # The pure-loss shell contribution is
 #
 # ```math
@@ -202,9 +226,9 @@ Cgp2
 # ```
 #
 # It has nine finite shell sectors together with 84 genuine causal-frequency pinches.
-# Consequently `collision_kernel(G2[γp^2])` is intentionally not a silent "finite-part"
-# operation: the high-level compiler refuses to discard those blockers.  To study this
-# sector, follow the explicit pipeline through `R = reduce_frequency_collision(...)`,
+# Consequently `collision_kernel` is intentionally not a silent finite-part operation
+# for this sector: the high-level compiler refuses to discard those blockers. To study
+# it, follow the explicit pipeline through `R = reduce_frequency_collision(...)`,
 # inspect `reduced_regular_terms(R)` and `reduced_blocked_terms(R)`, and only then choose
 # whether a finite regular branch is the intended approximation.
 #
