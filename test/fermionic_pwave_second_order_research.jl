@@ -159,7 +159,8 @@ function certify_gp2_elastic(result)
     nk, np, nq, nr = n(k), n(p), n(q), n(r)
     one_n = one(typeof(nk))
     fermi_gain_loss =
-        (one_n - nk) * (one_n - np) * nq * nr - nk * np * (one_n - nq) * (one_n - nr)
+        (one_n - nk) * (one_n - np) * nq * nr -
+        nk * np * (one_n - nq) * (one_n - nr)
 
     relative_in = pwave_axis_polynomial(k) - pwave_axis_polynomial(p)
     relative_out = pwave_axis_polynomial(q) - pwave_axis_polynomial(r)
@@ -197,6 +198,100 @@ function certify_gp2_elastic(result)
             isempty(KC.frequency_support(sector).principal_values),
         keys(KC.collision_kernel_terms(result.kernel)),
     )
+    return nothing
+end
+
+function certify_gamma2_loss(result)
+    terms = KC.occupation_reduced_terms(result.occupation)
+    @test length(terms) == 9
+    @test isempty(KC.reduced_trotter_terms(result.reduced))
+
+    first_sector = first(keys(terms))
+    basis = KC.momentum_basis(first_sector)
+    external = KC.external_wigner_momentum(first_sector)
+    external_index = only(i for (i, variable) in enumerate(basis) if variable == external)
+    loop_indices = Int[i for i in eachindex(basis.variables) if i != external_index]
+    @test length(loop_indices) == 2
+
+    k = KC.basis_momentum(basis, external_index)
+    q = KC.basis_momentum(basis, loop_indices[1])
+    r = KC.basis_momentum(basis, loop_indices[2])
+    p = -k + q + r
+
+    ε(momentum) = KC.EnergyForm(KC.DispersionAtom(second_order_pwave_ψ, momentum))
+    shell, shell_factor = KC.energy_shell(ε(k) + ε(p) - ε(q) - ε(r))
+    @test shell_factor == 1 // 1
+    support = KC.FrequencySupport(
+        KC.EnergyShell{Fermion}[shell], KC.PrincipalValueSupport{Fermion}[]
+    )
+
+    C = KC.ComplexRationals
+    n(momentum) =
+        KC.OccupationPolynomial(KC.OccupationAtom(second_order_pwave_ψ, momentum), one(C))
+    nk, np, nq, nr = n(k), n(p), n(q), n(r)
+    one_n = one(typeof(nk))
+
+    # The trace-preserving dissipative pair cut is fixed directly by the fermionic
+    # greater/lesser pair weights, Π>=(1-n₁)(1-n₂) and Π<=n₁n₂.
+    pair_cut =
+        (one_n - nk) * (one_n - np) * nq * nr +
+        nk * np * (one_n - nq) * (one_n - nr) -
+        2 * nk * np * nq * nr
+
+    relative_in = pwave_axis_polynomial(k) - pwave_axis_polynomial(p)
+    relative_out = pwave_axis_polynomial(q) - pwave_axis_polynomial(r)
+    expected_weight =
+        (1 // 8) * (relative_in * relative_in) * (relative_out * relative_out)
+
+    Sector = typeof(first_sector)
+    Occupation = typeof(pair_cut)
+    expected_terms = Dict{Sector,Occupation}()
+    zero_occupation = zero(pair_cut)
+    for (monomial, coefficient) in expected_weight
+        kinematic = KC.MomentumPolynomial(monomial, one(C))
+        sector = KC.ReducedCollisionSector(
+            KC.parameters(result.occupation), basis, external, kinematic, support
+        )
+        contribution = coefficient * pair_cut
+        expected_terms[sector] = get(expected_terms, sector, zero_occupation) + contribution
+    end
+
+    expected_occupation = typeof(result.occupation)(
+        expected_terms,
+        KC.target_family(result.occupation),
+        KC.parameters(result.occupation),
+        KC.wigner_context(result.occupation),
+    )
+    expected_kernel = KC.collision_kernel(KC.quotient_loop_momenta(expected_occupation))
+
+    @test KC.collision_kernel_terms(result.kernel) ==
+        KC.collision_kernel_terms(expected_kernel)
+    @test all(
+        sector ->
+            length(KC.frequency_support(sector).shells) == 1 &&
+            isempty(KC.frequency_support(sector).principal_values),
+        keys(KC.collision_kernel_terms(result.kernel)),
+    )
+
+    # The singular branch remains upstream. Every generated blocker is a genuine pinch,
+    # and all 84 contributions carry the same exact canonical affine singular geometry.
+    blocked = collect(values(KC.reduced_blocked_terms(result.reduced)))
+    @test length(blocked) == 84
+    @test all(
+        contribution ->
+            KC.trotter_frequency_blocker_kind(contribution) === KC.CausalFrequencyPinch,
+        blocked,
+    )
+    blocked_supports = [
+        KC.trotter_frequency_blocked_supports(contribution) for contribution in blocked
+    ]
+    reference_supports = first(blocked_supports)
+    @test !isempty(reference_supports)
+    @test all(KC.has_affine_singular_support, reference_supports)
+    @test all(supports -> supports == reference_supports, blocked_supports)
+    @info "fermionic p-wave gamma2 blocked causal census" blocker_count = length(blocked) support_ranks =
+        [KC.affine_support_rank(support) for support in reference_supports] support_counts =
+        [KC.affine_support_count(support) for support in reference_supports]
     return nothing
 end
 
@@ -239,6 +334,7 @@ end
         census = research_second_order_census(result)
         @info "fermionic p-wave second-order canonical compiler census" parameter census
         parameter == gp^2 && certify_gp2_elastic(result)
+        parameter == γp^2 && certify_gamma2_loss(result)
 
         # The research branch may retain genuine blocked/singular support, but every finite
         # strict-QP contribution must traverse the common occupation/loop/kernel path.
