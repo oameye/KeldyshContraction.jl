@@ -119,7 +119,9 @@ end
     boundary = KC.canonical_trotter_boundary_expressions(reduction)
 
     @test isempty(reduced_constants)
-    @test length(boundary) == 4
+    # The eight regular sunset reductions are all retained. Four were previously quarantined
+    # inside pinched complete sectors, which was the γ² regression caught by the raw oracle.
+    @test length(boundary) == 8
     @test all(second_order_boundary_has_no_active_frequency, values(boundary))
     @test length(blockers) == 8
 
