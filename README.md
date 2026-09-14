@@ -8,6 +8,40 @@
 [![Aqua QA](https://raw.githubusercontent.com/JuliaTesting/Aqua.jl/master/badge.svg)](https://github.com/JuliaTesting/Aqua.jl)
 [![jet](https://img.shields.io/badge/%F0%9F%9B%A9%EF%B8%8F_tested_with-JET.jl-233f9a)](https://github.com/aviatesk/JET.jl)
 
-KeldyshContraction.jl is a package for the symbolic derivation of the two-point correlator diagrams in Keldysh-Schwinger field theory. The symbolic quantum field theory algebra is implemented using [SymbolicUtils.jl](https://github.com/JuliaSymbolics/SymbolicUtils.jl) and [TermInterface.jl](https://github.com/JuliaSymbolics/TermInterface.jl/) of the JuliaSymbolic ecosystem. The typesystem has been heavily inspired by the second quantization algebra defined in [QuantumCumulants.jl](https://github.com/qojulia/QuantumCumulants.jl). For more details on the implementation see the ["symbolic quantum field algebra"](https://oameye.github.io/KeldyshContraction.jl/dev/typesystem/) documentation page.
+KeldyshContraction.jl symbolically derives perturbative two-point functions, 1PI self-energies, and quantum-kinetic collision kernels in Schwinger--Keldysh field theory. The same compiler supports bosonic and fermionic fields, coherent interactions, Lindblad loss vertices, coordinate derivatives, exact momentum routing, Wigner transformation, and statistics-dependent occupation reduction.
 
-In developing this package, the work [`SciPost Phys. Core 8, 014 (2025)`](https://doi.org/10.21468/SciPostPhysCore.8.1.014) symbolic quantum field algebra was used extensively. Hence, the corresponding conventions and notation are used in this package.
+## Installation
+
+The package is currently under active development. Install the development version directly from GitHub:
+
+```julia
+import Pkg
+Pkg.add(url="https://github.com/oameye/KeldyshContraction.jl")
+```
+
+For a selected perturbative dressed-propagator sector `G`, the ordinary kinetic API is deliberately small:
+
+```julia
+C = collision_kernel(G)
+```
+
+This compiles the sector to the physical strict-quasiparticle `CollisionKernel`. The complete derivation remains inspectable through the staged compiler
+
+```text
+G
+  → Fourier transform
+  → 1PI self-energy
+  → Wigner transform
+  → Kadanoff–Baym collision identity
+  → spectral/dispersive decomposition
+  → shell / PV / blocker reduction
+  → occupation reduction
+  → loop quotient
+  → CollisionKernel.
+```
+
+Genuine causal-frequency pinches and unresolved finite-Trotter states are never silently discarded: the high-level compiler reports them, while the staged API exposes the corresponding reduced structures for inspection.
+
+The documentation is organised as a compact [theory introduction](https://oameye.github.io/KeldyshContraction.jl/dev/theory/keldysh/), a task-oriented [manual](https://oameye.github.io/KeldyshContraction.jl/dev/manual/fields/), and complete bosonic and fermionic transport examples that unpack the compiler step by step.
+
+The field-theory conventions follow the symbolic Keldysh framework developed in [`SciPost Phys. Core 8, 014 (2025)`](https://doi.org/10.21468/SciPostPhysCore.8.1.014).

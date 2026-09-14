@@ -3,27 +3,8 @@ CI = get(ENV, "CI", nothing) == "true" || get(ENV, "GITHUB_TOKEN", nothing) !== 
 using KeldyshContraction
 using Documenter
 
-using Plots: Plots
-Plots.default(; fmt=:png)
-# Gotta set this environment variable when using the GR run-time on CI machines.
-# This happens as examples will use Plots.jl to make plots and movies.
-# See: https://github.com/jheinen/GR.jl/issues/278
-ENV["GKSwstype"] = "100"
-
 include("pages.jl")
-
-# The README.md file is used index (home) page of the documentation.
-if CI
-    include("make_md_examples.jl")
-    cp(
-        normpath(@__FILE__, "../../README.md"),
-        normpath(@__FILE__, "../src/index.md");
-        force=true,
-    )
-else
-    nothing
-end
-# ^ when using LiveServer, this will generate a loop
+include("make_md_examples.jl")
 
 makedocs(;
     sitename="KeldyshContraction.jl",
@@ -31,11 +12,11 @@ makedocs(;
     modules=KeldyshContraction,
     format=Documenter.HTML(; canonical="https://oameye.github.io/KeldyshContraction.jl"),
     pages=pages,
+    pagesonly=true,
     clean=true,
     linkcheck=true,
-    warnonly=:missing_docs,
-    draft=false,#,(!CI),
-    doctest=false,  # We test it in the CI, no need to run it here
+    draft=false,
+    doctest=false,  # Doctests are run in the test suite.
     checkdocs=:public,
 )
 

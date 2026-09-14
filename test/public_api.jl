@@ -28,23 +28,39 @@ end
         @test is_exported(name)
     end
 
-    # Stable representation/inspection API is qualified, not namespace-polluting.
+    # Qualified public names are semantic inspection used by the manual and canonical examples.
     for name in (
-        :QTerm,
         :Regularisation,
-        :Edge,
-        :Diagram,
-        :Diagrams,
-        :contractions,
-        :topology,
-        :propagator_type,
-        :DressedPropagatorSum,
+        :field_families,
+        :target_family,
+        :parameters,
         :matrix,
         :order,
         :statistics,
         :keldysh_component,
         :retarded_component,
         :advanced_component,
+        :kinematic_factor,
+        :frequency_support,
+        :reduced_regular_terms,
+        :reduced_blocked_terms,
+        :reduced_trotter_terms,
+        :collision_kernel_terms,
+    )
+        @test !is_exported(name)
+        VERSION >= v"1.11" && @test Base.ispublic(KC, name)
+    end
+
+    # Returned representation types and compiler machinery are implementation details.
+    for name in (
+        :QTerm,
+        :QMul,
+        :QAdd,
+        :Edge,
+        :Diagram,
+        :Diagrams,
+        :DressedPropagatorSum,
+        :SelfEnergySum,
         :MomentumBasis,
         :FourierDressedPropagator,
         :FourierSelfEnergy,
@@ -53,23 +69,11 @@ end
         :KineticSelfEnergy,
         :OffShellCollisionExpression,
         :SpectralDispersiveCollision,
+        :FrequencySupport,
         :ReducedFrequencyCollision,
-        :reduced_regular_terms,
-        :reduced_blocked_terms,
-        :reduced_trotter_terms,
         :OccupationReducedExpression,
-        :occupation_reduced_terms,
         :LoopQuotientedExpression,
-        :loop_quotient_terms,
         :CollisionKernelSector,
-        :collision_kernel_terms,
-    )
-        @test !is_exported(name)
-        VERSION >= v"1.11" && @test Base.ispublic(KC, name)
-    end
-
-    # Algorithmic IR and canonicalization machinery are implementation details.
-    for name in (
         :KineticLine,
         :KineticTerm,
         :EnergyForm,

@@ -1,11 +1,4 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-DocumenterTools = "35a29f4d-8980-5a13-9543-d66fff28ecb8"
-GraphRecipes = "bd48cda9-67a9-57be-86fa-5b3c104eda73"
 KeldyshContraction = "da6be1f2-7f61-475e-9253-2fea1ca4beca"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
-Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-Term = "22787eb5-b846-44ae-b979-8e399b8463ab"
-
-[compat]
-Term = "1"
