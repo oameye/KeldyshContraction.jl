@@ -8,7 +8,9 @@ import KeldyshContraction as KC
 const GC_SHA = "ec5f84d4b1b1f21b2dacdb00ce4ed9af6bd68fa8"
 
 function gc_result(edges::Vector{Tuple{Int,Int}}, colors::Vector{Int})
-    graph = GC.DirectedGCGraph(Pair{Int,Int}[source => target for (source, target) in edges], length(colors))
+    graph = GC.DirectedGCGraph(
+        Pair{Int,Int}[source => target for (source, target) in edges], length(colors)
+    )
     return GC.canonicalize_directed(graph, colors)
 end
 
@@ -147,8 +149,9 @@ end
 function gc_canonical_loop_transform(
     sector::KC.ReducedCollisionSector{S}, monomial::KC.OccupationMonomial{S}
 ) where {S<:KC.Statistics}
-    result, pair_vertices, loop_incidences, basis, external, nloops =
-        gc_loop_graph_data(sector, monomial)
+    result, pair_vertices, loop_incidences, basis, external, nloops = gc_loop_graph_data(
+        sector, monomial
+    )
 
     rank = GC.vertex_mapping(GC.canonical_relabeling(result))
     ordered_slots = sortperm(1:nloops; by=slot -> rank[pair_vertices[slot]])
@@ -187,20 +190,19 @@ function gc_quotient_loop_momenta(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{KC.OccupationMonomial{S},D}[
-                    transformed_monomial => transformed_coefficient
-                ]
+                contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
                 KC._push_kernel_polynomial!(
-                    out,
-                    transformed_sector,
-                    KC.OccupationPolynomial{D,S}(contribution),
+                    out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
                 )
             end
         end
     end
 
     return KC.LoopQuotientedExpression{D,S,O,G,Ctx}(
-        out, KC.target_family(expression), KC.parameters(expression), KC.wigner_context(expression)
+        out,
+        KC.target_family(expression),
+        KC.parameters(expression),
+        KC.wigner_context(expression),
     )
 end
 
@@ -282,8 +284,9 @@ end
             @test gc_canonicalize(fixture) == KC.canonicalize(fixture)
             graph_positions = KC.canonicalization_positions(fixture)
             gc_topology = gc_topology_result(fixture, graph_positions)
-            _, _, _, nauty_automorphisms =
-                KC.canonicalization_permutations(fixture, graph_positions)
+            _, _, _, nauty_automorphisms = KC.canonicalization_permutations(
+                fixture, graph_positions
+            )
             @test GC.canonical_automorphism_order(gc_topology) == nauty_automorphisms.n
         end
         @test GC.canonical_automorphism_order(gc_topology_result(symmetric)) == 3
@@ -291,8 +294,7 @@ end
 
     @testset "historical topology 1 / 3 / 11 / 59" begin
         elastic = -(
-            1 // 2 * (c^2 + q^2) * bar(c) * bar(q) +
-            1 // 2 * c * q * (bar(c)^2 + bar(q)^2)
+            1 // 2 * (c^2 + q^2) * bar(c) * bar(q) + 1 // 2 * c * q * (bar(c)^2 + bar(q)^2)
         )
         L = InteractionLagrangian(elastic)
         cases = ((1, 3, 1), (2, 5, 3), (3, 7, 11), (4, 9, 59))
@@ -322,7 +324,9 @@ end
                     for (kinematic, _) in KC.kinematic_factor(sector)
                         atom_sector = KC._kinematic_atom_sector(sector, kinematic)
                         gc_transform = gc_canonical_loop_transform(atom_sector, monomial)
-                        nauty_transform = KC._canonical_loop_transform(atom_sector, monomial)
+                        nauty_transform = KC._canonical_loop_transform(
+                            atom_sector, monomial
+                        )
                         @test KC.loop_transform_matrix(gc_transform) ==
                             KC.loop_transform_matrix(nauty_transform)
                     end
@@ -337,8 +341,7 @@ end
         bosonic_occupation = KC.occupation_reduced_expression(bosonic_reduced)
         assert_quotient_matches(bosonic_occupation)
 
-        _, _, _, _, _, _, _, _, _, fermionic_occupation, fermionic_quotient =
-            benchmark_fermionic_pwave_fixtures()
+        _, _, _, _, _, _, _, _, _, fermionic_occupation, fermionic_quotient = benchmark_fermionic_pwave_fixtures()
         gc_fermionic_quotient = gc_quotient_loop_momenta(fermionic_occupation)
         @test KC.loop_quotient_terms(gc_fermionic_quotient) ==
             KC.loop_quotient_terms(fermionic_quotient)
@@ -355,7 +358,9 @@ end
             (c(Bulk(4)), bar(q)(Bulk(1))),
             (c(Bulk(4)), bar(q)(In())),
         ])
-        benchmark_pair("propagator ring", () -> KC.canonicalize(ring), () -> gc_canonicalize(ring))
+        benchmark_pair(
+            "propagator ring", () -> KC.canonicalize(ring), () -> gc_canonicalize(ring)
+        )
 
         occupation2 = benchmark_loop_quotient_fixture(2)
         occupation4 = benchmark_loop_quotient_fixture(4)
