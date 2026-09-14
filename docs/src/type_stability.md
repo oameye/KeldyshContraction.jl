@@ -15,44 +15,68 @@ For both supported statistics families, the guaranteed coefficient representatio
 Other `Number` subtypes may work through generic methods, but they are outside the guarantee
 until they are added to the supported-type contract matrix and CI workload.
 
+## Shared derivative-field contract
+
+Coordinate-derivative decoration is part of the supported public field model for both
+statistics families. `partial(field, axis)` preserves the same outer `Field{S}` type and
+stores the derivative multi-index as concrete value data rather than introducing one subtype
+per derivative axis/order.
+
+The supported contract includes:
+
+- single, repeated, and mixed coordinate derivatives;
+- canonical equality of commuting derivative multi-indices;
+- owned `derivatives(field)` access;
+- preservation through `bar`, position changes, and regularisation changes;
+- derivative-aware generator equality/hash/order;
+- derivative-aware physical diagram identity;
+- derivative-blind `FieldFamily` contraction compatibility and R/A/K classification;
+- preservation through `InteractionLagrangian`, Wick contraction, `DressedPropagator`, and
+  `SelfEnergy`.
+
+Derivative-to-momentum conversion is deliberately not part of this layer. The coordinate-space
+derivative metadata remains intact until the replacement Fourier/momentum pipeline consumes it.
+
 ## Bosonic public contract
 
 For `Boson`, the guarantee covers package-owned public entry points for:
 
-- field construction and access;
+- field construction, derivative decoration, and access;
 - coefficient conversion and rationalization;
 - `InteractionLagrangian` and `LagrangianSum`;
 - `wick_contraction`;
 - `DressedPropagator` and `SelfEnergy`, including parameter-keyed sum results;
 - matrix and topology access;
-- Wigner transformation;
+- the existing experimental Wigner transformation while it remains supported by the current
+  branch;
 - package-owned plain-text and LaTeX rendering.
 
-The resulting symbolic, diagram, propagator, self-energy, and Wigner representations must
-remain recursively concrete and inference-visible.
+The resulting symbolic, diagram, propagator, self-energy, and current Wigner representations
+must remain recursively concrete and inference-visible.
 
 ## Fermionic public contract
 
-For `Fermion`, the guarantee covers the v1 fermionic physics implemented by the LO layer:
+For `Fermion`, the guarantee covers the normal fermionic/LO physics plus derivative-decorated
+Grassmann generators:
 
 - `FieldFamily{Fermion}` / `Field{Fermion}` construction through `@qfields`;
 - `One` / `Two` component selection and `bar`;
-- Grassmann field algebra;
+- Grassmann field algebra, including differentiated-generator anticommutation and nilpotency;
 - explicit coefficient conversion and rationalization;
 - `InteractionLagrangian`, including multi-family target selection;
 - `LagrangianSum` for sums whose terms share the same physical field families;
-- `wick_contraction` with fermionic permutation signs;
+- `wick_contraction` with fermionic permutation signs and exact derivative endpoint retention;
 - `DressedPropagator` and `SelfEnergy`, including parameter-keyed sum results;
 - statistics-dispatched `matrix` access with the fermionic upper-triangular LO layout.
 
 Representative exact and floating-point fermionic pipelines are exercised with `@inferred`
 and recursively concrete result checks from field algebra through self-energy construction.
-The sum workload additionally exercises distinct perturbation parameters and the mixed
-second-order parameter monomial under the same concrete result representation.
+The derivative workload includes a differentiated fermionic interaction through
+`DressedPropagator -> SelfEnergy` under the same concrete result representation.
 
-Fermionic Wigner transformation and collision-integral physics are not part of this guarantee.
-They are explicitly outside the fermionic v1 scope and must not be inferred from the bosonic
-coverage above.
+Fermionic Fourier/Wigner transformation and collision-integral physics are not yet part of
+this guarantee. They are owned by the #265 kinetic roadmap and must not be inferred from the
+current bosonic experimental downstream code.
 
 ## Enforcement
 

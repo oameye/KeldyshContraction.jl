@@ -34,6 +34,7 @@ struct Field{S<:Statistics} <: QSym
     keldysh::KeldyshIndex.T
     position::Position
     regularisation::Regularisation.T
+    derivative::DerivativeMultiIndex
 end
 
 """Construct a Keldysh component of a field family."""
@@ -43,8 +44,9 @@ function Field(
     orientation::Orientation.T=Orientation.Unbarred,
     reg::Regularisation.T=Regularisation.Zero,
     pos::Position=Bulk(),
+    derivative::DerivativeMultiIndex=DerivativeMultiIndex(),
 ) where {S<:Statistics}
-    return Field{S}(family, orientation, keldysh, pos, reg)
+    return Field{S}(family, orientation, keldysh, pos, reg, derivative)
 end
 
 Base.getindex(family::FieldFamily, keldysh::KeldyshIndex.T) = Field(family, keldysh)
@@ -65,8 +67,9 @@ function reconstruct(
     keldysh::KeldyshIndex.T=keldysh_index(f),
     position::Position=position(f),
     regularisation::Regularisation.T=regularisation(f),
+    derivative::DerivativeMultiIndex=derivative_multiindex(f),
 ) where {S<:Statistics}
-    return Field(family, keldysh, orientation, regularisation, position)
+    return Field(family, keldysh, orientation, regularisation, position, derivative)
 end
 
 statistics(::Field{S}) where {S<:Statistics} = S
@@ -74,7 +77,17 @@ orientation(f::Field) = f.orientation
 keldysh_index(f::Field) = f.keldysh
 regularisation(f::Field) = f.regularisation
 position(f::Field) = f.position
+derivative_multiindex(f::Field) = f.derivative
 index(f::Field) = index(position(f))
+
+"""Return an owned canonical list of coordinate-derivative axes on a field."""
+derivatives(f::Field) = derivative_axes(derivative_multiindex(f))
+
+"""Return a new field with one additional coordinate derivative `axis`."""
+function partial(f::Field, axis::Symbol)
+    derivative = append_derivative(derivative_multiindex(f), axis)
+    return reconstruct(f; derivative)
+end
 
 is_unbarred(f::Field) = orientation(f) === Orientation.Unbarred
 is_barred(f::Field) = orientation(f) === Orientation.Barred
@@ -111,7 +124,8 @@ function Base.isequal(a::Field{S}, b::Field{S}) where {S}
            isequal(orientation(a), orientation(b)) &&
            isequal(keldysh_index(a), keldysh_index(b)) &&
            isequal(position(a), position(b)) &&
-           isequal(regularisation(a), regularisation(b))
+           isequal(regularisation(a), regularisation(b)) &&
+           isequal(derivative_multiindex(a), derivative_multiindex(b))
 end
 Base.:(==)(a::Field{S}, b::Field{S}) where {S} = isequal(a, b)
 
@@ -125,7 +139,9 @@ function Base.isless(a::Field{S}, b::Field{S}) where {S}
     name(a) == name(b) || return isless(name(a), name(b))
     ra, rb = Int(regularisation(a)), Int(regularisation(b))
     ra == rb || return ra < rb
-    return isless(field_indices(a), field_indices(b))
+    ia, ib = field_indices(a), field_indices(b)
+    isequal(ia, ib) || return isless(ia, ib)
+    return isless(derivative_multiindex(a), derivative_multiindex(b))
 end
 
 """Exchange sign for statistics `S`."""

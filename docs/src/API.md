@@ -25,8 +25,8 @@ Term.typestree(KeldyshContraction.QSym) # hide
 The package uses one concrete field representation, parameterized only by statistics.
 Bosonic and fermionic fields therefore have types `Field{Boson}` and `Field{Fermion}` while
 sharing the same storage layout. Physical field identity is stored in `FieldFamily{S}`;
-barred/unbarred orientation, Keldysh component, position, and regularisation are concrete value
-data on each field component.
+barred/unbarred orientation, Keldysh component, position, regularisation, and coordinate-
+derivative decoration are concrete value data on each field component.
 
 ```@docs
 KeldyshContraction.QField
@@ -38,6 +38,8 @@ KeldyshContraction.FieldFamily
 KeldyshContraction.Field
 KeldyshContraction.field_family
 KeldyshContraction.bar
+KeldyshContraction.partial
+KeldyshContraction.derivatives
 ```
 
 #### Field properties
@@ -50,6 +52,32 @@ For fermions, `bar(psi)` constructs the independent barred Grassmann path-integr
 and preserves the `One` / `Two` component. It is not an operator-adjoint operation. See
 [the convention page](conventions.md) for the asymmetric fermionic LO rotation and matrix
 placement.
+
+Coordinate derivatives likewise preserve the outer field type:
+
+```@example API
+using KeldyshContraction
+
+@qfields ϕd::Boson ψd::Fermion
+c = ϕd[Classical]
+ψ1 = ψd[One]
+
+∂xc = partial(c, :x)
+∂xyψ = partial(partial(ψ1, :y), :x)
+
+(typeof(∂xc), typeof(∂xyψ), derivatives(∂xyψ))
+```
+
+The supported coordinate axes are `:t`, `:x`, `:y`, and `:z`; unsupported axis labels raise
+`ArgumentError`. Derivative axes are stored canonically as concrete value-level metadata.
+Coordinate derivatives commute as operations on the field label, so
+`partial(partial(ψ1,:x),:y)` and `partial(partial(ψ1,:y),:x)` denote the same generator.
+`derivatives(field)` returns an owned copy of the canonical axis sequence.
+
+Derivative decoration is part of generator and diagram identity but not of the underlying
+`FieldFamily`. Consequently `ψ` and `∂xψ` are distinct Grassmann generators of the same
+physical field family. This coordinate-space layer deliberately does not convert derivatives
+to momentum factors; that belongs to the Fourier/momentum transformation.
 
 ```@docs
 KeldyshContraction.KeldyshIndex
@@ -65,7 +93,7 @@ KeldyshContraction.reconstruct
 
 The constructors `Bulk(i)`, `In()`, and `Out()` create `Position` values. Calling a field
 with a `Position` or `Regularisation` value returns the same concrete field type with that
-value changed and preserves its field family.
+value changed and preserves its field family and derivative decoration.
 
 #### Field constructors
 
@@ -113,6 +141,11 @@ where `C` is the coefficient representation and `S` the field statistics. Algebr
 and one remain inside this symbolic representation instead of returning value-dependent raw
 scalars. For `Fermion`, canonical products additionally implement Grassmann exchange signs and
 nilpotency while retaining the same `QMul{C,Fermion}` result representation.
+
+Derivative decoration participates in that same algebra. In particular, for a fermion field
+`ψ`, `ψ*ψ` and `partial(ψ,:x)*partial(ψ,:x)` vanish, while `ψ*partial(ψ,:x)` is generally
+nonzero and changes sign under exchange. Bosonic differentiated generators retain bosonic
+commutation.
 
 ```@docs
 KeldyshContraction.QTerm
@@ -171,7 +204,8 @@ higher orders include the corresponding mixed monomials.
 The perturbation order and propagator edge count are supplied as `Val` arguments because
 they determine the static diagram representation. Fermionic contractions reuse the same
 `WickPairing{S,E}` representation; statistics dispatch supplies permutation parity to the
-pairing weight.
+pairing weight. Coordinate derivatives are passive for pairing parity and R/A/K
+classification but remain attached to their exact contraction endpoints.
 
 ```@docs
 wick_contraction
@@ -201,7 +235,9 @@ KeldyshContraction.matrix(::DressedPropagator)
 is `[[R,K],[0,A]]`; the bosonic self-energy uses `[[0,A],[R,K]]`.
 
 Applying `SelfEnergy` to a `DressedPropagatorSum` preserves the parameter-monomial keys and
-returns a concrete `SelfEnergySum`.
+returns a concrete `SelfEnergySum`. Derivative endpoint decoration is preserved through
+self-energy extraction and remains coordinate-space metadata until the later Fourier layer
+converts it to a momentum polynomial.
 
 ```@docs
 KeldyshContraction.SelfEnergy
