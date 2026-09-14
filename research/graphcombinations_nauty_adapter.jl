@@ -219,9 +219,9 @@ function assert_quotient_matches(expression)
     return nothing
 end
 
-function benchmark_pair(label, nauty, gc; samples=5)
-    nauty_trial = @benchmark $nauty() samples = $samples evals = 1
-    gc_trial = @benchmark $gc() samples = $samples evals = 1
+function benchmark_pair(label, nauty, gc)
+    nauty_trial = @benchmark $nauty() samples = 5 evals = 1
+    gc_trial = @benchmark $gc() samples = 5 evals = 1
     nauty_estimate = median(nauty_trial)
     gc_estimate = median(gc_trial)
     println(
