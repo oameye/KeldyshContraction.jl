@@ -167,14 +167,14 @@ Cγp_explicit = collision_kernel(Q)
 Cγp_explicit
 
 @assert KeldyshContraction.collision_kernel_terms(Cγp) ==
-        KeldyshContraction.collision_kernel_terms(Cγp_explicit)
+    KeldyshContraction.collision_kernel_terms(Cγp_explicit)
 
 # ## Second-order p-wave scattering
 #
 # The regular coherent `g_p^2` sector can again be compiled directly.
 
 G2 = DressedPropagator(L, Val(2), Val(3); preserve_regularisation=true)
-Cgp2 = collision_kernel(G2[gp^2])
+Cgp2 = collision_kernel(G2[gp ^ 2])
 Cgp2
 
 # The certified shell contribution is
