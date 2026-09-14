@@ -121,6 +121,82 @@ function research_second_order_census(result)
     )
 end
 
+function pwave_axis_polynomial(momentum)
+    C = KC.ComplexRationals
+    component = KC.MomentumComponent(momentum, :x)
+    monomial = KC.MomentumMonomial(KC.MomentumComponent[component])
+    return KC.MomentumPolynomial(monomial, one(C))
+end
+
+function occupation_scale(actual, reference)
+    reference_terms = Dict(collect(reference))
+    actual_terms = Dict(collect(actual))
+    reference_monomial, reference_coefficient = first(reference_terms)
+    @test haskey(actual_terms, reference_monomial)
+    scale = actual_terms[reference_monomial] / reference_coefficient
+    @test actual == scale * reference
+    return scale
+end
+
+function certify_gp2_elastic(result)
+    terms = KC.occupation_reduced_terms(result.occupation)
+    @test length(terms) == 9
+    @test isempty(KC.reduced_blocked_terms(result.reduced))
+    @test isempty(KC.reduced_trotter_terms(result.reduced))
+
+    first_sector = first(keys(terms))
+    basis = KC.momentum_basis(first_sector)
+    external = KC.external_wigner_momentum(first_sector)
+    external_index = only(i for (i, variable) in enumerate(basis) if variable == external)
+    loop_indices = Int[i for i in eachindex(basis.variables) if i != external_index]
+    @test length(loop_indices) == 2
+
+    k = KC.basis_momentum(basis, external_index)
+    q = KC.basis_momentum(basis, loop_indices[1])
+    r = KC.basis_momentum(basis, loop_indices[2])
+    p = -k + q + r
+
+    ε(momentum) = KC.EnergyForm(KC.DispersionAtom(second_order_pwave_ψ, momentum))
+    shell, shell_factor = KC.energy_shell(ε(k) + ε(p) - ε(q) - ε(r))
+    @test shell_factor == 1 // 1
+    support = KC.FrequencySupport(
+        KC.EnergyShell{Fermion}[shell], KC.PrincipalValueSupport{Fermion}[]
+    )
+
+    C = KC.ComplexRationals
+    n(momentum) = KC.OccupationPolynomial(
+        KC.OccupationAtom(second_order_pwave_ψ, momentum), one(C)
+    )
+    nk, np, nq, nr = n(k), n(p), n(q), n(r)
+    one_n = one(typeof(nk))
+    fermi_gain_loss =
+        (one_n - nk) * (one_n - np) * nq * nr -
+        nk * np * (one_n - nq) * (one_n - nr)
+
+    relative_in = pwave_axis_polynomial(k) - pwave_axis_polynomial(p)
+    relative_out = pwave_axis_polynomial(q) - pwave_axis_polynomial(r)
+    expected_weight =
+        (1 // 8) * (relative_in * relative_in) * (relative_out * relative_out)
+
+    generated_weight = KC.MomentumPolynomial{KC.ComplexRationals}()
+    for (sector, occupation) in terms
+        @test KC.momentum_basis(sector) == basis
+        @test KC.external_wigner_momentum(sector) == external
+        @test KC.frequency_support(sector) == support
+        scale = occupation_scale(occupation, fermi_gain_loss)
+        generated_weight += scale * KC.kinematic_factor(sector)
+    end
+
+    @test generated_weight == expected_weight
+    @test all(
+        sector ->
+            length(KC.frequency_support(sector).shells) == 1 &&
+            isempty(KC.frequency_support(sector).principal_values),
+        keys(KC.collision_kernel_terms(result.kernel)),
+    )
+    return nothing
+end
+
 function log_gp2_kernel(result)
     for (sector, occupation) in KC.collision_kernel_terms(result.kernel)
         @info "fermionic p-wave gp² kernel term" basis = KC.momentum_basis(sector) external = KC.external_wigner_momentum(
@@ -170,7 +246,10 @@ end
 
         census = research_second_order_census(result)
         @info "fermionic p-wave second-order canonical compiler census" parameter census
-        parameter == gp^2 && log_gp2_kernel(result)
+        if parameter == gp^2
+            certify_gp2_elastic(result)
+            log_gp2_kernel(result)
+        end
 
         # The research branch may retain genuine blocked/singular support, but every finite
         # strict-QP contribution must traverse the common occupation/loop/kernel path.
