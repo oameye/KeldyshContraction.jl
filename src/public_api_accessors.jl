@@ -37,6 +37,22 @@ Return the perturbative order represented by `x`.
 Return the field statistics represented by `x`.
 """ statistics
 
+@doc """
+    topologies(diagrams)
+
+Group diagrams by their canonical uncolored topology signature. This is an advanced inspection
+helper; physical diagram identity still retains field, Keldysh, regularisation, and propagator
+information beyond the topology label.
+""" topologies
+
+@doc """
+    wigner_transform(x; gradient_order=Val(0))
+
+Transform a Fourier-space propagator or self-energy to homogeneous Wigner variables while
+preserving exact momentum routing, derivative kinematics, target provenance, and finite
+equal-time regularisation. The current kinetic compiler supports only `gradient_order=Val(0)`.
+""" wigner_transform
+
 """
     keldysh_component(x)
 
