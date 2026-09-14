@@ -1,5 +1,8 @@
 """
-$(DocStringExtensions.README)
+    KeldyshContraction
+
+Symbolic Schwinger--Keldysh perturbation theory for bosonic and fermionic fields, from
+interaction actions and 1PI self-energies to quantum-kinetic collision kernels.
 """
 module KeldyshContraction
 
@@ -72,6 +75,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("collision_frequency_assembly.jl")
     include("collision_momentum_quotient.jl")
     include("collision_momentum_projective.jl")
+    include("collision_kernel_api.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
     include("propagator_algebra/legacy_momentum_routing.jl")
@@ -80,98 +84,28 @@ const ComplexRationals = Complex{Rational{Int64}}
     # show methods
     include("show_methods/latexify_recipes.jl")
     include("show_methods/printing.jl")
+    include("show_methods/kinetic_pipeline.jl")
 
     # Stable public inspection helpers defined after the full representation stack exists.
     include("public_api_accessors.jl")
 
-    # Stable qualified API. These names are intentionally public without being imported by
-    # `using KeldyshContraction`; SciMLPublic backports Julia's `public` declaration to 1.10.
-    @public Statistics,
-    QField,
-    QSym,
-    KeldyshIndex,
-    Orientation,
-    Regularisation,
-    Position,
-    IndexKind,
-    Bulk,
-    In,
-    Out,
-    reconstruct,
-    position,
+    # Qualified public API is deliberately small: only semantic inspection that users need
+    # in the manual or canonical examples. Representation and compiler IR remain private.
+    @public Regularisation,
     field_families,
     target_family,
-    ParameterMonomial,
-    parameter_monomial,
     parameters,
-    QTerm,
-    QMul,
-    QAdd,
-    coefficient,
-    fields,
-    terms,
-    exchange_sign,
-    is_conserved,
-    is_physical,
-    LagrangianSum,
-    Edge,
-    Diagram,
-    Diagrams,
-    contractions,
-    topology,
-    propagator_type,
-    DressedPropagatorSum,
-    PropagatorType,
     matrix,
     order,
     statistics,
     keldysh_component,
     retarded_component,
     advanced_component,
-    SelfEnergySum,
-    MomentumVariable,
-    LinearMomentum,
-    MomentumBasis,
-    MomentumComponent,
-    MomentumMonomial,
-    MomentumPolynomial,
-    momentum_basis,
     kinematic_factor,
-    FourierDiagram,
-    FourierDiagrams,
-    FourierDressedPropagator,
-    FourierSelfEnergy,
-    WignerDiagram,
-    WignerDiagrams,
-    WignerDressedPropagator,
-    WignerSelfEnergy,
-    HomogeneousWignerContext,
-    gradient_order,
-    external_wigner_momentum,
-    wigner_context,
-    KineticSelfEnergy,
-    retarded_minus_advanced,
-    spectral_self_energy,
-    statistical_occupation_coefficients,
-    statistical_from_occupation,
-    OffShellCollisionExpression,
-    collision_offset,
-    collision_distribution_coefficient,
-    SpectralDispersiveCollision,
-    EnergyShell,
-    PrincipalValueSupport,
-    FrequencySupport,
     frequency_support,
-    frequency_factor,
-    ReducedFrequencyCollision,
     reduced_regular_terms,
     reduced_blocked_terms,
     reduced_trotter_terms,
-    OccupationReducedExpression,
-    occupation_reduced_terms,
-    LoopQuotientedExpression,
-    loop_quotient_terms,
-    CollisionKernelSector,
     collision_kernel_terms
 
     # Small workflow surface intended for ordinary unqualified use.
