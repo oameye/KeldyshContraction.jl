@@ -57,7 +57,7 @@ end
 function Base.show(io::IO, ::MIME"text/latex", G::DressedPropagator)
     return _latex_display(io) do
         write(io, "G^{R,A,K}(x_1,x_2)")
-        _write_latex_stage_metadata(io, G)
+        return _write_latex_stage_metadata(io, G)
     end
 end
 
@@ -69,7 +69,7 @@ end
 function Base.show(io::IO, ::MIME"text/latex", G::FourierDressedPropagator)
     return _latex_display(io) do
         write(io, "G_F^{R,A,K}(p)")
-        _write_latex_stage_metadata(io, G)
+        return _write_latex_stage_metadata(io, G)
     end
 end
 
@@ -81,7 +81,7 @@ end
 function Base.show(io::IO, ::MIME"text/latex", Σ::FourierSelfEnergy)
     return _latex_display(io) do
         write(io, "\\Sigma_F^{R,A,K}(p)")
-        _write_latex_stage_metadata(io, Σ)
+        return _write_latex_stage_metadata(io, Σ)
     end
 end
 
@@ -99,7 +99,7 @@ function Base.show(io::IO, ::MIME"text/latex", G::WignerDressedPropagator)
             string(_val_parameter(gradient_order(G))),
             "}}",
         )
-        _write_latex_stage_metadata(io, G)
+        return _write_latex_stage_metadata(io, G)
     end
 end
 
@@ -117,7 +117,7 @@ function Base.show(io::IO, ::MIME"text/latex", Σ::WignerSelfEnergy)
             string(_val_parameter(gradient_order(Σ))),
             "}}",
         )
-        _write_latex_stage_metadata(io, Σ)
+        return _write_latex_stage_metadata(io, Σ)
     end
 end
 
@@ -130,7 +130,7 @@ end
 function Base.show(io::IO, ::MIME"text/latex", Σ::KineticSelfEnergy)
     return _latex_display(io) do
         write(io, "\\Sigma_{\\mathrm{kin}}^{R,A,K}[A,F],\\qquad G^K=-iFA")
-        _write_latex_stage_metadata(io, Σ)
+        return _write_latex_stage_metadata(io, Σ)
     end
 end
 
@@ -146,7 +146,7 @@ function Base.show(io::IO, ::MIME"text/latex", I::OffShellCollisionExpression)
             "I_{\\mathrm{coll}}=i\\Sigma^K-F_{\\mathrm{target}}(k)A_{\\Sigma},\\qquad " *
             "A_{\\Sigma}=i(\\Sigma^R-\\Sigma^A)",
         )
-        _write_latex_stage_metadata(io, I)
+        return _write_latex_stage_metadata(io, I)
     end
 end
 
@@ -162,7 +162,7 @@ function Base.show(io::IO, ::MIME"text/latex", collision::SpectralDispersiveColl
             "G^R=D-\\frac{i}{2}A,\\qquad G^A=D+\\frac{i}{2}A,\\qquad " *
             "I_{\\mathrm{coll}}=I_{\\mathrm{coll}}[D,A,F]",
         )
-        _write_latex_stage_metadata(io, collision)
+        return _write_latex_stage_metadata(io, collision)
     end
 end
 
@@ -187,7 +187,7 @@ function Base.show(io::IO, ::MIME"text/latex", result::ReducedFrequencyCollision
             "I_{\\mathrm{reg}}\\!\\left[\\delta(\\Delta E),\\operatorname{PV}\\!\\left(\\frac{1}{\\Delta E}\\right)\\right]" *
             "\\oplus I_{\\mathrm{blocked}}",
         )
-        write(
+        return write(
             io,
             "\\qquad (N_{\\mathrm{reg}},N_{\\mathrm{block}},N_{\\mathrm{T}})=(",
             string(length(reduced_regular_terms(result))),
@@ -205,8 +205,11 @@ function Base.show(io::IO, ::MIME"text/plain", result::OccupationReducedExpressi
     print(io, "\n  regular sectors: ", length(occupation_reduced_terms(result)))
     print(
         io,
-        statistics(result) === Boson ? "\n  F = 1 + 2n,  C_n = I/2" :
-        "\n  F = 1 - 2n,  C_n = -I/2",
+        if statistics(result) === Boson
+            "\n  F = 1 + 2n,  C_n = I/2"
+        else
+            "\n  F = 1 - 2n,  C_n = -I/2"
+        end,
     )
     return nothing
 end
@@ -217,7 +220,7 @@ function Base.show(io::IO, ::MIME"text/latex", result::OccupationReducedExpressi
         else
             write(io, "F=1-2n,\\qquad C_n=-\\frac{1}{2}I_{\\mathrm{reg}}")
         end
-        write(io, "\\qquad N_{\\mathrm{sec}}=", string(length(result)))
+        return write(io, "\\qquad N_{\\mathrm{sec}}=", string(length(result)))
     end
 end
 
@@ -229,7 +232,7 @@ function Base.show(io::IO, ::MIME"text/plain", result::LoopQuotientedExpression)
 end
 function Base.show(io::IO, ::MIME"text/latex", result::LoopQuotientedExpression)
     return _latex_display(io) do
-        write(
+        return write(
             io,
             "\\{q_i\\}\\,/\\,\\big(q_i\\sim \\pm q_{\\pi(i)}\\big)" *
             "\\qquad\\Longrightarrow\\qquad N_{\\mathrm{sec}}=",
@@ -252,6 +255,6 @@ function Base.show(io::IO, ::MIME"text/latex", kernel::CollisionKernel)
             "}\\mathcal K_{\\alpha}(k,\\{q\\})\\," *
             "P_{\\alpha}[n]\\,\\mathcal S_{\\alpha}",
         )
-        _write_latex_stage_metadata(io, kernel)
+        return _write_latex_stage_metadata(io, kernel)
     end
 end
