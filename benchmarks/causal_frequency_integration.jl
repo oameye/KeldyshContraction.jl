@@ -18,11 +18,27 @@ function benchmark_causal_frequency_integration!(suite)
     ])
     plan = KC.CausalFrequencyReductionPlan((1, 2))
 
+    zero_energy = KC.EnergyForm{Boson}(3)
+    support_denominators = KC.CausalFrequencyDenominator{Boson}[
+        KC.CausalFrequencyDenominator([1 // 1, 0 // 1], zero_energy, -1 // 1),
+        KC.CausalFrequencyDenominator([0 // 1, 1 // 1], zero_energy, -1 // 1),
+        KC.CausalFrequencyDenominator([1 // 1, 1 // 1], zero_energy, 1 // 1),
+    ]
+    pinch_expression = KC.CausalFrequencyExpression([
+        KC.CausalFrequencyTerm(1 // 1, support_denominators)
+    ])
+
     suite["Frequency reduction"]["causal expression residue"] = @benchmarkable KC.integrate_causal_frequency_expression(
         $expression, 1
     ) seconds = 10
     suite["Frequency reduction"]["causal two-frequency plan"] = @benchmarkable KC.reduce_causal_frequency_expression(
         $expression, $plan
+    ) seconds = 10
+    suite["Frequency reduction"]["affine singular support"] = @benchmarkable KC.affine_singular_support(
+        $support_denominators
+    ) seconds = 10
+    suite["Frequency reduction"]["support-aware pinch plan"] = @benchmarkable KC.reduce_causal_frequency_with_support(
+        $pinch_expression, $plan
     ) seconds = 10
     return suite
 end
