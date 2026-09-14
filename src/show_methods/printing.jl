@@ -11,10 +11,8 @@ end
 function Base.show(io::IO, x::Field)
     reg = Int(regularisation(x))
     write_derivatives(io, x)
-    if is_barred(x)
-        write(io, "̄")
-    end
     write(io, string(field_symbol(x)))
+    is_barred(x) && write(io, "̄")
     if reg == 1
         write(io, "⁺")
     elseif reg == -1
@@ -44,8 +42,12 @@ function Base.show(io::IO, x::QMul)
         return nothing
     end
     if !SymbolicUtils._isone(x.arg_c)
-        print_number(io, x.arg_c)
-        show(io, *)
+        if SymbolicUtils._isone(-x.arg_c)
+            write(io, "-")
+        else
+            print_number(io, x.arg_c)
+            show(io, *)
+        end
     end
     show_brackets[]::Bool && write(io, "(")
     show(io, x.args_nc[1])
@@ -141,27 +143,43 @@ function Base.show(io::IO, d::Diagram)
     end
     return nothing
 end
-function Base.show(io::IO, ds::Diagrams)
-    diagrams = collect(keys(ds.diagrams))
-    l = length(diagrams)
-    for idx in eachindex(diagrams)
-        if idx == l
-            show_key(io, ds.diagrams, diagrams[idx])
-        else
-            show_key(io, ds.diagrams, diagrams[idx])
-            write(io, " + ")
-        end
-    end
-    return nothing
+
+_plain_negative_real(x::Real) = x < 0
+function _plain_negative_real(x::Complex)
+    return iszero(imag(x)) && real(x) < 0
 end
-function show_key(io::IO, terms::AbstractDict{K,C}, key::K) where {K,C}
-    prefactor = terms[key]
+_plain_negative_real(::Number) = false
+
+function _show_key_value(io::IO, key, prefactor)
     print_number(io, prefactor)
     if !isempty(key)
         !SymbolicUtils._isone(prefactor) ? show(io, *) : write(io, "")
         show(io, key)
     end
     return nothing
+end
+
+function _show_dict_sum(io::IO, terms::AbstractDict)
+    entries = collect(terms)
+    sort!(entries; by=entry -> repr(first(entry)))
+    for (i, (key, prefactor)) in enumerate(entries)
+        if _plain_negative_real(prefactor)
+            write(io, isone(i) ? "-" : " - ")
+            _show_key_value(io, key, -prefactor)
+        else
+            i > 1 && write(io, " + ")
+            _show_key_value(io, key, prefactor)
+        end
+    end
+    return nothing
+end
+
+function Base.show(io::IO, ds::Diagrams)
+    return _show_dict_sum(io, ds.diagrams)
+end
+
+function show_key(io::IO, terms::AbstractDict{K,C}, key::K) where {K,C}
+    return _show_key_value(io, key, terms[key])
 end
 
 function print_number(io::IO, x::Real)
@@ -189,9 +207,23 @@ function print_number(io::IO, x::Number)
     return nothing
 end
 
-const underscore_dict = Dict(
-    1 => "₁", 2 => "₂", 3 => "₃", 4 => "₄", 5 => "₅", 6 => "₆", 7 => "₇", 8 => "₈", 9 => "₉"
+const _subscript_digits = Dict(
+    '0' => "₀",
+    '1' => "₁",
+    '2' => "₂",
+    '3' => "₃",
+    '4' => "₄",
+    '5' => "₅",
+    '6' => "₆",
+    '7' => "₇",
+    '8' => "₈",
+    '9' => "₉",
 )
+
+function _subscript_string(index::Integer)
+    index >= 0 || throw(ArgumentError("display index must be non-negative"))
+    return join(_subscript_digits[digit] for digit in string(index))
+end
 
 function pos_string(p::Position)
     if is_in(p)
@@ -199,7 +231,7 @@ function pos_string(p::Position)
     elseif is_out(p)
         return "x₁"
     else
-        return "y" * underscore_dict[p.index]
+        return "y" * _subscript_string(Int(p.index))
     end
 end
 
@@ -218,7 +250,7 @@ function momentum_string(p::Momentum)
     if iszero(p.index)
         return "k"
     else
-        return "q" * underscore_dict[p.index]
+        return "q" * _subscript_string(Int(p.index))
     end
 end
 
@@ -228,36 +260,30 @@ function Base.show(io::IO, p::Momentum)
 end
 
 function Base.show(io::IO, ms::Momenta)
-    if length(ms.prefactors) == 1 && iszero(ms.prefactors[1])
-        write(io, "0")
-        return nothing
-    end
-
-    for (i, (p, m)) in enumerate(zip(ms.prefactors, ms.momenta))
-        if i > 1
-            if p < 0
-                write(io, " - ")
-            else
-                write(io, " + ")
-            end
+    isempty(ms.prefactors) && return write(io, "0")
+    wrote = false
+    for (prefactor, momentum) in zip(ms.prefactors, ms.momenta)
+        iszero(prefactor) && continue
+        negative = prefactor < 0
+        magnitude = abs(prefactor)
+        if wrote
+            write(io, negative ? " - " : " + ")
+        elseif negative
+            write(io, "-")
         end
-        show(io, m)
+        if magnitude != 1
+            show(io, magnitude)
+            write(io, "*")
+        end
+        show(io, momentum)
+        wrote = true
     end
+    wrote || write(io, "0")
     return nothing
 end
 
 function Base.show(io::IO, ds::BosonicDistributions)
-    bd_terms = collect(keys(ds.terms))
-    l = length(bd_terms)
-    for idx in eachindex(bd_terms)
-        if idx == l
-            show_key(io, ds.terms, bd_terms[idx])
-        else
-            show_key(io, ds.terms, bd_terms[idx])
-            write(io, " + ")
-        end
-    end
-    return nothing
+    return _show_dict_sum(io, ds.terms)
 end
 
 function Base.show(io::IO, bds::BosonicDistributionTerm)
@@ -271,8 +297,7 @@ function Base.show(io::IO, bds::BosonicDistributionTerm)
 end
 
 function Base.show(io::IO, ci::CollisionIntegral)
-    write(io, "Collision integral ")
-    write(io, ":\n")
+    write(io, "Collision integral:\n")
     show(io, ci.terms)
     return nothing
 end
