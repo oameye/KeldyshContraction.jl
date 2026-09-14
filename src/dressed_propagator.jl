@@ -93,53 +93,36 @@ function propagator_fields(
     return family[Quantum], family[Classical]
 end
 
-"""
-    DressedPropagator(L::InteractionLagrangian, ::Val{order}, ::Val{edges}; target, kwargs...)
+function propagator_external_products(
+    ::Type{Boson}, qfield::Field{Boson}, cfield::Field{Boson}
+)
+    return (
+        cfield(Out()) * bar(cfield)(In()),
+        cfield(Out()) * bar(qfield)(In()),
+        qfield(Out()) * bar(cfield)(In()),
+    )
+end
 
-For a single field family, the target propagator is inferred. Multi-family interactions
-require `target` to select the physical field family.
-
-All the same-coordinate advanced propagators are converted to retarded propagators when
-`simplify=true`.
-"""
-function DressedPropagator(
-    L::InteractionLagrangian{C,Boson},
+function _dressed_propagator(
+    L::InteractionLagrangian{C,S},
+    external_products::Tuple{QMul{P1,S},QMul{P2,S},QMul{P3,S}},
     ::Val{O},
     ::Val{E};
-    target=nothing,
     simplify=true,
     _set_reg_to_zero=true,
     kwargs...,
-) where {C<:Number,O,E}
+) where {C<:Number,S<:Statistics,P1<:Number,P2<:Number,P3<:Number,O,E}
     @assert number_of_propagators(L) * O + 1 == E "The supplied Val{edges} must equal the interaction's propagator count times Val{order}, plus the external propagator"
-    qfield, cfield = propagator_fields(L, target)
+    keldysh_inout, retarded_inout, advanced_inout = external_products
 
     keldysh = wick_contraction(
-        cfield(Out()) * bar(cfield)(In()),
-        L,
-        Val(O),
-        Val(E);
-        simplify,
-        _set_reg_to_zero,
-        kwargs...,
+        keldysh_inout, L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
     retarded = wick_contraction(
-        cfield(Out()) * bar(qfield)(In()),
-        L,
-        Val(O),
-        Val(E);
-        simplify,
-        _set_reg_to_zero,
-        kwargs...,
+        retarded_inout, L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
     advanced = wick_contraction(
-        qfield(Out()) * bar(cfield)(In()),
-        L,
-        Val(O),
-        Val(E);
-        simplify,
-        _set_reg_to_zero,
-        kwargs...,
+        advanced_inout, L, Val(O), Val(E); simplify, _set_reg_to_zero, kwargs...
     )
 
     for component in (keldysh, retarded, advanced)
@@ -147,6 +130,32 @@ function DressedPropagator(
     end
 
     return DressedPropagator(keldysh, retarded, advanced, Val(O), parameters(L)^O)
+end
+
+"""
+    DressedPropagator(L::InteractionLagrangian, ::Val{order}, ::Val{edges}; target, kwargs...)
+
+For a single field family, the target propagator is inferred. Multi-family interactions
+require `target` to select the physical field family. Statistics dispatch selects the
+external K/R/A field products; diagram generation then shares one implementation.
+
+All the same-coordinate advanced propagators are converted to retarded propagators when
+`simplify=true`.
+"""
+function DressedPropagator(
+    L::InteractionLagrangian{C,Boson},
+    order::Val{O},
+    edges::Val{E};
+    target=nothing,
+    simplify=true,
+    _set_reg_to_zero=true,
+    kwargs...,
+) where {C<:Number,O,E}
+    fields = propagator_fields(L, target)
+    external_products = propagator_external_products(Boson, fields...)
+    return _dressed_propagator(
+        L, external_products, order, edges; simplify, _set_reg_to_zero, kwargs...
+    )
 end
 
 """Collection of dressed propagators with distinct perturbation-parameter monomials."""
@@ -161,53 +170,49 @@ end
 order(::DressedPropagatorSum{GS,O}) where {GS,O} = O
 parameters(d::DressedPropagatorSum) = collect(keys(d.arguments))
 
-"""
-    DressedPropagator(Ls::LagrangianSum, ::Val{order}, ::Val{edges}; target, kwargs...)
-"""
-function DressedPropagator(
-    Ls::LagrangianSum{C,Boson},
+function _dressed_propagator_sum(
+    Ls::LagrangianSum{C,S},
+    external_products::Tuple{QMul{P1,S},QMul{P2,S},QMul{P3,S}},
     ::Val{O},
     ::Val{E};
-    target=nothing,
     simplify=true,
     _set_reg_to_zero=true,
     kwargs...,
-) where {C<:Number,O,E}
+) where {C<:Number,S<:Statistics,P1<:Number,P2<:Number,P3<:Number,O,E}
     @assert all(number_of_propagators(L) * O + 1 == E for L in arguments(Ls)) "All LagrangianSum terms must produce the supplied number of propagator edges"
-    qfield, cfield = propagator_fields(first(arguments(Ls)), target)
-
-    simplify = isa(simplify, Bool) ? fill(simplify, length(Ls)) : simplify
+    keldysh_inout, retarded_inout, advanced_inout = external_products
+    simplify_flags = isa(simplify, Bool) ? fill(simplify, length(Ls)) : simplify
 
     keldysh_pairs = wick_contraction(
-        cfield(Out()) * bar(cfield)(In()),
+        keldysh_inout,
         Ls,
         Val(O),
         Val(E);
-        simplify,
+        simplify=simplify_flags,
         _set_reg_to_zero,
         kwargs...,
     )
     retarded_pairs = wick_contraction(
-        cfield(Out()) * bar(qfield)(In()),
+        retarded_inout,
         Ls,
         Val(O),
         Val(E);
-        simplify,
+        simplify=simplify_flags,
         _set_reg_to_zero,
         kwargs...,
     )
     advanced_pairs = wick_contraction(
-        qfield(Out()) * bar(cfield)(In()),
+        advanced_inout,
         Ls,
         Val(O),
         Val(E);
-        simplify,
+        simplify=simplify_flags,
         _set_reg_to_zero,
         kwargs...,
     )
 
     D = diagram_coefficient_type(C)
-    GS = DressedPropagator{D,Boson,O,E,max_edges(O)}
+    GS = DressedPropagator{D,S,O,E,max_edges(O)}
     dict = Dict{ParameterMonomial,GS}()
     for idx in eachindex(keldysh_pairs)
         components = last.((keldysh_pairs[idx], retarded_pairs[idx], advanced_pairs[idx]))
@@ -220,4 +225,27 @@ function DressedPropagator(
     end
 
     return DressedPropagatorSum{GS,O}(dict)
+end
+
+"""
+    DressedPropagator(Ls::LagrangianSum, ::Val{order}, ::Val{edges}; target, kwargs...)
+
+Construct a perturbative propagator for a sum of interactions with common field families.
+Statistics dispatch selects the R/A/K external products while diagram generation and
+parameter-monomial accumulation share one implementation.
+"""
+function DressedPropagator(
+    Ls::LagrangianSum{C,Boson},
+    order::Val{O},
+    edges::Val{E};
+    target=nothing,
+    simplify=true,
+    _set_reg_to_zero=true,
+    kwargs...,
+) where {C<:Number,O,E}
+    fields = propagator_fields(first(arguments(Ls)), target)
+    external_products = propagator_external_products(Boson, fields...)
+    return _dressed_propagator_sum(
+        Ls, external_products, order, edges; simplify, _set_reg_to_zero, kwargs...
+    )
 end
