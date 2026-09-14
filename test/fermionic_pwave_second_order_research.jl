@@ -165,45 +165,37 @@ function certify_gp2_elastic(result)
     relative_out = pwave_axis_polynomial(q) - pwave_axis_polynomial(r)
     expected_weight = (1 // 8) * (relative_in * relative_in) * (relative_out * relative_out)
 
-    Monomial = KC.OccupationMonomial{Fermion}
-    Polynomial = KC.MomentumPolynomial{KC.ComplexRationals}
-    zero_weight = Polynomial()
-    generated = Dict{Monomial,Polynomial}()
-    for (sector, occupation) in terms
-        @test KC.momentum_basis(sector) == basis
-        @test KC.external_wigner_momentum(sector) == external
-        @test KC.frequency_support(sector) == support
-        kinematic = KC.kinematic_factor(sector)
-        for (monomial, coefficient) in occupation
-            generated[monomial] = get(generated, monomial, zero_weight) + coefficient * kinematic
-        end
+    # The physical Boltzmann form is an equivalence class under dummy-loop relabeling.
+    # Build it independently, split only the kinematic polynomial into exact monomials,
+    # then send it through the same safe quotient before comparing final kernels.
+    Sector = typeof(first_sector)
+    Occupation = typeof(fermi_gain_loss)
+    expected_terms = Dict{Sector,Occupation}()
+    zero_occupation = zero(fermi_gain_loss)
+    for (monomial, coefficient) in expected_weight
+        kinematic = KC.MomentumPolynomial(monomial, one(C))
+        sector = KC.ReducedCollisionSector(
+            KC.parameters(result.occupation), basis, external, kinematic, support
+        )
+        contribution = coefficient * fermi_gain_loss
+        expected_terms[sector] = get(expected_terms, sector, zero_occupation) + contribution
     end
-    filter!(term -> !iszero(last(term)), generated)
 
-    expected = Dict{Monomial,Polynomial}(
-        monomial => coefficient * expected_weight for (monomial, coefficient) in fermi_gain_loss
+    expected_occupation = typeof(result.occupation)(
+        expected_terms,
+        KC.target_family(result.occupation),
+        KC.parameters(result.occupation),
+        KC.wigner_context(result.occupation),
     )
-    filter!(term -> !iszero(last(term)), expected)
+    expected_kernel = KC.collision_kernel(KC.quotient_loop_momenta(expected_occupation))
 
-    @test Set(keys(generated)) == Set(keys(expected))
-    for monomial in keys(expected)
-        @test generated[monomial] == expected[monomial]
-    end
+    @test KC.collision_kernel_terms(result.kernel) == KC.collision_kernel_terms(expected_kernel)
     @test all(
         sector ->
             length(KC.frequency_support(sector).shells) == 1 &&
             isempty(KC.frequency_support(sector).principal_values),
         keys(KC.collision_kernel_terms(result.kernel)),
     )
-    return nothing
-end
-
-function log_gp2_kernel(result)
-    for (sector, occupation) in KC.collision_kernel_terms(result.kernel)
-        @info "fermionic p-wave gp² kernel term" basis = KC.momentum_basis(sector) external = KC.external_wigner_momentum(
-            sector
-        ) kinematic = KC.kinematic_factor(sector) support = KC.frequency_support(sector) occupation
-    end
     return nothing
 end
 
@@ -245,10 +237,7 @@ end
 
         census = research_second_order_census(result)
         @info "fermionic p-wave second-order canonical compiler census" parameter census
-        if parameter == gp^2
-            certify_gp2_elastic(result)
-            log_gp2_kernel(result)
-        end
+        parameter == gp^2 && certify_gp2_elastic(result)
 
         # The research branch may retain genuine blocked/singular support, but every finite
         # strict-QP contribution must traverse the common occupation/loop/kernel path.
