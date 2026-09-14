@@ -53,6 +53,9 @@ jobs:
             Pkg.instantiate();
             include("runbenchmarks.jl")'
 
+      - name: Restore benchmark project metadata
+        run: git restore benchmarks/Project.toml
+
       # this will update benchmarks/data.js in gh-pages branch
       - name: Parse & Upload Benchmark Results
         uses: benchmark-action/github-action-benchmark@v1
