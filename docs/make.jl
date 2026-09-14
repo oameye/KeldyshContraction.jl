@@ -31,9 +31,9 @@ makedocs(;
     modules=KeldyshContraction,
     format=Documenter.HTML(; canonical="https://oameye.github.io/KeldyshContraction.jl"),
     pages=pages,
+    pagesonly=true,
     clean=true,
     linkcheck=true,
-    warnonly=:missing_docs,
     draft=false,#,(!CI),
     doctest=false,  # We test it in the CI, no need to run it here
     checkdocs=:public,
