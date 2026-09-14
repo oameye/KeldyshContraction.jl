@@ -1,8 +1,8 @@
 # Physics-facing displays for the staged kinetic compiler.
 #
-# Stage displays must show the represented physical expression, not merely restate the
-# transformation that produced it. The small metadata summaries below are retained for the
-# earlier diagrammatic stages; the collision stages render their actual routed integrands.
+# The early diagrammatic stages are summarized by their physical representation. Once the
+# collision expression exists, displays render the actual routed integrand rather than a
+# description of the compiler pass that produced it.
 
 function _show_stage_plain(io::IO, label::AbstractString, x)
     print(io, label, " (order=", order(x), ", statistics=", statistics(x), ", parameter=")
@@ -24,21 +24,7 @@ function _show_component_counts(io::IO, x)
     return nothing
 end
 
-# Extract the integer carried by Val without exposing it as user API.
 _val_parameter(::Val{G}) where {G} = G
-
-function _write_plain_parameter(io::IO, parameter::ParameterMonomial)
-    if isempty(parameter.powers)
-        write(io, "1")
-        return nothing
-    end
-    for (i, power) in enumerate(parameter.powers)
-        i > 1 && write(io, " ")
-        write(io, string(power.name))
-        power.exponent == 1 || write(io, "^", string(power.exponent))
-    end
-    return nothing
-end
 
 function _write_latex_parameter(io::IO, parameter::ParameterMonomial)
     if isempty(parameter.powers)
@@ -67,953 +53,436 @@ function _latex_display(writer, io::IO)
     return nothing
 end
 
-function _write_plain_number(io::IO, x::Rational)
-    if denominator(x) == 1
-        write(io, string(numerator(x)))
-    else
-        write(io, string(numerator(x)), "/", string(denominator(x)))
-    end
-    return nothing
-end
-
-function _write_plain_number(io::IO, x::Real)
-    show(io, x)
-    return nothing
-end
-
-function _write_plain_number(io::IO, x::Complex)
-    re = real(x)
-    im_part = imag(x)
-    if iszero(im_part)
-        _write_plain_number(io, re)
-    elseif iszero(re)
-        if isone(im_part)
-            write(io, "i")
-        elseif isone(-im_part)
-            write(io, "-i")
+function _display_number(x::Number, latex::Bool)
+    io = IOBuffer()
+    if latex
+        write_latex_number(io, x)
+    elseif x isa Rational
+        if denominator(x) == 1
+            write(io, string(numerator(x)))
         else
-            _write_plain_number(io, im_part)
-            write(io, "i")
+            write(io, string(numerator(x)), "/", string(denominator(x)))
         end
     else
-        write(io, "(")
-        _write_plain_number(io, re)
-        if im_part < 0
-            write(io, " - ")
-            _write_plain_number(io, -im_part)
+        show(io, x)
+    end
+    return String(take!(io))
+end
+
+function _display_symbol(symbol::Symbol, latex::Bool)
+    latex || return string(symbol)
+    io = IOBuffer()
+    write_latex_symbol(io, symbol)
+    return String(take!(io))
+end
+
+function _parameter_string(parameter::ParameterMonomial, latex::Bool)
+    isempty(parameter.powers) && return ""
+    factors = String[]
+    for power in parameter.powers
+        base = _display_symbol(power.name, latex)
+        if power.exponent == 1
+            push!(factors, base)
+        elseif latex
+            push!(factors, base * "^{" * string(power.exponent) * "}")
         else
-            write(io, " + ")
-            _write_plain_number(io, im_part)
+            push!(factors, base * "^" * string(power.exponent))
         end
-        write(io, "i)")
     end
-    return nothing
+    return join(factors, latex ? "\\," : " ")
 end
 
-function _write_plain_number(io::IO, x::Number)
-    show(io, x)
-    return nothing
-end
-
-_plain_negative_real(x::Real) = x < 0
-function _plain_negative_real(x::Complex)
-    return iszero(imag(x)) && real(x) < 0
-end
-_plain_negative_real(::Number) = false
-
-_parameter_isone(parameter::ParameterMonomial) = isempty(parameter.powers)
-
-function _basis_variable_slot(
-    basis::MomentumBasis, external::MomentumVariable, variable::MomentumVariable
-)
-    for i in eachindex(basis.variables)
-        basis[i] == variable && return i
-    end
-    throw(ArgumentError("momentum variable is not present in the displayed basis"))
-end
-
-function _loop_ordinal(basis::MomentumBasis, external::MomentumVariable, slot::Int)
-    external_slot = _external_basis_index(basis, external)
-    slot == external_slot && return 0
-    ordinal = 0
-    for i in eachindex(basis.variables)
-        i == external_slot && continue
-        ordinal += 1
-        i == slot && return ordinal
-    end
-    throw(ArgumentError("momentum slot is not present in the displayed loop basis"))
-end
-
-function _write_plain_basis_variable(
-    io::IO, basis::MomentumBasis, external::MomentumVariable, slot::Int
+function _momentum_label(
+    basis::MomentumBasis, external::MomentumVariable, slot::Int, latex::Bool
 )
     external_slot = _external_basis_index(basis, external)
-    if slot == external_slot
-        write(io, "k")
-        return nothing
-    end
-    nloops = length(basis) - 1
-    ordinal = _loop_ordinal(basis, external, slot)
-    write(io, nloops == 1 ? "q" : "q" * string(ordinal))
-    return nothing
+    slot == external_slot && return "k"
+    loop_slots = _loop_basis_indices(basis, external)
+    ordinal = findfirst(==(slot), loop_slots)
+    ordinal === nothing && return "q?"
+    length(loop_slots) == 1 && return "q"
+    return latex ? "q_{" * string(ordinal) * "}" : "q" * string(ordinal)
 end
 
-function _write_latex_basis_variable(
-    io::IO, basis::MomentumBasis, external::MomentumVariable, slot::Int
-)
-    external_slot = _external_basis_index(basis, external)
-    if slot == external_slot
-        write(io, "k")
-        return nothing
-    end
-    nloops = length(basis) - 1
-    ordinal = _loop_ordinal(basis, external, slot)
-    if nloops == 1
-        write(io, "q")
-    else
-        write(io, "q_{", string(ordinal), "}")
-    end
-    return nothing
-end
-
-function _write_plain_linear_momentum(
-    io::IO, momentum::LinearMomentum, basis::MomentumBasis, external::MomentumVariable
-)
-    first_term = true
-    for slot in eachindex(momentum.coefficients)
-        coefficient = momentum[slot]
-        iszero(coefficient) && continue
-        negative = coefficient < 0
-        magnitude = abs(coefficient)
-        if first_term
-            negative && write(io, "-")
-        else
-            write(io, negative ? " - " : " + ")
-        end
-        if magnitude != 1
-            _write_plain_number(io, magnitude)
-            write(io, "*")
-        end
-        _write_plain_basis_variable(io, basis, external, slot)
-        first_term = false
-    end
-    first_term && write(io, "0")
-    return nothing
-end
-
-function _write_latex_linear_momentum(
-    io::IO, momentum::LinearMomentum, basis::MomentumBasis, external::MomentumVariable
-)
-    first_term = true
-    for slot in eachindex(momentum.coefficients)
-        coefficient = momentum[slot]
-        iszero(coefficient) && continue
-        negative = coefficient < 0
-        magnitude = abs(coefficient)
-        if first_term
-            negative && write(io, "-")
-        else
-            write(io, negative ? "-" : "+")
-        end
-        if magnitude != 1
-            write_latex_number(io, magnitude)
-            write(io, "\\,")
-        end
-        _write_latex_basis_variable(io, basis, external, slot)
-        first_term = false
-    end
-    first_term && write(io, "0")
-    return nothing
-end
-
-function _simple_unit_momentum_slot(momentum::LinearMomentum)
-    found = 0
-    for slot in eachindex(momentum.coefficients)
-        coefficient = momentum[slot]
-        iszero(coefficient) && continue
-        coefficient == 1 || return 0
-        iszero(found) || return 0
-        found = slot
-    end
-    return found
-end
-
-function _write_plain_momentum_component(
-    io::IO, component::MomentumComponent, basis::MomentumBasis, external::MomentumVariable
-)
-    slot = _simple_unit_momentum_slot(component.momentum)
-    if iszero(slot)
-        write(io, "(")
-        _write_plain_linear_momentum(io, component.momentum, basis, external)
-        write(io, ")")
-    else
-        _write_plain_basis_variable(io, basis, external, slot)
-    end
-    write(io, "_", string(component.axis))
-    return nothing
-end
-
-function _write_latex_momentum_component(
-    io::IO, component::MomentumComponent, basis::MomentumBasis, external::MomentumVariable
-)
-    slot = _simple_unit_momentum_slot(component.momentum)
-    if iszero(slot)
-        write(io, "\\left(")
-        _write_latex_linear_momentum(io, component.momentum, basis, external)
-        write(io, "\\right)")
-    else
-        _write_latex_basis_variable(io, basis, external, slot)
-    end
-    write(io, "_{")
-    write_latex_symbol(io, component.axis)
-    write(io, "}")
-    return nothing
-end
-
-function _write_plain_momentum_monomial(
-    io::IO, monomial::MomentumMonomial, basis::MomentumBasis, external::MomentumVariable
-)
-    i = 1
-    while i <= length(monomial.factors)
-        component = monomial.factors[i]
-        multiplicity = 1
-        while i + multiplicity <= length(monomial.factors) &&
-            monomial.factors[i + multiplicity] == component
-            multiplicity += 1
-        end
-        i > 1 && write(io, " ")
-        _write_plain_momentum_component(io, component, basis, external)
-        multiplicity > 1 && write(io, "^", string(multiplicity))
-        i += multiplicity
-    end
-    return nothing
-end
-
-function _write_latex_momentum_monomial(
-    io::IO, monomial::MomentumMonomial, basis::MomentumBasis, external::MomentumVariable
-)
-    i = 1
-    while i <= length(monomial.factors)
-        component = monomial.factors[i]
-        multiplicity = 1
-        while i + multiplicity <= length(monomial.factors) &&
-            monomial.factors[i + multiplicity] == component
-            multiplicity += 1
-        end
-        i > 1 && write(io, "\\,")
-        _write_latex_momentum_component(io, component, basis, external)
-        multiplicity > 1 && write(io, "^{", string(multiplicity), "}")
-        i += multiplicity
-    end
-    return nothing
-end
-
-function _write_plain_family(io::IO, family::FieldFamily)
-    write(io, string(name(family)))
-    return nothing
-end
-
-function _write_latex_family(io::IO, family::FieldFamily)
-    write_latex_symbol(io, name(family))
-    return nothing
-end
-
-function _write_plain_statistical_atom(
-    io::IO, atom::StatisticalAtom, basis::MomentumBasis, external::MomentumVariable
-)
-    write(io, "F_")
-    _write_plain_family(io, atom.family)
-    write(io, "(")
-    _write_plain_linear_momentum(io, atom.momentum, basis, external)
-    write(io, ")")
-    return nothing
-end
-
-function _write_latex_statistical_atom(
-    io::IO, atom::StatisticalAtom, basis::MomentumBasis, external::MomentumVariable
-)
-    write(io, "F_{")
-    _write_latex_family(io, atom.family)
-    write(io, "}\\!\\left(")
-    _write_latex_linear_momentum(io, atom.momentum, basis, external)
-    write(io, "\\right)")
-    return nothing
-end
-
-function _write_plain_occupation_atom(
-    io::IO, atom::OccupationAtom, basis::MomentumBasis, external::MomentumVariable
-)
-    write(io, "n_")
-    _write_plain_family(io, atom.family)
-    write(io, "(")
-    _write_plain_linear_momentum(io, atom.momentum, basis, external)
-    write(io, ")")
-    return nothing
-end
-
-function _write_latex_occupation_atom(
-    io::IO, atom::OccupationAtom, basis::MomentumBasis, external::MomentumVariable
-)
-    write(io, "n_{")
-    _write_latex_family(io, atom.family)
-    write(io, "}\\!\\left(")
-    _write_latex_linear_momentum(io, atom.momentum, basis, external)
-    write(io, "\\right)")
-    return nothing
-end
-
-function _write_plain_statistical_monomial(
-    io::IO, monomial::StatisticalMonomial, basis::MomentumBasis, external::MomentumVariable
-)
-    i = 1
-    while i <= length(monomial.factors)
-        atom = monomial.factors[i]
-        multiplicity = 1
-        while i + multiplicity <= length(monomial.factors) &&
-            monomial.factors[i + multiplicity] == atom
-            multiplicity += 1
-        end
-        i > 1 && write(io, " ")
-        _write_plain_statistical_atom(io, atom, basis, external)
-        multiplicity > 1 && write(io, "^", string(multiplicity))
-        i += multiplicity
-    end
-    return nothing
-end
-
-function _write_latex_statistical_monomial(
-    io::IO, monomial::StatisticalMonomial, basis::MomentumBasis, external::MomentumVariable
-)
-    i = 1
-    while i <= length(monomial.factors)
-        atom = monomial.factors[i]
-        multiplicity = 1
-        while i + multiplicity <= length(monomial.factors) &&
-            monomial.factors[i + multiplicity] == atom
-            multiplicity += 1
-        end
-        i > 1 && write(io, "\\,")
-        _write_latex_statistical_atom(io, atom, basis, external)
-        multiplicity > 1 && write(io, "^{", string(multiplicity), "}")
-        i += multiplicity
-    end
-    return nothing
-end
-
-function _write_plain_occupation_monomial(
-    io::IO, monomial::OccupationMonomial, basis::MomentumBasis, external::MomentumVariable
-)
-    i = 1
-    while i <= length(monomial.factors)
-        atom = monomial.factors[i]
-        multiplicity = 1
-        while i + multiplicity <= length(monomial.factors) &&
-            monomial.factors[i + multiplicity] == atom
-            multiplicity += 1
-        end
-        i > 1 && write(io, " ")
-        _write_plain_occupation_atom(io, atom, basis, external)
-        multiplicity > 1 && write(io, "^", string(multiplicity))
-        i += multiplicity
-    end
-    return nothing
-end
-
-function _write_latex_occupation_monomial(
-    io::IO, monomial::OccupationMonomial, basis::MomentumBasis, external::MomentumVariable
-)
-    i = 1
-    while i <= length(monomial.factors)
-        atom = monomial.factors[i]
-        multiplicity = 1
-        while i + multiplicity <= length(monomial.factors) &&
-            monomial.factors[i + multiplicity] == atom
-            multiplicity += 1
-        end
-        i > 1 && write(io, "\\,")
-        _write_latex_occupation_atom(io, atom, basis, external)
-        multiplicity > 1 && write(io, "^{", string(multiplicity), "}")
-        i += multiplicity
-    end
-    return nothing
-end
-
-function _write_plain_dispersion_atom(
-    io::IO, atom::DispersionAtom, basis::MomentumBasis, external::MomentumVariable
-)
-    write(io, "ε_")
-    _write_plain_family(io, atom.family)
-    write(io, "(")
-    _write_plain_linear_momentum(io, atom.momentum, basis, external)
-    write(io, ")")
-    return nothing
-end
-
-function _write_latex_dispersion_atom(
-    io::IO, atom::DispersionAtom, basis::MomentumBasis, external::MomentumVariable
-)
-    write(io, "\\varepsilon_{")
-    _write_latex_family(io, atom.family)
-    write(io, "}\\!\\left(")
-    _write_latex_linear_momentum(io, atom.momentum, basis, external)
-    write(io, "\\right)")
-    return nothing
-end
-
-function _write_plain_energy_form(
-    io::IO, form::EnergyForm, basis::MomentumBasis, external::MomentumVariable
-)
-    first_term = true
-    for (atom, coefficient) in form
-        negative = coefficient < 0
-        magnitude = abs(coefficient)
-        if first_term
-            negative && write(io, "-")
-        else
-            write(io, negative ? " - " : " + ")
-        end
-        if magnitude != 1
-            _write_plain_number(io, magnitude)
-            write(io, "*")
-        end
-        _write_plain_dispersion_atom(io, atom, basis, external)
-        first_term = false
-    end
-    first_term && write(io, "0")
-    return nothing
-end
-
-function _write_latex_energy_form(
-    io::IO, form::EnergyForm, basis::MomentumBasis, external::MomentumVariable
-)
-    first_term = true
-    for (atom, coefficient) in form
-        negative = coefficient < 0
-        magnitude = abs(coefficient)
-        if first_term
-            negative && write(io, "-")
-        else
-            write(io, negative ? "-" : "+")
-        end
-        if magnitude != 1
-            write_latex_number(io, magnitude)
-            write(io, "\\,")
-        end
-        _write_latex_dispersion_atom(io, atom, basis, external)
-        first_term = false
-    end
-    first_term && write(io, "0")
-    return nothing
-end
-
-_support_isempty(support::FrequencySupport) =
-    isempty(support.shells) && isempty(support.principal_values)
-
-function _write_plain_frequency_support(
-    io::IO, support::FrequencySupport, basis::MomentumBasis, external::MomentumVariable
-)
-    wrote = false
-    for shell in support.shells
-        wrote && write(io, " ")
-        write(io, "δ(")
-        _write_plain_energy_form(io, shell.energy, basis, external)
-        write(io, ")")
-        wrote = true
-    end
-    for principal_value in support.principal_values
-        wrote && write(io, " ")
-        write(io, "PV(1/(")
-        _write_plain_energy_form(io, principal_value.energy, basis, external)
-        write(io, "))")
-        wrote = true
-    end
-    return nothing
-end
-
-function _write_latex_frequency_support(
-    io::IO, support::FrequencySupport, basis::MomentumBasis, external::MomentumVariable
-)
-    wrote = false
-    for shell in support.shells
-        wrote && write(io, "\\,")
-        write(io, "\\delta\\!\\left(")
-        _write_latex_energy_form(io, shell.energy, basis, external)
-        write(io, "\\right)")
-        wrote = true
-    end
-    for principal_value in support.principal_values
-        wrote && write(io, "\\,")
-        write(io, "\\operatorname{PV}\\!\\left(\\frac{1}{")
-        _write_latex_energy_form(io, principal_value.energy, basis, external)
-        write(io, "}\\right)")
-        wrote = true
-    end
-    return nothing
-end
-
-function _write_plain_measure(
-    io::IO, basis::MomentumBasis, external::MomentumVariable
-)
-    loops = _loop_basis_indices(basis, external)
-    for (i, slot) in enumerate(loops)
-        i > 1 && write(io, " ")
-        write(io, "∫_")
-        _write_plain_basis_variable(io, basis, external, slot)
-    end
-    return !isempty(loops)
-end
-
-function _write_latex_measure(
-    io::IO, basis::MomentumBasis, external::MomentumVariable
-)
-    loops = _loop_basis_indices(basis, external)
-    for slot in loops
-        write(io, "\\int_{")
-        _write_latex_basis_variable(io, basis, external, slot)
-        write(io, "}")
-    end
-    return !isempty(loops)
-end
-
-function _write_plain_contribution(
-    io::IO,
-    coefficient::Number,
-    parameter::ParameterMonomial,
+function _linear_momentum_string(
+    momentum::LinearMomentum,
     basis::MomentumBasis,
     external::MomentumVariable,
-    kinematic::MomentumMonomial,
-    statistical::Union{StatisticalMonomial,OccupationMonomial},
-    support::Union{FrequencySupport,Nothing},
+    latex::Bool,
 )
-    wrote = false
-    has_non_numeric =
-        !_parameter_isone(parameter) ||
-        length(basis) > 1 ||
-        !isempty(kinematic) ||
-        !isempty(statistical) ||
-        (support !== nothing && !_support_isempty(support))
-    if !isone(coefficient) || !has_non_numeric
-        _write_plain_number(io, coefficient)
-        wrote = true
-    end
-    if !_parameter_isone(parameter)
-        wrote && write(io, " ")
-        _write_plain_parameter(io, parameter)
-        wrote = true
-    end
-    if length(basis) > 1
-        wrote && write(io, " ")
-        _write_plain_measure(io, basis, external)
-        wrote = true
-    end
-    if !isempty(kinematic)
-        wrote && write(io, " ")
-        _write_plain_momentum_monomial(io, kinematic, basis, external)
-        wrote = true
-    end
-    if !isempty(statistical)
-        wrote && write(io, " ")
-        if statistical isa StatisticalMonomial
-            _write_plain_statistical_monomial(io, statistical, basis, external)
+    terms = String[]
+    for slot in eachindex(momentum.coefficients)
+        coefficient = momentum[slot]
+        iszero(coefficient) && continue
+        label = _momentum_label(basis, external, slot, latex)
+        magnitude = abs(coefficient)
+        if magnitude == 1
+            body = label
         else
-            _write_plain_occupation_monomial(io, statistical, basis, external)
+            multiplication = latex ? "\\," : "*"
+            body = _display_number(magnitude, latex) * multiplication * label
         end
-        wrote = true
+        push!(terms, coefficient < 0 ? "-" * body : body)
     end
-    if support !== nothing && !_support_isempty(support)
-        wrote && write(io, " ")
-        _write_plain_frequency_support(io, support, basis, external)
+    isempty(terms) && return "0"
+    out = first(terms)
+    for term in Iterators.drop(terms, 1)
+        if startswith(term, "-")
+            out *= " - " * term[2:end]
+        else
+            out *= " + " * term
+        end
     end
-    return nothing
+    return out
 end
 
-function _write_latex_contribution(
-    io::IO,
-    coefficient::Number,
-    parameter::ParameterMonomial,
+function _component_string(
+    component::MomentumComponent,
     basis::MomentumBasis,
     external::MomentumVariable,
-    kinematic::MomentumMonomial,
-    statistical::Union{StatisticalMonomial,OccupationMonomial},
-    support::Union{FrequencySupport,Nothing},
+    latex::Bool,
 )
-    wrote = false
-    has_non_numeric =
-        !_parameter_isone(parameter) ||
-        length(basis) > 1 ||
-        !isempty(kinematic) ||
-        !isempty(statistical) ||
-        (support !== nothing && !_support_isempty(support))
-    if !isone(coefficient) || !has_non_numeric
-        write_latex_number(io, coefficient)
-        wrote = true
+    momentum_text = _linear_momentum_string(component.momentum, basis, external, latex)
+    nonzero_count = count(value -> !iszero(value), component.momentum.coefficients)
+    positive_unit = any(==(1 // 1), component.momentum.coefficients)
+    simple = nonzero_count == 1 && positive_unit
+    if simple
+        base = momentum_text
+    elseif latex
+        base = "\\left(" * momentum_text * "\\right)"
+    else
+        base = "(" * momentum_text * ")"
     end
-    if !_parameter_isone(parameter)
-        wrote && write(io, "\\,")
-        _write_latex_parameter(io, parameter)
-        wrote = true
+    axis = _display_symbol(component.axis, latex)
+    return latex ? base * "_{" * axis * "}" : base * "_" * axis
+end
+
+function _grouped_factor_strings(render, factors)
+    out = String[]
+    i = 1
+    while i <= length(factors)
+        factor = factors[i]
+        multiplicity = 1
+        while i + multiplicity <= length(factors)
+            factors[i + multiplicity] == factor || break
+            multiplicity += 1
+        end
+        text = render(factor)
+        if multiplicity > 1
+            text *= "^" * string(multiplicity)
+        end
+        push!(out, text)
+        i += multiplicity
     end
-    if length(basis) > 1
-        wrote && write(io, "\\,")
-        _write_latex_measure(io, basis, external)
-        wrote = true
+    return out
+end
+
+function _momentum_monomial_string(
+    monomial::MomentumMonomial,
+    basis::MomentumBasis,
+    external::MomentumVariable,
+    latex::Bool,
+)
+    factors = _grouped_factor_strings(monomial.factors) do component
+        _component_string(component, basis, external, latex)
     end
-    if !isempty(kinematic)
-        wrote && write(io, "\\,")
-        _write_latex_momentum_monomial(io, kinematic, basis, external)
-        wrote = true
+    return join(factors, latex ? "\\," : " ")
+end
+
+_family_string(family::FieldFamily, latex::Bool) = _display_symbol(name(family), latex)
+
+function _distribution_atom_string(
+    prefix::String,
+    family::FieldFamily,
+    momentum::LinearMomentum,
+    basis::MomentumBasis,
+    external::MomentumVariable,
+    latex::Bool,
+)
+    family_text = _family_string(family, latex)
+    momentum_text = _linear_momentum_string(momentum, basis, external, latex)
+    if latex
+        return prefix * "_{" * family_text * "}\\!\\left(" * momentum_text * "\\right)"
     end
-    if !isempty(statistical)
-        wrote && write(io, "\\,")
-        if statistical isa StatisticalMonomial
-            _write_latex_statistical_monomial(io, statistical, basis, external)
+    return prefix * "_" * family_text * "(" * momentum_text * ")"
+end
+
+function _statistical_monomial_string(
+    monomial::StatisticalMonomial,
+    basis::MomentumBasis,
+    external::MomentumVariable,
+    latex::Bool,
+)
+    factors = _grouped_factor_strings(monomial.factors) do atom
+        _distribution_atom_string("F", atom.family, atom.momentum, basis, external, latex)
+    end
+    return join(factors, latex ? "\\," : " ")
+end
+
+function _occupation_monomial_string(
+    monomial::OccupationMonomial,
+    basis::MomentumBasis,
+    external::MomentumVariable,
+    latex::Bool,
+)
+    factors = _grouped_factor_strings(monomial.factors) do atom
+        _distribution_atom_string("n", atom.family, atom.momentum, basis, external, latex)
+    end
+    return join(factors, latex ? "\\," : " ")
+end
+
+function _energy_form_string(
+    form::EnergyForm,
+    basis::MomentumBasis,
+    external::MomentumVariable,
+    latex::Bool,
+)
+    terms = String[]
+    for (atom, coefficient) in form
+        family_text = _family_string(atom.family, latex)
+        momentum_text = _linear_momentum_string(atom.momentum, basis, external, latex)
+        if latex
+            energy = "\\varepsilon_{" * family_text * "}\\!\\left(" * momentum_text * "\\right)"
         else
-            _write_latex_occupation_monomial(io, statistical, basis, external)
+            energy = "ε_" * family_text * "(" * momentum_text * ")"
         end
-        wrote = true
+        magnitude = abs(coefficient)
+        if magnitude == 1
+            body = energy
+        else
+            multiplication = latex ? "\\," : "*"
+            body = _display_number(magnitude, latex) * multiplication * energy
+        end
+        push!(terms, coefficient < 0 ? "-" * body : body)
     end
-    if support !== nothing && !_support_isempty(support)
-        wrote && write(io, "\\,")
-        _write_latex_frequency_support(io, support, basis, external)
+    isempty(terms) && return "0"
+    out = first(terms)
+    for term in Iterators.drop(terms, 1)
+        if startswith(term, "-")
+            out *= " - " * term[2:end]
+        else
+            out *= " + " * term
+        end
     end
-    return nothing
+    return out
 end
 
-function _write_plain_signed_prefix(io::IO, coefficient::Number, first_term::Bool)
-    negative = _plain_negative_real(coefficient)
-    magnitude = negative ? -coefficient : coefficient
-    if first_term
-        negative && write(io, "-")
-    else
-        write(io, negative ? "\n    - " : "\n    + ")
+function _frequency_support_string(
+    support::FrequencySupport,
+    basis::MomentumBasis,
+    external::MomentumVariable,
+    latex::Bool,
+)
+    factors = String[]
+    for shell in support.shells
+        energy = _energy_form_string(shell.energy, basis, external, latex)
+        if latex
+            push!(factors, "\\delta\\!\\left(" * energy * "\\right)")
+        else
+            push!(factors, "δ(" * energy * ")")
+        end
     end
-    return magnitude
+    for pv in support.principal_values
+        energy = _energy_form_string(pv.energy, basis, external, latex)
+        if latex
+            push!(
+                factors,
+                "\\operatorname{PV}\\!\\left(\\frac{1}{" * energy * "}\\right)",
+            )
+        else
+            push!(factors, "PV(1/(" * energy * "))")
+        end
+    end
+    return join(factors, latex ? "\\," : " ")
 end
 
-function _write_latex_signed_prefix(io::IO, coefficient::Number, first_term::Bool)
-    negative = _latex_negative_real(coefficient)
-    magnitude = negative ? -coefficient : coefficient
-    if first_term
-        negative && write(io, "-")
-    else
-        write(io, negative ? "\\\\\n&{}-" : "\\\\\n&{}+")
+function _measure_string(basis::MomentumBasis, external::MomentumVariable, latex::Bool)
+    loops = _loop_basis_indices(basis, external)
+    labels = [_momentum_label(basis, external, slot, latex) for slot in loops]
+    if latex
+        return join(["\\int_{" * label * "}" for label in labels])
     end
-    return magnitude
+    return join(["∫_" * label for label in labels], " ")
 end
 
-function _write_plain_statistical_collision(io::IO, terms)
-    first_term = true
+function _term_string(coefficient::Number, factors::Vector{String}, latex::Bool)
+    separator = latex ? "\\," : " "
+    nonempty_factors = [factor for factor in factors if !isempty(factor)]
+    body = join(nonempty_factors, separator)
+    isempty(body) && return _display_number(coefficient, latex)
+    isone(coefficient) && return body
+    isone(-coefficient) && return "-" * body
+    return _display_number(coefficient, latex) * separator * body
+end
+
+function _sum_string(terms::Vector{String}, latex::Bool)
+    isempty(terms) && return "0"
+    separator = latex ? "\\\\\n&{}" : "\n    "
+    out = first(terms)
+    for term in Iterators.drop(terms, 1)
+        if startswith(term, "-")
+            out *= separator * "- " * term[2:end]
+        else
+            out *= separator * "+ " * term
+        end
+    end
+    return out
+end
+
+function _polynomial_monomial_string(
+    monomial::StatisticalMonomial,
+    basis::MomentumBasis,
+    external::MomentumVariable,
+    latex::Bool,
+)
+    return _statistical_monomial_string(monomial, basis, external, latex)
+end
+
+function _polynomial_monomial_string(
+    monomial::OccupationMonomial,
+    basis::MomentumBasis,
+    external::MomentumVariable,
+    latex::Bool,
+)
+    return _occupation_monomial_string(monomial, basis, external, latex)
+end
+
+function _physical_collision_string(terms, latex::Bool)
+    rendered = String[]
     for (sector, polynomial) in terms
         basis = momentum_basis(sector)
         external = external_wigner_momentum(sector)
+        parameter_text = _parameter_string(parameters(sector), latex)
+        measure_text = _measure_string(basis, external, latex)
+        support_text = _frequency_support_string(
+            frequency_support(sector), basis, external, latex
+        )
         for (kinematic, kinematic_coefficient) in kinematic_factor(sector)
-            for (statistical, statistical_coefficient) in polynomial
-                coefficient = kinematic_coefficient * statistical_coefficient
+            kinematic_text = _momentum_monomial_string(
+                kinematic, basis, external, latex
+            )
+            for (monomial, polynomial_coefficient) in polynomial
+                coefficient = kinematic_coefficient * polynomial_coefficient
                 iszero(coefficient) && continue
-                magnitude = _write_plain_signed_prefix(io, coefficient, first_term)
-                _write_plain_contribution(
-                    io,
-                    magnitude,
-                    parameters(sector),
-                    basis,
-                    external,
-                    kinematic,
-                    statistical,
-                    frequency_support(sector),
+                polynomial_text = _polynomial_monomial_string(
+                    monomial, basis, external, latex
                 )
-                first_term = false
+                factors = String[
+                    parameter_text,
+                    measure_text,
+                    kinematic_text,
+                    polynomial_text,
+                    support_text,
+                ]
+                push!(rendered, _term_string(coefficient, factors, latex))
             end
         end
     end
-    first_term && write(io, "0")
-    return nothing
+    return _sum_string(rendered, latex)
 end
 
-function _write_latex_statistical_collision(io::IO, terms)
-    first_term = true
-    for (sector, polynomial) in terms
-        basis = momentum_basis(sector)
-        external = external_wigner_momentum(sector)
-        for (kinematic, kinematic_coefficient) in kinematic_factor(sector)
-            for (statistical, statistical_coefficient) in polynomial
-                coefficient = kinematic_coefficient * statistical_coefficient
-                iszero(coefficient) && continue
-                magnitude = _write_latex_signed_prefix(io, coefficient, first_term)
-                _write_latex_contribution(
-                    io,
-                    magnitude,
-                    parameters(sector),
-                    basis,
-                    external,
-                    kinematic,
-                    statistical,
-                    frequency_support(sector),
-                )
-                first_term = false
-            end
-        end
-    end
-    first_term && write(io, "0")
-    return nothing
-end
-
-function _write_plain_occupation_collision(io::IO, terms)
-    first_term = true
-    for (sector, polynomial) in terms
-        basis = momentum_basis(sector)
-        external = external_wigner_momentum(sector)
-        for (kinematic, kinematic_coefficient) in kinematic_factor(sector)
-            for (occupation, occupation_coefficient) in polynomial
-                coefficient = kinematic_coefficient * occupation_coefficient
-                iszero(coefficient) && continue
-                magnitude = _write_plain_signed_prefix(io, coefficient, first_term)
-                _write_plain_contribution(
-                    io,
-                    magnitude,
-                    parameters(sector),
-                    basis,
-                    external,
-                    kinematic,
-                    occupation,
-                    frequency_support(sector),
-                )
-                first_term = false
-            end
-        end
-    end
-    first_term && write(io, "0")
-    return nothing
-end
-
-function _write_latex_occupation_collision(io::IO, terms)
-    first_term = true
-    for (sector, polynomial) in terms
-        basis = momentum_basis(sector)
-        external = external_wigner_momentum(sector)
-        for (kinematic, kinematic_coefficient) in kinematic_factor(sector)
-            for (occupation, occupation_coefficient) in polynomial
-                coefficient = kinematic_coefficient * occupation_coefficient
-                iszero(coefficient) && continue
-                magnitude = _write_latex_signed_prefix(io, coefficient, first_term)
-                _write_latex_contribution(
-                    io,
-                    magnitude,
-                    parameters(sector),
-                    basis,
-                    external,
-                    kinematic,
-                    occupation,
-                    frequency_support(sector),
-                )
-                first_term = false
-            end
-        end
-    end
-    first_term && write(io, "0")
-    return nothing
-end
-
-function _write_plain_sd_line(
-    io::IO,
+function _sd_line_string(
     line::KineticLine,
     kind::SpectralDispersiveKind,
     basis::MomentumBasis,
     external::MomentumVariable,
+    latex::Bool,
 )
-    write(io, kind === CollisionSpectral ? "A_" : "D_")
-    _write_plain_family(io, line.family)
+    prefix = kind === CollisionSpectral ? "A" : "D"
+    family = _family_string(line.family, latex)
+    momentum_text = _linear_momentum_string(momentum(line), basis, external, latex)
     shift = Int(regularisation_shift(line))
+    if latex
+        decoration = ""
+        if !iszero(shift)
+            sign = shift > 0 ? "+" : ""
+            decoration = "^{[\\Delta t=" * sign * string(shift) * "\\,0^+]}"
+        end
+        return prefix * "_{" * family * "}" * decoration *
+               "\\!\\left(" * momentum_text * "\\right)"
+    end
+    decoration = ""
     if !iszero(shift)
-        write(io, "[Δt=", shift > 0 ? "+" : "", string(shift), "·0+]")
+        sign = shift > 0 ? "+" : ""
+        decoration = "[Δt=" * sign * string(shift) * "·0+]"
     end
-    write(io, "(")
-    _write_plain_linear_momentum(io, momentum(line), basis, external)
-    write(io, ")")
-    return nothing
+    return prefix * "_" * family * decoration * "(" * momentum_text * ")"
 end
 
-function _write_latex_sd_line(
-    io::IO,
-    line::KineticLine,
-    kind::SpectralDispersiveKind,
-    basis::MomentumBasis,
-    external::MomentumVariable,
-)
-    write(io, kind === CollisionSpectral ? "A_{" : "D_{")
-    _write_latex_family(io, line.family)
-    write(io, "}")
-    shift = Int(regularisation_shift(line))
-    if !iszero(shift)
-        write(io, "^{[\\Delta t=", shift > 0 ? "+" : "", string(shift), "\\,0^+]}")
-    end
-    write(io, "\\!\\left(")
-    _write_latex_linear_momentum(io, momentum(line), basis, external)
-    write(io, "\\right)")
-    return nothing
-end
-
-function _write_plain_sd_contribution(
-    io::IO,
-    coefficient::Number,
-    parameter::ParameterMonomial,
-    term::SpectralDispersiveTerm,
-    kinematic::MomentumMonomial,
+function _sd_expression_terms(
+    collision::SpectralDispersiveCollision,
+    expression::SpectralDispersiveExpression,
     include_external::Bool,
-    target::FieldFamily,
+    latex::Bool,
 )
-    basis = momentum_basis(term)
-    external = external_wigner_momentum(term)
-    has_non_numeric =
-        !_parameter_isone(parameter) || length(basis) > 1 || !isempty(kinematic) ||
-        include_external || !isempty(kinetic_lines(term.carrier))
-    wrote = false
-    if !isone(coefficient) || !has_non_numeric
-        _write_plain_number(io, coefficient)
-        wrote = true
-    end
-    if !_parameter_isone(parameter)
-        wrote && write(io, " ")
-        _write_plain_parameter(io, parameter)
-        wrote = true
-    end
-    if length(basis) > 1
-        wrote && write(io, " ")
-        _write_plain_measure(io, basis, external)
-        wrote = true
-    end
-    if !isempty(kinematic)
-        wrote && write(io, " ")
-        _write_plain_momentum_monomial(io, kinematic, basis, external)
-        wrote = true
-    end
-    if include_external
-        wrote && write(io, " ")
-        external_slot = _external_basis_index(basis, external)
-        atom = StatisticalAtom(target, basis_momentum(basis, external_slot))
-        _write_plain_statistical_atom(io, atom, basis, external)
-        wrote = true
-    end
-    lines = kinetic_lines(term.carrier)
-    kinds = spectral_dispersive_kinds(term)
-    for i in eachindex(lines)
-        line = lines[i]
-        if statistical_weight(line) === DistributionWeight
-            wrote && write(io, " ")
-            atom = StatisticalAtom(line.family, momentum(line))
-            _write_plain_statistical_atom(io, atom, basis, external)
-            wrote = true
+    rendered = String[]
+    parameter_text = _parameter_string(parameters(collision), latex)
+    for (term, source_coefficient) in expression
+        basis = momentum_basis(term)
+        external = external_wigner_momentum(term)
+        measure_text = _measure_string(basis, external, latex)
+        lines = kinetic_lines(term.carrier)
+        kinds = spectral_dispersive_kinds(term)
+        line_factors = String[]
+        if include_external
+            external_slot = _external_basis_index(basis, external)
+            external_momentum = basis_momentum(basis, external_slot)
+            push!(
+                line_factors,
+                _distribution_atom_string(
+                    "F", target_family(collision), external_momentum, basis, external, latex
+                ),
+            )
         end
-        wrote && write(io, " ")
-        _write_plain_sd_line(io, line, kinds[i], basis, external)
-        wrote = true
-    end
-    return nothing
-end
-
-function _write_latex_sd_contribution(
-    io::IO,
-    coefficient::Number,
-    parameter::ParameterMonomial,
-    term::SpectralDispersiveTerm,
-    kinematic::MomentumMonomial,
-    include_external::Bool,
-    target::FieldFamily,
-)
-    basis = momentum_basis(term)
-    external = external_wigner_momentum(term)
-    has_non_numeric =
-        !_parameter_isone(parameter) || length(basis) > 1 || !isempty(kinematic) ||
-        include_external || !isempty(kinetic_lines(term.carrier))
-    wrote = false
-    if !isone(coefficient) || !has_non_numeric
-        write_latex_number(io, coefficient)
-        wrote = true
-    end
-    if !_parameter_isone(parameter)
-        wrote && write(io, "\\,")
-        _write_latex_parameter(io, parameter)
-        wrote = true
-    end
-    if length(basis) > 1
-        wrote && write(io, "\\,")
-        _write_latex_measure(io, basis, external)
-        wrote = true
-    end
-    if !isempty(kinematic)
-        wrote && write(io, "\\,")
-        _write_latex_momentum_monomial(io, kinematic, basis, external)
-        wrote = true
-    end
-    if include_external
-        wrote && write(io, "\\,")
-        external_slot = _external_basis_index(basis, external)
-        atom = StatisticalAtom(target, basis_momentum(basis, external_slot))
-        _write_latex_statistical_atom(io, atom, basis, external)
-        wrote = true
-    end
-    lines = kinetic_lines(term.carrier)
-    kinds = spectral_dispersive_kinds(term)
-    for i in eachindex(lines)
-        line = lines[i]
-        if statistical_weight(line) === DistributionWeight
-            wrote && write(io, "\\,")
-            atom = StatisticalAtom(line.family, momentum(line))
-            _write_latex_statistical_atom(io, atom, basis, external)
-            wrote = true
-        end
-        wrote && write(io, "\\,")
-        _write_latex_sd_line(io, line, kinds[i], basis, external)
-        wrote = true
-    end
-    return nothing
-end
-
-function _write_plain_sd_expression(io::IO, collision::SpectralDispersiveCollision)
-    first_term = true
-    parameter = parameters(collision)
-    target = target_family(collision)
-    for (expression, include_external) in (
-        (collision_offset(collision), false),
-        (collision_distribution_coefficient(collision), true),
-    )
-        for (term, source_coefficient) in expression
-            for (kinematic, kinematic_coefficient) in kinematic_factor(term)
-                coefficient = source_coefficient * kinematic_coefficient
-                iszero(coefficient) && continue
-                magnitude = _write_plain_signed_prefix(io, coefficient, first_term)
-                _write_plain_sd_contribution(
-                    io, magnitude, parameter, term, kinematic, include_external, target
+        for i in eachindex(lines)
+            line = lines[i]
+            if statistical_weight(line) === DistributionWeight
+                push!(
+                    line_factors,
+                    _distribution_atom_string(
+                        "F", line.family, momentum(line), basis, external, latex
+                    ),
                 )
-                first_term = false
             end
+            push!(line_factors, _sd_line_string(line, kinds[i], basis, external, latex))
+        end
+        for (kinematic, kinematic_coefficient) in kinematic_factor(term)
+            coefficient = source_coefficient * kinematic_coefficient
+            iszero(coefficient) && continue
+            kinematic_text = _momentum_monomial_string(
+                kinematic, basis, external, latex
+            )
+            factors = vcat(String[parameter_text, measure_text, kinematic_text], line_factors)
+            push!(rendered, _term_string(coefficient, factors, latex))
         end
     end
-    first_term && write(io, "0")
-    return nothing
+    return rendered
 end
 
-function _write_latex_sd_expression(io::IO, collision::SpectralDispersiveCollision)
-    first_term = true
-    parameter = parameters(collision)
-    target = target_family(collision)
-    for (expression, include_external) in (
-        (collision_offset(collision), false),
-        (collision_distribution_coefficient(collision), true),
+function _spectral_dispersive_string(collision::SpectralDispersiveCollision, latex::Bool)
+    rendered = String[]
+    append!(
+        rendered,
+        _sd_expression_terms(collision, collision_offset(collision), false, latex),
     )
-        for (term, source_coefficient) in expression
-            for (kinematic, kinematic_coefficient) in kinematic_factor(term)
-                coefficient = source_coefficient * kinematic_coefficient
-                iszero(coefficient) && continue
-                magnitude = _write_latex_signed_prefix(io, coefficient, first_term)
-                _write_latex_sd_contribution(
-                    io, magnitude, parameter, term, kinematic, include_external, target
-                )
-                first_term = false
-            end
-        end
+    append!(
+        rendered,
+        _sd_expression_terms(
+            collision, collision_distribution_coefficient(collision), true, latex
+        ),
+    )
+    return _sum_string(rendered, latex)
+end
+
+function _blocked_summary(result::ReducedFrequencyCollision, latex::Bool)
+    blocked = reduced_blocked_terms(result)
+    unresolved = reduced_trotter_terms(result)
+    if latex
+        return "N_{\\mathrm{blocked}}=" * string(length(blocked)) *
+               ",\\qquad N_{\\mathrm{Trotter}}=" * string(length(unresolved))
     end
-    first_term && write(io, "0")
-    return nothing
+    return "causal blockers: " * string(length(blocked)) *
+           "\n  unresolved Trotter states: " * string(length(unresolved))
 end
 
 function Base.show(io::IO, ::MIME"text/latex", G::DressedPropagator)
@@ -1028,6 +497,7 @@ function Base.show(io::IO, ::MIME"text/plain", G::FourierDressedPropagator)
     _show_component_counts(io, G)
     return nothing
 end
+
 function Base.show(io::IO, ::MIME"text/latex", G::FourierDressedPropagator)
     return _latex_display(io) do
         write(io, "G_F^{R,A,K}(p)")
@@ -1040,6 +510,7 @@ function Base.show(io::IO, ::MIME"text/plain", Σ::FourierSelfEnergy)
     _show_component_counts(io, Σ)
     return nothing
 end
+
 function Base.show(io::IO, ::MIME"text/latex", Σ::FourierSelfEnergy)
     return _latex_display(io) do
         write(io, "\\Sigma_F^{R,A,K}(p)")
@@ -1053,6 +524,7 @@ function Base.show(io::IO, ::MIME"text/plain", G::WignerDressedPropagator)
     _show_component_counts(io, G)
     return nothing
 end
+
 function Base.show(io::IO, ::MIME"text/latex", G::WignerDressedPropagator)
     return _latex_display(io) do
         write(
@@ -1071,6 +543,7 @@ function Base.show(io::IO, ::MIME"text/plain", Σ::WignerSelfEnergy)
     _show_component_counts(io, Σ)
     return nothing
 end
+
 function Base.show(io::IO, ::MIME"text/latex", Σ::WignerSelfEnergy)
     return _latex_display(io) do
         write(
@@ -1089,6 +562,7 @@ function Base.show(io::IO, ::MIME"text/plain", Σ::KineticSelfEnergy)
     print(io, "\n  representation: spectral/statistical, G^K = -i F A")
     return nothing
 end
+
 function Base.show(io::IO, ::MIME"text/latex", Σ::KineticSelfEnergy)
     return _latex_display(io) do
         write(io, "\\Sigma_{\\mathrm{kin}}^{R,A,K}[A,F],\\qquad G^K=-iFA")
@@ -1101,6 +575,7 @@ function Base.show(io::IO, ::MIME"text/plain", I::OffShellCollisionExpression)
     print(io, "\n  I_coll = i Σ^K - F_target(k) A_Σ,  A_Σ = i(Σ^R - Σ^A)")
     return nothing
 end
+
 function Base.show(io::IO, ::MIME"text/latex", I::OffShellCollisionExpression)
     return _latex_display(io) do
         write(
@@ -1114,42 +589,41 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", collision::SpectralDispersiveCollision)
     _show_stage_plain(io, "Spectral/dispersive collision", collision)
-    write(io, "\n  I_coll(k) = ")
-    _write_plain_sd_expression(io, collision)
+    write(io, "\n  I_coll(k) = ", _spectral_dispersive_string(collision, false))
     return nothing
 end
+
 function Base.show(io::IO, ::MIME"text/latex", collision::SpectralDispersiveCollision)
     return _latex_display(io) do
-        write(io, "\\begin{aligned}\nI_{\\mathrm{coll}}(k)={}&")
-        _write_latex_sd_expression(io, collision)
-        write(io, "\n\\end{aligned}")
+        write(
+            io,
+            "\\begin{aligned}\nI_{\\mathrm{coll}}(k)={}&",
+            _spectral_dispersive_string(collision, true),
+            "\n\\end{aligned}",
+        )
         return nothing
     end
 end
 
 function Base.show(io::IO, ::MIME"text/plain", result::ReducedFrequencyCollision)
     _show_stage_plain(io, "Reduced causal-frequency collision", result)
-    write(io, "\n  I_reg(k) = ")
-    _write_plain_statistical_collision(io, reduced_regular_terms(result))
-    print(
+    write(
         io,
-        "\n  causal blockers: ",
-        length(reduced_blocked_terms(result)),
-        "\n  unresolved Trotter states: ",
-        length(reduced_trotter_terms(result)),
+        "\n  I_reg(k) = ",
+        _physical_collision_string(reduced_regular_terms(result), false),
     )
+    write(io, "\n  ", _blocked_summary(result, false))
     return nothing
 end
+
 function Base.show(io::IO, ::MIME"text/latex", result::ReducedFrequencyCollision)
     return _latex_display(io) do
-        write(io, "\\begin{aligned}\nI_{\\mathrm{reg}}(k)={}&")
-        _write_latex_statistical_collision(io, reduced_regular_terms(result))
         write(
             io,
-            "\\\\\nN_{\\mathrm{blocked}}={}&",
-            string(length(reduced_blocked_terms(result))),
-            ",\\qquad N_{\\mathrm{Trotter}}=",
-            string(length(reduced_trotter_terms(result))),
+            "\\begin{aligned}\nI_{\\mathrm{reg}}(k)={}&",
+            _physical_collision_string(reduced_regular_terms(result), true),
+            "\\\\\n&",
+            _blocked_summary(result, true),
             "\n\\end{aligned}",
         )
         return nothing
@@ -1158,45 +632,66 @@ end
 
 function Base.show(io::IO, ::MIME"text/plain", result::OccupationReducedExpression)
     _show_stage_plain(io, "Occupation-reduced regular collision", result)
-    write(io, "\n  C_n^reg(k) = ")
-    _write_plain_occupation_collision(io, occupation_reduced_terms(result))
+    write(
+        io,
+        "\n  C_n^reg(k) = ",
+        _physical_collision_string(occupation_reduced_terms(result), false),
+    )
     return nothing
 end
+
 function Base.show(io::IO, ::MIME"text/latex", result::OccupationReducedExpression)
     return _latex_display(io) do
-        write(io, "\\begin{aligned}\nC_n^{\\mathrm{reg}}(k)={}&")
-        _write_latex_occupation_collision(io, occupation_reduced_terms(result))
-        write(io, "\n\\end{aligned}")
+        write(
+            io,
+            "\\begin{aligned}\nC_n^{\\mathrm{reg}}(k)={}&",
+            _physical_collision_string(occupation_reduced_terms(result), true),
+            "\n\\end{aligned}",
+        )
         return nothing
     end
 end
 
 function Base.show(io::IO, ::MIME"text/plain", result::LoopQuotientedExpression)
     _show_stage_plain(io, "Loop-quotiented regular collision", result)
-    write(io, "\n  C_n^quot(k) = ")
-    _write_plain_occupation_collision(io, loop_quotient_terms(result))
+    write(
+        io,
+        "\n  C_n^quot(k) = ",
+        _physical_collision_string(loop_quotient_terms(result), false),
+    )
     return nothing
 end
+
 function Base.show(io::IO, ::MIME"text/latex", result::LoopQuotientedExpression)
     return _latex_display(io) do
-        write(io, "\\begin{aligned}\nC_n^{\\mathrm{quot}}(k)={}&")
-        _write_latex_occupation_collision(io, loop_quotient_terms(result))
-        write(io, "\n\\end{aligned}")
+        write(
+            io,
+            "\\begin{aligned}\nC_n^{\\mathrm{quot}}(k)={}&",
+            _physical_collision_string(loop_quotient_terms(result), true),
+            "\n\\end{aligned}",
+        )
         return nothing
     end
 end
 
 function Base.show(io::IO, ::MIME"text/plain", kernel::CollisionKernel)
     _show_stage_plain(io, "Collision kernel", kernel)
-    write(io, "\n  C_n(k) = ")
-    _write_plain_occupation_collision(io, collision_kernel_terms(kernel))
+    write(
+        io,
+        "\n  C_n(k) = ",
+        _physical_collision_string(collision_kernel_terms(kernel), false),
+    )
     return nothing
 end
+
 function Base.show(io::IO, ::MIME"text/latex", kernel::CollisionKernel)
     return _latex_display(io) do
-        write(io, "\\begin{aligned}\nC_n(k)={}&")
-        _write_latex_occupation_collision(io, collision_kernel_terms(kernel))
-        write(io, "\n\\end{aligned}")
+        write(
+            io,
+            "\\begin{aligned}\nC_n(k)={}&",
+            _physical_collision_string(collision_kernel_terms(kernel), true),
+            "\n\\end{aligned}",
+        )
         return nothing
     end
 end
