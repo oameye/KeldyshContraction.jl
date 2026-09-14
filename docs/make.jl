@@ -36,7 +36,7 @@ makedocs(;
     warnonly=:missing_docs,
     draft=false,#,(!CI),
     doctest=false,  # We test it in the CI, no need to run it here
-    checkdocs=:exports,
+    checkdocs=:public,
 )
 
 if CI

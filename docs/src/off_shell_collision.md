@@ -26,7 +26,7 @@ I_0=i\Sigma^K,
 I_1=-A_\Sigma.
 ```
 
-This is the meaning of [`OffShellCollisionExpression`](@ref). `collision_offset` returns `I₀`; `collision_distribution_coefficient` returns `I₁`. The external distribution is not inserted as a `KineticLine`, because it belongs to the external leg rather than to the internal propagator product. Each retained `KineticTerm` therefore keeps its original topology, routed internal momenta, and derivative-generated momentum polynomial.
+This is the meaning of [`KeldyshContraction.OffShellCollisionExpression`](@ref). `KeldyshContraction.collision_offset` returns `I₀`; `KeldyshContraction.collision_distribution_coefficient` returns `I₁`. The external distribution is not inserted as a `KineticLine`, because it belongs to the external leg rather than to the internal propagator product. Each retained `KineticTerm` therefore keeps its original topology, routed internal momenta, and derivative-generated momentum polynomial.
 
 The spectral factor is formed from the **complete** retarded and advanced self-energies. In particular, the supported path is
 
@@ -94,8 +94,8 @@ No operation on this page performs any of the following:
 Those operations belong to the subsequent quasiparticle/on-shell projection. Keeping them separate is required so that the mixed `gγ` sector can retain its principal-value contribution instead of being forced into a delta-shell representation.
 
 ```@docs
-OffShellCollisionExpression
+KeldyshContraction.OffShellCollisionExpression
 off_shell_collision_expression
-collision_offset
-collision_distribution_coefficient
+KeldyshContraction.collision_offset
+KeldyshContraction.collision_distribution_coefficient
 ```
