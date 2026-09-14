@@ -3,7 +3,7 @@ using KeldyshContraction, Test
 function has_no_zero_loops(component)
     return all(component) do pair
         diagram = first(pair)
-        vs = KeldyshContraction.Contraction[
+        vs = KeldyshContraction.Contraction{Boson}[
             (edge.out, edge.in) for edge in KeldyshContraction.contractions(diagram)
         ]
         return !KeldyshContraction.has_zero_loop(vs)
@@ -19,7 +19,8 @@ function has_valid_self_energy_diagrams(component)
 end
 
 @testset "number of topologies" begin
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields ϕ::Boson
+    c, q = ϕ[Classical], ϕ[Quantum]
     elasctic2boson = -(
         1//2 * (c^2 + q^2) * bar(c) * bar(q) + 1//2 * c * q * (bar(c)^2 + bar(q)^2)
     )
@@ -67,13 +68,14 @@ end
 end
 
 @testset "third order run's" begin
-    @qfields c::Boson(Classical) q::Boson(Quantum)
+    @qfields ϕ::Boson
+    c, q = ϕ[Classical], ϕ[Quantum]
     elasctic2boson = -(
         0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
     )
     L_int = InteractionLagrangian(elasctic2boson)
     GF3 = DressedPropagator(L_int, Val(3), Val(7))
-    Σ = SelfEnergy(GF3, Val(3))
+    Σ = SelfEnergy(GF3)
     @test Σ isa SelfEnergy
     @test all(component -> !isempty(component), (Σ.keldysh, Σ.retarded, Σ.advanced))
     @test all(has_valid_self_energy_diagrams, (Σ.keldysh, Σ.retarded, Σ.advanced))

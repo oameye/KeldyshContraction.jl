@@ -4,7 +4,8 @@ using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus
 using KeldyshContraction: Bulk, position
 
-@qfields ϕᶜ::Boson(Classical) ϕᴾ::Boson(Quantum)
+@qfields ϕ::Boson
+ϕᶜ, ϕᴾ = ϕ[Classical], ϕ[Quantum]
 
 L_int =
     im * (

@@ -3,7 +3,8 @@ using Combinatorics
 using KeldyshContraction: In, Out, Classical, Quantum, Plus, Minus, arguments
 import KeldyshContraction as KC
 
-@qfields ϕᶜ::Boson(Classical) ϕᴾ::Boson(Quantum)
+@qfields ϕ::Boson
+ϕᶜ, ϕᴾ = ϕ[Classical], ϕ[Quantum]
 
 L_int =
     im * (

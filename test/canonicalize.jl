@@ -1,7 +1,8 @@
 using KeldyshContraction, Test
 using KeldyshContraction: canonicalize, Bulk, In, Out, sort_by_position_and_type, positions
 
-@qfields c::Boson(Classical) q::Boson(Quantum)
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]
 
 @testset "canonicalize" begin
     # Basic isomorphic graphs
@@ -38,7 +39,7 @@ using KeldyshContraction: canonicalize, Bulk, In, Out, sort_by_position_and_type
     ]
     @test canonicalize(vs5) == canonicalize(vs6)
 
-    # 4-node isomorphic graphs - ring topology with different node labeling
+    # 4-node ring regression for #184: bulk labels must canonicalize completely.
     vs_ring1 = [
         (c(Out()), bar(q)(Bulk(1))),
         (c(Bulk(1)), bar(q)(Bulk(2))),
@@ -57,7 +58,7 @@ using KeldyshContraction: canonicalize, Bulk, In, Out, sort_by_position_and_type
     ]
     @test canonicalize(vs_ring1) == canonicalize(vs_ring2)
 
-    # Out() always connects to Bulk(1) in canonical form
+    # External labels are fixed: Out() remains attached to canonical Bulk(1).
     for vs in [vs1, vs2, vs5, vs6, vs_ring1, vs_ring2]
         canonical = canonicalize(vs)
         out_edge = findfirst(cn -> Out() ∈ KeldyshContraction.position.(cn), canonical)
@@ -100,6 +101,54 @@ using KeldyshContraction: canonicalize, Bulk, In, Out, sort_by_position_and_type
     ]
     @test canonicalize(vs_multi) == canonicalize(vs_multi)
 
+    @testset "color-aware bulk relabeling" begin
+        using KeldyshContraction: FieldIndex, FieldIndices
+        @qfields χ::Boson
+        χc, χq = χ[Classical], χ[Quantum]
+
+        colored1 = [
+            (c(Out()), bar(q)(Bulk(1))),
+            (χc(Bulk(1)), bar(χq)(Bulk(2))),
+            (c(Bulk(2)), bar(q)(In())),
+        ]
+        colored2 = [
+            (c(Out()), bar(q)(Bulk(2))),
+            (χc(Bulk(2)), bar(χq)(Bulk(1))),
+            (c(Bulk(1)), bar(q)(In())),
+        ]
+        @test canonicalize(colored1) == canonicalize(colored2)
+
+        family_changed = [
+            (c(Out()), bar(q)(Bulk(1))),
+            (c(Bulk(1)), bar(q)(Bulk(2))),
+            (c(Bulk(2)), bar(q)(In())),
+        ]
+        @test canonicalize(colored1) != canonicalize(family_changed)
+
+        propagator_changed = [
+            (c(Out()), bar(q)(Bulk(1))),
+            (χc(Bulk(1)), bar(χc)(Bulk(2))),
+            (c(Bulk(2)), bar(q)(In())),
+        ]
+        @test canonicalize(colored1) != canonicalize(propagator_changed)
+
+        χ_up = FieldFamily{Boson}(:χ, FieldIndices(FieldIndex(:spin, 1)))
+        χ_down = FieldFamily{Boson}(:χ, FieldIndices(FieldIndex(:spin, 2)))
+        up_c, up_q = χ_up[Classical], χ_up[Quantum]
+        down_c, down_q = χ_down[Classical], χ_down[Quantum]
+        spin_up = [
+            (c(Out()), bar(q)(Bulk(1))),
+            (up_c(Bulk(1)), bar(up_q)(Bulk(2))),
+            (c(Bulk(2)), bar(q)(In())),
+        ]
+        spin_down = [
+            (c(Out()), bar(q)(Bulk(1))),
+            (down_c(Bulk(1)), bar(down_q)(Bulk(2))),
+            (c(Bulk(2)), bar(q)(In())),
+        ]
+        @test canonicalize(spin_up) != canonicalize(spin_down)
+    end
+
     @testset "third order two body scattering" begin
         vs1 = [
             (c(Out()), bar(q)(Bulk(1))),
@@ -139,5 +188,6 @@ using KeldyshContraction: canonicalize, Bulk, In, Out, sort_by_position_and_type
             (c(Bulk(1)), bar(q)(In())),
         ]
         @inferred make_NautyDiGraph(vs1)
+        @inferred canonicalize(vs1)
     end
 end

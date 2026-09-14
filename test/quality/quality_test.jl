@@ -5,18 +5,34 @@ using CheckConcreteStructs: all_concrete
 using ExplicitImports
 
 @testset "Concretely typed" begin
+    all_concrete(KeldyshContraction.FieldFamily{KeldyshContraction.Boson})
     all_concrete(KeldyshContraction.Field{KeldyshContraction.Boson})
     all_concrete(KeldyshContraction.FieldIndex)
     all_concrete(KeldyshContraction.FieldIndices)
+    all_concrete(KeldyshContraction.ParameterPower)
+    all_concrete(KeldyshContraction.ParameterMonomial)
     all_concrete(KeldyshContraction.QMul)
     all_concrete(KeldyshContraction.QAdd)
     all_concrete(KeldyshContraction.InteractionLagrangian)
 
-    all_concrete(KeldyshContraction.Edge)
-    all_concrete(KeldyshContraction.Diagram{5,3})
-    all_concrete(KeldyshContraction.Diagrams{5,3})
-    all_concrete(KeldyshContraction.DressedPropagator)
-    all_concrete(KeldyshContraction.SelfEnergy)
+    all_concrete(KeldyshContraction.Contraction{KeldyshContraction.Boson})
+    all_concrete(KeldyshContraction.Edge{KeldyshContraction.Boson})
+    all_concrete(KeldyshContraction.Diagram{KeldyshContraction.Boson,5,3})
+    all_concrete(
+        KeldyshContraction.Diagrams{
+            KeldyshContraction.ComplexRationals,KeldyshContraction.Boson,5,3
+        },
+    )
+    all_concrete(
+        KeldyshContraction.DressedPropagator{
+            KeldyshContraction.ComplexRationals,KeldyshContraction.Boson,2,5,1
+        },
+    )
+    all_concrete(
+        KeldyshContraction.SelfEnergy{
+            KeldyshContraction.ComplexRationals,KeldyshContraction.Boson,2,3,1
+        },
+    )
 end
 
 @testset "ExplicitImports" begin

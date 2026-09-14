@@ -4,7 +4,8 @@ using KeldyshContraction: Regularisation.Minus as Minus
 
 #
 
-@qfields c::Boson(Classical) q::Boson(Quantum)
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]
 @syms Γ g
 
 inelastic_terms =
@@ -26,37 +27,37 @@ GF1 = DressedPropagator(L, Val(1), Val(3); _set_reg_to_zero=true)
 
 #
 
-GF1_elastic = arguments(GF1)[g]
+GF1_elastic = GF1[g]
 
 #
 
-GF1_inelastic = arguments(GF1)[Γ]
+GF1_inelastic = GF1[Γ]
 
 #
 
 GF2 = DressedPropagator(L, Val(2), Val(5); _set_reg_to_zero=true, simplify=true)
-topo = topologies(arguments(GF2)[g * Γ].keldysh)
+topo = topologies(GF2[g * Γ].keldysh)
 
 #
 
-[key => arguments(GF2)[g * Γ].keldysh.diagrams[key] for key in topo[[2]]]
+[key => GF2[g * Γ].keldysh.diagrams[key] for key in topo[[2]]]
 
 #
 
-[key => arguments(GF2)[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]
+[key => GF2[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]
 
 #
 
-Σ2 = SelfEnergy(GF2, Val(2))
-arguments(Σ2)[g * Γ].keldysh
+Σ2 = SelfEnergy(GF2)
+Σ2[g * Γ].keldysh
 
 #
 
-topo = topologies(arguments(Σ2)[g * Γ].retarded)
+topo = topologies(Σ2[g * Γ].retarded)
 
-[key => arguments(Σ2)[g * Γ].retarded.diagrams[key] for key in topo[[2]]]
+[key => Σ2[g * Γ].retarded.diagrams[key] for key in topo[[2]]]
 
 #
 
-topo = topologies(arguments(Σ2)[g * Γ].keldysh)
-[key => arguments(Σ2)[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]
+topo = topologies(Σ2[g * Γ].keldysh)
+[key => Σ2[g * Γ].keldysh.diagrams[key] for key in topo[[3]]]

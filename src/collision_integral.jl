@@ -81,7 +81,7 @@ Im(Gᴿ) = -0.5 * A
 Im(Gᴬ) = 0.5 * A
 Im(Gᴷ) = 0.5 * F * A
 """
-function imaginary_part(d::Diagram, coeff::ComplexRationals=ComplexRationals(1.0))
+function imaginary_part(d::Diagram, coeff::Number=ComplexRationals(1.0))
     bds = Vector{Momenta}()
     for edge in contractions(d)
         edgetype = propagator_type(edge)
@@ -117,8 +117,8 @@ end
 ⃗a ⃗a = - A A -  ⃗r ⃗r
 ⃗a ⃖r =  A A -  ⃗r ⃖a
 """
-function reduce_to_spectral(ds::Diagrams{E1,E2}) where {E1,E2}
-    ds′ = Diagrams{E1,E2}()
+function reduce_to_spectral(ds::Diagrams{C,S,E1,E2}) where {C<:Number,S<:Statistics,E1,E2}
+    ds′ = Diagrams{C,S,E1,E2}()
     for (d, coeff) in ds.diagrams
         _contractions = contractions(d)
         types = propagator_type.(_contractions)
@@ -199,7 +199,7 @@ function kelysh_to_distribution(ds::Diagrams)
     return dict
 end
 
-function kelysh_to_distribution(d::Diagram, coeff::ComplexRationals=ComplexRationals(1.0))
+function kelysh_to_distribution(d::Diagram, coeff::Number=ComplexRationals(1.0))
     bds = Vector{Momenta}()
     for edge in contractions(d)
         edgetype = propagator_type(edge)
@@ -218,8 +218,7 @@ end
 struct CollisionIntegral{E}
     terms::Dict{FixedVector{E,Int},BosonicDistributions}
 end
-function CollisionIntegral(Σ::SelfEnergy{E1,E2}) where {E1,E2}
-    # TODO: assert has momenta
+function CollisionIntegral(Σ::SelfEnergy{C,S,O,E1,E2}) where {C,S,O,E1,E2}
     Σk = wigner_transform(Σ)
 
     tmp = reduce_to_spectral(Σk.keldysh)
@@ -232,13 +231,13 @@ function CollisionIntegral(Σ::SelfEnergy{E1,E2}) where {E1,E2}
 
     dict = Dict{FixedVector{E2,Int},BosonicDistributions}()
     for t_ in intersect(keys(ΣkF), keys(imΣr))
-        dict[t_] = im*ΣkF[t_] + Fks2 * imΣr[t_]
+        dict[t_] = im * ΣkF[t_] + Fks2 * imΣr[t_]
     end
     for t_ in setdiff(keys(imΣr), keys(ΣkF))
         dict[t_] = Fks2 * imΣr[t_]
     end
     for t_ in setdiff(keys(ΣkF), keys(imΣr))
-        dict[t_] = im*ΣkF[t_]
+        dict[t_] = im * ΣkF[t_]
     end
     return CollisionIntegral{E2}(dict)
 end

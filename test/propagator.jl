@@ -4,7 +4,8 @@ using KeldyshContraction: Edge, position, keldysh_index
 using KeldyshContraction: Regularisation.Plus as Plus
 using KeldyshContraction: Regularisation.Minus as Minus
 
-@qfields c::Boson(Classical) q::Boson(Quantum)
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]
 
 @testset "propagator checks" begin
     @test_throws AssertionError Edge((c, c))
@@ -28,27 +29,27 @@ end
 
 @testset "diagram construction" begin
     using KeldyshContraction: Diagram, Contraction
-    contractions = Contraction[(q, bar(c)(In())), (c, bar(c)), (c(Out()), bar(q))]
+    contractions = Contraction{Boson}[(q, bar(c)(In())), (c, bar(c)), (c(Out()), bar(q))]
 
     @inferred Diagram(contractions, Val(3), Val(0))
 end
 
 @testset "sort" begin
-    using KeldyshContraction: Bulk, In, Out, sort_by_position_and_type
-    p1 = (q, bar(c)(In()))
-    p2 = (q, bar(c))
+    using KeldyshContraction: Bulk, In, Out, Contraction, sort_by_position_and_type
+    p1 = Contraction(q, bar(c)(In()))
+    p2 = Contraction(q, bar(c))
     @test isequal(sort!([p1, p2]; by=sort_by_position_and_type), [p2, p1])
 
     b1 = Bulk(1)
     b2 = Bulk(2)
-    test1 = [
+    test1 = Contraction{Boson}[
         (c(Out()), bar(q)(In())),
         (c(b1), bar(q)(b2)),
         (c(b1), bar(c)(b2)),
         (c(b2), bar(c)(b1)),
         (c(b2), bar(c)(In())),
     ]
-    test2 = [
+    test2 = Contraction{Boson}[
         (c(Out()), bar(q)(In())),
         (c(b1), bar(c)(b2)),
         (c(b1), bar(q)(b2)),
@@ -93,12 +94,12 @@ end
 end
 
 @testset "position" begin
-    using KeldyshContraction: position, same_position, Bulk, In, Out
-    p = (q, bar(c))
+    using KeldyshContraction: position, same_position, Bulk, In, Out, Contraction
+    p = Contraction(q, bar(c))
     @test same_position(p)
-    p = (q(Out()), bar(c))
+    p = Contraction(q(Out()), bar(c))
     @test !same_position(p)
-    p = (q(Bulk(3)), bar(c)(Bulk(3)))
+    p = Contraction(q(Bulk(3)), bar(c)(Bulk(3)))
     @test same_position(p)
 end
 

@@ -11,7 +11,6 @@ using TermInterface: TermInterface
 using SymbolicUtils: SymbolicUtils, @syms, arguments
 using Combinatorics: Combinatorics
 using SmallCollections: SmallCollections, FixedVector
-using SmallCombinatorics: SmallCombinatorics
 using NautyGraphs: NautyGraphs
 using Graphs: Graphs
 
@@ -32,6 +31,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("keldysh_algebra/QTerm.jl")
     include("keldysh_algebra/field_math.jl")
     include("keldysh_algebra/hashing.jl")
+    include("parameters.jl")
     include("InteractionLagrangian.jl")
 
     # Propagators
@@ -52,7 +52,13 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("show_methods/printing.jl")
 
     export @qfields,
+        FieldFamily,
         Field,
+        field_family,
+        field_families,
+        target_family,
+        ParameterMonomial,
+        parameter_monomial,
         Boson,
         bar,
         wick_contraction,
