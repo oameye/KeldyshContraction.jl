@@ -35,13 +35,26 @@ function _edge_shift(edge::Edge)
     return Int(out_reg) - Int(in_reg)
 end
 
-function _shift_decoration(shift::Int, latex::Bool)
+function _shift_label(shift::Int, latex::Bool)
     iszero(shift) && return ""
     sign = shift > 0 ? "+" : ""
     if latex
-        return "^{[\\Delta t=" * sign * string(shift) * "\\,0^+]}"
+        return "[\\Delta t=" * sign * string(shift) * "\\,0^+]"
     end
     return "[Δt=" * sign * string(shift) * "·0+]"
+end
+
+function _latex_shifted_symbol(base::AbstractString, component::AbstractString, shift::Int)
+    shift_text = _shift_label(shift, true)
+    superscript = if isempty(component)
+        shift_text
+    elseif isempty(shift_text)
+        component
+    else
+        component * "," * shift_text
+    end
+    isempty(superscript) && return String(base)
+    return String(base) * "^{" * superscript * "}"
 end
 
 function _propagator_symbol(type::PropagatorType.T, latex::Bool)
@@ -52,6 +65,14 @@ function _propagator_symbol(type::PropagatorType.T, latex::Bool)
     return "G"
 end
 
+function _latex_propagator_symbol(type::PropagatorType.T, shift::Int)
+    is_spectral(type) && return _latex_shifted_symbol("A", "", shift)
+    is_retarded(type) && return _latex_shifted_symbol("G", "R", shift)
+    is_advanced(type) && return _latex_shifted_symbol("G", "A", shift)
+    is_keldysh(type) && return _latex_shifted_symbol("G", "K", shift)
+    return _latex_shifted_symbol("G", "", shift)
+end
+
 function _routed_line_string(
     edge::Edge,
     routed::LinearMomentum,
@@ -60,20 +81,21 @@ function _routed_line_string(
     latex::Bool,
 )
     family = field_family(first(fields(edge)))
-    symbol = _propagator_symbol(propagator_type(edge), latex)
+    type = propagator_type(edge)
     family_text = _family_string(family, latex)
     momentum_text = _linear_momentum_string(routed, basis, external, latex)
-    decoration = _shift_decoration(_edge_shift(edge), latex)
+    shift = _edge_shift(edge)
     if latex
+        symbol = _latex_propagator_symbol(type, shift)
         return symbol *
                "_{" *
                family_text *
-               "}" *
-               decoration *
-               "\\!\\left(" *
+               "}\\!\\left(" *
                momentum_text *
                "\\right)"
     end
+    symbol = _propagator_symbol(type, false)
+    decoration = _shift_label(shift, false)
     return symbol * "_" * family_text * decoration * "(" * momentum_text * ")"
 end
 
@@ -121,7 +143,16 @@ function _kinetic_line_string(
     line::KineticLine, basis::MomentumBasis, external::MomentumVariable, latex::Bool
 )
     kind = kinetic_line_kind(line)
-    symbol = if kind === KineticSpectral
+    shift = Int(regularisation_shift(line))
+    symbol = if latex
+        if kind === KineticSpectral
+            _latex_shifted_symbol("A", "", shift)
+        elseif kind === KineticRetarded
+            _latex_shifted_symbol("G", "R", shift)
+        else
+            _latex_shifted_symbol("G", "A", shift)
+        end
+    elseif kind === KineticSpectral
         "A"
     elseif kind === KineticRetarded
         "G^R"
@@ -130,17 +161,15 @@ function _kinetic_line_string(
     end
     family_text = _family_string(line.family, latex)
     momentum_text = _linear_momentum_string(momentum(line), basis, external, latex)
-    decoration = _shift_decoration(Int(regularisation_shift(line)), latex)
     line_text = if latex
         symbol *
         "_{" *
         family_text *
-        "}" *
-        decoration *
-        "\\!\\left(" *
+        "}\\!\\left(" *
         momentum_text *
         "\\right)"
     else
+        decoration = _shift_label(shift, false)
         symbol * "_" * family_text * decoration * "(" * momentum_text * ")"
     end
 
