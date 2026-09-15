@@ -35,42 +35,12 @@ function _edge_shift(edge::Edge)
     return Int(out_reg) - Int(in_reg)
 end
 
-function _shift_label(shift::Int, latex::Bool)
-    iszero(shift) && return ""
-    sign = shift > 0 ? "+" : ""
-    if latex
-        return "[\\Delta t=" * sign * string(shift) * "\\,0^+]"
-    end
-    return "[Δt=" * sign * string(shift) * "·0+]"
-end
-
-function _latex_shifted_symbol(base::AbstractString, component::AbstractString, shift::Int)
-    shift_text = _shift_label(shift, true)
-    superscript = if isempty(component)
-        shift_text
-    elseif isempty(shift_text)
-        component
-    else
-        component * "," * shift_text
-    end
-    isempty(superscript) && return String(base)
-    return String(base) * "^{" * superscript * "}"
-end
-
 function _propagator_symbol(type::PropagatorType.T, latex::Bool)
     is_spectral(type) && return "A"
-    is_retarded(type) && return latex ? "G^R" : "G^R"
-    is_advanced(type) && return latex ? "G^A" : "G^A"
-    is_keldysh(type) && return latex ? "G^K" : "G^K"
+    is_retarded(type) && return latex ? "G^{R}" : "G^R"
+    is_advanced(type) && return latex ? "G^{A}" : "G^A"
+    is_keldysh(type) && return latex ? "G^{K}" : "G^K"
     return "G"
-end
-
-function _latex_propagator_symbol(type::PropagatorType.T, shift::Int)
-    is_spectral(type) && return _latex_shifted_symbol("A", "", shift)
-    is_retarded(type) && return _latex_shifted_symbol("G", "R", shift)
-    is_advanced(type) && return _latex_shifted_symbol("G", "A", shift)
-    is_keldysh(type) && return _latex_shifted_symbol("G", "K", shift)
-    return _latex_shifted_symbol("G", "", shift)
 end
 
 function _routed_line_string(
@@ -82,11 +52,11 @@ function _routed_line_string(
 )
     family = field_family(first(fields(edge)))
     type = propagator_type(edge)
-    family_text = _family_string(family, latex)
-    momentum_text = _linear_momentum_string(routed, basis, external, latex)
     shift = _edge_shift(edge)
+    family_text = _regulated_family_string(family, shift, latex)
+    momentum_text = _linear_momentum_string(routed, basis, external, latex)
+    symbol = _propagator_symbol(type, latex)
     if latex
-        symbol = _latex_propagator_symbol(type, shift)
         return symbol *
                "_{" *
                family_text *
@@ -94,9 +64,7 @@ function _routed_line_string(
                momentum_text *
                "\\right)"
     end
-    symbol = _propagator_symbol(type, false)
-    decoration = _shift_label(shift, false)
-    return symbol * "_" * family_text * decoration * "(" * momentum_text * ")"
+    return symbol * "_" * family_text * "(" * momentum_text * ")"
 end
 
 _display_external(graph::FourierDiagram) = momentum_basis(graph)[1]
@@ -144,22 +112,14 @@ function _kinetic_line_string(
 )
     kind = kinetic_line_kind(line)
     shift = Int(regularisation_shift(line))
-    symbol = if latex
-        if kind === KineticSpectral
-            _latex_shifted_symbol("A", "", shift)
-        elseif kind === KineticRetarded
-            _latex_shifted_symbol("G", "R", shift)
-        else
-            _latex_shifted_symbol("G", "A", shift)
-        end
-    elseif kind === KineticSpectral
+    symbol = if kind === KineticSpectral
         "A"
     elseif kind === KineticRetarded
-        "G^R"
+        latex ? "G^{R}" : "G^R"
     else
-        "G^A"
+        latex ? "G^{A}" : "G^A"
     end
-    family_text = _family_string(line.family, latex)
+    family_text = _regulated_family_string(line.family, shift, latex)
     momentum_text = _linear_momentum_string(momentum(line), basis, external, latex)
     line_text = if latex
         symbol *
@@ -169,8 +129,7 @@ function _kinetic_line_string(
         momentum_text *
         "\\right)"
     else
-        decoration = _shift_label(shift, false)
-        symbol * "_" * family_text * decoration * "(" * momentum_text * ")"
+        symbol * "_" * family_text * "(" * momentum_text * ")"
     end
 
     statistical_weight(line) === DistributionWeight || return line_text
