@@ -199,6 +199,20 @@ end
 
 _family_string(family::FieldFamily, latex::Bool) = _display_symbol(name(family), latex)
 
+function _regulator_label(shift::Int)
+    iszero(shift) && return ""
+    shift == 1 && return "+"
+    shift == -1 && return "-"
+    return shift > 0 ? "+" * string(shift) : string(shift)
+end
+
+function _regulated_family_string(family::FieldFamily, shift::Int, latex::Bool)
+    family_text = _family_string(family, latex)
+    regulator = _regulator_label(shift)
+    isempty(regulator) && return family_text
+    return family_text * "," * regulator
+end
+
 function _distribution_atom_string(
     prefix::String,
     family::FieldFamily,
@@ -391,30 +405,18 @@ function _sd_line_string(
     latex::Bool,
 )
     prefix = kind === CollisionSpectral ? "A" : "D"
-    family = _family_string(line.family, latex)
-    momentum_text = _linear_momentum_string(momentum(line), basis, external, latex)
     shift = Int(regularisation_shift(line))
+    family = _regulated_family_string(line.family, shift, latex)
+    momentum_text = _linear_momentum_string(momentum(line), basis, external, latex)
     if latex
-        decoration = ""
-        if !iszero(shift)
-            sign = shift > 0 ? "+" : ""
-            decoration = "^{[\\Delta t=" * sign * string(shift) * "\\,0^+]}"
-        end
         return prefix *
                "_{" *
                family *
-               "}" *
-               decoration *
-               "\\!\\left(" *
+               "}\\!\\left(" *
                momentum_text *
                "\\right)"
     end
-    decoration = ""
-    if !iszero(shift)
-        sign = shift > 0 ? "+" : ""
-        decoration = "[Δt=" * sign * string(shift) * "·0+]"
-    end
-    return prefix * "_" * family * decoration * "(" * momentum_text * ")"
+    return prefix * "_" * family * "(" * momentum_text * ")"
 end
 
 function _sd_expression_terms(
