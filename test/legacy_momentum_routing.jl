@@ -111,7 +111,7 @@ end
                 )
                 expected = @inferred construct_momenta_from_self_energy(diagram)
                 actual = @inferred construct_momenta_from_self_energy(relabeled)
-                @test momenta(actual) == momenta(expected)
+                @test isequal(momenta(actual), momenta(expected))
             end
         end
     end
