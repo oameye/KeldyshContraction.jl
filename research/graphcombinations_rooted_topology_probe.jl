@@ -77,8 +77,7 @@ flush(stdout)
                     (edge.out, edge.in) for edge in KC.contractions(diagram)
                 ]
                 push!(
-                    rooted_keys,
-                    Tuple(gc_rooted_topology(contractions, Val(length(key)))),
+                    rooted_keys, Tuple(gc_rooted_topology(contractions, Val(length(key))))
                 )
             end
 
