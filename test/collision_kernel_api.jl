@@ -96,12 +96,12 @@ end
     stages = explicit_collision_pipeline(G)
 
     displays = (
-        (G, "G^{R,A,K}"),
-        (stages.GF, "G_F^{R,A,K}"),
-        (stages.ΣF, "\\Sigma_F^{R,A,K}"),
-        (stages.ΣW, "\\Sigma_W^{R,A,K}"),
-        (stages.KΣ, "G^K=-iFA"),
-        (stages.I, "I_{\\mathrm{coll}}"),
+        (G, "G^K\\!\\left(x_1,x_2\\right)"),
+        (stages.GF, "G_F^K\\!\\left(k\\right)"),
+        (stages.ΣF, "\\Sigma_F^K\\!\\left(k\\right)"),
+        (stages.ΣW, "\\Sigma_W^K\\!\\left(X,k\\right)"),
+        (stages.KΣ, "\\Sigma_{\\mathrm{kin}}^K\\!\\left(k\\right)"),
+        (stages.I, "I_{\\mathrm{coll}}(k)"),
         (stages.SD, "I_{\\mathrm{coll}}(k)"),
         (stages.R, "I_{\\mathrm{reg}}(k)"),
         (stages.N, "C_n^{\\mathrm{reg}}(k)"),
@@ -113,6 +113,7 @@ end
         rendered = sprint(show, MIME"text/latex"(), value)
         @test startswith(rendered, "\\[")
         @test occursin(expected, rendered)
+        @test occursin("\\gamma", rendered)
         @test endswith(rendered, "\\]")
     end
 
