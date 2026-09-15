@@ -6,6 +6,8 @@ import GraphCombinations as GC
 import KeldyshContraction as KC
 
 const GC_SHA = "a09d6fdbd86bb4accae6ffbd3be1e0c801c49c05"
+const OccupationPolynomial = KC.OccupationPolynomial
+const OccupationAtom = KC.OccupationAtom
 
 include(joinpath(@__DIR__, "..", "benchmarks", "collision_reduction.jl"))
 
