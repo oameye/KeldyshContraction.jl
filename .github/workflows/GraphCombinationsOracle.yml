@@ -34,6 +34,6 @@ jobs:
       - uses: julia-actions/cache@v3
       - name: Instantiate research environment
         run: |
-          julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="ec5f84d4b1b1f21b2dacdb00ce4ed9af6bd68fa8")); Pkg.add("BenchmarkTools")'
+          julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="d7823f60d7f8a50b346ef68a0a0f927aedabec0c")); Pkg.add("BenchmarkTools")'
       - name: Compare GraphCombinations with Nauty
         run: julia --project=. research/graphcombinations_nauty_adapter.jl
