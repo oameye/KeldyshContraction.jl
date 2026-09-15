@@ -59,28 +59,22 @@ function gc_loop_graph_data(
     workspace = GC.DirectedCanonicalizationWorkspace(graph.num_vertices)
     buffer = GC.DirectedCanonicalizationBuffer(graph.num_vertices)
     GC.canonicalize_directed!(buffer, workspace, graph, labels)
-    return buffer, pair_vertices, loop_incidences, basis, external, nloops
-end
-
-function _canonical_first_incidence(buffer, incidences)
-    best = first(incidences)
-    best_rank = GC.canonical_rank(buffer, first(best))
-    for record in Iterators.drop(incidences, 1)
-        rank = GC.canonical_rank(buffer, first(record))
-        if rank < best_rank
-            best = record
-            best_rank = rank
-        end
-    end
-    return best
+    return (
+        buffer,
+        pair_vertices,
+        positive_vertices,
+        negative_vertices,
+        basis,
+        external,
+        nloops,
+    )
 end
 
 function gc_canonical_loop_transform(
     sector::KC.ReducedCollisionSector{S}, monomial::KC.OccupationMonomial{S}
 ) where {S<:KC.Statistics}
-    buffer, pair_vertices, loop_incidences, basis, external, nloops = gc_loop_graph_data(
-        sector, monomial
-    )
+    buffer, pair_vertices, positive_vertices, negative_vertices, basis, external, nloops =
+        gc_loop_graph_data(sector, monomial)
 
     ordered_slots = sortperm(
         1:nloops; by=slot -> GC.canonical_rank(buffer, pair_vertices[slot])
@@ -89,10 +83,9 @@ function gc_canonical_loop_transform(
     loop_signs = ones(Int, nloops)
     for (new_slot, old_slot) in enumerate(ordered_slots)
         loop_permutation[old_slot] = new_slot
-        incidences = loop_incidences[old_slot]
-        isempty(incidences) && continue
-        canonical_first = _canonical_first_incidence(buffer, incidences)
-        loop_signs[old_slot] = last(canonical_first) > 0 ? 1 : -1
+        positive_rank = GC.canonical_rank(buffer, positive_vertices[old_slot])
+        negative_rank = GC.canonical_rank(buffer, negative_vertices[old_slot])
+        loop_signs[old_slot] = positive_rank < negative_rank ? 1 : -1
     end
     return KC.loop_permutation_transform(
         basis, external, loop_permutation, loop_signs, zeros(Int, nloops)
