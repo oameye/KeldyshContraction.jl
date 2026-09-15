@@ -11,8 +11,7 @@ function elastic_interaction()
     c = topology_routing_c
     q = topology_routing_q
     return -(
-        1 // 2 * (c^2 + q^2) * bar(c) * bar(q) +
-        1 // 2 * c * q * (bar(c)^2 + bar(q)^2)
+        1 // 2 * (c^2 + q^2) * bar(c) * bar(q) + 1 // 2 * c * q * (bar(c)^2 + bar(q)^2)
     )
 end
 
