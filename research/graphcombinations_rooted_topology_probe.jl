@@ -32,6 +32,19 @@ function gc_position_edges(vs, graph_positions)
     return edges
 end
 
+function gc_rooted_topology_mapping(old_to_canonical, graph_positions)
+    canonical_to_old = sortperm(old_to_canonical)
+    canonical_bulk = Int[
+        original_vertex for
+        original_vertex in canonical_to_old if KC.is_bulk(graph_positions[original_vertex])
+    ]
+    mapping = Dict{KC.Position,KC.Position}()
+    for (bulk_index, original_vertex) in enumerate(canonical_bulk)
+        mapping[graph_positions[original_vertex]] = Bulk(bulk_index)
+    end
+    return mapping
+end
+
 function gc_rooted_topology(vs, ::Val{E2}) where {E2}
     isempty(vs) && return KC.bulk_multiplicity(Tuple{Int8,Int8}[], Val(E2))
 
@@ -41,8 +54,7 @@ function gc_rooted_topology(vs, ::Val{E2}) where {E2}
     result = gc_result(edges, colors)
 
     old_to_canonical = GC.vertex_mapping(GC.canonical_relabeling(result))
-    canonical_to_old = sortperm(old_to_canonical)
-    mapping = KC.make_permutation_dict(canonical_to_old, graph_positions, vs)
+    mapping = gc_rooted_topology_mapping(old_to_canonical, graph_positions)
     topology_edges = Tuple{Int8,Int8}[
         KC.integer_positions(KC.relabel_bulk_positions(item, mapping)) for item in vs
     ]
