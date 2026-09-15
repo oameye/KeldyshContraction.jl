@@ -15,12 +15,16 @@ end
 _plain_render(value) = sprint(show, value)
 _latex_render(value) = _render_with(write_latex, value)
 
-function _coordinate_component_string(diagrams::Diagrams, parameter::ParameterMonomial, latex::Bool)
+function _coordinate_component_string(
+    diagrams::Diagrams, parameter::ParameterMonomial, latex::Bool
+)
     rendered = String[]
     parameter_text = _parameter_string(parameter, latex)
     for (diagram, coefficient) in diagrams
         diagram_text = latex ? _latex_render(diagram) : _plain_render(diagram)
-        push!(rendered, _term_string(coefficient, String[parameter_text, diagram_text], latex))
+        push!(
+            rendered, _term_string(coefficient, String[parameter_text, diagram_text], latex)
+        )
     end
     sort!(rendered)
     return _sum_string(rendered, latex)
@@ -76,7 +80,9 @@ end
 _display_external(graph::FourierDiagram) = momentum_basis(graph)[1]
 _display_external(graph::WignerDiagram) = external_wigner_momentum(graph)
 
-function _routed_graph_terms(graph, contributions, parameter::ParameterMonomial, latex::Bool)
+function _routed_graph_terms(
+    graph, contributions, parameter::ParameterMonomial, latex::Bool
+)
     rendered = String[]
     basis = momentum_basis(graph)
     external = _display_external(graph)
@@ -93,7 +99,9 @@ function _routed_graph_terms(graph, contributions, parameter::ParameterMonomial,
             coefficient = contribution.coefficient * kinematic_coefficient
             iszero(coefficient) && continue
             kinematic_text = _momentum_monomial_string(monomial, basis, external, latex)
-            factors = vcat(String[parameter_text, measure_text, kinematic_text], line_factors)
+            factors = vcat(
+                String[parameter_text, measure_text, kinematic_text], line_factors
+            )
             push!(rendered, _term_string(coefficient, factors, latex))
         end
     end
@@ -156,7 +164,8 @@ function _kinetic_expression_terms(
         external = external_wigner_momentum(term)
         measure_text = _measure_string(basis, external, latex)
         line_factors = String[
-            _kinetic_line_string(line, basis, external, latex) for line in kinetic_lines(term)
+            _kinetic_line_string(line, basis, external, latex) for
+            line in kinetic_lines(term)
         ]
         if external_distribution !== nothing
             external_slot = _external_basis_index(basis, external)
@@ -172,7 +181,9 @@ function _kinetic_expression_terms(
             coefficient = source_coefficient * kinematic_coefficient
             iszero(coefficient) && continue
             kinematic_text = _momentum_monomial_string(monomial, basis, external, latex)
-            factors = vcat(String[parameter_text, measure_text, kinematic_text], line_factors)
+            factors = vcat(
+                String[parameter_text, measure_text, kinematic_text], line_factors
+            )
             push!(rendered, _term_string(coefficient, factors, latex))
         end
     end
@@ -187,9 +198,7 @@ function _kinetic_component_string(
 end
 
 function _off_shell_string(collision::OffShellCollisionExpression, latex::Bool)
-    rendered = _kinetic_expression_terms(
-        collision.offset, parameters(collision), latex
-    )
+    rendered = _kinetic_expression_terms(collision.offset, parameters(collision), latex)
     append!(
         rendered,
         _kinetic_expression_terms(
@@ -203,7 +212,9 @@ function _off_shell_string(collision::OffShellCollisionExpression, latex::Bool)
     return _sum_string(rendered, latex)
 end
 
-function _plain_three_components(io::IO, title::AbstractString, object, symbols::NTuple{3,String})
+function _plain_three_components(
+    io::IO, title::AbstractString, object, symbols::NTuple{3,String}
+)
     _show_stage_plain(io, title, object)
     parameter = parameters(object)
     components = (object.keldysh, object.retarded, object.advanced)
@@ -245,33 +256,25 @@ function _latex_three_components(
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/plain",
-    G::DressedPropagator{C,S,O,E1,E2},
+    io::IO, ::MIME"text/plain", G::DressedPropagator{C,S,O,E1,E2}
 ) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2}
     return _plain_three_components(io, "Dressed propagator", G, ("G^K", "G^R", "G^A"))
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/latex",
-    G::DressedPropagator{C,S,O,E1,E2},
+    io::IO, ::MIME"text/latex", G::DressedPropagator{C,S,O,E1,E2}
 ) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2}
     return _latex_three_components(io, G, ("G^K", "G^R", "G^A"), "x_1,x_2")
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/plain",
-    Σ::SelfEnergy{C,S,O,E1,E2},
+    io::IO, ::MIME"text/plain", Σ::SelfEnergy{C,S,O,E1,E2}
 ) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2}
     return _plain_three_components(io, "1PI self-energy", Σ, ("Σ^K", "Σ^R", "Σ^A"))
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/latex",
-    Σ::SelfEnergy{C,S,O,E1,E2},
+    io::IO, ::MIME"text/latex", Σ::SelfEnergy{C,S,O,E1,E2}
 ) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2}
     return _latex_three_components(
         io, Σ, ("\\Sigma^K", "\\Sigma^R", "\\Sigma^A"), "x_1,x_2"
@@ -279,9 +282,7 @@ function Base.show(
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/plain",
-    G::FourierDressedPropagator{C,S,O,E1,E2},
+    io::IO, ::MIME"text/plain", G::FourierDressedPropagator{C,S,O,E1,E2}
 ) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2}
     return _plain_three_components(
         io, "Fourier dressed propagator", G, ("G_F^K", "G_F^R", "G_F^A")
@@ -289,17 +290,13 @@ function Base.show(
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/latex",
-    G::FourierDressedPropagator{C,S,O,E1,E2},
+    io::IO, ::MIME"text/latex", G::FourierDressedPropagator{C,S,O,E1,E2}
 ) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2}
     return _latex_three_components(io, G, ("G_F^K", "G_F^R", "G_F^A"), "k")
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/plain",
-    Σ::FourierSelfEnergy{C,S,O,E1,E2},
+    io::IO, ::MIME"text/plain", Σ::FourierSelfEnergy{C,S,O,E1,E2}
 ) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2}
     return _plain_three_components(
         io, "Fourier 1PI self-energy", Σ, ("Σ_F^K", "Σ_F^R", "Σ_F^A")
@@ -307,9 +304,7 @@ function Base.show(
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/latex",
-    Σ::FourierSelfEnergy{C,S,O,E1,E2},
+    io::IO, ::MIME"text/latex", Σ::FourierSelfEnergy{C,S,O,E1,E2}
 ) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2}
     return _latex_three_components(
         io, Σ, ("\\Sigma_F^K", "\\Sigma_F^R", "\\Sigma_F^A"), "k"
@@ -317,74 +312,54 @@ function Base.show(
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/plain",
-    G::WignerDressedPropagator{C,S,O,E1,E2,GOrder,Ctx},
-) where {
-    C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext
-}
+    io::IO, ::MIME"text/plain", G::WignerDressedPropagator{C,S,O,E1,E2,GOrder,Ctx}
+) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext}
     return _plain_three_components(
         io, "Wigner dressed propagator", G, ("G_W^K", "G_W^R", "G_W^A")
     )
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/latex",
-    G::WignerDressedPropagator{C,S,O,E1,E2,GOrder,Ctx},
-) where {
-    C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext
-}
+    io::IO, ::MIME"text/latex", G::WignerDressedPropagator{C,S,O,E1,E2,GOrder,Ctx}
+) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext}
     return _latex_three_components(io, G, ("G_W^K", "G_W^R", "G_W^A"), "X,k")
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/plain",
-    Σ::WignerSelfEnergy{C,S,O,E1,E2,GOrder,Ctx},
-) where {
-    C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext
-}
+    io::IO, ::MIME"text/plain", Σ::WignerSelfEnergy{C,S,O,E1,E2,GOrder,Ctx}
+) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext}
     return _plain_three_components(
         io, "Wigner 1PI self-energy", Σ, ("Σ_W^K", "Σ_W^R", "Σ_W^A")
     )
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/latex",
-    Σ::WignerSelfEnergy{C,S,O,E1,E2,GOrder,Ctx},
-) where {
-    C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext
-}
+    io::IO, ::MIME"text/latex", Σ::WignerSelfEnergy{C,S,O,E1,E2,GOrder,Ctx}
+) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext}
     return _latex_three_components(
         io, Σ, ("\\Sigma_W^K", "\\Sigma_W^R", "\\Sigma_W^A"), "X,k"
     )
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/plain",
-    Σ::KineticSelfEnergy{C,S,O,E1,E2,GOrder,Ctx},
-) where {
-    C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext
-}
+    io::IO, ::MIME"text/plain", Σ::KineticSelfEnergy{C,S,O,E1,E2,GOrder,Ctx}
+) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext}
     return _plain_three_components(
         io, "Kinetic self-energy", Σ, ("Σ_kin^K", "Σ_kin^R", "Σ_kin^A")
     )
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/latex",
-    Σ::KineticSelfEnergy{C,S,O,E1,E2,GOrder,Ctx},
-) where {
-    C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext
-}
+    io::IO, ::MIME"text/latex", Σ::KineticSelfEnergy{C,S,O,E1,E2,GOrder,Ctx}
+) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext}
     return _latex_three_components(
         io,
         Σ,
-        ("\\Sigma_{\\mathrm{kin}}^K", "\\Sigma_{\\mathrm{kin}}^R", "\\Sigma_{\\mathrm{kin}}^A"),
+        (
+            "\\Sigma_{\\mathrm{kin}}^K",
+            "\\Sigma_{\\mathrm{kin}}^R",
+            "\\Sigma_{\\mathrm{kin}}^A",
+        ),
         "k",
     )
 end
@@ -393,9 +368,7 @@ function Base.show(
     io::IO,
     ::MIME"text/plain",
     collision::OffShellCollisionExpression{C,S,O,E1,E2,GOrder,Ctx},
-) where {
-    C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext
-}
+) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext}
     _show_stage_plain(io, "Off-shell Kadanoff-Baym collision", collision)
     write(io, "\n  I_coll(k) = ", _off_shell_string(collision, false))
     return nothing
@@ -405,9 +378,7 @@ function Base.show(
     io::IO,
     ::MIME"text/latex",
     collision::OffShellCollisionExpression{C,S,O,E1,E2,GOrder,Ctx},
-) where {
-    C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext
-}
+) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext}
     return _latex_display(io) do
         write(
             io,
