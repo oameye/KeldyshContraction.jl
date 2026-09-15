@@ -36,26 +36,26 @@ function _edge_shift(edge::Edge)
 end
 
 function _propagator_display_parts(type::PropagatorType.T)
-    is_spectral(type) && return ("A", nothing)
+    is_spectral(type) && return ("A", "")
     is_retarded(type) && return ("G", "R")
     is_advanced(type) && return ("G", "A")
     is_keldysh(type) && return ("G", "K")
-    return ("G", nothing)
+    return ("G", "")
 end
 
 function _line_display_string(
     symbol::String,
-    component::Union{Nothing,String},
+    component::String,
     family_text::String,
     momentum_text::String,
     latex::Bool,
 )
     if latex
         decorated = symbol * "_{" * family_text * "}"
-        component === nothing || (decorated *= "^{" * component * "}")
+        isempty(component) || (decorated *= "^{" * component * "}")
         return decorated * "\\!\\left(" * momentum_text * "\\right)"
     end
-    decorated = component === nothing ? symbol : symbol * "^" * component
+    decorated = isempty(component) ? symbol : symbol * "^" * component
     return decorated * "_" * family_text * "(" * momentum_text * ")"
 end
 
@@ -119,7 +119,7 @@ function _kinetic_line_string(
 )
     kind = kinetic_line_kind(line)
     symbol, component = if kind === KineticSpectral
-        ("A", nothing)
+        ("A", "")
     elseif kind === KineticRetarded
         ("G", "R")
     else
