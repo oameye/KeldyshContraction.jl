@@ -284,7 +284,7 @@ function _push_unique_momentum!(
     return momenta
 end
 
-function _candidate_momenta(rows, basis::MomentumBasis)
+function _candidate_momenta(group, rows, basis::MomentumBasis)
     raw = LinearMomentum[]
     for slot in 1:length(basis)
         push!(raw, basis_momentum(basis, slot))
@@ -294,15 +294,34 @@ function _candidate_momenta(rows, basis::MomentumBasis)
             push!(raw, component.momentum)
         end
     end
-
-    candidates = LinearMomentum[]
-    for momentum_value in raw
-        _push_unique_momentum!(candidates, momentum_value)
+    for (_, polynomial) in group
+        for (monomial, _) in polynomial
+            for atom in monomial
+                push!(raw, atom.momentum)
+            end
+        end
     end
-    nraw = length(raw)
-    for i in 1:nraw, j in (i + 1):nraw
-        j <= nraw || continue
-        _push_unique_momentum!(candidates, raw[i] - raw[j])
+    support = frequency_support(first(first(group)))
+    for shell in support.shells
+        for (atom, _) in shell.energy
+            push!(raw, atom.momentum)
+        end
+    end
+    for principal_value in support.principal_values
+        for (atom, _) in principal_value.energy
+            push!(raw, atom.momentum)
+        end
+    end
+
+    physical = LinearMomentum[]
+    for momentum_value in raw
+        _push_unique_momentum!(physical, momentum_value)
+    end
+
+    candidates = copy(physical)
+    for i in 1:length(physical), j in (i + 1):length(physical)
+        j <= length(physical) || continue
+        _push_unique_momentum!(candidates, physical[i] - physical[j])
     end
     return candidates
 end
@@ -406,7 +425,7 @@ function _expanded_kinematic_string(terms, basis, external, latex::Bool)
     return _wrap_sum(_inline_sum_string(rendered), length(rendered), latex)
 end
 
-function _compact_kinematic_string(terms, rows, basis, external, latex::Bool)
+function _compact_kinematic_string(terms, group, rows, basis, external, latex::Bool)
     fallback_content = one(Rational{Int})
     fallback_terms = collect(terms)
     if !isempty(fallback_terms)
@@ -439,7 +458,7 @@ function _compact_kinematic_string(terms, rows, basis, external, latex::Bool)
     degree = sum(values(counts))
     iszero(degree) && return fallback_content, ""
 
-    momenta = _candidate_momenta(rows, basis)
+    momenta = _candidate_momenta(group, rows, basis)
     axes = sort!(collect(keys(counts)))
     candidates = MomentumComponent[]
     for momentum_value in momenta, axis in axes
@@ -509,7 +528,7 @@ function _compact_group_string(group, latex::Bool)
     if factorization !== nothing
         kinematic_terms, distribution = factorization
         coefficient, kinematic_text = _compact_kinematic_string(
-            kinematic_terms, rows, basis, external, latex
+            kinematic_terms, group, rows, basis, external, latex
         )
         distribution_text = _compact_distribution_string(
             distribution, basis, external, latex
@@ -528,7 +547,7 @@ function _compact_group_string(group, latex::Bool)
     for key in sort!(collect(keys(rows)))
         content, primitive = _primitive_polynomial(rows[key])
         coefficient, kinematic_text = _compact_kinematic_string(
-            [key => content], rows, basis, external, latex
+            [key => content], group, rows, basis, external, latex
         )
         distribution_text = _compact_distribution_string(primitive, basis, external, latex)
         factors = String[
