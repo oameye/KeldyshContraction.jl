@@ -76,10 +76,14 @@ function certify_workspace(graph::GC.DirectedGCGraph, labels::Vector{Int})
 
     @test @inferred(GC.canonicalize_directed!(buffer, workspace, graph, labels)) === buffer
     @test GC.canonical_graph(buffer) == GC.canonical_graph(expected)
-    @test GC.canonical_automorphism_order(buffer) == GC.canonical_automorphism_order(expected)
+    @test GC.canonical_automorphism_order(buffer) ==
+        GC.canonical_automorphism_order(expected)
 
     mapping = GC.vertex_mapping(GC.canonical_relabeling(expected))
-    @test all(GC.canonical_rank(buffer, vertex) == mapping[vertex] for vertex in eachindex(mapping))
+    @test all(
+        GC.canonical_rank(buffer, vertex) == mapping[vertex] for
+        vertex in eachindex(mapping)
+    )
     @test all(
         GC.original_vertex(buffer, GC.canonical_rank(buffer, vertex)) == vertex for
         vertex in eachindex(mapping)
@@ -95,10 +99,10 @@ function report_kernel_benchmark(nloops::Int, graph, labels, builder, workspace,
     KC.NautyGraphs.canonical_permutation(nauty_graph)
     GC.canonicalize_directed!(buffer, workspace, graph, labels)
 
-    nauty_trial = @benchmark KC.NautyGraphs.canonical_permutation($nauty_graph) samples = 9 evals = 1
-    gc_trial = @benchmark GC.canonicalize_directed!(
-        $buffer, $workspace, $graph, $labels
-    ) samples = 9 evals = 1
+    nauty_trial = @benchmark KC.NautyGraphs.canonical_permutation($nauty_graph) samples = 9 evals =
+        1
+    gc_trial = @benchmark GC.canonicalize_directed!($buffer, $workspace, $graph, $labels) samples =
+        9 evals = 1
     nauty = median(nauty_trial)
     gc = median(gc_trial)
     println(
