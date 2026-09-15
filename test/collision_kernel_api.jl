@@ -120,7 +120,7 @@ end
     end
 
     routed = sprint(show, MIME"text/latex"(), stages.GF)
-    @test occursin(r"G_\{[^}]+,[+-]\}\^\{[KRA]\}", routed)
+    @test occursin(r"G\^\{[KRA]\}_\{[^}]+,[+-]\}", routed)
     @test !occursin(r"G\^\{[KRA],", routed)
 
     sd = sprint(show, MIME"text/latex"(), stages.SD)
@@ -148,24 +148,45 @@ end
 end
 
 @testset "compact display basis reconstructs physical factors" begin
-    basis = KC.MomentumBasis(4)
-    external = basis[1]
-    family = field_family(collision_api_ψ[One])
-    atoms = [
-        KC.OccupationAtom{Fermion}(family, KC.basis_momentum(basis, index)) for
-        index in 1:4
+    fermion_basis = KC.MomentumBasis(4)
+    fermion_external = fermion_basis[1]
+    fermion_family = field_family(collision_api_ψ[One])
+    fermion_atoms = [
+        KC.OccupationAtom{Fermion}(
+            fermion_family, KC.basis_momentum(fermion_basis, index)
+        ) for index in 1:4
     ]
-    n = [KC.OccupationPolynomial(atom, 1 // 1) for atom in atoms]
-    vacancy = [one(polynomial) - polynomial for polynomial in n]
-    gain_loss = vacancy[1] * vacancy[2] * n[3] * n[4] -
-                n[1] * n[2] * vacancy[3] * vacancy[4]
+    fermion_n = [KC.OccupationPolynomial(atom, 1 // 1) for atom in fermion_atoms]
+    vacancy = [one(polynomial) - polynomial for polynomial in fermion_n]
+    gain_loss =
+        vacancy[1] * vacancy[2] * fermion_n[3] * fermion_n[4] -
+        fermion_n[1] * fermion_n[2] * vacancy[3] * vacancy[4]
 
-    expanded = KC._expanded_polynomial_string(gain_loss, basis, external, true)
-    compact = KC._compact_distribution_string(gain_loss, basis, external, true)
+    expanded = KC._expanded_polynomial_string(
+        gain_loss, fermion_basis, fermion_external, true
+    )
+    compact = KC._compact_distribution_string(
+        gain_loss, fermion_basis, fermion_external, true
+    )
 
     @test ncodeunits(compact) < ncodeunits(expanded)
     @test occursin("\\left(1-n_{", compact)
     @test occursin(" - ", compact)
+
+    boson_basis = KC.MomentumBasis(2)
+    boson_external = boson_basis[1]
+    boson_family = field_family(collision_api_ϕ[Classical])
+    boson_atoms = [
+        KC.OccupationAtom{Boson}(boson_family, KC.basis_momentum(boson_basis, index)) for
+        index in 1:2
+    ]
+    boson_n = [KC.OccupationPolynomial(atom, 1 // 1) for atom in boson_atoms]
+    stimulated = (one(boson_n[1]) + boson_n[1]) * boson_n[2]
+    physical = KC._physical_basis_occupation_string(
+        stimulated, boson_basis, boson_external, true
+    )
+    @test physical !== nothing
+    @test occursin("\\left(1+n_{", physical)
 end
 
 @testset "collision-stage displays render computed p-wave physics" begin
