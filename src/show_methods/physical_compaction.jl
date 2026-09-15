@@ -1,10 +1,10 @@
 # Exact display-only compaction for physical collision expressions.
 #
-# This deliberately does not mutate compiler IR. The collision IR is first regrouped by
-# physical sector, then the kinematic/statistical tensor product is reconstructed exactly.
-# Small low-degree kinematic polynomials are matched against products of routed linear forms,
-# while statistical and occupation polynomials are transformed to the physically natural
-# tensor-product bases (1±F) and n/(1+σn). The shorter exact representation is rendered.
+# The compiler IR remains untouched. Display compaction groups only sectors with identical
+# parameter, loop measure and singular support, proves exact rank-one separation between
+# derivative kinematics and distribution weights, and then searches a bounded set of routed
+# linear momenta for a shorter exact factorization. Every failed proof falls back to the fully
+# expanded physical expression.
 
 function _inline_sum_string(terms::Vector{String})
     isempty(terms) && return "0"
@@ -36,8 +36,10 @@ function _expanded_polynomial_string(polynomial, basis, external, latex::Bool)
     return _wrap_sum(_inline_sum_string(rendered), length(rendered), latex)
 end
 
-function _collect_polynomial_atoms(polynomial)
-    atoms = Any[]
+function _collect_polynomial_atoms(
+    polynomial::OccupationPolynomial{C,S}
+) where {C<:Number,S<:Statistics}
+    atoms = OccupationAtom{S}[]
     for (monomial, _) in polynomial
         for atom in monomial
             any(existing -> isequal(existing, atom), atoms) || push!(atoms, atom)
@@ -47,63 +49,95 @@ function _collect_polynomial_atoms(polynomial)
     return atoms
 end
 
-function _multilinear_coefficients(polynomial, atoms)
+function _collect_polynomial_atoms(
+    polynomial::StatisticalPolynomial{C,S}
+) where {C<:Number,S<:Statistics}
+    atoms = StatisticalAtom{S}[]
+    for (monomial, _) in polynomial
+        for atom in monomial
+            any(existing -> isequal(existing, atom), atoms) || push!(atoms, atom)
+        end
+    end
+    sort!(atoms)
+    return atoms
+end
+
+function _multilinear_coefficients(
+    polynomial::OccupationPolynomial{C,S}, atoms::Vector{OccupationAtom{S}}
+) where {C<:Number,S<:Statistics}
     n = length(atoms)
-    n <= 8 || return nothing
-    atom_index = Dict{Any,Int}(atom => i for (i, atom) in enumerate(atoms))
-    C = isempty(polynomial) ? Rational{Int} : typeof(last(first(polynomial)))
+    n <= 8 || return false, C[]
+    atom_index = Dict{OccupationAtom{S},Int}(atom => i for (i, atom) in enumerate(atoms))
     coefficients = fill(zero(C), 1 << n)
     for (monomial, coefficient) in polynomial
         mask = 0
         for atom in monomial
             index = atom_index[atom]
             bit = 1 << (index - 1)
-            iszero(mask & bit) || return nothing
+            iszero(mask & bit) || return false, C[]
             mask |= bit
         end
         coefficients[mask + 1] += coefficient
     end
-    return coefficients
+    return true, coefficients
+end
+
+function _multilinear_coefficients(
+    polynomial::StatisticalPolynomial{C,S}, atoms::Vector{StatisticalAtom{S}}
+) where {C<:Number,S<:Statistics}
+    n = length(atoms)
+    n <= 8 || return false, C[]
+    atom_index = Dict{StatisticalAtom{S},Int}(atom => i for (i, atom) in enumerate(atoms))
+    coefficients = fill(zero(C), 1 << n)
+    for (monomial, coefficient) in polynomial
+        mask = 0
+        for atom in monomial
+            index = atom_index[atom]
+            bit = 1 << (index - 1)
+            iszero(mask & bit) || return false, C[]
+            mask |= bit
+        end
+        coefficients[mask + 1] += coefficient
+    end
+    return true, coefficients
 end
 
 function _occupation_literal_string(
-    atom, gain::Bool, basis, external, latex::Bool, sigma::Int
+    atom::OccupationAtom,
+    gain::Bool,
+    basis,
+    external,
+    latex::Bool,
+    sigma::Int,
 )
     atom_text = _distribution_atom_string(
         "n", atom.family, atom.momentum, basis, external, latex
     )
     gain || return atom_text
     sign = sigma > 0 ? "+" : "-"
-    return if latex
-        "\\left(1" * sign * atom_text * "\\right)"
-    else
-        "(1" * sign * atom_text * ")"
-    end
+    return latex ? "\\left(1" * sign * atom_text * "\\right)" : "(1" * sign * atom_text * ")"
 end
 
-function _statistical_literal_string(atom, plus::Bool, basis, external, latex::Bool)
+function _statistical_literal_string(
+    atom::StatisticalAtom, plus::Bool, basis, external, latex::Bool
+)
     atom_text = _distribution_atom_string(
         "F", atom.family, atom.momentum, basis, external, latex
     )
     sign = plus ? "+" : "-"
-    return if latex
-        "\\left(1" * sign * atom_text * "\\right)"
-    else
-        "(1" * sign * atom_text * ")"
-    end
+    return latex ? "\\left(1" * sign * atom_text * "\\right)" : "(1" * sign * atom_text * ")"
 end
 
 function _physical_basis_occupation_string(
     polynomial::OccupationPolynomial{C,S}, basis, external, latex::Bool
 ) where {C<:Number,S<:Statistics}
+    expanded = _expanded_polynomial_string(polynomial, basis, external, latex)
     atoms = _collect_polynomial_atoms(polynomial)
-    coefficients = _multilinear_coefficients(polynomial, atoms)
-    coefficients === nothing && return nothing
+    valid, coefficients = _multilinear_coefficients(polynomial, atoms)
+    valid || return expanded
+
     n = length(atoms)
     sigma = Int(occupation_statistics_sign(S))
-
-    # Per variable: a0 + a1 n = c_n n + c_g (1 + σ n),
-    # c_n = a1 - σ a0, c_g = a0.
     for variable in 0:(n - 1)
         bit = 1 << variable
         for mask in 0:((1 << n) - 1)
@@ -132,21 +166,21 @@ function _physical_basis_occupation_string(
         push!(rendered, _term_string(coefficient, factors, latex))
     end
     sort!(rendered; by=text -> (startswith(text, "-"), text))
-    return _wrap_sum(_inline_sum_string(rendered), length(rendered), latex)
+    physical = _wrap_sum(_inline_sum_string(rendered), length(rendered), latex)
+    return _display_cost(physical) < _display_cost(expanded) ? physical : expanded
 end
 
 function _physical_basis_statistical_string(
     polynomial::StatisticalPolynomial{C,S}, basis, external, latex::Bool
 ) where {C<:Number,S<:Statistics}
+    expanded = _expanded_polynomial_string(polynomial, basis, external, latex)
     atoms = _collect_polynomial_atoms(polynomial)
-    raw = _multilinear_coefficients(polynomial, atoms)
-    raw === nothing && return nothing
+    valid, raw = _multilinear_coefficients(polynomial, atoms)
+    valid || return expanded
+
     n = length(atoms)
     D = promote_type(C, Rational{Int})
     coefficients = D[convert(D, value) for value in raw]
-
-    # Per variable: a0 + a1 F = c_- (1-F) + c_+ (1+F),
-    # c_-=(a0-a1)/2, c_+=(a0+a1)/2.
     for variable in 0:(n - 1)
         bit = 1 << variable
         for mask in 0:((1 << n) - 1)
@@ -172,68 +206,63 @@ function _physical_basis_statistical_string(
         push!(rendered, _term_string(coefficient, factors, latex))
     end
     sort!(rendered; by=text -> (startswith(text, "-"), text))
-    return _wrap_sum(_inline_sum_string(rendered), length(rendered), latex)
-end
-
-function _compact_distribution_string(polynomial, basis, external, latex::Bool)
-    expanded = _expanded_polynomial_string(polynomial, basis, external, latex)
-    physical = if polynomial isa OccupationPolynomial
-        _physical_basis_occupation_string(polynomial, basis, external, latex)
-    elseif polynomial isa StatisticalPolynomial
-        _physical_basis_statistical_string(polynomial, basis, external, latex)
-    else
-        nothing
-    end
-    physical === nothing && return expanded
+    physical = _wrap_sum(_inline_sum_string(rendered), length(rendered), latex)
     return _display_cost(physical) < _display_cost(expanded) ? physical : expanded
 end
 
-function _real_rational(value)
-    value isa Rational && return value
-    if value isa Complex && iszero(imag(value)) && real(value) isa Rational
-        return real(value)
-    end
-    return nothing
+function _compact_distribution_string(
+    polynomial::OccupationPolynomial, basis, external, latex::Bool
+)
+    return _physical_basis_occupation_string(polynomial, basis, external, latex)
 end
 
-function _polynomial_content(polynomial)
-    isempty(polynomial) && return 1 // 1
-    rationals = Rational{Int}[]
-    for (_, coefficient) in polynomial
-        value = _real_rational(coefficient)
-        value === nothing && return 1 // 1
-        push!(rationals, convert(Rational{Int}, value))
-    end
-    numerator_gcd = zero(Int)
-    denominator_lcm = one(Int)
-    for value in rationals
-        numerator_gcd = gcd(numerator_gcd, abs(numerator(value)))
-        denominator_lcm = lcm(denominator_lcm, denominator(value))
-    end
-    iszero(numerator_gcd) && return 1 // 1
-    content = numerator_gcd // denominator_lcm
-    return first(rationals) < 0 ? -content : content
+function _compact_distribution_string(
+    polynomial::StatisticalPolynomial, basis, external, latex::Bool
+)
+    return _physical_basis_statistical_string(polynomial, basis, external, latex)
 end
 
-function _primitive_polynomial(polynomial)
-    content = _polynomial_content(polynomial)
-    isone(content) && return content, polynomial
-    return content, inv(content) * polynomial
-end
-
-function _polynomial_scale(a, b)
-    length(a) == length(b) || return nothing
-    isempty(a) && return one(Rational{Int})
-    left = collect(a)
-    right = collect(b)
+function _polynomial_scale(
+    a::OccupationPolynomial{C,S}, b::OccupationPolynomial{C,S}
+) where {C<:Number,S<:Statistics}
+    length(a) == length(b) || return false, zero(C)
+    isempty(a) && return true, one(C)
+    left = a.terms
+    right = b.terms
     for i in eachindex(left)
-        isequal(first(left[i]), first(right[i])) || return nothing
+        isequal(first(left[i]), first(right[i])) || return false, zero(C)
     end
     scale = last(first(left)) / last(first(right))
     for i in eachindex(left)
-        last(left[i]) == scale * last(right[i]) || return nothing
+        last(left[i]) == scale * last(right[i]) || return false, zero(C)
     end
-    return scale
+    return true, convert(C, scale)
+end
+
+function _polynomial_scale(
+    a::StatisticalPolynomial{C,S}, b::StatisticalPolynomial{C,S}
+) where {C<:Number,S<:Statistics}
+    length(a) == length(b) || return false, zero(C)
+    isempty(a) && return true, one(C)
+    left = a.terms
+    right = b.terms
+    for i in eachindex(left)
+        isequal(first(left[i]), first(right[i])) || return false, zero(C)
+    end
+    scale = last(first(left)) / last(first(right))
+    for i in eachindex(left)
+        last(left[i]) == scale * last(right[i]) || return false, zero(C)
+    end
+    return true, convert(C, scale)
+end
+
+function _complex_rational(value::Number)
+    converted = try
+        convert(ComplexRationals, value)
+    catch
+        return false, zero(ComplexRationals)
+    end
+    return true, converted
 end
 
 function _basis_component_polynomial(component::MomentumComponent, basis::MomentumBasis)
@@ -256,61 +285,78 @@ function _expanded_momentum_monomial(monomial::MomentumMonomial, basis::Momentum
     return out
 end
 
-function _expanded_kinematic_polynomial(terms, basis::MomentumBasis)
+function _expanded_kinematic_polynomial(
+    polynomial::MomentumPolynomial{ComplexRationals}, basis::MomentumBasis
+)
     out = MomentumPolynomial{ComplexRationals}()
-    for (monomial, coefficient) in terms
-        converted = try
-            convert(ComplexRationals, coefficient)
-        catch
-            return nothing
-        end
-        out += converted * _expanded_momentum_monomial(monomial, basis)
+    for (monomial, coefficient) in polynomial
+        out += coefficient * _expanded_momentum_monomial(monomial, basis)
     end
     return out
 end
 
 function _normalize_candidate_momentum(momentum_value::LinearMomentum)
-    nonzero = [value for value in momentum_value.coefficients if !iszero(value)]
-    isempty(nonzero) && return nothing
+    nonzero = MomentumCoefficient[
+        value for value in momentum_value.coefficients if !iszero(value)
+    ]
+    isempty(nonzero) && return false, momentum_value
 
     denominator_lcm = foldl(lcm, (denominator(value) for value in nonzero); init=1)
-    integer_coefficients = Int[
-        numerator(value * denominator_lcm) for value in nonzero
-    ]
+    integer_coefficients = Int[numerator(value * denominator_lcm) for value in nonzero]
     coefficient_gcd = foldl(gcd, (abs(value) for value in integer_coefficients); init=0)
     scale = coefficient_gcd // denominator_lcm
     normalized = inv(scale) * momentum_value
     first_nonzero = first(value for value in normalized.coefficients if !iszero(value))
-    return first_nonzero < 0 ? -normalized : normalized
+    return true, first_nonzero < 0 ? -normalized : normalized
 end
 
 function _push_unique_momentum!(
     momenta::Vector{LinearMomentum}, momentum_value::LinearMomentum
 )
-    normalized = _normalize_candidate_momentum(momentum_value)
-    normalized === nothing && return momenta
+    valid, normalized = _normalize_candidate_momentum(momentum_value)
+    valid || return momenta
     any(value -> isequal(value, normalized), momenta) || push!(momenta, normalized)
     return momenta
 end
 
-function _candidate_momenta(group, rows, basis::MomentumBasis)
+function _append_distribution_momenta!(
+    raw::Vector{LinearMomentum}, polynomial::OccupationPolynomial
+)
+    for (monomial, _) in polynomial
+        for atom in monomial
+            push!(raw, atom.momentum)
+        end
+    end
+    return raw
+end
+
+function _append_distribution_momenta!(
+    raw::Vector{LinearMomentum}, polynomial::StatisticalPolynomial
+)
+    for (monomial, _) in polynomial
+        for atom in monomial
+            push!(raw, atom.momentum)
+        end
+    end
+    return raw
+end
+
+function _candidate_momenta(
+    kinematic::MomentumPolynomial{ComplexRationals},
+    distribution,
+    support::FrequencySupport,
+    basis::MomentumBasis,
+)
     raw = LinearMomentum[]
     for slot in 1:length(basis)
         push!(raw, basis_momentum(basis, slot))
     end
-    for monomial in sort!(collect(keys(rows)))
+    for (monomial, _) in kinematic
         for component in monomial
             push!(raw, component.momentum)
         end
     end
-    for (_, polynomial) in group
-        for (monomial, _) in polynomial
-            for atom in monomial
-                push!(raw, atom.momentum)
-            end
-        end
-    end
-    support = frequency_support(first(first(group)))
+    _append_distribution_momenta!(raw, distribution)
     for shell in support.shells
         for (atom, _) in shell.energy
             push!(raw, atom.momentum)
@@ -328,16 +374,19 @@ function _candidate_momenta(group, rows, basis::MomentumBasis)
     end
 
     candidates = copy(physical)
-    for i in 1:length(physical), j in (i + 1):length(physical)
-        j <= length(physical) || continue
-        _push_unique_momentum!(candidates, physical[i] - physical[j])
-        _push_unique_momentum!(candidates, physical[i] + physical[j])
+    nphysical = length(physical)
+    for i in 1:nphysical
+        for j in (i + 1):nphysical
+            j <= nphysical || continue
+            _push_unique_momentum!(candidates, physical[i] - physical[j])
+            _push_unique_momentum!(candidates, physical[i] + physical[j])
+        end
     end
     return candidates
 end
 
-function _axis_counts(polynomial::MomentumPolynomial)
-    isempty(polynomial) && return Dict{Symbol,Int}()
+function _axis_counts(polynomial::MomentumPolynomial{ComplexRationals})
+    isempty(polynomial) && return true, Dict{Symbol,Int}()
     reference = Dict{Symbol,Int}()
     first_monomial = first(first(polynomial))
     for component in first_monomial
@@ -348,26 +397,29 @@ function _axis_counts(polynomial::MomentumPolynomial)
         for component in monomial
             counts[component.axis] = get(counts, component.axis, 0) + 1
         end
-        counts == reference || return nothing
+        counts == reference || return false, Dict{Symbol,Int}()
     end
-    return reference
+    return true, reference
 end
 
 function _momentum_polynomial_scale(
-    target::MomentumPolynomial, candidate::MomentumPolynomial
+    target::MomentumPolynomial{ComplexRationals},
+    candidate::MomentumPolynomial{ComplexRationals},
 )
-    length(target) == length(candidate) || return nothing
-    isempty(target) && return one(ComplexRationals)
-    target_terms = collect(target)
-    candidate_terms = collect(candidate)
+    length(target) == length(candidate) || return false, zero(ComplexRationals)
+    isempty(target) && return true, one(ComplexRationals)
+    target_terms = target.terms
+    candidate_terms = candidate.terms
     for i in eachindex(target_terms)
-        isequal(first(target_terms[i]), first(candidate_terms[i])) || return nothing
+        isequal(first(target_terms[i]), first(candidate_terms[i])) ||
+            return false, zero(ComplexRationals)
     end
     scale = last(first(target_terms)) / last(first(candidate_terms))
     for i in eachindex(target_terms)
-        last(target_terms[i]) == scale * last(candidate_terms[i]) || return nothing
+        last(target_terms[i]) == scale * last(candidate_terms[i]) ||
+            return false, zero(ComplexRationals)
     end
-    return scale
+    return true, scale
 end
 
 function _factor_components_string(factors, basis, external, latex::Bool)
@@ -378,31 +430,34 @@ function _factor_components_string(factors, basis, external, latex::Bool)
 end
 
 function _search_linear_factorization(
-    target::MomentumPolynomial,
+    target::MomentumPolynomial{ComplexRationals},
     candidates::Vector{MomentumComponent},
     counts::Dict{Symbol,Int},
-    basis,
-    external,
+    basis::MomentumBasis,
+    external::MomentumVariable,
     latex::Bool,
 )
     degree = sum(values(counts))
-    degree <= 6 || return nothing
+    degree <= 6 || return false, zero(ComplexRationals), ""
     max_candidates = degree <= 4 ? 24 : 14
     length(candidates) > max_candidates && resize!(candidates, max_candidates)
 
     remaining = copy(counts)
     identity_poly = MomentumPolynomial(MomentumMonomial(), one(ComplexRationals))
     factors = MomentumComponent[]
-    best = Ref{Union{Nothing,Tuple{ComplexRationals,String}}}(nothing)
+    best_found = Ref(false)
+    best_scale = Ref(zero(ComplexRationals))
+    best_text = Ref("")
 
     function recurse(start::Int, depth::Int, product::MomentumPolynomial{ComplexRationals})
         if depth > degree
-            scale = _momentum_polynomial_scale(target, product)
-            scale === nothing && return nothing
+            valid, scale = _momentum_polynomial_scale(target, product)
+            valid || return nothing
             text = _factor_components_string(factors, basis, external, latex)
-            candidate = (scale, text)
-            if best[] === nothing || _display_cost(text) < _display_cost(last(best[]))
-                best[] = candidate
+            if !best_found[] || _display_cost(text) < _display_cost(best_text[])
+                best_found[] = true
+                best_scale[] = scale
+                best_text[] = text
             end
             return nothing
         end
@@ -422,12 +477,17 @@ function _search_linear_factorization(
     end
 
     recurse(1, 1, identity_poly)
-    return best[]
+    return best_found[], best_scale[], best_text[]
 end
 
-function _expanded_kinematic_string(terms, basis, external, latex::Bool)
+function _expanded_kinematic_string(
+    polynomial::MomentumPolynomial{ComplexRationals},
+    basis::MomentumBasis,
+    external::MomentumVariable,
+    latex::Bool,
+)
     rendered = String[]
-    for (monomial, coefficient) in terms
+    for (monomial, coefficient) in polynomial
         monomial_text = _momentum_monomial_string(monomial, basis, external, latex)
         factors = isempty(monomial_text) ? String[] : String[monomial_text]
         push!(rendered, _term_string(coefficient, factors, latex))
@@ -435,145 +495,101 @@ function _expanded_kinematic_string(terms, basis, external, latex::Bool)
     return _wrap_sum(_inline_sum_string(rendered), length(rendered), latex)
 end
 
-function _compact_kinematic_string(terms, group, rows, basis, external, latex::Bool)
-    fallback_content = one(Rational{Int})
-    fallback_terms = collect(terms)
-    if !isempty(fallback_terms)
-        rational_candidates = [_real_rational(last(term)) for term in fallback_terms]
-        if all(value -> value !== nothing, rational_candidates)
-            rationals = Rational{Int}[
-                convert(Rational{Int}, value) for value in rational_candidates
-            ]
-            numerator_gcd = foldl(
-                gcd, (abs(numerator(value)) for value in rationals); init=0
-            )
-            denominator_lcm = foldl(
-                lcm, (denominator(value) for value in rationals); init=1
-            )
-            if !iszero(numerator_gcd)
-                fallback_content = numerator_gcd // denominator_lcm
-                first(rationals) < 0 && (fallback_content = -fallback_content)
-                fallback_terms = [
-                    first(term) => last(term) / fallback_content for term in fallback_terms
-                ]
-            end
-        end
-    end
-    fallback = _expanded_kinematic_string(fallback_terms, basis, external, latex)
-
-    expanded = _expanded_kinematic_polynomial(terms, basis)
-    expanded === nothing && return fallback_content, fallback
-    counts = _axis_counts(expanded)
-    counts === nothing && return fallback_content, fallback
+function _compact_kinematic_string(
+    polynomial::MomentumPolynomial{ComplexRationals},
+    distribution,
+    support::FrequencySupport,
+    basis::MomentumBasis,
+    external::MomentumVariable,
+    latex::Bool,
+)
+    fallback = _expanded_kinematic_string(polynomial, basis, external, latex)
+    expanded = _expanded_kinematic_polynomial(polynomial, basis)
+    valid_counts, counts = _axis_counts(expanded)
+    valid_counts || return one(ComplexRationals), fallback
     degree = sum(values(counts))
-    iszero(degree) && return fallback_content, ""
+    iszero(degree) && return one(ComplexRationals), ""
 
-    momenta = _candidate_momenta(group, rows, basis)
+    momenta = _candidate_momenta(polynomial, distribution, support, basis)
     axes = sort!(collect(keys(counts)))
     candidates = MomentumComponent[]
     for momentum_value in momenta, axis in axes
         push!(candidates, MomentumComponent(momentum_value, axis))
     end
-    factorization = _search_linear_factorization(
+    found, factor_scale, factor_text = _search_linear_factorization(
         expanded, candidates, counts, basis, external, latex
     )
-    factorization === nothing && return fallback_content, fallback
+    found || return one(ComplexRationals), fallback
 
-    factor_scale, factor_text = factorization
     factor_render = _term_string(factor_scale, String[factor_text], latex)
-    fallback_render = _term_string(fallback_content, String[fallback], latex)
-    if _display_cost(factor_render) < _display_cost(fallback_render)
+    if _display_cost(factor_render) < _display_cost(fallback)
         return factor_scale, factor_text
     end
-    return fallback_content, fallback
+    return one(ComplexRationals), fallback
 end
 
-function _collect_kinematic_rows(group)
-    rows = Dict{MomentumMonomial,Any}()
+function _rank_one_kinematic(
+    group::Vector{Pair{K,OccupationPolynomial{C,S}}}
+) where {K,C<:Number,S<:Statistics}
+    reference = last(first(group))
+    kinematic = MomentumPolynomial{ComplexRationals}()
     for (sector, polynomial) in group
-        for (kinematic, kinematic_coefficient) in kinematic_factor(sector)
-            contribution = kinematic_coefficient * polynomial
-            if haskey(rows, kinematic)
-                combined = rows[kinematic] + contribution
-                if iszero(combined)
-                    delete!(rows, kinematic)
-                else
-                    rows[kinematic] = combined
-                end
-            elseif !iszero(contribution)
-                rows[kinematic] = contribution
-            end
-        end
+        valid_scale, scale = _polynomial_scale(polynomial, reference)
+        valid_scale || return false, kinematic, reference
+        valid_coefficient, coefficient = _complex_rational(scale)
+        valid_coefficient || return false, kinematic, reference
+        kinematic += coefficient * kinematic_factor(sector)
     end
-    return rows
+    return true, kinematic, reference
 end
 
-function _rank_one_rows(rows)
-    isempty(rows) && return nothing
-    row_keys = sort!(collect(keys(rows)))
-    reference = rows[first(row_keys)]
-    scales = Dict{MomentumMonomial,Any}()
-    for key in row_keys
-        scale = _polynomial_scale(rows[key], reference)
-        scale === nothing && return nothing
-        scales[key] = scale
+function _rank_one_kinematic(
+    group::Vector{Pair{K,StatisticalPolynomial{C,S}}}
+) where {K,C<:Number,S<:Statistics}
+    reference = last(first(group))
+    kinematic = MomentumPolynomial{ComplexRationals}()
+    for (sector, polynomial) in group
+        valid_scale, scale = _polynomial_scale(polynomial, reference)
+        valid_scale || return false, kinematic, reference
+        valid_coefficient, coefficient = _complex_rational(scale)
+        valid_coefficient || return false, kinematic, reference
+        kinematic += coefficient * kinematic_factor(sector)
     end
-    content, primitive = _primitive_polynomial(reference)
-    kinematic = Pair{MomentumMonomial,Any}[key => scales[key] * content for key in row_keys]
-    return kinematic, primitive
+    return true, kinematic, reference
 end
 
-function _compact_group_string(group, latex::Bool)
+function _compact_group_string(group::Vector{Pair{K,P}}, latex::Bool) where {K,P}
+    isempty(group) && return "0"
     sector = first(first(group))
     basis = momentum_basis(sector)
     external = external_wigner_momentum(sector)
-    parameter_text = _parameter_string(parameters(sector), latex)
-    measure_text = _measure_string(basis, external, latex)
-    support_text = _frequency_support_string(
-        frequency_support(sector), basis, external, latex
+    support = frequency_support(sector)
+    rank_one, kinematic, distribution = _rank_one_kinematic(group)
+    rank_one || return _physical_collision_string(group, latex)
+
+    coefficient, kinematic_text = _compact_kinematic_string(
+        kinematic, distribution, support, basis, external, latex
     )
-    rows = _collect_kinematic_rows(group)
-    factorization = _rank_one_rows(rows)
-
-    if factorization !== nothing
-        kinematic_terms, distribution = factorization
-        coefficient, kinematic_text = _compact_kinematic_string(
-            kinematic_terms, group, rows, basis, external, latex
-        )
-        distribution_text = _compact_distribution_string(
-            distribution, basis, external, latex
-        )
-        factors = String[
-            parameter_text,
-            measure_text,
-            kinematic_text,
-            distribution_text == "1" ? "" : distribution_text,
-            support_text,
-        ]
-        return _term_string(coefficient, factors, latex)
-    end
-
-    rendered = String[]
-    for key in sort!(collect(keys(rows)))
-        content, primitive = _primitive_polynomial(rows[key])
-        coefficient, kinematic_text = _compact_kinematic_string(
-            [key => content], group, rows, basis, external, latex
-        )
-        distribution_text = _compact_distribution_string(primitive, basis, external, latex)
-        factors = String[
-            parameter_text,
-            measure_text,
-            kinematic_text,
-            distribution_text == "1" ? "" : distribution_text,
-            support_text,
-        ]
-        push!(rendered, _term_string(coefficient, factors, latex))
-    end
-    return _inline_sum_string(rendered)
+    distribution_text = _compact_distribution_string(distribution, basis, external, latex)
+    factors = String[
+        _parameter_string(parameters(sector), latex),
+        _measure_string(basis, external, latex),
+        kinematic_text,
+        distribution_text == "1" ? "" : distribution_text,
+        _frequency_support_string(support, basis, external, latex),
+    ]
+    compact = _term_string(coefficient, factors, latex)
+    expanded = _physical_collision_string(group, latex)
+    return _display_cost(compact) < _display_cost(expanded) ? compact : expanded
 end
 
-function _compact_physical_collision_string(terms, latex::Bool)
-    groups = Dict{Any,Vector{Any}}()
+function _compact_physical_collision_string_impl(
+    terms::Dict{K,P}, ::Type{S}, latex::Bool
+) where {K,P,S<:Statistics}
+    GroupKey = Tuple{
+        ParameterMonomial,MomentumBasis,MomentumVariable,FrequencySupport{S}
+    }
+    groups = Dict{GroupKey,Vector{Pair{K,P}}}()
     for (sector, polynomial) in terms
         key = (
             parameters(sector),
@@ -581,14 +597,36 @@ function _compact_physical_collision_string(terms, latex::Bool)
             external_wigner_momentum(sector),
             frequency_support(sector),
         )
-        push!(get!(groups, key, Any[]), sector => polynomial)
+        group = get!(groups, key) do
+            Pair{K,P}[]
+        end
+        push!(group, sector => polynomial)
     end
+
     rendered = String[]
     for group in values(groups)
         push!(rendered, _compact_group_string(group, latex))
     end
     sort!(rendered)
     return _sum_string(rendered, latex)
+end
+
+function _compact_physical_collision_string(
+    terms::Dict{ReducedCollisionSector{S},StatisticalPolynomial{C,S}}, latex::Bool
+) where {C<:Number,S<:Statistics}
+    return _compact_physical_collision_string_impl(terms, S, latex)
+end
+
+function _compact_physical_collision_string(
+    terms::Dict{ReducedCollisionSector{S},OccupationPolynomial{C,S}}, latex::Bool
+) where {C<:Number,S<:Statistics}
+    return _compact_physical_collision_string_impl(terms, S, latex)
+end
+
+function _compact_physical_collision_string(
+    terms::Dict{CollisionKernelSector{S},OccupationPolynomial{C,S}}, latex::Bool
+) where {C<:Number,S<:Statistics}
+    return _compact_physical_collision_string_impl(terms, S, latex)
 end
 
 function Base.show(
