@@ -270,9 +270,18 @@ function _expanded_kinematic_polynomial(terms, basis::MomentumBasis)
 end
 
 function _normalize_candidate_momentum(momentum_value::LinearMomentum)
-    pivot = findfirst(value -> !iszero(value), momentum_value.coefficients)
-    pivot === nothing && return nothing
-    return inv(momentum_value[pivot]) * momentum_value
+    nonzero = [value for value in momentum_value.coefficients if !iszero(value)]
+    isempty(nonzero) && return nothing
+
+    denominator_lcm = foldl(lcm, (denominator(value) for value in nonzero); init=1)
+    integer_coefficients = Int[
+        numerator(value * denominator_lcm) for value in nonzero
+    ]
+    coefficient_gcd = foldl(gcd, (abs(value) for value in integer_coefficients); init=0)
+    scale = coefficient_gcd // denominator_lcm
+    normalized = inv(scale) * momentum_value
+    first_nonzero = first(value for value in normalized.coefficients if !iszero(value))
+    return first_nonzero < 0 ? -normalized : normalized
 end
 
 function _push_unique_momentum!(
@@ -322,6 +331,7 @@ function _candidate_momenta(group, rows, basis::MomentumBasis)
     for i in 1:length(physical), j in (i + 1):length(physical)
         j <= length(physical) || continue
         _push_unique_momentum!(candidates, physical[i] - physical[j])
+        _push_unique_momentum!(candidates, physical[i] + physical[j])
     end
     return candidates
 end
