@@ -1,9 +1,8 @@
 # # Bosonic scattering and two-body loss
 #
 # Consider one complex bosonic field with coherent contact scattering and Markovian
-# two-body loss. The point of this example is twofold: first obtain the physical
-# collision kernel through the high-level API, then unpack exactly how the compiler
-# derives it.
+# two-body loss. We first ask for the physical collision kernel directly, then follow
+# the same calculation through the objects that carry the derivation.
 
 using KeldyshContraction
 using KeldyshContraction: Regularisation
@@ -11,18 +10,18 @@ using KeldyshContraction: Regularisation
 @qfields ϕ::Boson
 c, q = ϕ[Classical], ϕ[Quantum]
 
-# ## Interaction action
+# ## Microscopic interaction
 #
-# For the coherent contact interaction we use the standard bosonic Keldysh vertex
-# (up to the overall coupling `g`).
+# For the coherent contact interaction we use the standard bosonic Keldysh vertex,
+# with the coupling kept outside the field polynomial.
 
 elastic = -(
     (1 // 2) * (c^2 + q^2) * bar(c) * bar(q) + (1 // 2) * c * q * (bar(c)^2 + bar(q)^2)
 )
 
-# The dissipative vertex must retain its finite Trotter ordering. The `+` and `-`
-# labels distinguish the two sides of the equal-time contraction before the causal
-# reduction removes that regulator structurally.
+# The dissipative vertex retains its finite Trotter ordering. The `+` and `-` labels
+# distinguish the two sides of an equal-time contraction until the causal reduction
+# removes the regulator structurally.
 
 plus = Regularisation.Plus
 minus = Regularisation.Minus
@@ -40,112 +39,112 @@ Lg = InteractionLagrangian(elastic, g)
 Lγ = InteractionLagrangian(loss, γ)
 L = Lg + Lγ
 
-# `L` is the full microscopic interaction and keeps the `g`, `γ`, `g^2`, `gγ`, ...
-# sectors distinct. When only one sector is required, it is cheaper to build the
-# corresponding propagator from the relevant process directly; no unrelated diagrams
-# then need to be generated.
+# The full action `L` keeps the perturbative sectors `g`, `γ`, `g^2`, `gγ`, ...
+# distinct. If only one sector is needed, constructing from the corresponding process
+# avoids generating unrelated diagrams.
 #
-# ## Ask for the collision kernel
+# ## The physical loss kernel
 #
-# A user who wants the kinetic result does not need to drive the compiler manually.
-# Build the desired perturbative propagator and call `collision_kernel`.
+# For the first-order loss problem the ordinary user-facing calculation is just the
+# perturbative propagator followed by `collision_kernel`.
 
 Gγ = DressedPropagator(Lγ, Val(1), Val(3); preserve_regularisation=true)
 Cγ = collision_kernel(Gγ)
 Cγ
 
-# In the normalization used here the generated first-order loss kernel is
+# In the normalization used here the result is
 #
 # ```math
 # C_n^{(\gamma)}(k)=-4\gamma\int_q n_k n_q.
 # ```
 #
-# The compact call above is the ordinary API. The rest of this section exposes the
-# same computation stage by stage. Each returned value has a physics-facing LaTeX
-# display, so the rendered documentation shows the represented equation rather than
-# an internal field dump.
+# The compact call is the endpoint. To see where that kernel comes from, we now expose
+# the same derivation without changing the calculation.
 #
-# ## 1. Fourier transform
+# ## From diagrams to the kinetic equation
 #
-# Coordinate derivatives become exact momentum polynomials and the two-point diagrams
-# acquire routed frequency-momentum variables.
+# Fourier transformation assigns exact momentum variables to the coordinate-space
+# contractions. The resulting object already shows the routed propagator expression.
 
 GF = fourier_transform(Gγ)
 GF
 
-# ## 2. One-particle-irreducible self-energy
-#
-# `SelfEnergy` extracts the fixed-order 1PI contribution and amputates the external
-# propagators. No self-consistent Dyson iteration is implied.
+# The 1PI self-energy is then obtained by amputating the external propagators and
+# removing reducible two-point diagrams. This is a fixed-order perturbative
+# self-energy, not a self-consistent Dyson solution.
 
 ΣF = SelfEnergy(GF)
 ΣF
 
-# ## 3. Wigner representation
-#
-# Centre/relative coordinates are converted to Wigner variables. The present kinetic
-# compiler uses the homogeneous zeroth-gradient collision term.
+# Passing to Wigner variables separates centre and relative coordinates. For the
+# homogeneous collision problem we keep the zeroth-gradient contribution.
 
 ΣW = wigner_transform(ΣF; gradient_order=Val(0))
 ΣW
 
-# ## 4. Spectral/statistical kinetic representation
+# The kinetic representation replaces internal Keldysh propagators by spectral and
+# statistical objects. At this order,
 #
-# The Keldysh propagators are expressed through spectral information and the
-# statistical distribution, `G^K=-iFA` at zeroth gradient order.
+# ```math
+# G^K=-iFA.
+# ```
 
 KΣ = kinetic_expression(ΣW)
 KΣ
 
-# ## 5. Complete Kadanoff--Baym collision identity
-#
-# The off-shell collision expression is assembled before any on-shell reduction,
+# The full Kadanoff--Baym collision combination is formed before any shell projection,
 #
 # ```math
 # I_{\rm coll}=i\Sigma^K-F_k A_\Sigma,
 # \qquad
 # A_\Sigma=i(\Sigma^R-\Sigma^A).
 # ```
+#
+# This ordering matters: cancellations between the self-energy components belong to
+# the collision identity itself and must occur before frequency reduction.
 
 I = off_shell_collision_expression(KΣ)
 I
 
-# ## 6. Spectral/dispersive decomposition
+# ## Resolving the causal structure
 #
-# Retarded and advanced lines are decomposed as
-# `G^R=D-iA/2` and `G^A=D+iA/2`. This keeps both shell and principal-value physics.
+# Retarded and advanced propagators are decomposed into spectral and dispersive parts,
+#
+# ```math
+# G^R=D-\frac{i}{2}A,
+# \qquad
+# G^A=D+\frac{i}{2}A.
+# ```
+#
+# The displayed object below is the resulting concrete `A/D/F` integrand, not merely a
+# label for this transformation.
 
 SD = spectral_dispersive_collision(I)
 SD
 
-# ## 7. Causal frequency reduction
-#
-# Internal frequencies are eliminated exactly. Finite sectors retain
-# `δ(ΔE)` and, when present, `PV(1/ΔE)`. Genuine pinches remain explicit blockers.
+# Internal frequencies can now be integrated exactly. Regular terms retain their
+# physical shell or principal-value support, while genuine pinches remain explicit
+# blockers rather than being assigned a finite value.
 
 R = reduce_frequency_collision(SD)
 R
 
-# ## 8. Occupation reduction
-#
-# For bosons, `F=1+2n`; after the complete Kadanoff--Baym combination has been formed,
-# the statistical polynomial is converted to the Bose gain/loss polynomial.
+# Only after this causal reduction do we replace the bosonic statistical function by
+# occupations, `F=1+2n`. The displayed polynomial is therefore already the physical
+# Bose gain/loss structure carried by each reduced sector.
 
 N = occupation_reduced_expression(R)
 N
 
-# ## 9. Loop-momentum quotient
-#
-# Dummy loop variables related by signed permutations represent the same physical
-# integral. They are quotiented only after the occupation polynomial is known.
+# Dummy loop variables related by signed permutations describe the same momentum
+# integral. Quotienting them here gives a canonical representative without changing
+# the physical occupation or kinematic factors.
 
 Q = quotient_loop_momenta(N)
 Q
 
-# ## 10. Final physical kernel
-#
-# The explicit compiler route terminates in the same `CollisionKernel` as the one-line
-# user API above.
+# Lowering the canonical sectors produces the same physical kernel as the direct call
+# with which we started.
 
 Cγ_explicit = collision_kernel(Q)
 Cγ_explicit
@@ -153,16 +152,16 @@ Cγ_explicit
 @assert KeldyshContraction.collision_kernel_terms(Cγ) ==
     KeldyshContraction.collision_kernel_terms(Cγ_explicit)
 
-# ## Elastic two-body scattering
+# ## Coherent two-body scattering
 #
-# The identical compiler applies at second order in the coherent coupling. Two quartic
-# vertices plus the two external legs give five propagator edges at this order.
+# The same compiler applies at second order in the coherent coupling. Two quartic
+# vertices plus the external two-point legs give five propagator edges.
 
 Gg2 = DressedPropagator(Lg, Val(2), Val(5); preserve_regularisation=true)
 Cg2 = collision_kernel(Gg2)
 Cg2
 
-# Its Bose-enhanced gain/loss structure is
+# The result has the expected Bose-enhanced gain/loss structure,
 #
 # ```math
 # C_n^{(g^2)}(k)\propto
@@ -170,8 +169,9 @@ Cg2
 # -n_kn_p(1+n_q)(1+n_r)\right]\delta(\Delta E),
 # ```
 #
-# with the exact momentum-routing and phase-space factors retained by the symbolic
-# kernel. In the full multi-process expansion, mixed `g\gamma` sectors can contain
-# principal-value contributions. If a selected sector also contains a genuine pinch,
-# `collision_kernel(G)` refuses to hide it: follow the explicit route through
-# `R = reduce_frequency_collision(...)` and inspect `reduced_blocked_terms(R)` instead.
+# with the exact routing and phase-space factors retained by the symbolic kernel. In a
+# full multi-process expansion, mixed `g\gamma` sectors may also carry principal-value
+# contributions. If a selected sector contains a genuine pinch,
+# `collision_kernel(G)` refuses to hide it: stop at `R`, inspect
+# `reduced_regular_terms(R)` and `reduced_blocked_terms(R)`, and make that approximation
+# choice explicitly.
