@@ -86,7 +86,6 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("show_methods/printing.jl")
     include("show_methods/kinetic_pipeline.jl")
     include("show_methods/physical_pipeline.jl")
-    include("show_methods/physical_html.jl")
 
     # Stable public inspection helpers defined after the full representation stack exists.
     include("public_api_accessors.jl")
