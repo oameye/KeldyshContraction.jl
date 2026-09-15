@@ -34,7 +34,7 @@ jobs:
       - uses: julia-actions/cache@v3
       - name: Instantiate research environment
         run: |
-          julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="d7823f60d7f8a50b346ef68a0a0f927aedabec0c")); Pkg.add("BenchmarkTools")'
+          julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="a09d6fdbd86bb4accae6ffbd3be1e0c801c49c05")); Pkg.add("BenchmarkTools")'
       - name: Inventory 2-loop and 4-loop semantic graphs
         run: |
           julia --project=. research/graphcombinations_loop_probe.jl 2 inventory
