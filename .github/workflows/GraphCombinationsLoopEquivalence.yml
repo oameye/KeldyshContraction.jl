@@ -1,0 +1,39 @@
+name: GraphCombinations loop orbit equivalence
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/GraphCombinationsLoopEquivalence.yml'
+      - 'research/graphcombinations_loop_equivalence_probe.jl'
+      - 'src/collision_momentum_quotient.jl'
+      - 'benchmarks/collision_reduction.jl'
+      - 'Project.toml'
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - name: Instantiate research environment
+        run: |
+          julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="d7823f60d7f8a50b346ef68a0a0f927aedabec0c")); Pkg.add("BenchmarkTools")'
+      - name: Check loop-orbit equivalence and warmed medians
+        run: julia --project=. research/graphcombinations_loop_equivalence_probe.jl
