@@ -127,6 +127,21 @@ end
     @test occursin("C_n(k) =", sprint(show, MIME"text/plain"(), stages.C))
 end
 
+@testset "indexed momentum components use one LaTeX subscript" begin
+    basis = KC.MomentumBasis(3)
+    external = basis[1]
+    q1x = KC.MomentumComponent(KC.basis_momentum(basis, 2), :x)
+    q2x = KC.MomentumComponent(KC.basis_momentum(basis, 3), :x)
+
+    q1 = KC._component_string(q1x, basis, external, true)
+    q2 = KC._component_string(q2x, basis, external, true)
+
+    @test q1 == "q_{1,x}"
+    @test q2 == "q_{2,x}"
+    @test !occursin(r"q_\{\d+\}_\{", q1)
+    @test !occursin(r"q_\{\d+\}_\{", q2)
+end
+
 @testset "collision-stage displays render computed p-wave physics" begin
     stages = explicit_collision_pipeline(collision_api_pwave_loss_propagator())
 
