@@ -4,7 +4,7 @@ using KeldyshContraction
 import GraphCombinations as GC
 import KeldyshContraction as KC
 
-const GC_SHA = "a2bf542815b97f23a3bb36b54acc157b7798707a"
+const GC_SHA = "d7823f60d7f8a50b346ef68a0a0f927aedabec0c"
 const OccupationPolynomial = KC.OccupationPolynomial
 const OccupationAtom = KC.OccupationAtom
 
