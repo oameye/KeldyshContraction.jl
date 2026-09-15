@@ -6,7 +6,7 @@ import Combinatorics
 import GraphCombinations as GC
 import KeldyshContraction as KC
 
-const GC_SHA = "d7823f60d7f8a50b346ef68a0a0f927aedabec0c"
+const GC_SHA = "76b7dc50311f2715dfce3e29461c528c454406c3"
 const OccupationPolynomial = KC.OccupationPolynomial
 const OccupationAtom = KC.OccupationAtom
 
