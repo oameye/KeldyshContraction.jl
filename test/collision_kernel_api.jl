@@ -152,9 +152,8 @@ end
     fermion_external = fermion_basis[1]
     fermion_family = field_family(collision_api_ψ[One])
     fermion_atoms = [
-        KC.OccupationAtom{Fermion}(
-            fermion_family, KC.basis_momentum(fermion_basis, index)
-        ) for index in 1:4
+        KC.OccupationAtom{Fermion}(fermion_family, KC.basis_momentum(fermion_basis, index))
+        for index in 1:4
     ]
     fermion_n = [KC.OccupationPolynomial(atom, 1 // 1) for atom in fermion_atoms]
     vacancy = [one(polynomial) - polynomial for polynomial in fermion_n]
