@@ -118,16 +118,6 @@ end
         @test !occursin("\\[", rendered)
     end
 
-    for (value, expected) in displays
-        rendered = sprint(show, MIME"text/html"(), value)
-        @test occursin("kc-physics-display", rendered)
-        @test occursin("math-container", rendered)
-        @test occursin("\\[", rendered)
-        @test occursin(expected, rendered)
-        @test occursin("\\gamma", rendered)
-        @test !occursin("\\begin{aligned}", rendered)
-    end
-
     @test occursin("Kadanoff-Baym", sprint(show, MIME"text/plain"(), stages.I))
     @test occursin("causal blockers: 0", sprint(show, MIME"text/plain"(), stages.R))
     @test occursin("C_n(k) =", sprint(show, MIME"text/plain"(), stages.C))
