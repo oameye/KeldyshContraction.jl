@@ -19,7 +19,7 @@ makedocs(;
                     "tags" => "ams",
                     "packages" => ["base", "ams", "autoload", "mhchem"],
                     "maxBuffer" => 100 * 1024,
-                )
+                ),
             ),
         ),
     ),
