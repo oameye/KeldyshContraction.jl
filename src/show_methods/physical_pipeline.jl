@@ -35,12 +35,28 @@ function _edge_shift(edge::Edge)
     return Int(out_reg) - Int(in_reg)
 end
 
-function _propagator_symbol(type::PropagatorType.T, latex::Bool)
-    is_spectral(type) && return "A"
-    is_retarded(type) && return latex ? "G^{R}" : "G^R"
-    is_advanced(type) && return latex ? "G^{A}" : "G^A"
-    is_keldysh(type) && return latex ? "G^{K}" : "G^K"
-    return "G"
+function _propagator_display_parts(type::PropagatorType.T)
+    is_spectral(type) && return ("A", nothing)
+    is_retarded(type) && return ("G", "R")
+    is_advanced(type) && return ("G", "A")
+    is_keldysh(type) && return ("G", "K")
+    return ("G", nothing)
+end
+
+function _line_display_string(
+    symbol::String,
+    component::Union{Nothing,String},
+    family_text::String,
+    momentum_text::String,
+    latex::Bool,
+)
+    if latex
+        decorated = symbol * "_{" * family_text * "}"
+        component === nothing || (decorated *= "^{" * component * "}")
+        return decorated * "\\!\\left(" * momentum_text * "\\right)"
+    end
+    decorated = component === nothing ? symbol : symbol * "^" * component
+    return decorated * "_" * family_text * "(" * momentum_text * ")"
 end
 
 function _routed_line_string(
@@ -52,19 +68,10 @@ function _routed_line_string(
 )
     family = field_family(first(fields(edge)))
     type = propagator_type(edge)
-    shift = _edge_shift(edge)
-    family_text = _regulated_family_string(family, shift, latex)
+    family_text = _regulated_family_string(family, _edge_shift(edge), latex)
     momentum_text = _linear_momentum_string(routed, basis, external, latex)
-    symbol = _propagator_symbol(type, latex)
-    if latex
-        return symbol *
-               "_{" *
-               family_text *
-               "}\\!\\left(" *
-               momentum_text *
-               "\\right)"
-    end
-    return symbol * "_" * family_text * "(" * momentum_text * ")"
+    symbol, component = _propagator_display_parts(type)
+    return _line_display_string(symbol, component, family_text, momentum_text, latex)
 end
 
 _display_external(graph::FourierDiagram) = momentum_basis(graph)[1]
@@ -111,26 +118,18 @@ function _kinetic_line_string(
     line::KineticLine, basis::MomentumBasis, external::MomentumVariable, latex::Bool
 )
     kind = kinetic_line_kind(line)
-    shift = Int(regularisation_shift(line))
-    symbol = if kind === KineticSpectral
-        "A"
+    symbol, component = if kind === KineticSpectral
+        ("A", nothing)
     elseif kind === KineticRetarded
-        latex ? "G^{R}" : "G^R"
+        ("G", "R")
     else
-        latex ? "G^{A}" : "G^A"
+        ("G", "A")
     end
-    family_text = _regulated_family_string(line.family, shift, latex)
+    family_text = _regulated_family_string(
+        line.family, Int(regularisation_shift(line)), latex
+    )
     momentum_text = _linear_momentum_string(momentum(line), basis, external, latex)
-    line_text = if latex
-        symbol *
-        "_{" *
-        family_text *
-        "}\\!\\left(" *
-        momentum_text *
-        "\\right)"
-    else
-        symbol * "_" * family_text * "(" * momentum_text * ")"
-    end
+    line_text = _line_display_string(symbol, component, family_text, momentum_text, latex)
 
     statistical_weight(line) === DistributionWeight || return line_text
     distribution = _distribution_atom_string(
