@@ -120,7 +120,7 @@ end
     end
 
     routed = sprint(show, MIME"text/latex"(), stages.GF)
-    @test occursin(r"G\^\{[KRA]\}_\{[^}]+,[+-]\}", routed)
+    @test occursin(r"G_\{[^}]+,[+-]\}\^\{[KRA]\}", routed)
     @test !occursin(r"G\^\{[KRA],", routed)
 
     sd = sprint(show, MIME"text/latex"(), stages.SD)
