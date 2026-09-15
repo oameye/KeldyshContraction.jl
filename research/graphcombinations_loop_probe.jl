@@ -1,3 +1,4 @@
+using BenchmarkTools
 using KeldyshContraction
 
 import GraphCombinations as GC
@@ -50,7 +51,8 @@ function gc_loop_graph(
     color_classes = sort!(unique(copy(builder.colors)))
     labels = Int[searchsortedfirst(color_classes, color) for color in builder.colors]
     graph = GC.DirectedGCGraph(
-        Pair{Int,Int}[source => target for (source, target) in builder.edges], length(labels)
+        Pair{Int,Int}[source => target for (source, target) in builder.edges],
+        length(labels),
     )
     return graph, labels, length(builder.edges)
 end
@@ -143,7 +145,8 @@ function report_measurement(nloops)
     return nothing
 end
 
-length(ARGS) == 2 || error("usage: graphcombinations_loop_probe.jl <nloops> <inventory|measure>")
+length(ARGS) == 2 ||
+    error("usage: graphcombinations_loop_probe.jl <nloops> <inventory|measure>")
 nloops = parse(Int, ARGS[1])
 mode = ARGS[2]
 if mode == "inventory"
