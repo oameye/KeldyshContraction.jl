@@ -91,6 +91,42 @@ with principal-value sectors retained when present. `\mathcal K` is the exact mo
 
 Not every causal structure has a finite strict-quasiparticle limit. Degenerate retarded/advanced poles can produce a genuine pinch singularity. Such terms remain explicit blockers; KeldyshContraction.jl does **not** assign them an arbitrary finite coefficient. Finite-width or resummed kinetics is a separate approximation.
 
+### Bosonic two-body-loss second-order oracle
+
+For the local bosonic jump operator `L = ψ²`, the analytical second-order benchmark used by the test suite is the two-part result labelled Eq. (55a,b) in the reference derivation:
+
+```math
+I_{\mathrm{coll}}^{(\gamma^2)}[n]
+=
+4\gamma^2\int_{q_1,q_2,q_3}
+\mathcal N_{55a}[n]\,
+A_{q_1}A_{q_2}A_{q_3}
++
+16\gamma^2\int_{q_1,q_2}
+n_k n_{q_1}n_{q_2}\,
+A_{q_1}^2A_{q_2},
+```
+
+where
+
+```math
+\mathcal N_{55a}[n]
+=
+(1+n_k)(1+n_{q_3})n_{q_1}n_{q_2}
++(1+n_{q_1})(1+n_{q_2})n_{q_3}n_k
+-2n_{q_1}n_{q_2}n_{q_3}n_k.
+```
+
+The package stores the occupation-number equation rather than the equation for `F_B = 1 + 2n_B`, so for this bosonic convention
+
+```math
+C_n=\frac{1}{2}I_{\mathrm{coll}}.
+```
+
+Consequently Eq. (55a) becomes the regular `2γ² 𝒩₅₅ₐ[n]` kernel. Expanding `𝒩₅₅ₐ` cancels the quartic occupation term and gives the six-term polynomial checked by `generated_collision_kernel.jl`.
+
+Eq. (55b) is the second piece of the **same** `O(γ²)` result. In the package normalization it carries an `8γ²` prefactor, but its repeated spectral line `A_{q_1}²` is a degenerate retarded/advanced shell. The strict-quasiparticle compiler therefore certifies this contribution as repeated-shell pinch support in `generated_loss_canonical_support.jl` and deliberately keeps it upstream of `CollisionKernel` rather than assigning it a spurious finite coefficient.
+
 The package derives `C[n]`; it does not currently construct or solve the streaming equation on the left-hand side.
 
 ## Compiler chain

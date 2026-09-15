@@ -177,7 +177,7 @@ end
     )
 end
 
-@testset "generated γ² regular quotient equals independent 2𝒩 kernel" begin
+@testset "bosonic two-body loss Eq. 55a: regular γ²[3] CollisionKernel" begin
     collision = generated_kernel_loss_collision(Val(2), Val(5))
     reduced, occupation, _, kernel = generated_regular_kernel(collision)
 
@@ -194,7 +194,12 @@ end
     C = KC.ComplexRationals
     n(momentum) = OccupationPolynomial(OccupationAtom(generated_kernel_ϕ, momentum), one(C))
     nk, nq, nq1, nq2 = n(k), n(q), n(q1), n(q2)
-    standard =
+
+    # Eq. (55a) is written for I_coll[n]. KC stores the occupation equation
+    # C_n = I_coll[n]/2 because F_B = 1 + 2n_B. Hence its 4γ² prefactor becomes 2γ².
+    # Expanding the gain/loss bracket cancels the quartic occupation term and gives
+    # exactly the six-term polynomial below; the γ² factor itself is stored in `sector`.
+    eq55a_oracle =
         2 * (
             nq1 * nq2 +
             nq1 * nq2 * nq +
@@ -204,7 +209,7 @@ end
             nq2 * nq * nk
         )
 
-    expected_kernel = generated_expected_kernel(occupation, sector, standard)
+    expected_kernel = generated_expected_kernel(occupation, sector, eq55a_oracle)
     @test collision_kernel_terms(kernel) == collision_kernel_terms(expected_kernel)
     @test all(
         key ->

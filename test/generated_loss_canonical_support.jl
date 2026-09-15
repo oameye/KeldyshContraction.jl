@@ -44,7 +44,7 @@ function affine_support_signature(support)
     )
 end
 
-@testset "generated γ² canonical singular support" begin
+@testset "bosonic two-body loss Eq. 55b: singular γ²[2] repeated-shell support" begin
     collision = generated_loss_canonical_frequency_collision()
     @test parameters(collision) == KC.ParameterMonomial(:γ)^2
     @test target_family(collision) === canonical_loss_support_ϕ
@@ -107,10 +107,15 @@ end
     pinch = filter(record -> record.forward_kind === KC.CausalFrequencyPinch, census)
     regular = filter(record -> record.forward_kind === KC.CausalFrequencyIntegrated, census)
 
+    # This is the second piece of the same analytical O(γ²) result as the regular Eq. (55a)
+    # kernel test. Eq. (55b) contains 16γ² ∫ nₖ n_q1 n_q2 A_q1² A_q2 in I_coll[n],
+    # or 8γ² times that structure in KC's C_n = I_coll[n]/2 normalization. The repeated
+    # shell A(q1)^2 is a genuine pinch, so the strict-quasiparticle compiler preserves its
+    # support upstream instead of assigning an artificial finite CollisionKernel coefficient.
     # Complete statistical-sector assembly and every regular contour integration reduce the
     # unshifted γ² sector to seven regular sectors and four genuine pinch sectors. In each pinch,
     # the independent third shell is a coloop and therefore remains ordinary residual support;
-    # the unresolved singular subsystem is the rank-one repeated shell A(q)^2.
+    # the unresolved singular subsystem is precisely the rank-one repeated shell A(q)^2.
     @test length(pinch) == 4
     @test length(regular) == 7
     @test all(pinch) do record
