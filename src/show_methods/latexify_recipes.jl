@@ -72,9 +72,7 @@ end
 function write_latex_field(io::IO, field::Field{Boson}, ::Val{:standalone})
     write_latex_derivatives(io, field)
     if is_barred(field)
-        write(io, "\\bar{")
-        write_latex_symbol(io, name(field))
-        write(io, is_classical(field) ? "^c}" : "^P}")
+        write(io, "\\bar{", string(name(field)), is_classical(field) ? "ᶜ" : "ᴾ", "}")
     else
         write_latex_symbol(io, name(field))
         write(io, is_classical(field) ? "^c" : "^P")
@@ -245,28 +243,18 @@ function write_latex(io::IO, momentum::Momentum)
 end
 
 function write_latex(io::IO, momenta::Momenta)
-    if isempty(momenta.prefactors)
+    if length(momenta.prefactors) == 1 && iszero(momenta.prefactors[1])
         write(io, "0")
         return nothing
     end
-
-    wrote = false
-    for (prefactor, momentum) in zip(momenta.prefactors, momenta.momenta)
-        iszero(prefactor) && continue
-        negative = prefactor < 0
-        magnitude = abs(prefactor)
-        if wrote
-            write(io, negative ? " - " : " + ")
-        elseif negative
+    for (i, (prefactor, momentum)) in enumerate(zip(momenta.prefactors, momenta.momenta))
+        if i > 1
+            write(io, prefactor < 0 ? " - " : " + ")
+        elseif prefactor < 0
             write(io, "-")
         end
-        if magnitude != 1
-            write(io, string(magnitude), " ")
-        end
         write_latex(io, momentum)
-        wrote = true
     end
-    wrote || write(io, "0")
     return nothing
 end
 
@@ -313,7 +301,6 @@ end
 
 function write_latex(io::IO, diagrams::Diagrams)
     entries = collect(diagrams.diagrams)
-    sort!(entries; by=entry -> repr(first(entry)))
     for (i, (diagram, coefficient)) in enumerate(entries)
         if _latex_negative_real(coefficient)
             write(io, isone(i) ? "- " : " - ")
