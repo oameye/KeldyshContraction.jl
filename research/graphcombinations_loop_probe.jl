@@ -73,6 +73,59 @@ function relabeling_group_order(cells)
     return order
 end
 
+function first_largest_nonsingleton_cell(colors::Vector{Int})
+    isempty(colors) && return 0, Int[]
+    counts = zeros(Int, maximum(colors))
+    for color in colors
+        counts[color] += 1
+    end
+    largest = maximum(counts)
+    largest <= 1 && return 0, Int[]
+    target_color = findfirst(==(largest), counts)
+    return target_color, findall(==(target_color), colors)
+end
+
+function individualize_stable_color(
+    stable_colors::Vector{Int}, target_color::Int, chosen_vertex::Int
+)
+    individualized = similar(stable_colors)
+    @inbounds for vertex in eachindex(stable_colors)
+        color = stable_colors[vertex]
+        individualized[vertex] = if color < target_color
+            color
+        elseif color > target_color
+            color + 1
+        elseif vertex == chosen_vertex
+            target_color
+        else
+            target_color + 1
+        end
+    end
+    return individualized
+end
+
+function shallow_individualization_records(graph::GC.DirectedGCGraph, labels::Vector{Int})
+    stable_colors = GC._directed_refined_colors(graph, labels)
+    target_color, target_cell = first_largest_nonsingleton_cell(stable_colors)
+    isempty(target_cell) && return target_cell, NamedTuple[]
+
+    records = NamedTuple[]
+    for vertex in target_cell
+        individualized = individualize_stable_color(stable_colors, target_color, vertex)
+        cells = GC._directed_refined_cells(graph, individualized)
+        cell_sizes = sort!(length.(cells); rev=true)
+        push!(
+            records,
+            (
+                vertex=vertex,
+                cell_sizes=cell_sizes,
+                residual_group_order=relabeling_group_order(cell_sizes),
+            ),
+        )
+    end
+    return target_cell, records
+end
+
 function loop_records(expression)
     records = NamedTuple[]
     for (sector, polynomial) in KC.occupation_reduced_terms(expression)
@@ -129,6 +182,34 @@ function report_inventory(nloops)
         "exact residual relabeling group order after refinement: ",
         refined_worst.refined_group_order,
     )
+
+    target_cell, branch_records = shallow_individualization_records(
+        refined_worst.graph, refined_worst.labels
+    )
+    if isempty(branch_records)
+        println("shallow individualization: stable partition already discrete")
+    else
+        orders = [record.residual_group_order for record in branch_records]
+        println("shallow target-cell size: ", length(target_cell))
+        for record in branch_records
+            println(
+                "shallow branch vertex ",
+                record.vertex,
+                ": cells ",
+                record.cell_sizes,
+                "; residual order ",
+                record.residual_group_order,
+            )
+        end
+        println(
+            "shallow residual work min/max/sum: ",
+            minimum(orders),
+            "/",
+            maximum(orders),
+            "/",
+            sum(orders),
+        )
+    end
     flush(stdout)
     return worst
 end
