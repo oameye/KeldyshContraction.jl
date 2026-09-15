@@ -10,7 +10,10 @@ makedocs(;
     sitename="KeldyshContraction.jl",
     authors="Orjan Ameye",
     modules=KeldyshContraction,
-    format=Documenter.HTML(; canonical="https://oameye.github.io/KeldyshContraction.jl"),
+    format=Documenter.HTML(;
+        canonical="https://oameye.github.io/KeldyshContraction.jl",
+        mathengine=Documenter.MathJax(),
+    ),
     pages=pages,
     pagesonly=true,
     clean=true,
