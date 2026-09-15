@@ -104,26 +104,36 @@ function individualize_stable_color(
     return individualized
 end
 
-function shallow_individualization_records(graph::GC.DirectedGCGraph, labels::Vector{Int})
-    stable_colors = GC._directed_refined_colors(graph, labels)
-    target_color, target_cell = first_largest_nonsingleton_cell(stable_colors)
-    isempty(target_cell) && return target_cell, NamedTuple[]
-
-    records = NamedTuple[]
-    for vertex in target_cell
-        individualized = individualize_stable_color(stable_colors, target_color, vertex)
-        cells = GC._directed_refined_cells(graph, individualized)
-        cell_sizes = sort!(length.(cells); rev=true)
-        push!(
-            records,
-            (
-                vertex=vertex,
-                cell_sizes=cell_sizes,
-                residual_group_order=relabeling_group_order(cell_sizes),
-            ),
-        )
+function individualization_frontier(
+    graph::GC.DirectedGCGraph, labels::Vector{Int}, depth::Int
+)
+    frontier = [(colors=GC._directed_refined_colors(graph, labels), path=Int[])]
+    for _ in 1:depth
+        next_frontier = NamedTuple[]
+        for state in frontier
+            target_color, target_cell = first_largest_nonsingleton_cell(state.colors)
+            if isempty(target_cell)
+                push!(next_frontier, state)
+                continue
+            end
+            for vertex in target_cell
+                individualized = individualize_stable_color(
+                    state.colors, target_color, vertex
+                )
+                refined = GC._directed_refined_colors(graph, individualized)
+                push!(next_frontier, (colors=refined, path=[state.path; vertex]))
+            end
+        end
+        frontier = next_frontier
     end
-    return target_cell, records
+
+    return [
+        (
+            path=state.path,
+            cell_sizes=color_cell_sizes(state.colors),
+            residual_group_order=relabeling_group_order(color_cell_sizes(state.colors)),
+        ) for state in frontier
+    ]
 end
 
 function loop_records(expression)
@@ -158,6 +168,28 @@ function loop_records(expression)
     return records
 end
 
+function report_individualization_depths(graph, labels)
+    for depth in 1:4
+        records = individualization_frontier(graph, labels, depth)
+        orders = [record.residual_group_order for record in records]
+        patterns = unique(Tuple(record.cell_sizes) for record in records)
+        println(
+            "individualization depth $depth: branches=",
+            length(records),
+            "; residual min/max/sum=",
+            minimum(orders),
+            "/",
+            maximum(orders),
+            "/",
+            sum(orders),
+            "; discrete=",
+            all(isone, orders),
+        )
+        println("individualization depth $depth cell patterns: ", patterns)
+    end
+    return nothing
+end
+
 function report_inventory(nloops)
     expression = benchmark_loop_quotient_fixture(nloops)
     records = loop_records(expression)
@@ -182,34 +214,7 @@ function report_inventory(nloops)
         "exact residual relabeling group order after refinement: ",
         refined_worst.refined_group_order,
     )
-
-    target_cell, branch_records = shallow_individualization_records(
-        refined_worst.graph, refined_worst.labels
-    )
-    if isempty(branch_records)
-        println("shallow individualization: stable partition already discrete")
-    else
-        orders = [record.residual_group_order for record in branch_records]
-        println("shallow target-cell size: ", length(target_cell))
-        for record in branch_records
-            println(
-                "shallow branch vertex ",
-                record.vertex,
-                ": cells ",
-                record.cell_sizes,
-                "; residual order ",
-                record.residual_group_order,
-            )
-        end
-        println(
-            "shallow residual work min/max/sum: ",
-            minimum(orders),
-            "/",
-            maximum(orders),
-            "/",
-            sum(orders),
-        )
-    end
+    report_individualization_depths(refined_worst.graph, refined_worst.labels)
     flush(stdout)
     return worst
 end
