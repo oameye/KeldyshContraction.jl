@@ -103,19 +103,18 @@ function _multilinear_coefficients(
 end
 
 function _occupation_literal_string(
-    atom::OccupationAtom,
-    gain::Bool,
-    basis,
-    external,
-    latex::Bool,
-    sigma::Int,
+    atom::OccupationAtom, gain::Bool, basis, external, latex::Bool, sigma::Int
 )
     atom_text = _distribution_atom_string(
         "n", atom.family, atom.momentum, basis, external, latex
     )
     gain || return atom_text
     sign = sigma > 0 ? "+" : "-"
-    return latex ? "\\left(1" * sign * atom_text * "\\right)" : "(1" * sign * atom_text * ")"
+    return if latex
+        "\\left(1" * sign * atom_text * "\\right)"
+    else
+        "(1" * sign * atom_text * ")"
+    end
 end
 
 function _statistical_literal_string(
@@ -125,7 +124,11 @@ function _statistical_literal_string(
         "F", atom.family, atom.momentum, basis, external, latex
     )
     sign = plus ? "+" : "-"
-    return latex ? "\\left(1" * sign * atom_text * "\\right)" : "(1" * sign * atom_text * ")"
+    return if latex
+        "\\left(1" * sign * atom_text * "\\right)"
+    else
+        "(1" * sign * atom_text * ")"
+    end
 end
 
 function _physical_basis_occupation_string(
@@ -586,9 +589,7 @@ end
 function _compact_physical_collision_string_impl(
     terms::Dict{K,P}, ::Type{S}, latex::Bool
 ) where {K,P,S<:Statistics}
-    GroupKey = Tuple{
-        ParameterMonomial,MomentumBasis,MomentumVariable,FrequencySupport{S}
-    }
+    GroupKey = Tuple{ParameterMonomial,MomentumBasis,MomentumVariable,FrequencySupport{S}}
     groups = Dict{GroupKey,Vector{Pair{K,P}}}()
     for (sector, polynomial) in terms
         key = (
@@ -598,7 +599,7 @@ function _compact_physical_collision_string_impl(
             frequency_support(sector),
         )
         group = get!(groups, key) do
-            Pair{K,P}[]
+            return Pair{K,P}[]
         end
         push!(group, sector => polynomial)
     end
