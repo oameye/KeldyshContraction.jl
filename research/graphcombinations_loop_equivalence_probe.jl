@@ -1,8 +1,8 @@
 using BenchmarkTools
-using Combinatorics: permutations
 using KeldyshContraction
 using Test
 
+import Combinatorics
 import GraphCombinations as GC
 import KeldyshContraction as KC
 
@@ -109,7 +109,9 @@ function gc_quotient_loop_momenta(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
+                contribution = Pair{KC.OccupationMonomial{S},D}[
+                    transformed_monomial => transformed_coefficient
+                ]
                 KC._push_kernel_polynomial!(
                     out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
                 )
@@ -150,7 +152,9 @@ function gc_requotient_terms(
             )
             transformed_monomial = KC.transform_loop_momenta(monomial, transform)
             transformed_coefficient = convert(D, coefficient) * convert(D, support_factor)
-            contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
+            contribution = Pair{KC.OccupationMonomial{S},D}[
+                transformed_monomial => transformed_coefficient
+            ]
             KC._push_kernel_polynomial!(
                 out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
             )
@@ -197,7 +201,7 @@ function certify_all_signed_permutations(expression)
     nloops == 4 || error("signed-permutation exhaustive probe expects four loops")
     reference = KC.loop_quotient_terms(gc_quotient_loop_momenta(expression))
     count = 0
-    for permutation in permutations(collect(1:nloops))
+    for permutation in Combinatorics.permutations(collect(1:nloops))
         for mask in 0:(2^nloops - 1)
             signs = Int[isodd(mask >> (slot - 1)) ? -1 : 1 for slot in 1:nloops]
             transformed = signed_permutation_expression(expression, permutation, signs)
