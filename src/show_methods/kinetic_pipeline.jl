@@ -409,12 +409,7 @@ function _sd_line_string(
     family = _regulated_family_string(line.family, shift, latex)
     momentum_text = _linear_momentum_string(momentum(line), basis, external, latex)
     if latex
-        return prefix *
-               "_{" *
-               family *
-               "}\\!\\left(" *
-               momentum_text *
-               "\\right)"
+        return prefix * "_{" * family * "}\\!\\left(" * momentum_text * "\\right)"
     end
     return prefix * "_" * family * "(" * momentum_text * ")"
 end
@@ -617,7 +612,6 @@ function Base.show(io::IO, ::MIME"text/latex", collision::SpectralDispersiveColl
         return nothing
     end
 end
-
 function Base.show(io::IO, ::MIME"text/plain", result::ReducedFrequencyCollision)
     _show_stage_plain(io, "Reduced causal-frequency collision", result)
     write(
