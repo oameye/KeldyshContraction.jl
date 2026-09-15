@@ -167,10 +167,7 @@ function _physical_basis_statistical_string(
         factors = String[]
         for (index, atom) in enumerate(atoms)
             plus = !iszero(state & (1 << (index - 1)))
-            push!(
-                factors,
-                _statistical_literal_string(atom, plus, basis, external, latex),
-            )
+            push!(factors, _statistical_literal_string(atom, plus, basis, external, latex))
         end
         push!(rendered, _term_string(coefficient, factors, latex))
     end
@@ -386,7 +383,9 @@ function _search_linear_factorization(
             iszero(available) && continue
             remaining[component.axis] = available - 1
             push!(factors, component)
-            recurse(index, depth + 1, product * _basis_component_polynomial(component, basis))
+            recurse(
+                index, depth + 1, product * _basis_component_polynomial(component, basis)
+            )
             pop!(factors)
             remaining[component.axis] = available
         end
@@ -416,8 +415,12 @@ function _compact_kinematic_string(terms, rows, basis, external, latex::Bool)
             rationals = Rational{Int}[
                 convert(Rational{Int}, value) for value in rational_candidates
             ]
-            numerator_gcd = foldl(gcd, (abs(numerator(value)) for value in rationals); init=0)
-            denominator_lcm = foldl(lcm, (denominator(value) for value in rationals); init=1)
+            numerator_gcd = foldl(
+                gcd, (abs(numerator(value)) for value in rationals); init=0
+            )
+            denominator_lcm = foldl(
+                lcm, (denominator(value) for value in rationals); init=1
+            )
             if !iszero(numerator_gcd)
                 fallback_content = numerator_gcd // denominator_lcm
                 first(rationals) < 0 && (fallback_content = -fallback_content)
@@ -508,7 +511,9 @@ function _compact_group_string(group, latex::Bool)
         coefficient, kinematic_text = _compact_kinematic_string(
             kinematic_terms, rows, basis, external, latex
         )
-        distribution_text = _compact_distribution_string(distribution, basis, external, latex)
+        distribution_text = _compact_distribution_string(
+            distribution, basis, external, latex
+        )
         factors = String[
             parameter_text,
             measure_text,
