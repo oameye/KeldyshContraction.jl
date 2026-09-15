@@ -204,24 +204,43 @@ function certify_all_signed_permutations(expression)
     nloops =
         length(KC.momentum_basis(only(keys(KC.occupation_reduced_terms(expression))))) - 1
     nloops == 4 || error("signed-permutation exhaustive probe expects four loops")
-    reference = KC.loop_quotient_terms(gc_quotient_loop_momenta(expression))
+    gc_reference = KC.loop_quotient_terms(gc_quotient_loop_momenta(expression))
+    nauty_reference = KC.loop_quotient_terms(KC.quotient_loop_momenta(expression))
+    gc_failures = 0
+    nauty_failures = 0
     count = 0
     for permutation in Combinatorics.permutations(collect(1:nloops))
         for mask in 0:(2 ^ nloops - 1)
             signs = Int[isodd(mask >> (slot - 1)) ? -1 : 1 for slot in 1:nloops]
             transformed = signed_permutation_expression(expression, permutation, signs)
-            actual = KC.loop_quotient_terms(gc_quotient_loop_momenta(transformed))
-            matches = actual == reference
-            matches || println(
-                "signed mismatch: permutation=", collect(permutation), ", mask=", mask,
-                ", signs=", signs
+            gc_matches =
+                KC.loop_quotient_terms(gc_quotient_loop_momenta(transformed)) == gc_reference
+            nauty_matches =
+                KC.loop_quotient_terms(KC.quotient_loop_momenta(transformed)) == nauty_reference
+            gc_failures += !gc_matches
+            nauty_failures += !nauty_matches
+            (!gc_matches || !nauty_matches) && println(
+                "signed mismatch: permutation=",
+                collect(permutation),
+                ", mask=",
+                mask,
+                ", signs=",
+                signs,
+                ", GC=",
+                gc_matches,
+                ", Nauty=",
+                nauty_matches,
             )
-            @test matches
             count += 1
         end
     end
-    println("GC signed-loop invariance: checked $count four-loop transformations")
+    println(
+        "signed-loop invariance: checked $count transformations; GC failures=$gc_failures; ",
+        "Nauty failures=$nauty_failures",
+    )
     @test count == factorial(nloops) * 2^nloops
+    @test gc_failures == 0
+    @test nauty_failures == 0
     return nothing
 end
 
