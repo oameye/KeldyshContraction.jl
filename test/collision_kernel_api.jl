@@ -147,6 +147,27 @@ end
     @test !occursin(r"q_\{\d+\}_\{", q2)
 end
 
+@testset "compact display basis reconstructs physical factors" begin
+    basis = KC.MomentumBasis(4)
+    external = basis[1]
+    family = field_family(collision_api_ψ[One])
+    atoms = [
+        KC.OccupationAtom{Fermion}(family, KC.basis_momentum(basis, index)) for
+        index in 1:4
+    ]
+    n = [KC.OccupationPolynomial(atom, 1 // 1) for atom in atoms]
+    vacancy = [one(polynomial) - polynomial for polynomial in n]
+    gain_loss = vacancy[1] * vacancy[2] * n[3] * n[4] -
+                n[1] * n[2] * vacancy[3] * vacancy[4]
+
+    expanded = KC._expanded_polynomial_string(gain_loss, basis, external, true)
+    compact = KC._compact_distribution_string(gain_loss, basis, external, true)
+
+    @test ncodeunits(compact) < ncodeunits(expanded)
+    @test occursin("\\left(1-n_{", compact)
+    @test occursin(" - ", compact)
+end
+
 @testset "collision-stage displays render computed p-wave physics" begin
     stages = explicit_collision_pipeline(collision_api_pwave_loss_propagator())
 
@@ -173,6 +194,7 @@ end
         @test occursin("q", rendered)
     end
 
+    @test occursin("\\left(k - q\\right)_{x}^2", kernel)
     @test !occursin("q_i\\sim", quotiented)
     @test !occursin("\\mathcal K", kernel)
 
