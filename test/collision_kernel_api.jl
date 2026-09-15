@@ -116,7 +116,11 @@ end
         @test occursin("\\gamma", rendered)
         @test endswith(rendered, "\$\$")
         @test !occursin("\\[", rendered)
+        @test !occursin(r"G\^[KRA]_\{[^}]+\}\^\{\[\\Delta t=", rendered)
     end
+
+    routed = sprint(show, MIME"text/latex"(), stages.GF)
+    @test occursin(r"G\^\{[KRA],\[\\Delta t=[+-]1\\,0\^\+\]\}_\{", routed)
 
     @test occursin("Kadanoff-Baym", sprint(show, MIME"text/plain"(), stages.I))
     @test occursin("causal blockers: 0", sprint(show, MIME"text/plain"(), stages.R))
