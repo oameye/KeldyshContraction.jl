@@ -34,7 +34,7 @@ jobs:
       - uses: julia-actions/cache@v3
       - name: Instantiate research environment
         run: |
-          julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="76b7dc50311f2715dfce3e29461c528c454406c3")); Pkg.add("BenchmarkTools")'
+          julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="a09d6fdbd86bb4accae6ffbd3be1e0c801c49c05")); Pkg.add("BenchmarkTools")'
       - name: Check loop-orbit equivalence and warmed medians
         run: julia --project=. research/graphcombinations_loop_equivalence_probe.jl 2>&1 | tee loop-equivalence.log
       - name: Preserve loop-equivalence diagnostics
