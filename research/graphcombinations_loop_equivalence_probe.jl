@@ -1,4 +1,5 @@
 using BenchmarkTools
+using Combinatorics: permutations
 using KeldyshContraction
 using Test
 
@@ -158,6 +159,57 @@ function gc_requotient_terms(
     return out
 end
 
+function signed_permutation_expression(
+    expression::KC.OccupationReducedExpression{C,S,O,G,Ctx},
+    permutation::Vector{Int},
+    signs::Vector{Int},
+) where {C<:Number,S<:KC.Statistics,O,G,Ctx<:KC.AbstractWignerContext}
+    length(KC.occupation_reduced_terms(expression)) == 1 ||
+        error("signed-permutation probe expects one collision sector")
+    sector, polynomial = only(KC.occupation_reduced_terms(expression))
+    basis = KC.momentum_basis(sector)
+    external = KC.external_wigner_momentum(sector)
+    transform = KC.loop_permutation_transform(
+        basis, external, permutation, signs, zeros(Int, length(permutation))
+    )
+    support, support_factor = KC._transform_frequency_support(
+        KC.frequency_support(sector), transform
+    )
+    transformed_sector = KC.ReducedCollisionSector{S}(
+        KC.parameters(sector),
+        basis,
+        external,
+        KC.transform_loop_momenta(KC.kinematic_factor(sector), transform),
+        support,
+    )
+    transformed_polynomial =
+        support_factor * KC.transform_loop_momenta(polynomial, transform)
+    return KC.OccupationReducedExpression{C,S,O,G,Ctx}(
+        Dict(transformed_sector => transformed_polynomial),
+        KC.target_family(expression),
+        KC.parameters(expression),
+        KC.wigner_context(expression),
+    )
+end
+
+function certify_all_signed_permutations(expression)
+    nloops = length(KC.momentum_basis(only(keys(KC.occupation_reduced_terms(expression))))) - 1
+    nloops == 4 || error("signed-permutation exhaustive probe expects four loops")
+    reference = KC.loop_quotient_terms(gc_quotient_loop_momenta(expression))
+    count = 0
+    for permutation in permutations(collect(1:nloops))
+        for mask in 0:(2^nloops - 1)
+            signs = Int[isodd(mask >> (slot - 1)) ? -1 : 1 for slot in 1:nloops]
+            transformed = signed_permutation_expression(expression, permutation, signs)
+            @test KC.loop_quotient_terms(gc_quotient_loop_momenta(transformed)) == reference
+            count += 1
+        end
+    end
+    println("GC signed-loop invariance: certified $count four-loop transformations")
+    @test count == factorial(nloops) * 2^nloops
+    return nothing
+end
+
 function report_equivalence(nloops::Int)
     expression = benchmark_loop_quotient_fixture(nloops)
     nauty = KC.quotient_loop_momenta(expression)
@@ -206,6 +258,7 @@ end
 @testset "GC/Nauty loop-orbit equivalence" begin
     for nloops in (2, 4)
         expression = report_equivalence(nloops)
+        nloops == 4 && certify_all_signed_permutations(expression)
         report_benchmark(nloops, expression)
     end
 end
