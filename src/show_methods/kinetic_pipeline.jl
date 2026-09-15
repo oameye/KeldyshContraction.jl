@@ -140,18 +140,29 @@ function _component_string(
     latex::Bool,
 )
     momentum_text = _linear_momentum_string(component.momentum, basis, external, latex)
-    nonzero_count = count(value -> !iszero(value), component.momentum.coefficients)
-    positive_unit = any(==(1 // 1), component.momentum.coefficients)
-    simple = nonzero_count == 1 && positive_unit
-    if simple
-        base = momentum_text
-    elseif latex
-        base = "\\left(" * momentum_text * "\\right)"
-    else
-        base = "(" * momentum_text * ")"
-    end
+    nonzero_slots = findall(value -> !iszero(value), component.momentum.coefficients)
+    simple =
+        length(nonzero_slots) == 1 && component.momentum[first(nonzero_slots)] == 1 // 1
     axis = _display_symbol(component.axis, latex)
-    return latex ? base * "_{" * axis * "}" : base * "_" * axis
+
+    if simple && latex
+        slot = first(nonzero_slots)
+        external_slot = _external_basis_index(basis, external)
+        slot == external_slot && return "k_{" * axis * "}"
+
+        loop_slots = _loop_basis_indices(basis, external)
+        ordinal = findfirst(==(slot), loop_slots)
+        ordinal === nothing && return "\\left(" * momentum_text * "\\right)_{" * axis * "}"
+        if length(loop_slots) == 1
+            return "q_{" * axis * "}"
+        end
+        return "q_{" * string(ordinal) * "," * axis * "}"
+    elseif simple
+        return momentum_text * "_" * axis
+    elseif latex
+        return "\\left(" * momentum_text * "\\right)_{" * axis * "}"
+    end
+    return "(" * momentum_text * ")_" * axis
 end
 
 function _grouped_factor_strings(render, factors)
