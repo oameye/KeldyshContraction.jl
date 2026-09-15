@@ -12,13 +12,6 @@ const OccupationAtom = KC.OccupationAtom
 
 include(joinpath(@__DIR__, "..", "benchmarks", "collision_reduction.jl"))
 
-function gc_result(edges::Vector{Tuple{Int,Int}}, colors::Vector{Int})
-    graph = GC.DirectedGCGraph(
-        Pair{Int,Int}[source => target for (source, target) in edges], length(colors)
-    )
-    return GC.canonicalize_directed(graph, colors)
-end
-
 function gc_loop_graph_data(
     sector::KC.ReducedCollisionSector{S}, monomial::KC.OccupationMonomial{S}
 ) where {S<:KC.Statistics}
@@ -61,26 +54,44 @@ function gc_loop_graph_data(
 
     color_classes = sort!(unique(copy(builder.colors)))
     labels = Int[searchsortedfirst(color_classes, color) for color in builder.colors]
-    result = gc_result(builder.edges, labels)
-    return result, pair_vertices, loop_incidences, basis, external, nloops
+    edges = Pair{Int,Int}[source => target for (source, target) in builder.edges]
+    graph = GC.DirectedGCGraph(edges, length(labels))
+    workspace = GC.DirectedCanonicalizationWorkspace(graph.num_vertices)
+    buffer = GC.DirectedCanonicalizationBuffer(graph.num_vertices)
+    GC.canonicalize_directed!(buffer, workspace, graph, labels)
+    return buffer, pair_vertices, loop_incidences, basis, external, nloops
+end
+
+function _canonical_first_incidence(buffer, incidences)
+    best = first(incidences)
+    best_rank = GC.canonical_rank(buffer, first(best))
+    for record in Iterators.drop(incidences, 1)
+        rank = GC.canonical_rank(buffer, first(record))
+        if rank < best_rank
+            best = record
+            best_rank = rank
+        end
+    end
+    return best
 end
 
 function gc_canonical_loop_transform(
     sector::KC.ReducedCollisionSector{S}, monomial::KC.OccupationMonomial{S}
 ) where {S<:KC.Statistics}
-    result, pair_vertices, loop_incidences, basis, external, nloops = gc_loop_graph_data(
+    buffer, pair_vertices, loop_incidences, basis, external, nloops = gc_loop_graph_data(
         sector, monomial
     )
 
-    rank = GC.vertex_mapping(GC.canonical_relabeling(result))
-    ordered_slots = sortperm(1:nloops; by=slot -> rank[pair_vertices[slot]])
+    ordered_slots = sortperm(
+        1:nloops; by=slot -> GC.canonical_rank(buffer, pair_vertices[slot])
+    )
     loop_permutation = zeros(Int, nloops)
     loop_signs = ones(Int, nloops)
     for (new_slot, old_slot) in enumerate(ordered_slots)
         loop_permutation[old_slot] = new_slot
         incidences = loop_incidences[old_slot]
         isempty(incidences) && continue
-        canonical_first = first(sort!(copy(incidences); by=record -> rank[first(record)]))
+        canonical_first = _canonical_first_incidence(buffer, incidences)
         loop_signs[old_slot] = last(canonical_first) > 0 ? 1 : -1
     end
     return KC.loop_permutation_transform(
@@ -109,7 +120,9 @@ function gc_quotient_loop_momenta(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
+                contribution = Pair{KC.OccupationMonomial{S},D}[
+                    transformed_monomial => transformed_coefficient
+                ]
                 KC._push_kernel_polynomial!(
                     out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
                 )
@@ -150,7 +163,9 @@ function gc_requotient_terms(
             )
             transformed_monomial = KC.transform_loop_momenta(monomial, transform)
             transformed_coefficient = convert(D, coefficient) * convert(D, support_factor)
-            contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
+            contribution = Pair{KC.OccupationMonomial{S},D}[
+                transformed_monomial => transformed_coefficient
+            ]
             KC._push_kernel_polynomial!(
                 out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
             )
