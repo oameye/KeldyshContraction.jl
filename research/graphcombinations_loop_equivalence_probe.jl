@@ -210,11 +210,17 @@ function certify_all_signed_permutations(expression)
         for mask in 0:(2 ^ nloops - 1)
             signs = Int[isodd(mask >> (slot - 1)) ? -1 : 1 for slot in 1:nloops]
             transformed = signed_permutation_expression(expression, permutation, signs)
-            @test KC.loop_quotient_terms(gc_quotient_loop_momenta(transformed)) == reference
+            actual = KC.loop_quotient_terms(gc_quotient_loop_momenta(transformed))
+            matches = actual == reference
+            matches || println(
+                "signed mismatch: permutation=", collect(permutation), ", mask=", mask,
+                ", signs=", signs
+            )
+            @test matches
             count += 1
         end
     end
-    println("GC signed-loop invariance: certified $count four-loop transformations")
+    println("GC signed-loop invariance: checked $count four-loop transformations")
     @test count == factorial(nloops) * 2^nloops
     return nothing
 end
