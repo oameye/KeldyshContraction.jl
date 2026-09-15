@@ -12,12 +12,7 @@ function _html_escape_math(text::AbstractString)
 end
 
 function _write_html_math(io::IO, latex::AbstractString)
-    write(
-        io,
-        "<div class=\"math-container\">\\[",
-        _html_escape_math(latex),
-        "\\]</div>",
-    )
+    write(io, "<div class=\"math-container\">\\[", _html_escape_math(latex), "\\]</div>")
     return nothing
 end
 
@@ -71,9 +66,7 @@ end
 function Base.show(
     io::IO, ::MIME"text/html", Σ::SelfEnergy{C,S,O,E1,E2}
 ) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2}
-    return _html_three_components(
-        io, Σ, ("\\Sigma^K", "\\Sigma^R", "\\Sigma^A"), "x_1,x_2"
-    )
+    return _html_three_components(io, Σ, ("\\Sigma^K", "\\Sigma^R", "\\Sigma^A"), "x_1,x_2")
 end
 
 function Base.show(
@@ -85,9 +78,7 @@ end
 function Base.show(
     io::IO, ::MIME"text/html", Σ::FourierSelfEnergy{C,S,O,E1,E2}
 ) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2}
-    return _html_three_components(
-        io, Σ, ("\\Sigma_F^K", "\\Sigma_F^R", "\\Sigma_F^A"), "k"
-    )
+    return _html_three_components(io, Σ, ("\\Sigma_F^K", "\\Sigma_F^R", "\\Sigma_F^A"), "k")
 end
 
 function Base.show(
@@ -144,9 +135,7 @@ function Base.show(
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/html",
-    result::ReducedFrequencyCollision{C,S,O,E1,E2,GOrder,Ctx},
+    io::IO, ::MIME"text/html", result::ReducedFrequencyCollision{C,S,O,E1,E2,GOrder,Ctx}
 ) where {C<:Number,S<:_PhysicalDisplayStatistics,O,E1,E2,GOrder,Ctx<:AbstractWignerContext}
     write(io, "<div class=\"kc-physics-display\">")
     _write_html_sum(
@@ -160,9 +149,7 @@ function Base.show(
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/html",
-    result::OccupationReducedExpression{C,S,O,GOrder,Ctx},
+    io::IO, ::MIME"text/html", result::OccupationReducedExpression{C,S,O,GOrder,Ctx}
 ) where {C<:Number,S<:_PhysicalDisplayStatistics,O,GOrder,Ctx<:AbstractWignerContext}
     write(io, "<div class=\"kc-physics-display\">")
     _write_html_sum(
@@ -175,9 +162,7 @@ function Base.show(
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/html",
-    result::LoopQuotientedExpression{C,S,O,GOrder,Ctx},
+    io::IO, ::MIME"text/html", result::LoopQuotientedExpression{C,S,O,GOrder,Ctx}
 ) where {C<:Number,S<:_PhysicalDisplayStatistics,O,GOrder,Ctx<:AbstractWignerContext}
     write(io, "<div class=\"kc-physics-display\">")
     _write_html_sum(
@@ -190,9 +175,7 @@ function Base.show(
 end
 
 function Base.show(
-    io::IO,
-    ::MIME"text/html",
-    kernel::CollisionKernel{C,S,O,GOrder,Ctx},
+    io::IO, ::MIME"text/html", kernel::CollisionKernel{C,S,O,GOrder,Ctx}
 ) where {C<:Number,S<:_PhysicalDisplayStatistics,O,GOrder,Ctx<:AbstractWignerContext}
     write(io, "<div class=\"kc-physics-display\">")
     _write_html_sum(
