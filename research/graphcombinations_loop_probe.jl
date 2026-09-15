@@ -4,7 +4,7 @@ using KeldyshContraction
 import GraphCombinations as GC
 import KeldyshContraction as KC
 
-const GC_SHA = "ec5f84d4b1b1f21b2dacdb00ce4ed9af6bd68fa8"
+const GC_SHA = "a2bf542815b97f23a3bb36b54acc157b7798707a"
 const OccupationPolynomial = KC.OccupationPolynomial
 const OccupationAtom = KC.OccupationAtom
 
@@ -81,13 +81,18 @@ function loop_records(expression)
                 atom_sector = KC._kinematic_atom_sector(sector, kinematic_monomial)
                 graph, labels, edge_count = gc_loop_graph(atom_sector, monomial)
                 cells = color_cell_sizes(labels)
+                refined_cells = sort!(
+                    length.(GC._directed_refined_cells(graph, labels)); rev=true
+                )
                 push!(
                     records,
                     (
                         group_order=relabeling_group_order(cells),
+                        refined_group_order=relabeling_group_order(refined_cells),
                         vertices=length(labels),
                         edges=edge_count,
                         cells=cells,
+                        refined_cells=refined_cells,
                         graph=graph,
                         labels=labels,
                         sector=atom_sector,
@@ -106,11 +111,24 @@ function report_inventory(nloops)
     isempty(records) && error("loop fixture produced no canonicalization records")
     worst_index = argmax(record.group_order for record in records)
     worst = records[worst_index]
+    refined_worst_index = argmax(record.refined_group_order for record in records)
+    refined_worst = records[refined_worst_index]
     println("GC loop probe ($GC_SHA): $nloops loops")
     println("integrand atoms: ", length(records))
     println("worst semantic graph vertices/edges: ", worst.vertices, "/", worst.edges)
     println("worst color-cell sizes: ", worst.cells)
     println("exact enumerated relabeling group order: ", worst.group_order)
+    println(
+        "worst stable-refined graph vertices/edges: ",
+        refined_worst.vertices,
+        "/",
+        refined_worst.edges,
+    )
+    println("worst stable-refined cell sizes: ", refined_worst.refined_cells)
+    println(
+        "exact residual relabeling group order after refinement: ",
+        refined_worst.refined_group_order,
+    )
     flush(stdout)
     return worst
 end
