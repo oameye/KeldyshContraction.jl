@@ -2,11 +2,11 @@ using BenchmarkTools
 using KeldyshContraction
 using Test
 
-import Combinatorics
+using Combinatorics: Combinatorics
 import GraphCombinations as GC
 import KeldyshContraction as KC
 
-const GC_SHA = "76b7dc50311f2715dfce3e29461c528c454406c3"
+const GC_SHA = "a09d6fdbd86bb4accae6ffbd3be1e0c801c49c05"
 const OccupationPolynomial = KC.OccupationPolynomial
 const OccupationAtom = KC.OccupationAtom
 
@@ -109,9 +109,7 @@ function gc_quotient_loop_momenta(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{KC.OccupationMonomial{S},D}[
-                    transformed_monomial => transformed_coefficient
-                ]
+                contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
                 KC._push_kernel_polynomial!(
                     out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
                 )
@@ -152,9 +150,7 @@ function gc_requotient_terms(
             )
             transformed_monomial = KC.transform_loop_momenta(monomial, transform)
             transformed_coefficient = convert(D, coefficient) * convert(D, support_factor)
-            contribution = Pair{KC.OccupationMonomial{S},D}[
-                transformed_monomial => transformed_coefficient
-            ]
+            contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
             KC._push_kernel_polynomial!(
                 out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
             )
@@ -197,12 +193,13 @@ function signed_permutation_expression(
 end
 
 function certify_all_signed_permutations(expression)
-    nloops = length(KC.momentum_basis(only(keys(KC.occupation_reduced_terms(expression))))) - 1
+    nloops =
+        length(KC.momentum_basis(only(keys(KC.occupation_reduced_terms(expression))))) - 1
     nloops == 4 || error("signed-permutation exhaustive probe expects four loops")
     reference = KC.loop_quotient_terms(gc_quotient_loop_momenta(expression))
     count = 0
     for permutation in Combinatorics.permutations(collect(1:nloops))
-        for mask in 0:(2^nloops - 1)
+        for mask in 0:(2 ^ nloops - 1)
             signs = Int[isodd(mask >> (slot - 1)) ? -1 : 1 for slot in 1:nloops]
             transformed = signed_permutation_expression(expression, permutation, signs)
             @test KC.loop_quotient_terms(gc_quotient_loop_momenta(transformed)) == reference
