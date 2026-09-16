@@ -15,7 +15,7 @@ using TermInterface: TermInterface
 using SymbolicUtils: SymbolicUtils, @syms, arguments
 using Combinatorics: Combinatorics
 using SmallCollections: SmallCollections, FixedVector
-using GraphCombinations: GraphCombinations
+import GraphCombinations as GC
 using NautyGraphs: NautyGraphs
 using Graphs: Graphs
 using DispatchDoctor: @stable
