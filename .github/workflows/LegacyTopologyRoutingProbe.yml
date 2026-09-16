@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - fix-projective-loop-sign-character
     paths:
       - '.github/workflows/LegacyTopologyRoutingProbe.yml'
       - 'research/legacy_topology_routing_probe.jl'
