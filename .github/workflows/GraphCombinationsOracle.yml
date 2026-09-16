@@ -8,6 +8,8 @@ on:
     paths:
       - '.github/workflows/GraphCombinationsOracle.yml'
       - 'research/graphcombinations_nauty_adapter.jl'
+      - 'research/graphcombinations_collision_semantic_probe.jl'
+      - 'research/graphcombinations_loop_equivalence_probe.jl'
       - 'src/**'
       - 'benchmarks/**'
       - 'Project.toml'
@@ -36,5 +38,7 @@ jobs:
       - name: Instantiate research environment
         run: |
           julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="e0e5d7dc4e14f4fc356ffeee3809fdb5b47fcf12")); Pkg.add("BenchmarkTools")'
-      - name: Compare GraphCombinations with Nauty
+      - name: Certify physical canonicalization
         run: julia --project=. research/graphcombinations_nauty_adapter.jl
+      - name: Certify production collision semantics
+        run: julia --project=. research/graphcombinations_collision_semantic_probe.jl
