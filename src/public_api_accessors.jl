@@ -38,6 +38,19 @@ Return the field statistics represented by `x`.
 """ statistics
 
 @doc """
+    gradient_order(x)
+
+Return the retained Wigner-gradient order as a `Val`. The current kinetic compiler supports
+only the homogeneous zeroth-gradient collision problem.
+""" gradient_order
+
+@doc """
+    wigner_context(x)
+
+Return the Wigner context carried by a Wigner-space or kinetic result.
+""" wigner_context
+
+@doc """
     topologies(diagrams)
 
 Group diagrams by their canonical uncolored topology signature. This is an advanced inspection
@@ -94,6 +107,24 @@ advanced_component(x::FourierSelfEnergy) = x.advanced
 advanced_component(x::WignerDressedPropagator) = x.advanced
 advanced_component(x::WignerSelfEnergy) = x.advanced
 advanced_component(x::KineticSelfEnergy) = x.advanced
+
+@doc """
+    collision_offset(collision)
+
+Return the distribution-independent part of a collision expression. For
+`OffShellCollisionExpression` this is the exact full-frequency contribution
+`I₀ = iΣᴷ`; no quasiparticle shell, occupation substitution, or finite-width prescription has
+been applied.
+""" collision_offset
+
+@doc """
+    collision_distribution_coefficient(collision)
+
+Return the coefficient of the external statistical distribution in a collision expression. For
+`OffShellCollisionExpression` this is the exact full-frequency contribution `I₁ = -A_Σ`, so
+`I_coll = I₀ + F_target(k) I₁`. The external distribution is not absorbed into the internal-line
+IR and the quasiparticle reduction remains a downstream operation.
+""" collision_distribution_coefficient
 
 @doc """
     kinematic_factor(sector)
