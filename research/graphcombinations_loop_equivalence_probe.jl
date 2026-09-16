@@ -6,168 +6,16 @@ using Combinatorics: Combinatorics
 import GraphCombinations as GC
 import KeldyshContraction as KC
 
-const GC_SHA = "a09d6fdbd86bb4accae6ffbd3be1e0c801c49c05"
+const GC_SHA = "e0e5d7dc4e14f4fc356ffeee3809fdb5b47fcf12"
 const OccupationPolynomial = KC.OccupationPolynomial
 const OccupationAtom = KC.OccupationAtom
 
 include(joinpath(@__DIR__, "..", "benchmarks", "collision_reduction.jl"))
 
-function primitive_momentum_coefficients(momentum::KC.LinearMomentum)
-    coefficients = momentum.coefficients
-    nonzero = [coefficient for coefficient in coefficients if !iszero(coefficient)]
-    isempty(nonzero) && return zeros(KC.MomentumCoefficient, length(coefficients))
-
-    common_denominator = foldl(lcm, (denominator(coefficient) for coefficient in nonzero); init=1)
-    integers = Int[
-        numerator(coefficient) * (common_denominator ÷ denominator(coefficient)) for
-        coefficient in coefficients
-    ]
-    divisor = foldl(gcd, (abs(value) for value in integers if !iszero(value)); init=0)
-    return KC.MomentumCoefficient[(value ÷ divisor) // 1 for value in integers]
-end
-
-function add_projective_kinematic_component!(
-    builder::KC._LoopCanonicalGraphBuilder,
-    term_vertex::Int,
-    component::KC.MomentumComponent,
-    external_index::Int,
-    loop_indices::Vector{Int},
-    positive_vertices::Vector{Int},
-    negative_vertices::Vector{Int},
-    external_positive::Int,
-    external_negative::Int,
-)
-    component_pair = KC._add_loop_vertex!(builder, KC._loop_axis_color(21, component.axis))
-    component_positive = KC._add_loop_vertex!(builder, KC._loop_graph_color(22))
-    component_negative = KC._add_loop_vertex!(builder, KC._loop_graph_color(22))
-    KC._add_loop_edge!(builder, term_vertex, component_pair)
-    KC._add_loop_edge!(builder, component_pair, component_positive)
-    KC._add_loop_edge!(builder, component_pair, component_negative)
-
-    primitive = primitive_momentum_coefficients(component.momentum)
-    for basis_index in eachindex(primitive)
-        coefficient = primitive[basis_index]
-        iszero(coefficient) && continue
-        magnitude = abs(coefficient)
-        loop_slot = findfirst(==(basis_index), loop_indices)
-        for local_sign in (1, -1)
-            incidence = KC._add_loop_vertex!(
-                builder,
-                KC._loop_axis_color(23, :projective_component_coefficient, magnitude),
-            )
-            component_orientation =
-                local_sign == 1 ? component_positive : component_negative
-            coefficient_positive = (local_sign == 1) == (coefficient > 0)
-            target = if basis_index == external_index
-                coefficient_positive ? external_positive : external_negative
-            else
-                isnothing(loop_slot) && error("projective component uses an unknown momentum basis slot")
-                coefficient_positive ? positive_vertices[loop_slot] : negative_vertices[loop_slot]
-            end
-            KC._add_loop_edge!(builder, component_orientation, incidence)
-            KC._add_loop_edge!(builder, incidence, target)
-        end
-    end
-    return builder
-end
-
-function add_projective_loop_semantics!(
-    builder::KC._LoopCanonicalGraphBuilder,
-    root::Int,
-    sector::KC.ReducedCollisionSector{S},
-    monomial::KC.OccupationMonomial{S},
-    external_index::Int,
-    loop_indices::Vector{Int},
-    positive_vertices::Vector{Int},
-    negative_vertices::Vector{Int},
-    loop_incidences::Vector{Vector{Tuple{Int,KC.MomentumCoefficient}}},
-) where {S<:KC.Statistics}
-    external_positive = KC._add_loop_vertex!(builder, KC._loop_graph_color(5))
-    external_negative = KC._add_loop_vertex!(builder, KC._loop_graph_color(6))
-    KC._add_loop_edge!(builder, root, external_positive)
-    KC._add_loop_edge!(builder, root, external_negative)
-
-    for atom in monomial
-        momentum = atom.momentum
-        vertex = KC._add_loop_vertex!(
-            builder, KC._loop_family_color(10, atom.family, momentum[external_index])
-        )
-        KC._add_loop_edge!(builder, root, vertex)
-        KC._add_loop_momentum_incidence!(
-            builder,
-            vertex,
-            momentum,
-            loop_indices,
-            positive_vertices,
-            negative_vertices,
-            loop_incidences,
-        )
-    end
-
-    for (kinematic_monomial, coefficient) in KC.kinematic_factor(sector)
-        term_vertex = KC._add_loop_vertex!(builder, KC._loop_complex_color(20, coefficient))
-        KC._add_loop_edge!(builder, root, term_vertex)
-        for component in kinematic_monomial
-            add_projective_kinematic_component!(
-                builder,
-                term_vertex,
-                component,
-                external_index,
-                loop_indices,
-                positive_vertices,
-                negative_vertices,
-                external_positive,
-                external_negative,
-            )
-        end
-    end
-
-    support = KC.frequency_support(sector)
-    for shell in support.shells
-        support_vertex = KC._add_loop_vertex!(builder, KC._loop_graph_color(30))
-        KC._add_loop_edge!(builder, root, support_vertex)
-        for (atom, coefficient) in shell.energy
-            momentum = atom.momentum
-            energy_vertex = KC._add_loop_vertex!(
-                builder,
-                KC._loop_family_color(32, atom.family, coefficient, momentum[external_index]),
-            )
-            KC._add_loop_edge!(builder, support_vertex, energy_vertex)
-            KC._add_loop_momentum_incidence!(
-                builder,
-                energy_vertex,
-                momentum,
-                loop_indices,
-                positive_vertices,
-                negative_vertices,
-                loop_incidences,
-            )
-        end
-    end
-    for principal_value in support.principal_values
-        support_vertex = KC._add_loop_vertex!(builder, KC._loop_graph_color(31))
-        KC._add_loop_edge!(builder, root, support_vertex)
-        for (atom, coefficient) in principal_value.energy
-            momentum = atom.momentum
-            energy_vertex = KC._add_loop_vertex!(
-                builder,
-                KC._loop_family_color(32, atom.family, coefficient, momentum[external_index]),
-            )
-            KC._add_loop_edge!(builder, support_vertex, energy_vertex)
-            KC._add_loop_momentum_incidence!(
-                builder,
-                energy_vertex,
-                momentum,
-                loop_indices,
-                positive_vertices,
-                negative_vertices,
-                loop_incidences,
-            )
-        end
-    end
-    return builder
-end
-
+# Build exactly the semantic graph used by the production KC quotient, but hand the
+# resulting colored directed multigraph to GraphCombinations instead of Nauty. This is
+# deliberately an adapter-only backend substitution: all projective derivative, support,
+# occupation, and fixed-external semantics remain owned by KC.
 function gc_loop_graph_data(
     sector::KC.ReducedCollisionSector{S}, monomial::KC.OccupationMonomial{S}
 ) where {S<:KC.Statistics}
@@ -196,7 +44,7 @@ function gc_loop_graph_data(
         KC._add_loop_edge!(builder, pair, negative)
     end
 
-    add_projective_loop_semantics!(
+    KC._add_projective_loop_semantics!(
         builder,
         root,
         sector,
@@ -215,13 +63,27 @@ function gc_loop_graph_data(
     workspace = GC.DirectedCanonicalizationWorkspace(graph.num_vertices)
     buffer = GC.DirectedCanonicalizationBuffer(graph.num_vertices)
     GC.canonicalize_directed!(buffer, workspace, graph, labels)
-    return buffer, pair_vertices, basis, external, nloops
+    return (
+        buffer,
+        pair_vertices,
+        positive_vertices,
+        negative_vertices,
+        basis,
+        external,
+        nloops,
+    )
 end
 
 function gc_canonical_loop_transform(
     sector::KC.ReducedCollisionSector{S}, monomial::KC.OccupationMonomial{S}
 ) where {S<:KC.Statistics}
-    buffer, pair_vertices, basis, external, nloops = gc_loop_graph_data(sector, monomial)
+    buffer,
+    pair_vertices,
+    positive_vertices,
+    negative_vertices,
+    basis,
+    external,
+    nloops = gc_loop_graph_data(sector, monomial)
 
     ordered_slots = sortperm(
         1:nloops; by=slot -> GC.canonical_rank(buffer, pair_vertices[slot])
@@ -230,10 +92,8 @@ function gc_canonical_loop_transform(
     loop_signs = ones(Int, nloops)
     for (new_slot, old_slot) in enumerate(ordered_slots)
         loop_permutation[old_slot] = new_slot
-        positive_vertex = 3 * old_slot
-        negative_vertex = positive_vertex + 1
-        positive_rank = GC.canonical_rank(buffer, positive_vertex)
-        negative_rank = GC.canonical_rank(buffer, negative_vertex)
+        positive_rank = GC.canonical_rank(buffer, positive_vertices[old_slot])
+        negative_rank = GC.canonical_rank(buffer, negative_vertices[old_slot])
         loop_signs[old_slot] = positive_rank < negative_rank ? 1 : -1
     end
     return KC.loop_permutation_transform(
@@ -290,6 +150,9 @@ function reduced_sector(sector::KC.CollisionKernelSector{S}) where {S<:KC.Statis
     )
 end
 
+# Backend canonical ranks are coordinate gauges. Normalize both outputs once with the GC
+# witness before demanding equality; this compares exact quotient physics without assuming
+# that Nauty and GC assign the same integer canonical labels to an otherwise identical graph.
 function gc_requotient_terms(
     expression::KC.LoopQuotientedExpression{C,S}
 ) where {C<:Number,S<:KC.Statistics}
@@ -358,8 +221,9 @@ function certify_all_signed_permutations(expression)
     gc_failures = 0
     nauty_failures = 0
     count = 0
+
     for permutation in Combinatorics.permutations(collect(1:nloops))
-        for mask in 0:(2 ^ nloops - 1)
+        for mask in 0:(2^nloops - 1)
             signs = Int[isodd(mask >> (slot - 1)) ? -1 : 1 for slot in 1:nloops]
             transformed = signed_permutation_expression(expression, permutation, signs)
             gc_matches =
@@ -383,13 +247,14 @@ function certify_all_signed_permutations(expression)
             count += 1
         end
     end
+
     println(
         "signed-loop invariance: checked $count transformations; GC failures=$gc_failures; ",
         "Nauty failures=$nauty_failures",
     )
     @test count == factorial(nloops) * 2^nloops
     @test gc_failures == 0
-    @test nauty_failures == 288
+    @test nauty_failures == 0
     return nothing
 end
 
