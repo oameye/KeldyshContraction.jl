@@ -98,18 +98,22 @@ function _lift_kernel_group_to_support(
     target_support::FrequencySupport{S},
     transforms::Vector{LoopMomentumTransform},
 ) where {C<:Number,S<:Statistics}
-    D = promote_type(C, ComplexRationals, Rational{Int})
-    rows = Dict{CollisionKernelSector{S},OccupationPolynomial{D,S}}()
+    rows = Dict{CollisionKernelSector{S},OccupationPolynomial{ComplexRationals,S}}()
+    empty_rows = Pair{
+        CollisionKernelSector{S},OccupationPolynomial{ComplexRationals,S}
+    }[]
 
     for (sector, polynomial) in group
         matches = _matching_support_transforms(
             frequency_support(sector), target_support, transforms
         )
-        isempty(matches) &&
-            return false, Pair{CollisionKernelSector{S},OccupationPolynomial{D,S}}[]
-        orbit_weight = inv(convert(D, length(matches)))
+        isempty(matches) && return false, empty_rows
+        orbit_weight = inv(convert(ComplexRationals, length(matches)))
 
         for (occupation_monomial, occupation_coefficient) in polynomial
+            valid_coefficient, exact_coefficient = _complex_rational(occupation_coefficient)
+            valid_coefficient || return false, empty_rows
+
             for (transform, support_factor) in matches
                 transformed_occupation = transform_loop_momenta(
                     occupation_monomial, transform
@@ -130,12 +134,14 @@ function _lift_kernel_group_to_support(
                         target_support,
                     )
                     coefficient =
-                        convert(D, occupation_coefficient) *
-                        convert(D, support_factor) *
-                        convert(D, kinematic_coefficient) *
+                        exact_coefficient *
+                        convert(ComplexRationals, support_factor) *
+                        kinematic_coefficient *
                         orbit_weight
-                    contribution = OccupationPolynomial{D,S}(
-                        Pair{OccupationMonomial{S},D}[transformed_occupation => coefficient]
+                    contribution = OccupationPolynomial{ComplexRationals,S}(
+                        Pair{OccupationMonomial{S},ComplexRationals}[
+                            transformed_occupation => coefficient
+                        ],
                     )
                     if haskey(rows, row_sector)
                         combined = rows[row_sector] + contribution
