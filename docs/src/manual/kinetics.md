@@ -31,6 +31,26 @@ C = collision_kernel(Q)
 
 The canonical examples execute this chain one stage at a time. Each intermediate object has compact `text/plain` and `text/latex` displays so Documenter shows the represented physics rather than the implementation fields.
 
+## Off-shell collision functional
+
+`OffShellCollisionExpression` is the stable physical boundary before the strict-quasiparticle approximation. It stores the exact homogeneous Kadanoff--Baym collision functional affinely in the external statistical distribution,
+
+```math
+I_{\mathrm{coll}} = I_0 + F_{\mathrm{target}}(k) I_1,
+\qquad I_0=i\Sigma^K,
+\qquad I_1=-A_\Sigma.
+```
+
+No shell delta function, occupation substitution, principal-value reduction, or finite-width prescription has been applied at this stage. The semantic accessors expose the two affine pieces and the retained Wigner context without exposing internal term dictionaries.
+
+```@docs
+KeldyshContraction.OffShellCollisionExpression
+KeldyshContraction.collision_offset
+KeldyshContraction.collision_distribution_coefficient
+KeldyshContraction.gradient_order
+KeldyshContraction.wigner_context
+```
+
 ## Spectral/statistical lowering
 
 ```@docs
