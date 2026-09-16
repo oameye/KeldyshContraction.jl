@@ -11,8 +11,7 @@ include(joinpath(@__DIR__, "..", "benchmarks", "fermionic_pwave_loss.jl"))
     bosonic_gc = gc_quotient_loop_momenta(bosonic_occupation)
     @test gc_requotient_terms(bosonic_nauty) == KC.loop_quotient_terms(bosonic_gc)
 
-    _, _, _, _, _, _, _, _, _, fermionic_occupation, fermionic_nauty =
-        benchmark_fermionic_pwave_fixtures()
+    _, _, _, _, _, _, _, _, _, fermionic_occupation, fermionic_nauty = benchmark_fermionic_pwave_fixtures()
     fermionic_gc = gc_quotient_loop_momenta(fermionic_occupation)
     @test gc_requotient_terms(fermionic_nauty) == KC.loop_quotient_terms(fermionic_gc)
 
