@@ -20,10 +20,8 @@ function gc_result(edges::Vector{Tuple{Int,Int}}, colors::Vector{Int})
     buffer = GC.DirectedCanonicalizationBuffer(graph.num_vertices)
     GC.canonicalize_directed!(buffer, workspace, graph, colors)
     @test GC.canonical_graph(buffer) == GC.canonical_graph(result)
-    @test GC.canonical_automorphism_order(buffer) ==
-          GC.canonical_automorphism_order(result)
-    @test buffer.old_to_canonical ==
-          GC.vertex_mapping(GC.canonical_relabeling(result))
+    @test GC.canonical_automorphism_order(buffer) == GC.canonical_automorphism_order(result)
+    @test buffer.old_to_canonical == GC.vertex_mapping(GC.canonical_relabeling(result))
     return result
 end
 
