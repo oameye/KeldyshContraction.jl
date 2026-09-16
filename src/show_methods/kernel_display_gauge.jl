@@ -15,6 +15,7 @@ function _display_loop_transforms(basis::MomentumBasis, external::MomentumVariab
 
     transforms = LoopMomentumTransform[]
     slots = collect(1:nloops)
+    external_shifts = zeros(Int, nloops)
     for permutation in Combinatorics.permutations(slots)
         permutation_vector = Int[value for value in permutation]
         for mask in 0:((1 << nloops) - 1)
@@ -25,7 +26,7 @@ function _display_loop_transforms(basis::MomentumBasis, external::MomentumVariab
             push!(
                 transforms,
                 loop_permutation_transform(
-                    basis, external, permutation_vector, signs, zeros(Int, nloops)
+                    basis, external, permutation_vector, signs, external_shifts
                 ),
             )
         end
@@ -218,18 +219,25 @@ function _lift_kernel_group_to_support(
         matches === nothing && return false, empty_rows
         orbit_weight = inv(convert(ComplexRationals, length(matches)))
 
+        exact_terms = Pair{OccupationMonomial{S},ComplexRationals}[]
+        sizehint!(exact_terms, length(polynomial))
         for (occupation_monomial, occupation_coefficient) in polynomial
             valid_coefficient, exact_coefficient = _complex_rational(occupation_coefficient)
             valid_coefficient || return false, empty_rows
+            push!(exact_terms, occupation_monomial => exact_coefficient)
+        end
 
-            for (transform, support_factor) in matches
+        for (transform, support_factor) in matches
+            transformed_kinematic = transform_loop_momenta(
+                kinematic_factor(sector), transform
+            )
+            transform_factor =
+                convert(ComplexRationals, support_factor) * orbit_weight
+
+            for (occupation_monomial, exact_coefficient) in exact_terms
                 transformed_occupation = transform_loop_momenta(
                     occupation_monomial, transform
                 )
-                transformed_kinematic = transform_loop_momenta(
-                    kinematic_factor(sector), transform
-                )
-
                 for (kinematic_monomial, kinematic_coefficient) in transformed_kinematic
                     unit_kinematic = MomentumPolynomial(
                         kinematic_monomial, one(ComplexRationals)
@@ -242,12 +250,11 @@ function _lift_kernel_group_to_support(
                         target_support,
                     )
                     coefficient =
-                        exact_coefficient *
-                        convert(ComplexRationals, support_factor) *
-                        kinematic_coefficient *
-                        orbit_weight
+                        exact_coefficient * transform_factor * kinematic_coefficient
                     contribution = OccupationPolynomial{ComplexRationals,S}(
-                        Pair{OccupationMonomial{S},ComplexRationals}[transformed_occupation => coefficient],
+                        Pair{OccupationMonomial{S},ComplexRationals}[
+                            transformed_occupation => coefficient
+                        ],
                     )
                     if haskey(rows, row_sector)
                         combined = rows[row_sector] + contribution
@@ -269,10 +276,30 @@ function _lift_kernel_group_to_support(
     return true, lifted
 end
 
+function _exact_kernel_rank_one_kinematic(
+    group::Vector{
+        Pair{CollisionKernelSector{S},OccupationPolynomial{ComplexRationals,S}}
+    },
+) where {S<:Statistics}
+    reference = last(first(group))
+    kinematic = MomentumPolynomial{ComplexRationals}()
+    for (sector, polynomial) in group
+        valid_scale, scale = _polynomial_scale(polynomial, reference)
+        valid_scale || return false, kinematic, reference
+        kinematic += scale * kinematic_factor(sector)
+    end
+    return true, kinematic, reference
+end
+
 function _aligned_rank_one_kinematic(
     group::Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}},
     cache::Dict{FrequencySupport{S},_DisplaySupportOrbit{S}},
-) where {C<:Number,S<:Statistics}
+)::Tuple{
+    Bool,
+    MomentumPolynomial{ComplexRationals},
+    OccupationPolynomial{ComplexRationals,S},
+    FrequencySupport{S},
+} where {C<:Number,S<:Statistics}
     first_sector = first(first(group))
     target_support = frequency_support(first_sector)
     empty_kinematic = MomentumPolynomial{ComplexRationals}()
@@ -282,7 +309,7 @@ function _aligned_rank_one_kinematic(
     lifted_ok || return false, empty_kinematic, empty_distribution, target_support
     isempty(lifted) && return false, empty_kinematic, empty_distribution, target_support
 
-    rank_one, kinematic, distribution = _rank_one_kinematic(lifted)
+    rank_one, kinematic, distribution = _exact_kernel_rank_one_kinematic(lifted)
     return rank_one, kinematic, distribution, target_support
 end
 
@@ -335,8 +362,9 @@ function _compact_group_string(
 
     # The direct quotient gauge was not compact enough. Reconstruct a coherent gauge across the
     # signed-permutation orbit and retry the same exact rank-one/factorization machinery.
-    rank_one, kinematic, distribution, aligned_support =
-        _aligned_rank_one_kinematic(group, cache)
+    rank_one, kinematic, distribution, aligned_support = _aligned_rank_one_kinematic(
+        group, cache
+    )
     rank_one || return expanded
     compact = _rank_one_display_candidate(
         sector, kinematic, distribution, aligned_support, latex
