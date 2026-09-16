@@ -5,7 +5,7 @@ using Test
 import GraphCombinations as GC
 import KeldyshContraction as KC
 
-const GC_SHA = "a09d6fdbd86bb4accae6ffbd3be1e0c801c49c05"
+const GC_SHA = "e0e5d7dc4e14f4fc356ffeee3809fdb5b47fcf12"
 const OccupationPolynomial = KC.OccupationPolynomial
 const OccupationAtom = KC.OccupationAtom
 
@@ -37,7 +37,7 @@ function gc_loop_graph(
         KC._add_loop_edge!(builder, pair, negative)
     end
 
-    KC._add_loop_semantics!(
+    KC._add_projective_loop_semantics!(
         builder,
         root,
         sector,
