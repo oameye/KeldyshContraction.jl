@@ -1,4 +1,3 @@
-using BenchmarkTools
 using KeldyshContraction
 using Test
 
@@ -12,10 +11,6 @@ const OccupationAtom = KC.OccupationAtom
 
 include(joinpath(@__DIR__, "..", "benchmarks", "collision_reduction.jl"))
 
-# Build exactly the semantic graph used by the production KC quotient, but hand the
-# resulting colored directed multigraph to GraphCombinations instead of Nauty. This is
-# deliberately an adapter-only backend substitution: all projective derivative, support,
-# occupation, and fixed-external semantics remain owned by KC.
 function gc_loop_graph_data(
     sector::KC.ReducedCollisionSector{S}, monomial::KC.OccupationMonomial{S}
 ) where {S<:KC.Statistics}
@@ -58,20 +53,29 @@ function gc_loop_graph_data(
 
     color_classes = sort!(unique(copy(builder.colors)))
     labels = Int[searchsortedfirst(color_classes, color) for color in builder.colors]
-    edges = Pair{Int,Int}[source => target for (source, target) in builder.edges]
-    graph = GC.DirectedGCGraph(edges, length(labels))
+    graph = GC.DirectedGCGraph(
+        Pair{Int,Int}[source => target for (source, target) in builder.edges],
+        length(labels),
+    )
     workspace = GC.DirectedCanonicalizationWorkspace(graph.num_vertices)
     buffer = GC.DirectedCanonicalizationBuffer(graph.num_vertices)
     GC.canonicalize_directed!(buffer, workspace, graph, labels)
-    return (buffer, pair_vertices, positive_vertices, negative_vertices, basis, external, nloops)
+    return (
+        buffer,
+        pair_vertices,
+        positive_vertices,
+        negative_vertices,
+        basis,
+        external,
+        nloops,
+    )
 end
 
 function gc_canonical_loop_transform(
     sector::KC.ReducedCollisionSector{S}, monomial::KC.OccupationMonomial{S}
 ) where {S<:KC.Statistics}
-    buffer, pair_vertices, positive_vertices, negative_vertices, basis, external, nloops = gc_loop_graph_data(
-        sector, monomial
-    )
+    buffer, pair_vertices, positive_vertices, negative_vertices, basis, external, nloops =
+        gc_loop_graph_data(sector, monomial)
 
     ordered_slots = sortperm(
         1:nloops; by=slot -> GC.canonical_rank(buffer, pair_vertices[slot])
@@ -110,7 +114,9 @@ function gc_quotient_loop_momenta(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
+                contribution = Pair{KC.OccupationMonomial{S},D}[
+                    transformed_monomial => transformed_coefficient
+                ]
                 KC._push_kernel_polynomial!(
                     out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
                 )
@@ -136,9 +142,6 @@ function reduced_sector(sector::KC.CollisionKernelSector{S}) where {S<:KC.Statis
     )
 end
 
-# Backend canonical ranks are coordinate gauges. Normalize both outputs once with the GC
-# witness before demanding equality; this compares exact quotient physics without assuming
-# that Nauty and GC assign the same integer canonical labels to an otherwise identical graph.
 function gc_requotient_terms(
     expression::KC.LoopQuotientedExpression{C,S}
 ) where {C<:Number,S<:KC.Statistics}
@@ -154,7 +157,9 @@ function gc_requotient_terms(
             )
             transformed_monomial = KC.transform_loop_momenta(monomial, transform)
             transformed_coefficient = convert(D, coefficient) * convert(D, support_factor)
-            contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
+            contribution = Pair{KC.OccupationMonomial{S},D}[
+                transformed_monomial => transformed_coefficient
+            ]
             KC._push_kernel_polynomial!(
                 out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
             )
@@ -200,6 +205,7 @@ function certify_all_signed_permutations(expression)
     nloops =
         length(KC.momentum_basis(only(keys(KC.occupation_reduced_terms(expression))))) - 1
     nloops == 4 || error("signed-permutation exhaustive probe expects four loops")
+
     gc_reference = KC.loop_quotient_terms(gc_quotient_loop_momenta(expression))
     nauty_reference = KC.loop_quotient_terms(KC.quotient_loop_momenta(expression))
     gc_failures = 0
@@ -207,29 +213,14 @@ function certify_all_signed_permutations(expression)
     count = 0
 
     for permutation in Combinatorics.permutations(collect(1:nloops))
-        for mask in 0:(2 ^ nloops - 1)
+        for mask in 0:(2^nloops - 1)
             signs = Int[isodd(mask >> (slot - 1)) ? -1 : 1 for slot in 1:nloops]
             transformed = signed_permutation_expression(expression, permutation, signs)
-            gc_matches =
-                KC.loop_quotient_terms(gc_quotient_loop_momenta(transformed)) ==
-                gc_reference
-            nauty_matches =
-                KC.loop_quotient_terms(KC.quotient_loop_momenta(transformed)) ==
+            gc_failures +=
+                KC.loop_quotient_terms(gc_quotient_loop_momenta(transformed)) != gc_reference
+            nauty_failures +=
+                KC.loop_quotient_terms(KC.quotient_loop_momenta(transformed)) !=
                 nauty_reference
-            gc_failures += !gc_matches
-            nauty_failures += !nauty_matches
-            (!gc_matches || !nauty_matches) && println(
-                "signed mismatch: permutation=",
-                collect(permutation),
-                ", mask=",
-                mask,
-                ", signs=",
-                signs,
-                ", GC=",
-                gc_matches,
-                ", Nauty=",
-                nauty_matches,
-            )
             count += 1
         end
     end
@@ -244,55 +235,23 @@ function certify_all_signed_permutations(expression)
     return nothing
 end
 
-function report_equivalence(nloops::Int)
-    expression = benchmark_loop_quotient_fixture(nloops)
-    nauty = KC.quotient_loop_momenta(expression)
-    gc = gc_quotient_loop_momenta(expression)
-    nauty_terms = KC.loop_quotient_terms(nauty)
-    gc_terms = KC.loop_quotient_terms(gc)
-    normalized_nauty = gc_requotient_terms(nauty)
-    normalized_gc = gc_requotient_terms(gc)
-
-    println("GC loop equivalence probe ($GC_SHA): $nloops loops")
-    println("direct exact equality: ", gc_terms == nauty_terms)
-    println("Nauty sectors: ", length(nauty_terms), "; GC sectors: ", length(gc_terms))
-    println("GC re-quotient idempotent: ", normalized_gc == gc_terms)
-    println("orbit-normalized equality: ", normalized_nauty == gc_terms)
-
-    @test normalized_gc == gc_terms
-    @test normalized_nauty == gc_terms
-    return expression
-end
-
-function report_benchmark(nloops::Int, expression)
-    KC.quotient_loop_momenta(expression)
-    gc_quotient_loop_momenta(expression)
-    nauty_trial = @benchmark KC.quotient_loop_momenta($expression) samples = 7 evals = 1
-    gc_trial = @benchmark gc_quotient_loop_momenta($expression) samples = 7 evals = 1
-    nauty = median(nauty_trial)
-    gc = median(gc_trial)
-    println(
-        "$nloops-loop warmed median: Nauty ",
-        round(nauty.time / 1.0e3; digits=2),
-        " μs / ",
-        nauty.memory,
-        " B / ",
-        nauty.allocs,
-        " allocs; GC ",
-        round(gc.time / 1.0e3; digits=2),
-        " μs / ",
-        gc.memory,
-        " B / ",
-        gc.allocs,
-        " allocs",
-    )
-    return nothing
-end
-
-@testset "GC/Nauty loop-orbit equivalence" begin
+@testset "GC/Nauty loop-orbit equivalence ($GC_SHA)" begin
     for nloops in (2, 4)
-        expression = report_equivalence(nloops)
+        expression = benchmark_loop_quotient_fixture(nloops)
+        nauty = KC.quotient_loop_momenta(expression)
+        gc = gc_quotient_loop_momenta(expression)
+        gc_terms = KC.loop_quotient_terms(gc)
+
+        @test gc_requotient_terms(gc) == gc_terms
+        @test gc_requotient_terms(nauty) == gc_terms
         nloops == 4 && certify_all_signed_permutations(expression)
-        report_benchmark(nloops, expression)
+
+        println(
+            "$nloops-loop orbit equivalence: Nauty sectors=",
+            length(KC.loop_quotient_terms(nauty)),
+            "; GC sectors=",
+            length(gc_terms),
+            "; normalized=true",
+        )
     end
 end
