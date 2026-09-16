@@ -1,0 +1,52 @@
+name: GraphCombinations production loop backend
+
+on:
+  pull_request:
+    branches:
+      - fix-projective-loop-sign-character
+    paths:
+      - '.github/workflows/GraphCombinationsProductionIntegration.yml'
+      - 'Project.toml'
+      - 'src/**'
+      - 'test/**'
+      - 'research/graphcombinations_production_integration_probe.jl'
+      - 'benchmarks/collision_reduction.jl'
+  workflow_dispatch:
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - name: Instantiate registered production dependency
+        run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - name: Run package tests
+        run: julia --project=. -e 'using Pkg; Pkg.test()'
+      - name: Add benchmark harness
+        run: julia --project=. -e 'using Pkg; Pkg.add("BenchmarkTools")'
+      - name: Compare production GC quotient with retained Nauty oracle
+        shell: bash
+        run: |
+          set -o pipefail
+          julia --project=. research/graphcombinations_production_integration_probe.jl 2>&1 | tee graphcombinations-production-integration.log
+      - name: Preserve production integration diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphcombinations-production-integration
+          path: graphcombinations-production-integration.log
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - name: Apply JuliaFormatter
+        run: julia -e 'using Pkg; Pkg.add(name="JuliaFormatter", version="2"); using JuliaFormatter; format(".")'
+      - name: Check formatting
+        run: git diff --exit-code
