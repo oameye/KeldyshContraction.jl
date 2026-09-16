@@ -1,6 +1,7 @@
 using KeldyshContraction
 using Test
 
+using Combinatorics: Combinatorics
 import GraphCombinations as GC
 import KeldyshContraction as KC
 
@@ -50,6 +51,56 @@ function rooted_graph_key(
     return (
         Tuple(canonical_colors), Tuple(GC.canonical_graph(result).multiplicities)
     )
+end
+
+function rooted_primary_signature(vs, mapping, nbulk::Int)
+    nvertices = nbulk + 2
+    adjacency = zeros(UInt8, nvertices * nvertices)
+    for item in vs
+        out, in = KC.positions(item)
+        source = if KC.is_out(out)
+            1
+        elseif KC.is_in(out)
+            nvertices
+        else
+            1 + mapping[out]
+        end
+        target = if KC.is_out(in)
+            1
+        elseif KC.is_in(in)
+            nvertices
+        else
+            1 + mapping[in]
+        end
+        adjacency[(source - 1) * nvertices + target] = 1
+    end
+    return Tuple(adjacency)
+end
+
+function two_stage_rooted_topology(vs, ::Val{E2}) where {E2}
+    graph_positions = KC.canonicalization_positions(vs)
+    bulk_positions = KC.Position[p for p in graph_positions if KC.is_bulk(p)]
+    nbulk = length(bulk_positions)
+    best_primary = nothing
+    best_topology = nothing
+
+    for bulk_order in Combinatorics.permutations(bulk_positions)
+        rank = Dict(position => i for (i, position) in enumerate(bulk_order))
+        primary = rooted_primary_signature(vs, rank, nbulk)
+        position_mapping = Dict(position => KC.Bulk(i) for (i, position) in enumerate(bulk_order))
+        topology_edges = Tuple{Int8,Int8}[
+            KC.integer_positions(KC.relabel_bulk_positions(item, position_mapping)) for item in vs
+        ]
+        topology = Tuple(KC.bulk_multiplicity(topology_edges, Val(E2)))
+
+        if best_primary === nothing || primary < best_primary
+            best_primary = primary
+            best_topology = topology
+        elseif primary == best_primary && topology < best_topology
+            best_topology = topology
+        end
+    end
+    return best_topology
 end
 
 const ROOTED_VARIANTS = (
@@ -138,4 +189,26 @@ flush(stdout)
         )
         flush(stdout)
     end
+
+    topology_to_nauty = Dict{Any,Any}()
+    nauty_to_topology = Dict{Any,Any}()
+    for (key, diagrams) in component
+        nauty_key = Tuple(key)
+        topology_keys = Set{Any}()
+        for diagram in diagrams
+            contractions = KC.Contraction{Boson}[
+                (edge.out, edge.in) for edge in KC.contractions(diagram)
+            ]
+            push!(topology_keys, two_stage_rooted_topology(contractions, Val(length(key))))
+        end
+        @test length(topology_keys) == 1
+        topology_key = only(topology_keys)
+        @test get!(nauty_to_topology, nauty_key, topology_key) == topology_key
+        previous = get(topology_to_nauty, topology_key, nothing)
+        @test previous === nothing || previous == nauty_key
+        topology_to_nauty[topology_key] = nauty_key
+    end
+    println("two-stage rooted topology: ", length(topology_to_nauty), " classes")
+    @test length(topology_to_nauty) == expected
+    @test length(nauty_to_topology) == expected
 end
