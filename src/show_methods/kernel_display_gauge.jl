@@ -33,79 +33,189 @@ function _display_loop_transforms(basis::MomentumBasis, external::MomentumVariab
     return transforms
 end
 
-function _kernel_display_pair_key(
-    pair::Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}
-) where {C<:Number,S<:Statistics}
-    singleton = Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}[pair]
-    return _physical_collision_string(singleton, false)
+function _display_parameter_isless(a::ParameterMonomial, b::ParameterMonomial)
+    n = min(length(a.powers), length(b.powers))
+    @inbounds for i in 1:n
+        ap = a.powers[i]
+        bp = b.powers[i]
+        ap.name === bp.name || return isless(ap.name, bp.name)
+        ap.exponent == bp.exponent || return ap.exponent < bp.exponent
+    end
+    return length(a.powers) < length(b.powers)
 end
 
-function _display_support_equivalent(
-    source::FrequencySupport{S},
-    target::FrequencySupport{S},
-    transforms::Vector{LoopMomentumTransform},
-) where {S<:Statistics}
-    isempty(transforms) && return source == target
-    for transform in transforms
-        transformed, _ = _transform_frequency_support(source, transform)
-        transformed == target && return true
+function _display_basis_isless(a::MomentumBasis, b::MomentumBasis)
+    n = min(length(a), length(b))
+    @inbounds for i in 1:n
+        a[i] == b[i] || return isless(a[i], b[i])
     end
-    return false
+    return length(a) < length(b)
+end
+
+function _display_number_isless(a::Number, b::Number)
+    isequal(a, b) && return false
+    ar = real(a)
+    br = real(b)
+    isequal(ar, br) || return isless(ar, br)
+    return isless(imag(a), imag(b))
+end
+
+function _display_support_isless(a::FrequencySupport{S}, b::FrequencySupport{S}) where {S}
+    nshells = min(length(a.shells), length(b.shells))
+    @inbounds for i in 1:nshells
+        ashell = a.shells[i]
+        bshell = b.shells[i]
+        isequal(ashell, bshell) || return isless(ashell, bshell)
+    end
+    length(a.shells) == length(b.shells) || return length(a.shells) < length(b.shells)
+
+    npv = min(length(a.principal_values), length(b.principal_values))
+    @inbounds for i in 1:npv
+        apv = a.principal_values[i]
+        bpv = b.principal_values[i]
+        isequal(apv, bpv) || return isless(apv, bpv)
+    end
+    return length(a.principal_values) < length(b.principal_values)
+end
+
+function _display_kinematic_isless(a::MomentumPolynomial, b::MomentumPolynomial)
+    n = min(length(a), length(b))
+    @inbounds for i in 1:n
+        am, ac = a.terms[i]
+        bm, bc = b.terms[i]
+        isequal(am, bm) || return isless(am, bm)
+        isequal(ac, bc) || return _display_number_isless(ac, bc)
+    end
+    return length(a) < length(b)
+end
+
+function _display_occupation_isless(
+    a::OccupationPolynomial{C1,S}, b::OccupationPolynomial{C2,S}
+) where {C1<:Number,C2<:Number,S<:Statistics}
+    n = min(length(a), length(b))
+    @inbounds for i in 1:n
+        am, ac = a.terms[i]
+        bm, bc = b.terms[i]
+        isequal(am, bm) || return isless(am, bm)
+        isequal(ac, bc) || return _display_number_isless(ac, bc)
+    end
+    return length(a) < length(b)
+end
+
+function _kernel_display_pair_isless(
+    a::Pair{CollisionKernelSector{S},OccupationPolynomial{C1,S}},
+    b::Pair{CollisionKernelSector{S},OccupationPolynomial{C2,S}},
+) where {C1<:Number,C2<:Number,S<:Statistics}
+    a_sector, a_polynomial = a
+    b_sector, b_polynomial = b
+
+    a_parameter = parameters(a_sector)
+    b_parameter = parameters(b_sector)
+    isequal(a_parameter, b_parameter) ||
+        return _display_parameter_isless(a_parameter, b_parameter)
+
+    a_basis = momentum_basis(a_sector)
+    b_basis = momentum_basis(b_sector)
+    isequal(a_basis, b_basis) || return _display_basis_isless(a_basis, b_basis)
+
+    a_external = external_wigner_momentum(a_sector)
+    b_external = external_wigner_momentum(b_sector)
+    a_external == b_external || return isless(a_external, b_external)
+
+    a_support = frequency_support(a_sector)
+    b_support = frequency_support(b_sector)
+    isequal(a_support, b_support) || return _display_support_isless(a_support, b_support)
+
+    a_kinematic = kinematic_factor(a_sector)
+    b_kinematic = kinematic_factor(b_sector)
+    isequal(a_kinematic, b_kinematic) ||
+        return _display_kinematic_isless(a_kinematic, b_kinematic)
+
+    return _display_occupation_isless(a_polynomial, b_polynomial)
+end
+
+struct _DisplaySupportOrbit{S<:Statistics}
+    canonical::FrequencySupport{S}
+    images::Dict{
+        FrequencySupport{S},Vector{Tuple{LoopMomentumTransform,MomentumCoefficient}}
+    }
+end
+
+function _display_support_orbit(
+    support::FrequencySupport{S}, transforms::Vector{LoopMomentumTransform}
+) where {S<:Statistics}
+    images = Dict{
+        FrequencySupport{S},Vector{Tuple{LoopMomentumTransform,MomentumCoefficient}}
+    }()
+    if isempty(transforms)
+        return _DisplaySupportOrbit{S}(support, images)
+    end
+
+    canonical = support
+    for transform in transforms
+        transformed, factor = _transform_frequency_support(support, transform)
+        matches = get!(images, transformed) do
+            return Tuple{LoopMomentumTransform,MomentumCoefficient}[]
+        end
+        push!(matches, (transform, factor))
+        _display_support_isless(transformed, canonical) && (canonical = transformed)
+    end
+    return _DisplaySupportOrbit{S}(canonical, images)
+end
+
+function _display_support_orbit_cache(
+    group::Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}},
+    transforms::Vector{LoopMomentumTransform},
+) where {C<:Number,S<:Statistics}
+    cache = Dict{FrequencySupport{S},_DisplaySupportOrbit{S}}()
+    for (sector, _) in group
+        support = frequency_support(sector)
+        haskey(cache, support) && continue
+        cache[support] = _display_support_orbit(support, transforms)
+    end
+    return cache
 end
 
 function _display_support_orbit_groups(
     group::Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}},
-    transforms::Vector{LoopMomentumTransform},
+    cache::Dict{FrequencySupport{S},_DisplaySupportOrbit{S}},
 ) where {C<:Number,S<:Statistics}
-    ordered = sort!(copy(group); by=_kernel_display_pair_key)
-    orbit_groups = Vector{Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}}}()
-
-    for pair in ordered
+    groups = Dict{
+        FrequencySupport{S},Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}}
+    }()
+    for pair in group
         support = frequency_support(first(pair))
-        placed = false
-        for orbit_group in orbit_groups
-            reference_support = frequency_support(first(first(orbit_group)))
-            _display_support_equivalent(support, reference_support, transforms) || continue
-            push!(orbit_group, pair)
-            placed = true
-            break
+        canonical = cache[support].canonical
+        orbit_group = get!(groups, canonical) do
+            return Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}[]
         end
-        if !placed
-            push!(
-                orbit_groups, Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}[pair]
-            )
-        end
+        push!(orbit_group, pair)
+    end
+
+    supports = collect(keys(groups))
+    sort!(supports; lt=_display_support_isless)
+    orbit_groups = Vector{Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}}}()
+    sizehint!(orbit_groups, length(supports))
+    for support in supports
+        orbit_group = groups[support]
+        sort!(orbit_group; lt=_kernel_display_pair_isless)
+        push!(orbit_groups, orbit_group)
     end
     return orbit_groups
-end
-
-function _matching_support_transforms(
-    support::FrequencySupport{S},
-    target::FrequencySupport{S},
-    transforms::Vector{LoopMomentumTransform},
-) where {S<:Statistics}
-    matches = Tuple{LoopMomentumTransform,MomentumCoefficient}[]
-    for transform in transforms
-        transformed, factor = _transform_frequency_support(support, transform)
-        transformed == target || continue
-        push!(matches, (transform, factor))
-    end
-    return matches
 end
 
 function _lift_kernel_group_to_support(
     group::Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}},
     target_support::FrequencySupport{S},
-    transforms::Vector{LoopMomentumTransform},
+    cache::Dict{FrequencySupport{S},_DisplaySupportOrbit{S}},
 ) where {C<:Number,S<:Statistics}
     rows = Dict{CollisionKernelSector{S},OccupationPolynomial{ComplexRationals,S}}()
     empty_rows = Pair{CollisionKernelSector{S},OccupationPolynomial{ComplexRationals,S}}[]
 
     for (sector, polynomial) in group
-        matches = _matching_support_transforms(
-            frequency_support(sector), target_support, transforms
-        )
-        isempty(matches) && return false, empty_rows
+        orbit = cache[frequency_support(sector)]
+        matches = get(orbit.images, target_support, nothing)
+        matches === nothing && return false, empty_rows
         orbit_weight = inv(convert(ComplexRationals, length(matches)))
 
         for (occupation_monomial, occupation_coefficient) in polynomial
@@ -155,26 +265,20 @@ function _lift_kernel_group_to_support(
     end
 
     lifted = collect(rows)
-    sort!(lifted; by=_kernel_display_pair_key)
+    sort!(lifted; lt=_kernel_display_pair_isless)
     return true, lifted
 end
 
 function _aligned_rank_one_kinematic(
-    group::Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}}
+    group::Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}},
+    cache::Dict{FrequencySupport{S},_DisplaySupportOrbit{S}},
 ) where {C<:Number,S<:Statistics}
     first_sector = first(first(group))
-    basis = momentum_basis(first_sector)
-    external = external_wigner_momentum(first_sector)
-    transforms = _display_loop_transforms(basis, external)
+    target_support = frequency_support(first_sector)
     empty_kinematic = MomentumPolynomial{ComplexRationals}()
     empty_distribution = OccupationPolynomial{ComplexRationals,S}()
 
-    isempty(transforms) &&
-        return false, empty_kinematic, empty_distribution, frequency_support(first_sector)
-
-    ordered = sort!(copy(group); by=_kernel_display_pair_key)
-    target_support = frequency_support(first(first(ordered)))
-    lifted_ok, lifted = _lift_kernel_group_to_support(ordered, target_support, transforms)
+    lifted_ok, lifted = _lift_kernel_group_to_support(group, target_support, cache)
     lifted_ok || return false, empty_kinematic, empty_distribution, target_support
     isempty(lifted) && return false, empty_kinematic, empty_distribution, target_support
 
@@ -206,7 +310,9 @@ function _rank_one_display_candidate(
 end
 
 function _compact_group_string(
-    group::Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}}, latex::Bool
+    group::Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}},
+    latex::Bool,
+    cache::Dict{FrequencySupport{S},_DisplaySupportOrbit{S}},
 ) where {C<:Number,S<:Statistics}
     isempty(group) && return "0"
     sector = first(first(group))
@@ -229,7 +335,8 @@ function _compact_group_string(
 
     # The direct quotient gauge was not compact enough. Reconstruct a coherent gauge across the
     # signed-permutation orbit and retry the same exact rank-one/factorization machinery.
-    rank_one, kinematic, distribution, aligned_support = _aligned_rank_one_kinematic(group)
+    rank_one, kinematic, distribution, aligned_support =
+        _aligned_rank_one_kinematic(group, cache)
     rank_one || return expanded
     compact = _rank_one_display_candidate(
         sector, kinematic, distribution, aligned_support, latex
@@ -258,13 +365,13 @@ function _compact_physical_collision_string_impl(
 
     rendered = String[]
     for base_group in values(base_groups)
-        ordered = sort!(copy(base_group); by=_kernel_display_pair_key)
-        sector = first(first(ordered))
+        sector = first(first(base_group))
         transforms = _display_loop_transforms(
             momentum_basis(sector), external_wigner_momentum(sector)
         )
-        for orbit_group in _display_support_orbit_groups(ordered, transforms)
-            push!(rendered, _compact_group_string(orbit_group, latex))
+        cache = _display_support_orbit_cache(base_group, transforms)
+        for orbit_group in _display_support_orbit_groups(base_group, cache)
+            push!(rendered, _compact_group_string(orbit_group, latex, cache))
         end
     end
     sort!(rendered)
