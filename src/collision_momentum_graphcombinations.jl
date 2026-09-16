@@ -5,8 +5,8 @@
 # to use the exact GraphCombinations directed-canonicalization workspace.
 
 struct _LoopGCCanonicalizationBuffers
-    workspace::GraphCombinations.DirectedCanonicalizationWorkspace
-    buffer::GraphCombinations.DirectedCanonicalizationBuffer
+    workspace::GC.DirectedCanonicalizationWorkspace
+    buffer::GC.DirectedCanonicalizationBuffer
 end
 
 const _LoopGCCanonicalizationCache = Dict{Int,_LoopGCCanonicalizationBuffers}
@@ -15,7 +15,7 @@ function _loop_gc_graph(builder::_LoopCanonicalGraphBuilder)
     color_classes = sort!(unique(copy(builder.colors)))
     labels = Int[searchsortedfirst(color_classes, color) for color in builder.colors]
     edges = Pair{Int,Int}[source => target for (source, target) in builder.edges]
-    return GraphCombinations.DirectedGCGraph(edges, length(labels)), labels
+    return GC.DirectedGCGraph(edges, length(labels)), labels
 end
 
 function _loop_gc_buffers!(cache::_LoopGCCanonicalizationCache, num_vertices::Int)
@@ -23,8 +23,8 @@ function _loop_gc_buffers!(cache::_LoopGCCanonicalizationCache, num_vertices::In
         return cache[num_vertices]
     end
     buffers = _LoopGCCanonicalizationBuffers(
-        GraphCombinations.DirectedCanonicalizationWorkspace(num_vertices),
-        GraphCombinations.DirectedCanonicalizationBuffer(num_vertices),
+        GC.DirectedCanonicalizationWorkspace(num_vertices),
+        GC.DirectedCanonicalizationBuffer(num_vertices),
     )
     cache[num_vertices] = buffers
     return buffers
@@ -73,24 +73,17 @@ function _graphcombinations_projective_canonical_loop_transform(
 
     graph, labels = _loop_gc_graph(builder)
     buffers = _loop_gc_buffers!(cache, graph.num_vertices)
-    GraphCombinations.canonicalize_directed!(
-        buffers.buffer, buffers.workspace, graph, labels
-    )
+    GC.canonicalize_directed!(buffers.buffer, buffers.workspace, graph, labels)
 
     ordered_slots = sortperm(
-        1:nloops;
-        by=slot -> GraphCombinations.canonical_rank(buffers.buffer, pair_vertices[slot]),
+        1:nloops; by=slot -> GC.canonical_rank(buffers.buffer, pair_vertices[slot])
     )
     loop_permutation = zeros(Int, nloops)
     loop_signs = ones(Int, nloops)
     for (new_slot, old_slot) in enumerate(ordered_slots)
         loop_permutation[old_slot] = new_slot
-        positive_rank = GraphCombinations.canonical_rank(
-            buffers.buffer, positive_vertices[old_slot]
-        )
-        negative_rank = GraphCombinations.canonical_rank(
-            buffers.buffer, negative_vertices[old_slot]
-        )
+        positive_rank = GC.canonical_rank(buffers.buffer, positive_vertices[old_slot])
+        negative_rank = GC.canonical_rank(buffers.buffer, negative_vertices[old_slot])
         loop_signs[old_slot] = positive_rank < negative_rank ? 1 : -1
     end
 
