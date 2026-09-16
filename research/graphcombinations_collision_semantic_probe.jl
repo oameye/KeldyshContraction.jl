@@ -1,3 +1,5 @@
+using BenchmarkTools
+
 include(joinpath(@__DIR__, "graphcombinations_loop_equivalence_probe.jl"))
 include(joinpath(@__DIR__, "..", "benchmarks", "fermionic_pwave_loss.jl"))
 
