@@ -63,27 +63,15 @@ function gc_loop_graph_data(
     workspace = GC.DirectedCanonicalizationWorkspace(graph.num_vertices)
     buffer = GC.DirectedCanonicalizationBuffer(graph.num_vertices)
     GC.canonicalize_directed!(buffer, workspace, graph, labels)
-    return (
-        buffer,
-        pair_vertices,
-        positive_vertices,
-        negative_vertices,
-        basis,
-        external,
-        nloops,
-    )
+    return (buffer, pair_vertices, positive_vertices, negative_vertices, basis, external, nloops)
 end
 
 function gc_canonical_loop_transform(
     sector::KC.ReducedCollisionSector{S}, monomial::KC.OccupationMonomial{S}
 ) where {S<:KC.Statistics}
-    buffer,
-    pair_vertices,
-    positive_vertices,
-    negative_vertices,
-    basis,
-    external,
-    nloops = gc_loop_graph_data(sector, monomial)
+    buffer, pair_vertices, positive_vertices, negative_vertices, basis, external, nloops = gc_loop_graph_data(
+        sector, monomial
+    )
 
     ordered_slots = sortperm(
         1:nloops; by=slot -> GC.canonical_rank(buffer, pair_vertices[slot])
@@ -122,9 +110,7 @@ function gc_quotient_loop_momenta(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{KC.OccupationMonomial{S},D}[
-                    transformed_monomial => transformed_coefficient
-                ]
+                contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
                 KC._push_kernel_polynomial!(
                     out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
                 )
@@ -168,9 +154,7 @@ function gc_requotient_terms(
             )
             transformed_monomial = KC.transform_loop_momenta(monomial, transform)
             transformed_coefficient = convert(D, coefficient) * convert(D, support_factor)
-            contribution = Pair{KC.OccupationMonomial{S},D}[
-                transformed_monomial => transformed_coefficient
-            ]
+            contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
             KC._push_kernel_polynomial!(
                 out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
             )
@@ -223,13 +207,15 @@ function certify_all_signed_permutations(expression)
     count = 0
 
     for permutation in Combinatorics.permutations(collect(1:nloops))
-        for mask in 0:(2^nloops - 1)
+        for mask in 0:(2 ^ nloops - 1)
             signs = Int[isodd(mask >> (slot - 1)) ? -1 : 1 for slot in 1:nloops]
             transformed = signed_permutation_expression(expression, permutation, signs)
             gc_matches =
-                KC.loop_quotient_terms(gc_quotient_loop_momenta(transformed)) == gc_reference
+                KC.loop_quotient_terms(gc_quotient_loop_momenta(transformed)) ==
+                gc_reference
             nauty_matches =
-                KC.loop_quotient_terms(KC.quotient_loop_momenta(transformed)) == nauty_reference
+                KC.loop_quotient_terms(KC.quotient_loop_momenta(transformed)) ==
+                nauty_reference
             gc_failures += !gc_matches
             nauty_failures += !nauty_matches
             (!gc_matches || !nauty_matches) && println(
