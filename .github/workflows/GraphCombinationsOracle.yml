@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - fix-projective-loop-sign-character
     paths:
       - '.github/workflows/GraphCombinationsOracle.yml'
       - 'research/graphcombinations_nauty_adapter.jl'
@@ -34,6 +35,6 @@ jobs:
       - uses: julia-actions/cache@v3
       - name: Instantiate research environment
         run: |
-          julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="a09d6fdbd86bb4accae6ffbd3be1e0c801c49c05")); Pkg.add("BenchmarkTools")'
+          julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="e0e5d7dc4e14f4fc356ffeee3809fdb5b47fcf12")); Pkg.add("BenchmarkTools")'
       - name: Compare GraphCombinations with Nauty
         run: julia --project=. research/graphcombinations_nauty_adapter.jl
