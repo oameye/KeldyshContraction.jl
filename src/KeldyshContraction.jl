@@ -62,6 +62,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("spectral_dispersive_collision.jl")
     include("frequency_support.jl")
     include("full_rank_frequency_reduction.jl")
+    include("finite_width_spectral.jl")
+    include("finite_width_convolution.jl")
     include("canonical_frequency_expression.jl")
     include("causal_frequency_integration.jl")
     include("affine_singular_support.jl")
@@ -96,6 +98,21 @@ const ComplexRationals = Complex{Rational{Int64}}
     # boundaries of the kinetic compiler. Lower-level representation machinery remains private.
     @public Regularisation,
     OffShellCollisionExpression,
+    SpectralLineIdentity,
+    LorentzianSpectralData,
+    LorentzianSpectralModel,
+    LorentzianSpectralFactor,
+    LorentzianSpectralWeight,
+    LorentzianSpectralReductionKind,
+    LorentzianSpectralReduction,
+    LorentzianResolved,
+    LorentzianUnsupported,
+    LorentzianConvolutionReductionKind,
+    LorentzianConvolutionReduction,
+    LorentzianConvolutionResolved,
+    LorentzianConvolutionUnsupported,
+    LinewidthPower,
+    WidthAwarePowerCounting,
     field_families,
     target_family,
     parameters,
@@ -114,7 +131,40 @@ const ComplexRationals = Complex{Rational{Int64}}
     reduced_regular_terms,
     reduced_blocked_terms,
     reduced_trotter_terms,
-    collision_kernel_terms
+    collision_kernel_terms,
+    spectral_line_family,
+    spectral_line_momentum,
+    spectral_data,
+    spectral_energy,
+    spectral_linewidth,
+    spectral_residue,
+    spectral_normalization,
+    spectral_squared_weight,
+    spectral_jacobian,
+    spectral_factors,
+    spectral_reduction_kind,
+    spectral_reduction_resolved,
+    convolution_reduction_kind,
+    convolution_reduction_resolved,
+    convolution_jacobian,
+    convolution_pivot_lines,
+    convolution_dependent_line,
+    convolution_coefficients,
+    convolution_external_coefficient,
+    convolution_energy_mismatch,
+    convolution_effective_linewidth,
+    spectral_line,
+    spectral_multiplicity,
+    linewidth_exponent,
+    linewidth_powers,
+    width_aware_power_counting,
+    lorentzian_spectral_data_from_retarded_self_energy,
+    lorentzian_spectral_value,
+    lorentzian_integrated_power,
+    lorentzian_spectral_reduction,
+    lorentzian_convolution_reduction,
+    evaluate_spectral_weight,
+    evaluate_spectral_convolution
 
     # Small workflow surface intended for ordinary unqualified use.
     export @qfields,

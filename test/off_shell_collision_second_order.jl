@@ -68,6 +68,57 @@ end
     @test any(term -> maximum_spectral_multiplicity(term) == 1, terms)
     @test any(term -> maximum_spectral_multiplicity(term) >= 2, terms)
 
+    # The Lorentzian backend is line-identity based rather than loss/topology specific. At least
+    # one generated repeated-line term must admit the exact factorized finite-width integral.
+    repeated_terms = [term for term in terms if maximum_spectral_multiplicity(term) >= 2]
+    reductions = [
+        (term, reduction) for term in repeated_terms for
+        reduction in (KC.lorentzian_spectral_reduction(term),) if
+        KC.spectral_reduction_resolved(reduction)
+    ]
+    @test !isempty(reductions)
+
+    _, repeated_reduction = first(reductions)
+    repeated_factor = only(
+        factor for factor in KC.spectral_factors(repeated_reduction) if
+        KC.spectral_multiplicity(factor) == 2
+    )
+    @test KC.linewidth_exponent(repeated_factor) == -1
+
+    counting = KC.width_aware_power_counting(KC.parameters(collision), repeated_reduction)
+    @test KC.parameters(counting) == KC.ParameterMonomial(:γ)^2
+    @test any(power -> KC.linewidth_exponent(power) == -1, KC.linewidth_powers(counting))
+
+    data = Dict(
+        KC.spectral_line(factor) => KC.LorentzianSpectralData(
+            0 // 1, KC.spectral_multiplicity(factor) == 2 ? 4 // 5 : 1 // 1
+        ) for factor in KC.spectral_factors(repeated_reduction)
+    )
+    model = KC.LorentzianSpectralModel(data)
+    expected = KC.spectral_jacobian(repeated_reduction) * (5 // 2)
+    @test KC.evaluate_spectral_weight(repeated_reduction, model) == expected
+
+    # The regular Eq. 55a branch is a one-residual-shell Cauchy convolution. Its broadened
+    # mismatch must tend to exactly the same shell and Jacobian as the strict reducer.
+    regular_terms = [term for term in terms if maximum_spectral_multiplicity(term) == 1]
+    convolutions = [
+        (term, reduction) for term in regular_terms for
+        reduction in (KC.lorentzian_convolution_reduction(term, offshell_loss2_ϕ),) if
+        KC.convolution_reduction_resolved(reduction)
+    ]
+    @test !isempty(convolutions)
+
+    regular_term, convolution = first(convolutions)
+    strict_regular = @inferred KC.full_rank_frequency_reduction(
+        regular_term, offshell_loss2_ϕ
+    )
+    shell, support_factor = KC.energy_shell(KC.convolution_energy_mismatch(convolution))
+    strict_support = KC.frequency_support(strict_regular)
+    @test strict_support.shells == [shell]
+    @test isempty(strict_support.principal_values)
+    @test KC.frequency_factor(strict_regular) ==
+        KC.convolution_jacobian(convolution) * support_factor
+
     # Only the strict quasiparticle reduction turns the repeated spectral line into a blocker.
     # The regular sector remains finite and the existing reduction semantics are unchanged.
     reduced = @inferred reduce_frequency_collision(spectral)
