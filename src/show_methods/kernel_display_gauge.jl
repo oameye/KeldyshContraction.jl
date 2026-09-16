@@ -23,11 +23,7 @@ function _display_loop_transforms(basis::MomentumBasis, external::MomentumVariab
             push!(
                 transforms,
                 loop_permutation_transform(
-                    basis,
-                    external,
-                    permutation_vector,
-                    signs,
-                    zeros(Int, nloops),
+                    basis, external, permutation_vector, signs, zeros(Int, nloops)
                 ),
             )
         end
@@ -40,7 +36,9 @@ function _display_transform_kernel_pair(
     polynomial::OccupationPolynomial{C,S},
     transform::LoopMomentumTransform,
 ) where {C<:Number,S<:Statistics}
-    support, support_factor = _transform_frequency_support(frequency_support(sector), transform)
+    support, support_factor = _transform_frequency_support(
+        frequency_support(sector), transform
+    )
     kinematic = transform_loop_momenta(kinematic_factor(sector), transform)
     distribution =
         convert(C, support_factor) * transform_loop_momenta(polynomial, transform)
@@ -60,23 +58,24 @@ function _aligned_rank_one_kinematic(
         return false, empty_kinematic, first_polynomial, frequency_support(first_sector)
 
     for reference_transform in transforms
-        reference_kinematic, reference_distribution, reference_support =
-            _display_transform_kernel_pair(
-                first_sector, first_polynomial, reference_transform
-            )
-        kinematic = copy(reference_kinematic)
+        reference_kinematic, reference_distribution, reference_support = _display_transform_kernel_pair(
+            first_sector, first_polynomial, reference_transform
+        )
+        kinematic = reference_kinematic
         aligned = true
 
         for index in 2:length(group)
             sector, polynomial = group[index]
             matched = false
             for transform in transforms
-                candidate_kinematic, candidate_distribution, candidate_support =
-                    _display_transform_kernel_pair(sector, polynomial, transform)
+                candidate_kinematic, candidate_distribution, candidate_support = _display_transform_kernel_pair(
+                    sector, polynomial, transform
+                )
                 candidate_support == reference_support || continue
 
-                valid_scale, scale =
-                    _polynomial_scale(candidate_distribution, reference_distribution)
+                valid_scale, scale = _polynomial_scale(
+                    candidate_distribution, reference_distribution
+                )
                 valid_scale || continue
                 valid_coefficient, coefficient = _complex_rational(scale)
                 valid_coefficient || continue
