@@ -28,15 +28,12 @@ function projective_four_loop_fixture()
 
     n(momentum) = OccupationPolynomial(OccupationAtom(projective_loop_ϕ, momentum), one(C))
     nk, np, nq, nr = n(k), n(p), n(q), n(r)
-    polynomial =
-        -4 * nk * np * nq - 2 * nk * np + 2 * nk * nq * nr + 2 * nq * nr + nr - nq
+    polynomial = -4 * nk * np * nq - 2 * nk * np + 2 * nk * nq * nr + 2 * nq * nr + nr - nq
     for loop in Iterators.drop(loops, 2)
         polynomial += n(loop) + n(q + loop)
     end
 
-    return KC.OccupationReducedExpression{
-        C,Boson,2,0,KC.HomogeneousWignerContext
-    }(
+    return KC.OccupationReducedExpression{C,Boson,2,0,KC.HomogeneousWignerContext}(
         Dict(sector => polynomial),
         projective_loop_ϕ,
         parameter,
