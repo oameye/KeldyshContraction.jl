@@ -231,8 +231,7 @@ function _lift_kernel_group_to_support(
             transformed_kinematic = transform_loop_momenta(
                 kinematic_factor(sector), transform
             )
-            transform_factor =
-                convert(ComplexRationals, support_factor) * orbit_weight
+            transform_factor = convert(ComplexRationals, support_factor) * orbit_weight
 
             for (occupation_monomial, exact_coefficient) in exact_terms
                 transformed_occupation = transform_loop_momenta(
@@ -252,9 +251,7 @@ function _lift_kernel_group_to_support(
                     coefficient =
                         exact_coefficient * transform_factor * kinematic_coefficient
                     contribution = OccupationPolynomial{ComplexRationals,S}(
-                        Pair{OccupationMonomial{S},ComplexRationals}[
-                            transformed_occupation => coefficient
-                        ],
+                        Pair{OccupationMonomial{S},ComplexRationals}[transformed_occupation => coefficient],
                     )
                     if haskey(rows, row_sector)
                         combined = rows[row_sector] + contribution
@@ -277,9 +274,7 @@ function _lift_kernel_group_to_support(
 end
 
 function _exact_kernel_rank_one_kinematic(
-    group::Vector{
-        Pair{CollisionKernelSector{S},OccupationPolynomial{ComplexRationals,S}}
-    },
+    group::Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{ComplexRationals,S}}}
 ) where {S<:Statistics}
     reference = last(first(group))
     kinematic = MomentumPolynomial{ComplexRationals}()
