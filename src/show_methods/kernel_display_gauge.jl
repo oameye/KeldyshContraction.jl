@@ -99,9 +99,7 @@ function _lift_kernel_group_to_support(
     transforms::Vector{LoopMomentumTransform},
 ) where {C<:Number,S<:Statistics}
     rows = Dict{CollisionKernelSector{S},OccupationPolynomial{ComplexRationals,S}}()
-    empty_rows = Pair{
-        CollisionKernelSector{S},OccupationPolynomial{ComplexRationals,S}
-    }[]
+    empty_rows = Pair{CollisionKernelSector{S},OccupationPolynomial{ComplexRationals,S}}[]
 
     for (sector, polynomial) in group
         matches = _matching_support_transforms(
@@ -139,9 +137,7 @@ function _lift_kernel_group_to_support(
                         kinematic_coefficient *
                         orbit_weight
                     contribution = OccupationPolynomial{ComplexRationals,S}(
-                        Pair{OccupationMonomial{S},ComplexRationals}[
-                            transformed_occupation => coefficient
-                        ],
+                        Pair{OccupationMonomial{S},ComplexRationals}[transformed_occupation => coefficient],
                     )
                     if haskey(rows, row_sector)
                         combined = rows[row_sector] + contribution
@@ -171,15 +167,16 @@ function _aligned_rank_one_kinematic(
     external = external_wigner_momentum(first_sector)
     transforms = _display_loop_transforms(basis, external)
     empty_kinematic = MomentumPolynomial{ComplexRationals}()
+    empty_distribution = OccupationPolynomial{ComplexRationals,S}()
 
     isempty(transforms) &&
-        return false, empty_kinematic, last(first(group)), frequency_support(first_sector)
+        return false, empty_kinematic, empty_distribution, frequency_support(first_sector)
 
     ordered = sort!(copy(group); by=_kernel_display_pair_key)
     target_support = frequency_support(first(first(ordered)))
     lifted_ok, lifted = _lift_kernel_group_to_support(ordered, target_support, transforms)
-    lifted_ok || return false, empty_kinematic, last(first(ordered)), target_support
-    isempty(lifted) && return false, empty_kinematic, last(first(ordered)), target_support
+    lifted_ok || return false, empty_kinematic, empty_distribution, target_support
+    isempty(lifted) && return false, empty_kinematic, empty_distribution, target_support
 
     rank_one, kinematic, distribution = _rank_one_kinematic(lifted)
     return rank_one, kinematic, distribution, target_support
