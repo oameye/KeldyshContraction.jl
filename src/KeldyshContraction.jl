@@ -92,18 +92,23 @@ const ComplexRationals = Complex{Rational{Int64}}
     # Stable public inspection helpers defined after the full representation stack exists.
     include("public_api_accessors.jl")
 
-    # Qualified public API is deliberately small: only semantic inspection that users need
-    # in the manual or canonical examples. Representation and compiler IR remain private.
+    # Qualified public API is deliberately small: semantic inspection and the stable physical
+    # boundaries of the kinetic compiler. Lower-level representation machinery remains private.
     @public Regularisation,
+    OffShellCollisionExpression,
     field_families,
     target_family,
     parameters,
     matrix,
     order,
     statistics,
+    gradient_order,
+    wigner_context,
     keldysh_component,
     retarded_component,
     advanced_component,
+    collision_offset,
+    collision_distribution_coefficient,
     kinematic_factor,
     frequency_support,
     reduced_regular_terms,
