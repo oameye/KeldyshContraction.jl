@@ -213,9 +213,7 @@ function _compact_group_string(
     # Preserve a compact exact expression already visible in the quotient gauge. This is
     # essential for support-free one-loop kernels, where averaging over the full support
     # stabilizer would erase the physically useful routed-momentum representative.
-    literal_support = all(
-        pair -> frequency_support(first(pair)) == support, group
-    )
+    literal_support = all(pair -> frequency_support(first(pair)) == support, group)
     if literal_support
         rank_one, kinematic, distribution = _rank_one_kinematic(group)
         if rank_one
