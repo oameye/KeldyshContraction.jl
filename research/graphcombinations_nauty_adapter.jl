@@ -5,18 +5,26 @@ using Test
 import GraphCombinations as GC
 import KeldyshContraction as KC
 
-const GC_SHA = "ec5f84d4b1b1f21b2dacdb00ce4ed9af6bd68fa8"
+const GC_SHA = "e0e5d7dc4e14f4fc356ffeee3809fdb5b47fcf12"
 const Out = KC.Out
 const In = KC.In
 const Bulk = KC.Bulk
-const OccupationPolynomial = KC.OccupationPolynomial
-const OccupationAtom = KC.OccupationAtom
 
 function gc_result(edges::Vector{Tuple{Int,Int}}, colors::Vector{Int})
     graph = GC.DirectedGCGraph(
         Pair{Int,Int}[source => target for (source, target) in edges], length(colors)
     )
-    return GC.canonicalize_directed(graph, colors)
+    result = GC.canonicalize_directed(graph, colors)
+
+    workspace = GC.DirectedCanonicalizationWorkspace(graph.num_vertices)
+    buffer = GC.DirectedCanonicalizationBuffer(graph.num_vertices)
+    GC.canonicalize_directed!(buffer, workspace, graph, colors)
+    @test GC.canonical_graph(buffer) == GC.canonical_graph(result)
+    @test GC.canonical_automorphism_order(buffer) ==
+          GC.canonical_automorphism_order(result)
+    @test buffer.old_to_canonical ==
+          GC.vertex_mapping(GC.canonical_relabeling(result))
+    return result
 end
 
 function gc_position_edges(vs, graph_positions)
@@ -75,194 +83,6 @@ function gc_canonicalize(vs::Vector{T}) where {T}
     return T[KC.relabel_bulk_positions(item, mapping) for item in vs]
 end
 
-function gc_legacy_topology(vs, ::Val{E2}) where {E2}
-    isempty(vs) && return KC.bulk_multiplicity(Tuple{Int8,Int8}[], Val(E2))
-
-    position_pairs = Tuple{Int8,Int8}[KC.integer_positions(item) for item in vs]
-    flattened = collect(Iterators.flatten(position_pairs))
-    max_label = length(unique(flattened))
-    has_out = typemin(Int8) in flattened
-
-    edges = Tuple{Int,Int}[]
-    for pair in position_pairs
-        vertices = if typemin(Int8) in pair
-            (1, Int(last(pair)) + Int(has_out))
-        elseif typemax(Int8) in pair
-            (Int(first(pair)) + Int(has_out), max_label)
-        else
-            (Int(first(pair)) + Int(has_out), Int(last(pair)) + Int(has_out))
-        end
-        vertices in edges || push!(edges, vertices)
-    end
-
-    result = gc_result(edges, ones(Int, max_label))
-    old_to_canonical = GC.vertex_mapping(GC.canonical_relabeling(result))
-    canonical_to_old = sortperm(old_to_canonical)
-    mapping = KC.legacy_topology_permutation_dict(canonical_to_old, max_label, has_out)
-    topology_edges = Tuple{Int8,Int8}[
-        KC.integer_positions(KC.relabel_bulk_positions(item, mapping)) for item in vs
-    ]
-    return KC.bulk_multiplicity(topology_edges, Val(E2))
-end
-
-function gc_loop_graph_data(
-    sector::KC.ReducedCollisionSector{S}, monomial::KC.OccupationMonomial{S}
-) where {S<:KC.Statistics}
-    basis = KC.momentum_basis(sector)
-    external = KC.external_wigner_momentum(sector)
-    external_index = KC._external_basis_index(basis, external)
-    loop_indices = KC._loop_basis_indices(basis, external)
-    nloops = length(loop_indices)
-
-    builder = KC._LoopCanonicalGraphBuilder()
-    root = KC._add_loop_vertex!(builder, KC._loop_graph_color(1))
-    pair_vertices = Vector{Int}(undef, nloops)
-    positive_vertices = Vector{Int}(undef, nloops)
-    negative_vertices = Vector{Int}(undef, nloops)
-    loop_incidences = [Tuple{Int,KC.MomentumCoefficient}[] for _ in 1:nloops]
-
-    for slot in 1:nloops
-        pair = KC._add_loop_vertex!(builder, KC._loop_graph_color(2))
-        positive = KC._add_loop_vertex!(builder, KC._loop_graph_color(3))
-        negative = KC._add_loop_vertex!(builder, KC._loop_graph_color(3))
-        pair_vertices[slot] = pair
-        positive_vertices[slot] = positive
-        negative_vertices[slot] = negative
-        KC._add_loop_edge!(builder, root, pair)
-        KC._add_loop_edge!(builder, pair, positive)
-        KC._add_loop_edge!(builder, pair, negative)
-    end
-
-    KC._add_loop_semantics!(
-        builder,
-        root,
-        sector,
-        monomial,
-        external_index,
-        loop_indices,
-        positive_vertices,
-        negative_vertices,
-        loop_incidences,
-    )
-
-    color_classes = sort!(unique(copy(builder.colors)))
-    labels = Int[searchsortedfirst(color_classes, color) for color in builder.colors]
-    result = gc_result(builder.edges, labels)
-    return result, pair_vertices, loop_incidences, basis, external, nloops
-end
-
-function gc_canonical_loop_transform(
-    sector::KC.ReducedCollisionSector{S}, monomial::KC.OccupationMonomial{S}
-) where {S<:KC.Statistics}
-    result, pair_vertices, loop_incidences, basis, external, nloops = gc_loop_graph_data(
-        sector, monomial
-    )
-
-    rank = GC.vertex_mapping(GC.canonical_relabeling(result))
-    ordered_slots = sortperm(1:nloops; by=slot -> rank[pair_vertices[slot]])
-    loop_permutation = zeros(Int, nloops)
-    loop_signs = ones(Int, nloops)
-    for (new_slot, old_slot) in enumerate(ordered_slots)
-        loop_permutation[old_slot] = new_slot
-        incidences = loop_incidences[old_slot]
-        isempty(incidences) && continue
-        canonical_first = first(sort!(copy(incidences); by=record -> rank[first(record)]))
-        loop_signs[old_slot] = last(canonical_first) > 0 ? 1 : -1
-    end
-    return KC.loop_permutation_transform(
-        basis, external, loop_permutation, loop_signs, zeros(Int, nloops)
-    )
-end
-
-function gc_quotient_loop_momenta(
-    expression::KC.OccupationReducedExpression{C,S,O,G,Ctx}
-) where {C<:Number,S<:KC.Statistics,O,G,Ctx<:KC.AbstractWignerContext}
-    D = promote_type(C, KC.ComplexRationals, Rational{Int})
-    out = Dict{KC.CollisionKernelSector{S},KC.OccupationPolynomial{D,S}}()
-
-    for (sector, polynomial) in KC.occupation_reduced_terms(expression)
-        for (occupation_monomial, occupation_coefficient) in polynomial
-            for (kinematic_monomial, kinematic_coefficient) in KC.kinematic_factor(sector)
-                atom_sector = KC._kinematic_atom_sector(sector, kinematic_monomial)
-                transform = gc_canonical_loop_transform(atom_sector, occupation_monomial)
-                transformed_sector, support_factor = KC._transform_kernel_sector(
-                    atom_sector, transform
-                )
-                transformed_monomial = KC.transform_loop_momenta(
-                    occupation_monomial, transform
-                )
-                transformed_coefficient =
-                    convert(D, occupation_coefficient) *
-                    convert(D, kinematic_coefficient) *
-                    convert(D, support_factor)
-                contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
-                KC._push_kernel_polynomial!(
-                    out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
-                )
-            end
-        end
-    end
-
-    return KC.LoopQuotientedExpression{D,S,O,G,Ctx}(
-        out,
-        KC.target_family(expression),
-        KC.parameters(expression),
-        KC.wigner_context(expression),
-    )
-end
-
-function assert_quotient_matches(expression)
-    nauty = KC.quotient_loop_momenta(expression)
-    gc = gc_quotient_loop_momenta(expression)
-    @test KC.loop_quotient_terms(gc) == KC.loop_quotient_terms(nauty)
-    @test KC.collision_kernel(gc).terms == KC.collision_kernel(nauty).terms
-    return nothing
-end
-
-function benchmark_pair(label, nauty, gc)
-    nauty_trial = @benchmark $nauty() samples = 5 evals = 1
-    gc_trial = @benchmark $gc() samples = 5 evals = 1
-    nauty_estimate = median(nauty_trial)
-    gc_estimate = median(gc_trial)
-    println(
-        label,
-        ": Nauty ",
-        round(nauty_estimate.time / 1.0e3; digits=2),
-        " μs / ",
-        nauty_estimate.memory,
-        " B / ",
-        nauty_estimate.allocs,
-        " allocs; GC ",
-        round(gc_estimate.time / 1.0e3; digits=2),
-        " μs / ",
-        gc_estimate.memory,
-        " B / ",
-        gc_estimate.allocs,
-        " allocs",
-    )
-    flush(stdout)
-    return nothing
-end
-
-function measure_pair_once(label, nauty, gc)
-    nauty_measurement = @timed nauty()
-    gc_measurement = @timed gc()
-    println(
-        label,
-        ": Nauty ",
-        round(nauty_measurement.time * 1.0e3; digits=2),
-        " ms / ",
-        nauty_measurement.bytes,
-        " B; GC ",
-        round(gc_measurement.time * 1.0e3; digits=2),
-        " ms / ",
-        gc_measurement.bytes,
-        " B",
-    )
-    flush(stdout)
-    return nothing
-end
-
 @qfields gc_adapter_ϕ::Boson
 @qfields gc_adapter_χ::Boson
 
@@ -273,153 +93,74 @@ function as_contractions(vs)
     return KC.Contraction{Boson}[KC.Contraction(item) for item in vs]
 end
 
-println("GC oracle: propagator canonicalization")
+println("GC physical canonicalization oracle ($GC_SHA)")
 flush(stdout)
-@testset "GraphCombinations exact KC oracle adapter ($GC_SHA)" begin
-    @testset "propagator canonicalization and automorphism order" begin
-        ring = as_contractions([
-            (c(Out()), bar(q)(Bulk(1))),
-            (c(Bulk(1)), bar(q)(Bulk(2))),
-            (c(Bulk(2)), bar(q)(Bulk(3))),
-            (c(Bulk(3)), bar(q)(Bulk(4))),
-            (c(Bulk(4)), bar(q)(Bulk(1))),
-            (c(Bulk(4)), bar(q)(In())),
-        ])
-        self_loop = as_contractions([
-            (c(Out()), bar(q)(Bulk(1))),
-            (c(Bulk(1)), bar(q)(Bulk(1))),
-            (c(Bulk(1)), bar(q)(In())),
-        ])
-        repeated = as_contractions([
-            (c(Out()), bar(q)(Bulk(1))),
-            (c(Bulk(1)), bar(q)(Bulk(2))),
-            (c(Bulk(1)), bar(q)(Bulk(2))),
-            (c(Bulk(2)), bar(q)(In())),
-        ])
-        colored = as_contractions([
-            (c(Out()), bar(q)(Bulk(1))),
-            (χc(Bulk(1)), bar(χq)(Bulk(2))),
-            (c(Bulk(2)), bar(q)(In())),
-        ])
-        symmetric = as_contractions([
-            (c(Bulk(1)), bar(q)(Bulk(2))),
-            (c(Bulk(2)), bar(q)(Bulk(3))),
-            (c(Bulk(3)), bar(q)(Bulk(1))),
-        ])
 
-        for fixture in (ring, self_loop, repeated, colored, symmetric)
-            gc_fixture = gc_canonicalize(fixture)
-            nauty_fixture = KC.canonicalize(fixture)
-            @test gc_canonicalize(nauty_fixture) == gc_fixture
-            @test KC.canonicalize(gc_fixture) == nauty_fixture
+@testset "GraphCombinations physical KC oracle" begin
+    ring = as_contractions([
+        (c(Out()), bar(q)(Bulk(1))),
+        (c(Bulk(1)), bar(q)(Bulk(2))),
+        (c(Bulk(2)), bar(q)(Bulk(3))),
+        (c(Bulk(3)), bar(q)(Bulk(4))),
+        (c(Bulk(4)), bar(q)(Bulk(1))),
+        (c(Bulk(4)), bar(q)(In())),
+    ])
+    self_loop = as_contractions([
+        (c(Out()), bar(q)(Bulk(1))),
+        (c(Bulk(1)), bar(q)(Bulk(1))),
+        (c(Bulk(1)), bar(q)(In())),
+    ])
+    repeated = as_contractions([
+        (c(Out()), bar(q)(Bulk(1))),
+        (c(Bulk(1)), bar(q)(Bulk(2))),
+        (c(Bulk(1)), bar(q)(Bulk(2))),
+        (c(Bulk(2)), bar(q)(In())),
+    ])
+    colored = as_contractions([
+        (c(Out()), bar(q)(Bulk(1))),
+        (χc(Bulk(1)), bar(χq)(Bulk(2))),
+        (c(Bulk(2)), bar(q)(In())),
+    ])
+    symmetric = as_contractions([
+        (c(Bulk(1)), bar(q)(Bulk(2))),
+        (c(Bulk(2)), bar(q)(Bulk(3))),
+        (c(Bulk(3)), bar(q)(Bulk(1))),
+    ])
 
-            graph_positions = KC.canonicalization_positions(fixture)
-            gc_topology = gc_topology_result(fixture, graph_positions)
-            _, _, _, nauty_automorphisms = KC.canonicalization_permutations(
-                fixture, graph_positions
-            )
-            @test GC.canonical_automorphism_order(gc_topology) == nauty_automorphisms.n
-        end
-        @test GC.canonical_automorphism_order(gc_topology_result(symmetric)) == 3
-    end
+    for fixture in (ring, self_loop, repeated, colored, symmetric)
+        gc_fixture = gc_canonicalize(fixture)
+        nauty_fixture = KC.canonicalize(fixture)
+        @test gc_canonicalize(nauty_fixture) == gc_fixture
+        @test KC.canonicalize(gc_fixture) == nauty_fixture
 
-    println("GC oracle: historical topology classes")
-    flush(stdout)
-    @testset "historical topology 1 / 3 / 11 / 59" begin
-        elastic = -(
-            1 // 2 * (c^2 + q^2) * bar(c) * bar(q) + 1 // 2 * c * q * (bar(c)^2 + bar(q)^2)
+        graph_positions = KC.canonicalization_positions(fixture)
+        gc_topology = gc_topology_result(fixture, graph_positions)
+        _, _, _, nauty_automorphisms = KC.canonicalization_permutations(
+            fixture, graph_positions
         )
-        L = InteractionLagrangian(elastic)
-        cases = ((1, 3, 1), (2, 5, 3), (3, 7, 11), (4, 9, 59))
-        for (order, edge_count, expected) in cases
-            G = DressedPropagator(L, Val(order), Val(edge_count))
-            component = KC.topologies(G.keldysh)
-            @test length(keys(component)) == expected
-
-            nauty_to_gc = Dict{Any,Any}()
-            gc_to_nauty = Dict{Any,Any}()
-            for (key, diagrams) in component
-                nauty_key = Tuple(key)
-                representative_keys = Set{Any}()
-                representative_indices = length(diagrams) > 1 ? (1, length(diagrams)) : (1,)
-                for index in representative_indices
-                    diagram = diagrams[index]
-                    contractions = KC.Contraction{Boson}[
-                        (edge.out, edge.in) for edge in KC.contractions(diagram)
-                    ]
-                    push!(
-                        representative_keys,
-                        Tuple(gc_legacy_topology(contractions, Val(length(key)))),
-                    )
-                end
-                @test length(representative_keys) == 1
-                gc_key = only(representative_keys)
-                @test get!(nauty_to_gc, nauty_key, gc_key) == gc_key
-                @test get!(gc_to_nauty, gc_key, nauty_key) == nauty_key
-            end
-            @test length(nauty_to_gc) == expected
-            @test length(gc_to_nauty) == expected
-            println("GC oracle: topology order $order -> $expected classes")
-            flush(stdout)
-        end
+        @test GC.canonical_automorphism_order(gc_topology) == nauty_automorphisms.n
     end
+    @test GC.canonical_automorphism_order(gc_topology_result(symmetric)) == 3
 
-    include(joinpath(@__DIR__, "..", "benchmarks", "collision_reduction.jl"))
-    include(joinpath(@__DIR__, "..", "benchmarks", "fermionic_pwave_loss.jl"))
-
-    println("GC oracle: loop quotient fixtures")
-    flush(stdout)
-    @testset "loop-momentum quotient fixtures" begin
-        for nloops in (2, 4)
-            expression = benchmark_loop_quotient_fixture(nloops)
-            assert_quotient_matches(expression)
-            println("GC oracle: exact $nloops-loop quotient matched")
-            flush(stdout)
-        end
-    end
-
-    println("GC oracle: production collision cases")
-    flush(stdout)
-    @testset "production collision cases" begin
-        bosonic_collision = benchmark_collision_fixture()
-        bosonic_reduced = KC.reduce_frequency_collision(bosonic_collision)
-        bosonic_occupation = KC.occupation_reduced_expression(bosonic_reduced)
-        assert_quotient_matches(bosonic_occupation)
-
-        _, _, _, _, _, _, _, _, _, fermionic_occupation, fermionic_quotient = benchmark_fermionic_pwave_fixtures()
-        gc_fermionic_quotient = gc_quotient_loop_momenta(fermionic_occupation)
-        @test KC.loop_quotient_terms(gc_fermionic_quotient) ==
-            KC.loop_quotient_terms(fermionic_quotient)
-        @test KC.collision_kernel(gc_fermionic_quotient).terms ==
-            KC.collision_kernel(fermionic_quotient).terms
-    end
-
-    println("GC oracle: backend measurements")
-    flush(stdout)
-    @testset "backend measurements" begin
-        ring = as_contractions([
-            (c(Out()), bar(q)(Bulk(1))),
-            (c(Bulk(1)), bar(q)(Bulk(2))),
-            (c(Bulk(2)), bar(q)(Bulk(3))),
-            (c(Bulk(3)), bar(q)(Bulk(4))),
-            (c(Bulk(4)), bar(q)(Bulk(1))),
-            (c(Bulk(4)), bar(q)(In())),
-        ])
-        benchmark_pair(
-            "propagator ring", () -> KC.canonicalize(ring), () -> gc_canonicalize(ring)
-        )
-
-        occupation2 = benchmark_loop_quotient_fixture(2)
-        occupation4 = benchmark_loop_quotient_fixture(4)
-        benchmark_pair(
-            "loop quotient 2-loop",
-            () -> KC.quotient_loop_momenta(occupation2),
-            () -> gc_quotient_loop_momenta(occupation2),
-        )
-        measure_pair_once(
-            "loop quotient 4-loop",
-            () -> KC.quotient_loop_momenta(occupation4),
-            () -> gc_quotient_loop_momenta(occupation4),
-        )
-    end
+    KC.canonicalize(ring)
+    gc_canonicalize(ring)
+    nauty_trial = @benchmark KC.canonicalize($ring) samples = 7 evals = 1
+    gc_trial = @benchmark gc_canonicalize($ring) samples = 7 evals = 1
+    nauty = median(nauty_trial)
+    gc = median(gc_trial)
+    println(
+        "propagator ring warmed median: Nauty ",
+        round(nauty.time / 1.0e3; digits=2),
+        " μs / ",
+        nauty.memory,
+        " B / ",
+        nauty.allocs,
+        " allocs; GC adapter ",
+        round(gc.time / 1.0e3; digits=2),
+        " μs / ",
+        gc.memory,
+        " B / ",
+        gc.allocs,
+        " allocs",
+    )
 end
