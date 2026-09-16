@@ -3,10 +3,11 @@
 # `quotient_loop_momenta` intentionally canonicalizes each occupation-monomial ×
 # kinematic-monomial atom independently. That is the correct canonical IR, but different atoms
 # can therefore use different representatives of the same signed-permutation orbit. Before
-# looking for a physics-facing factorization of the final kernel, lift each quotient atom into
-# one common support gauge and average only over the residual dummy-loop stabilizer. This never
-# mutates the compiler IR and uses only the same universally safe signed-permutation subgroup as
-# the production quotient.
+# looking for a physics-facing factorization of the final kernel, first keep any shorter exact
+# factorization already present in the stored quotient gauge. Only if that direct representation
+# cannot be compacted do we lift quotient atoms into one common support gauge and average over
+# the residual dummy-loop stabilizer. This never mutates the compiler IR and uses only the same
+# universally safe signed-permutation subgroup as the production quotient.
 
 function _display_loop_transforms(basis::MomentumBasis, external::MomentumVariable)
     nloops = length(basis) - 1
@@ -178,17 +179,15 @@ function _aligned_rank_one_kinematic(
     return rank_one, kinematic, distribution, target_support
 end
 
-function _compact_group_string(
-    group::Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}}, latex::Bool
-) where {C<:Number,S<:Statistics}
-    isempty(group) && return "0"
-    sector = first(first(group))
+function _rank_one_display_candidate(
+    sector::CollisionKernelSector,
+    kinematic::MomentumPolynomial{ComplexRationals},
+    distribution::OccupationPolynomial,
+    support::FrequencySupport,
+    latex::Bool,
+)
     basis = momentum_basis(sector)
     external = external_wigner_momentum(sector)
-
-    rank_one, kinematic, distribution, support = _aligned_rank_one_kinematic(group)
-    rank_one || return _physical_collision_string(group, latex)
-
     coefficient, kinematic_text = _compact_kinematic_string(
         kinematic, distribution, support, basis, external, latex
     )
@@ -200,8 +199,40 @@ function _compact_group_string(
         distribution_text == "1" ? "" : distribution_text,
         _frequency_support_string(support, basis, external, latex),
     ]
-    compact = _term_string(coefficient, factors, latex)
+    return _term_string(coefficient, factors, latex)
+end
+
+function _compact_group_string(
+    group::Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}}, latex::Bool
+) where {C<:Number,S<:Statistics}
+    isempty(group) && return "0"
+    sector = first(first(group))
+    support = frequency_support(sector)
     expanded = _physical_collision_string(group, latex)
+
+    # Preserve a compact exact expression already visible in the quotient gauge. This is
+    # essential for support-free one-loop kernels, where averaging over the full support
+    # stabilizer would erase the physically useful routed-momentum representative.
+    literal_support = all(
+        pair -> frequency_support(first(pair)) == support, group
+    )
+    if literal_support
+        rank_one, kinematic, distribution = _rank_one_kinematic(group)
+        if rank_one
+            direct = _rank_one_display_candidate(
+                sector, kinematic, distribution, support, latex
+            )
+            _display_cost(direct) < _display_cost(expanded) && return direct
+        end
+    end
+
+    # The direct quotient gauge was not compact enough. Reconstruct a coherent gauge across the
+    # signed-permutation orbit and retry the same exact rank-one/factorization machinery.
+    rank_one, kinematic, distribution, aligned_support = _aligned_rank_one_kinematic(group)
+    rank_one || return expanded
+    compact = _rank_one_display_candidate(
+        sector, kinematic, distribution, aligned_support, latex
+    )
     return _display_cost(compact) < _display_cost(expanded) ? compact : expanded
 end
 
