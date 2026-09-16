@@ -15,6 +15,7 @@ using TermInterface: TermInterface
 using SymbolicUtils: SymbolicUtils, @syms, arguments
 using Combinatorics: Combinatorics
 using SmallCollections: SmallCollections, FixedVector
+using GraphCombinations: GraphCombinations
 using NautyGraphs: NautyGraphs
 using Graphs: Graphs
 using DispatchDoctor: @stable
@@ -75,6 +76,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("collision_frequency_assembly.jl")
     include("collision_momentum_quotient.jl")
     include("collision_momentum_projective.jl")
+    include("collision_momentum_graphcombinations.jl")
     include("collision_kernel_api.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
