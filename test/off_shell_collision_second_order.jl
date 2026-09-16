@@ -29,8 +29,8 @@ end
 
 function spectral_momenta(term)
     return [
-        KC.momentum(line) for
-        (line, kind) in zip(KC.kinetic_lines(term.carrier), KC.spectral_dispersive_kinds(term)) if
+        KC.momentum(line) for (line, kind) in
+        zip(KC.kinetic_lines(term.carrier), KC.spectral_dispersive_kinds(term)) if
         kind === KC.CollisionSpectral
     ]
 end
@@ -57,10 +57,10 @@ end
     # functions, occupation substitution, or finite-width prescription has been introduced.
     spectral = @inferred spectral_dispersive_collision(collision)
     terms = [
-        term for expression in (
-            KC.collision_offset(spectral), KC.collision_distribution_coefficient(spectral)
-        ) for (term, coefficient) in expression if !iszero(coefficient) &&
-        count(==(KC.CollisionSpectral), KC.spectral_dispersive_kinds(term)) == 3
+        term for expression in
+        (KC.collision_offset(spectral), KC.collision_distribution_coefficient(spectral)) for
+        (term, coefficient) in expression if !iszero(coefficient) &&
+            count(==(KC.CollisionSpectral), KC.spectral_dispersive_kinds(term)) == 3
     ]
 
     # The ordinary sunset contribution has three distinct spectral momenta (Eq. 55a), while
