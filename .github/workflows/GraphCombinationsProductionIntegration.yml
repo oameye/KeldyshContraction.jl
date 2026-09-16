@@ -4,6 +4,11 @@ on:
   pull_request:
     branches:
       - fix-projective-loop-sign-character
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
     paths:
       - '.github/workflows/GraphCombinationsProductionIntegration.yml'
       - 'Project.toml'
@@ -15,6 +20,7 @@ on:
 
 jobs:
   acceptance:
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -40,6 +46,7 @@ jobs:
           path: graphcombinations-production-integration.log
 
   format:
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
