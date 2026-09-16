@@ -57,9 +57,7 @@ function _display_support_orbit_groups(
     transforms::Vector{LoopMomentumTransform},
 ) where {C<:Number,S<:Statistics}
     ordered = sort!(copy(group); by=_kernel_display_pair_key)
-    orbit_groups = Vector{
-        Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}}
-    }()
+    orbit_groups = Vector{Vector{Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}}}()
 
     for pair in ordered
         support = frequency_support(first(pair))
@@ -73,8 +71,7 @@ function _display_support_orbit_groups(
         end
         if !placed
             push!(
-                orbit_groups,
-                Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}[pair],
+                orbit_groups, Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}[pair]
             )
         end
     end
@@ -107,7 +104,8 @@ function _lift_kernel_group_to_support(
         matches = _matching_support_transforms(
             frequency_support(sector), target_support, transforms
         )
-        isempty(matches) && return false, Pair{CollisionKernelSector{S},OccupationPolynomial{D,S}}[]
+        isempty(matches) &&
+            return false, Pair{CollisionKernelSector{S},OccupationPolynomial{D,S}}[]
         orbit_weight = inv(convert(D, length(matches)))
 
         for (occupation_monomial, occupation_coefficient) in polynomial
@@ -136,9 +134,7 @@ function _lift_kernel_group_to_support(
                         convert(D, kinematic_coefficient) *
                         orbit_weight
                     contribution = OccupationPolynomial{D,S}(
-                        Pair{OccupationMonomial{S},D}[
-                            transformed_occupation => coefficient
-                        ],
+                        Pair{OccupationMonomial{S},D}[transformed_occupation => coefficient]
                     )
                     if haskey(rows, row_sector)
                         combined = rows[row_sector] + contribution
@@ -175,10 +171,8 @@ function _aligned_rank_one_kinematic(
     ordered = sort!(copy(group); by=_kernel_display_pair_key)
     target_support = frequency_support(first(first(ordered)))
     lifted_ok, lifted = _lift_kernel_group_to_support(ordered, target_support, transforms)
-    lifted_ok ||
-        return false, empty_kinematic, last(first(ordered)), target_support
-    isempty(lifted) &&
-        return false, empty_kinematic, last(first(ordered)), target_support
+    lifted_ok || return false, empty_kinematic, last(first(ordered)), target_support
+    isempty(lifted) && return false, empty_kinematic, last(first(ordered)), target_support
 
     rank_one, kinematic, distribution = _rank_one_kinematic(lifted)
     return rank_one, kinematic, distribution, target_support
@@ -215,9 +209,7 @@ end
 # path groups by literal support, which is appropriate before the loop quotient but would split
 # physically identical quotient representatives before their common gauge can be reconstructed.
 function _compact_physical_collision_string_impl(
-    terms::Dict{CollisionKernelSector{S},OccupationPolynomial{C,S}},
-    ::Type{S},
-    latex::Bool,
+    terms::Dict{CollisionKernelSector{S},OccupationPolynomial{C,S}}, ::Type{S}, latex::Bool
 ) where {C<:Number,S<:Statistics}
     BaseKey = Tuple{ParameterMonomial,MomentumBasis,MomentumVariable}
     base_groups = Dict{
@@ -225,11 +217,7 @@ function _compact_physical_collision_string_impl(
     }()
 
     for (sector, polynomial) in terms
-        key = (
-            parameters(sector),
-            momentum_basis(sector),
-            external_wigner_momentum(sector),
-        )
+        key = (parameters(sector), momentum_basis(sector), external_wigner_momentum(sector))
         group = get!(base_groups, key) do
             return Pair{CollisionKernelSector{S},OccupationPolynomial{C,S}}[]
         end
