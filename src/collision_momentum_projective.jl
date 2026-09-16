@@ -125,20 +125,25 @@ function _add_projective_kinematic_component!(
                     break
                 end
             end
-            iszero(loop_slot) && error("projective derivative uses an unknown momentum basis slot")
+            iszero(loop_slot) &&
+                error("projective derivative uses an unknown momentum basis slot")
         end
 
         for local_sign in (1, -1)
             incidence = _add_loop_vertex!(
-                builder,
-                _loop_axis_color(23, :projective_component_coefficient, magnitude),
+                builder, _loop_axis_color(23, :projective_component_coefficient, magnitude)
             )
-            component_orientation = local_sign == 1 ? component_positive : component_negative
+            component_orientation =
+                local_sign == 1 ? component_positive : component_negative
             coefficient_positive = (local_sign == 1) == (coefficient > 0)
             target = if basis_index == external_index
                 coefficient_positive ? external_positive : external_negative
             else
-                coefficient_positive ? positive_vertices[loop_slot] : negative_vertices[loop_slot]
+                if coefficient_positive
+                    positive_vertices[loop_slot]
+                else
+                    negative_vertices[loop_slot]
+                end
             end
             _add_loop_edge!(builder, component_orientation, incidence)
             _add_loop_edge!(builder, incidence, target)
