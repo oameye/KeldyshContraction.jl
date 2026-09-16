@@ -39,9 +39,8 @@ function certify_gc_graph_kernel(vs)
     GC.canonicalize_directed!(buffer, workspace, graph)
 
     @test Tuple(buffer.canonical_multiplicities) ==
-          Tuple(GC.canonical_graph(reference).multiplicities)
-    @test buffer.old_to_canonical ==
-          GC.vertex_mapping(GC.canonical_relabeling(reference))
+        Tuple(GC.canonical_graph(reference).multiplicities)
+    @test buffer.old_to_canonical == GC.vertex_mapping(GC.canonical_relabeling(reference))
     return nothing
 end
 
