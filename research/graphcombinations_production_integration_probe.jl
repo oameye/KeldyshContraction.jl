@@ -139,6 +139,65 @@ function gc_transform_sweep!(workspace::KC._LoopGCQuotientWorkspace, expression)
     return result
 end
 
+function report_termwise_transform_benchmark(expression::KC.OccupationReducedExpression)
+    graph_capacity, loop_capacity = KC._loop_gc_capacities(expression)
+    workspace = KC._LoopGCQuotientWorkspace(graph_capacity, loop_capacity)
+    term_index = 0
+
+    for (sector, polynomial) in KC.occupation_reduced_terms(expression)
+        for (occupation_monomial, _) in polynomial
+            for (kinematic_monomial, _) in KC.kinematic_factor(sector)
+                term_index += 1
+                atom_sector = KC._kinematic_atom_sector(sector, kinematic_monomial)
+                KC._projective_canonical_loop_transform(atom_sector, occupation_monomial)
+                KC._graphcombinations_projective_canonical_loop_transform(
+                    atom_sector, occupation_monomial, workspace
+                )
+
+                storage = workspace.canonicalization
+                gc_workspace = storage.workspace
+                num_vertices = storage.graph.num_vertices
+                num_edges = length(workspace.builder.edges)
+                search_nodes = gc_workspace.search_nodes
+                search_leaves = gc_workspace.search_leaves
+                refinement_rounds = gc_workspace.refinement_rounds
+
+                nauty_trial = @benchmark KC._projective_canonical_loop_transform(
+                    $atom_sector, $occupation_monomial
+                ) samples = 21 evals = 1
+                gc_trial = @benchmark KC._graphcombinations_projective_canonical_loop_transform(
+                    $atom_sector, $occupation_monomial, $workspace
+                ) samples = 21 evals = 1
+                nauty = median(nauty_trial)
+                gc = median(gc_trial)
+                println(
+                    "4-loop term ",
+                    term_index,
+                    ": occupation_degree=",
+                    length(occupation_monomial),
+                    "; vertices=",
+                    num_vertices,
+                    "; edges=",
+                    num_edges,
+                    "; GC search nodes/leaves/refinements=",
+                    search_nodes,
+                    "/",
+                    search_leaves,
+                    "/",
+                    refinement_rounds,
+                    "; Nauty=",
+                    round(nauty.time / 1.0e3; digits=2),
+                    " μs; GC=",
+                    round(gc.time / 1.0e3; digits=2),
+                    " μs; ratio=",
+                    round(gc.time / nauty.time; digits=3),
+                )
+            end
+        end
+    end
+    return nothing
+end
+
 function report_quotient_benchmark(nloops::Int, expression)
     nauty_quotient_loop_momenta(expression)
     KC.quotient_loop_momenta(expression)
@@ -205,6 +264,7 @@ function report_quotient_benchmark(nloops::Int, expression)
         " allocs; time ratio=",
         round(gc_transform.time / nauty_transform.time; digits=3),
     )
+    nloops == 4 && report_termwise_transform_benchmark(expression)
     return nothing
 end
 
