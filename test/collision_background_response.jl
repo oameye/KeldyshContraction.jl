@@ -44,7 +44,7 @@ end
     @test @inferred(KC.occupation_background_value(background, k_atom)) == 2 // 1
     @test @inferred(KC.occupation_background_value(background, q_atom)) == 5 // 1
 
-    explicit_background = KC.OccupationBackground(Rational{Int64}, _ -> 3 // 1)
+    explicit_background = KC.OccupationBackground(_ -> 3 // 1, Rational{Int64})
     @test @inferred(KC.occupation_background_value(explicit_background, k_atom)) == 3 // 1
 
     polynomial = 2 * nk * nk * nq + 3 * nq
@@ -56,11 +56,17 @@ end
     @test terms[k_atom] == 40 // 1
     @test terms[q_atom] == 11 // 1
 
-    zero_background = KC.OccupationBackground(Rational{Int64}, _ -> 0 // 1)
+    zero_background = KC.OccupationBackground(_ -> 0 // 1, Rational{Int64})
+    nonlinear_symbolic = @inferred KC.occupation_linearization(2 * nk * nk * nq)
     zero_response = @inferred KC.evaluate_occupation_linearization(
-        symbolic, zero_background
+        nonlinear_symbolic, zero_background
     )
     @test isempty(zero_response)
+
+    linear_response = @inferred KC.evaluate_occupation_linearization(symbolic, zero_background)
+    linear_terms = Dict(KC.background_occupation_linearization_terms(linear_response))
+    @test length(linear_terms) == 1
+    @test linear_terms[q_atom] == 3 // 1
 end
 
 @testset "collision response evaluates around a supplied background" begin
@@ -88,7 +94,7 @@ end
     direct_terms = Dict(KC.background_occupation_linearization_terms(direct_response))
     @test direct_terms == terms
 
-    zero_background = KC.OccupationBackground(Rational{Int64}, _ -> 0 // 1)
+    zero_background = KC.OccupationBackground(_ -> 0 // 1, Rational{Int64})
     zero_kernel = @inferred KC.linearize_collision_kernel(fixture.kernel, zero_background)
     @test isempty(zero_kernel)
 end
