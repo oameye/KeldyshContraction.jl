@@ -64,6 +64,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("full_rank_frequency_reduction.jl")
     include("finite_width_spectral.jl")
     include("finite_width_convolution.jl")
+    include("finite_width_spectral_variation.jl")
     include("finite_width_frequency_collision.jl")
     include("finite_width_collision_evaluation.jl")
     include("canonical_frequency_expression.jl")
@@ -73,11 +74,14 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("exceptional_frequency_classification.jl")
     include("statistical_frequency_algebra.jl")
     include("collision_statistical_algebra.jl")
+    include("occupation_background.jl")
+    include("occupation_linearization.jl")
     include("canonical_frequency_collision.jl")
     include("trotter_frequency_reduction.jl")
     include("trotter_frequency_collision.jl")
     include("collision_frequency_assembly.jl")
     include("finite_width_occupation_reduction.jl")
+    include("finite_width_collision_response.jl")
     include("collision_momentum_quotient.jl")
     include("collision_momentum_projective.jl")
     include("collision_kernel_api.jl")
@@ -104,6 +108,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     SpectralLineIdentity,
     LorentzianSpectralData,
     LorentzianSpectralModel,
+    LorentzianSpectralDataVariation,
+    LorentzianSpectralModelVariation,
     LorentzianSpectralFactor,
     LorentzianSpectralWeight,
     LorentzianSpectralReductionKind,
@@ -126,6 +132,11 @@ const ComplexRationals = Complex{Rational{Int64}}
     FiniteWidthEvaluatedExpression,
     FiniteWidthEvaluatedCollision,
     FiniteWidthOccupationCollision,
+    OccupationBackground,
+    OccupationLinearization,
+    BackgroundOccupationLinearization,
+    OccupationSpectralResponse,
+    FiniteWidthCollisionLinearization,
     field_families,
     target_family,
     parameters,
@@ -151,6 +162,10 @@ const ComplexRationals = Complex{Rational{Int64}}
     spectral_energy,
     spectral_linewidth,
     spectral_residue,
+    spectral_data_variation,
+    spectral_energy_variation,
+    spectral_linewidth_variation,
+    spectral_residue_variation,
     spectral_normalization,
     spectral_squared_weight,
     spectral_jacobian,
@@ -183,13 +198,27 @@ const ComplexRationals = Complex{Rational{Int64}}
     finite_width_unsupported_offset_terms,
     finite_width_unsupported_distribution_terms,
     finite_width_occupation_collision,
+    occupation_background_value,
+    evaluate_occupation_polynomial,
+    occupation_linearization_terms,
+    occupation_linearization,
+    background_occupation_linearization_terms,
+    evaluate_occupation_linearization,
+    spectral_occupation_response_terms,
+    finite_width_linearized_terms,
+    finite_width_occupation_response_terms,
+    finite_width_spectral_response_terms,
+    linearize_finite_width_collision,
     lorentzian_spectral_data_from_retarded_self_energy,
     lorentzian_spectral_value,
     lorentzian_integrated_power,
+    lorentzian_integrated_power_variation,
     lorentzian_spectral_reduction,
     lorentzian_convolution_reduction,
     evaluate_spectral_weight,
-    evaluate_spectral_convolution
+    evaluate_spectral_convolution,
+    evaluate_spectral_weight_variation,
+    evaluate_spectral_convolution_variation
 
     # Small workflow surface intended for ordinary unqualified use.
     export @qfields,
