@@ -12,6 +12,7 @@ pages = [
         "Propagators and self-energy" => "manual/propagators.md",
         "Fourier and Wigner representations" => "manual/transforms.md",
         "Kinetic reduction" => "manual/kinetics.md",
+        "Finite-width spectral response" => "manual/finite_width_variation.md",
     ],
     "Examples" => [
         "Bosonic scattering and two-body loss" => "examples/bosonic_transport.md",

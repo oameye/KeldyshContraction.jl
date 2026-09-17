@@ -64,6 +64,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("full_rank_frequency_reduction.jl")
     include("finite_width_spectral.jl")
     include("finite_width_convolution.jl")
+    include("finite_width_spectral_variation.jl")
     include("canonical_frequency_expression.jl")
     include("causal_frequency_integration.jl")
     include("affine_singular_support.jl")
@@ -101,6 +102,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     SpectralLineIdentity,
     LorentzianSpectralData,
     LorentzianSpectralModel,
+    LorentzianSpectralDataVariation,
+    LorentzianSpectralModelVariation,
     LorentzianSpectralFactor,
     LorentzianSpectralWeight,
     LorentzianSpectralReductionKind,
@@ -138,6 +141,10 @@ const ComplexRationals = Complex{Rational{Int64}}
     spectral_energy,
     spectral_linewidth,
     spectral_residue,
+    spectral_data_variation,
+    spectral_energy_variation,
+    spectral_linewidth_variation,
+    spectral_residue_variation,
     spectral_normalization,
     spectral_squared_weight,
     spectral_jacobian,
@@ -161,10 +168,13 @@ const ComplexRationals = Complex{Rational{Int64}}
     lorentzian_spectral_data_from_retarded_self_energy,
     lorentzian_spectral_value,
     lorentzian_integrated_power,
+    lorentzian_integrated_power_variation,
     lorentzian_spectral_reduction,
     lorentzian_convolution_reduction,
     evaluate_spectral_weight,
-    evaluate_spectral_convolution
+    evaluate_spectral_convolution,
+    evaluate_spectral_weight_variation,
+    evaluate_spectral_convolution_variation
 
     # Small workflow surface intended for ordinary unqualified use.
     export @qfields,
