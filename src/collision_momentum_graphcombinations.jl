@@ -113,15 +113,15 @@ function _prepare_loop_gc_workspace!(workspace::_LoopGCQuotientWorkspace, nloops
 end
 
 function _write_loop_basis_indices!(
-    workspace::_LoopGCQuotientWorkspace,
-    basis::MomentumBasis,
-    external::MomentumVariable,
+    workspace::_LoopGCQuotientWorkspace, basis::MomentumBasis, external::MomentumVariable
 )
     external_index = 0
     @inbounds for basis_index in eachindex(basis.variables)
         basis.variables[basis_index] == external || continue
         iszero(external_index) || throw(
-            ArgumentError("external momentum must occur exactly once in the momentum basis")
+            ArgumentError(
+                "external momentum must occur exactly once in the momentum basis"
+            ),
         )
         external_index = basis_index
     end
@@ -250,9 +250,7 @@ function _quotient_loop_momenta_graphcombinations(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{OccupationMonomial{S},D}[
-                    transformed_monomial => transformed_coefficient
-                ]
+                contribution = Pair{OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
                 _push_kernel_polynomial!(
                     out, transformed_sector, OccupationPolynomial{D,S}(contribution)
                 )
