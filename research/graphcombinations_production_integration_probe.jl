@@ -60,13 +60,13 @@ function gc_requotient_terms(
 ) where {C<:Number,S<:KC.Statistics}
     D = promote_type(C, KC.ComplexRationals, Rational{Int})
     out = Dict{KC.CollisionKernelSector{S},KC.OccupationPolynomial{D,S}}()
-    cache = KC._LoopGCCanonicalizationCache()
+    workspace = KC._LoopGCQuotientWorkspace()
 
     for (sector, polynomial) in KC.loop_quotient_terms(expression)
         source_sector = reduced_sector(sector)
         for (monomial, coefficient) in polynomial
             transform = KC._graphcombinations_projective_canonical_loop_transform(
-                source_sector, monomial, cache
+                source_sector, monomial, workspace
             )
             transformed_sector, support_factor = KC._transform_kernel_sector(
                 source_sector, transform
