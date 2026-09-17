@@ -1,0 +1,72 @@
+name: GraphCombinations loop corpus certification
+
+on:
+  pull_request:
+    branches:
+      - perf-graphcombinations-loop-canonicalization
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+    paths:
+      - '.github/workflows/GraphCombinationsLoopCorpus.yml'
+      - 'Project.toml'
+      - 'src/**'
+      - 'research/graphcombinations_loop_corpus_certification.jl'
+  workflow_dispatch:
+
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        loop_count: [1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - name: Instantiate baseline environment
+        run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - name: Pin exact GraphCombinations research candidate
+        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="2885d19acda65b686314aef95f29035e1448de2f")'
+      - name: Add benchmark harness
+        run: julia --project=. -e 'using Pkg; Pkg.add("BenchmarkTools")'
+      - name: Select loop-count slice
+        run: sed -i 's/const CORPUS_LOOP_COUNTS = 1:5/const CORPUS_LOOP_COUNTS = ${{ matrix.loop_count }}:${{ matrix.loop_count }}/' research/graphcombinations_loop_corpus_certification.jl
+      - name: Run generated GC versus Nauty corpus
+        shell: bash
+        run: |
+          set -o pipefail
+          julia --project=. research/graphcombinations_loop_corpus_certification.jl 2>&1 | tee graphcombinations-loop-corpus-${{ matrix.loop_count }}.log
+      - name: Preserve corpus diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphcombinations-loop-corpus-${{ matrix.loop_count }}
+          path: graphcombinations-loop-corpus-${{ matrix.loop_count }}.log
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - name: Apply JuliaFormatter
+        run: julia -e 'using Pkg; Pkg.add(name="JuliaFormatter", version="2"); using JuliaFormatter; format(".")'
+      - name: Check formatting
+        run: git diff --exit-code
+      - name: Capture formatter diff
+        if: always()
+        run: git diff > juliaformatter.diff
+      - name: Preserve formatter diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphcombinations-loop-corpus-formatter
+          path: juliaformatter.diff
