@@ -44,6 +44,9 @@ end
     @test @inferred(KC.occupation_background_value(background, k_atom)) == 2 // 1
     @test @inferred(KC.occupation_background_value(background, q_atom)) == 5 // 1
 
+    explicit_background = KC.OccupationBackground(Rational{Int64}, _ -> 3 // 1)
+    @test @inferred(KC.occupation_background_value(explicit_background, k_atom)) == 3 // 1
+
     polynomial = 2 * nk * nk * nq + 3 * nq
     @test @inferred(KC.evaluate_occupation_polynomial(polynomial, background)) == 55 // 1
 
@@ -73,13 +76,15 @@ end
     @test KC.order(evaluated) == KC.order(fixture.kernel)
     @test KC.gradient_order(evaluated) == KC.gradient_order(fixture.kernel)
     @test KC.wigner_context(evaluated) == KC.wigner_context(fixture.kernel)
-    @test KC.background_linearized_collision_terms(direct) ==
-        KC.background_linearized_collision_terms(evaluated)
 
     response = only(values(KC.background_linearized_collision_terms(evaluated)))
     terms = Dict(KC.background_occupation_linearization_terms(response))
     @test terms[k_atom] == -20 // 1
     @test terms[q_atom] == -8 // 1
+
+    direct_response = only(values(KC.background_linearized_collision_terms(direct)))
+    direct_terms = Dict(KC.background_occupation_linearization_terms(direct_response))
+    @test direct_terms == terms
 
     zero_background = KC.OccupationBackground(Rational{Int64}, _ -> 0 // 1)
     zero_kernel = @inferred KC.linearize_collision_kernel(fixture.kernel, zero_background)
