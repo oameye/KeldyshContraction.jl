@@ -32,6 +32,11 @@ end
     for name in (
         :Regularisation,
         :OffShellCollisionExpression,
+        :OccupationLinearization,
+        :LinearizedCollisionKernel,
+        :CollisionMomentProjection,
+        :NumberMoment,
+        :EnergyMoment,
         :field_families,
         :target_family,
         :parameters,
@@ -51,6 +56,17 @@ end
         :reduced_blocked_terms,
         :reduced_trotter_terms,
         :collision_kernel_terms,
+        :occupation_linearization_terms,
+        :linearized_collision_terms,
+        :moment_test_function,
+        :projected_collision,
+        :occupation_linearization,
+        :linearize_collision_kernel,
+        :project_collision_moment,
+        :number_moment_projection,
+        :energy_moment_projection,
+        :moment_weight,
+        :linearize_collision_moment,
     )
         @test !is_exported(name)
         VERSION >= v"1.11" && @test Base.ispublic(KC, name)
