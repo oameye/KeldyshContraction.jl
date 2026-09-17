@@ -88,7 +88,7 @@ A_{\Sigma,\gamma}(k)=\Gamma_\gamma(k)
 =4\gamma\int_q n_q,
 ```
 
-with the vacuum contribution cancelled by the equal-time regularisation. Evaluating this kernel on a physical background supplies the `Γ` entering the Lorentzian spectral data; that downstream background evaluation is separate from the compiler object itself.
+with the vacuum contribution cancelled by the equal-time regularisation.
 
 ```@docs
 KeldyshContraction.SpectralSelfEnergySector
@@ -97,6 +97,30 @@ KeldyshContraction.spectral_self_energy_terms
 KeldyshContraction.spectral_self_energy_blocked_terms
 KeldyshContraction.spectral_self_energy_trotter_terms
 KeldyshContraction.spectral_self_energy_kernel
+```
+
+### Background-evaluated linewidth integrands
+
+A generated linewidth kernel can be evaluated on a supplied occupation state without choosing a momentum-integration prescription. `BackgroundSpectralSelfEnergyKernel` replaces only the exact occupation-polynomial factors by their background values while retaining the routed momentum basis, kinematic and shell/PV support, perturbative parameter, target/Wigner context, and unresolved causal/Trotter provenance.
+
+For example,
+
+```math
+4n_q\;\longrightarrow\;4\bar n_q
+```
+
+is still the coefficient of the explicit loop integral. The scalar linewidth
+
+```math
+\Gamma_\gamma(k)=4\gamma\int_q\bar n_q
+```
+
+requires a separate user-supplied integration or closure. Background evaluation therefore does not hide a trap model, quadrature, or local-density approximation.
+
+```@docs
+KeldyshContraction.BackgroundSpectralSelfEnergyKernel
+KeldyshContraction.background_spectral_self_energy_terms
+KeldyshContraction.evaluate_spectral_self_energy_background
 ```
 
 For integer multiplicity `m`, the analytic line integral is
