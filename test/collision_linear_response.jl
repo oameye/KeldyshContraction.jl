@@ -15,13 +15,12 @@ function linear_response_fixture()
     q = KC.basis_momentum(basis, 2)
     parameter = KC.ParameterMonomial(:γ)
     kinematic = KC.MomentumPolynomial(KC.MomentumMonomial(), one(C))
-    support = KC.FrequencySupport(KC.EnergyShell{Boson}[], KC.PrincipalValueSupport{Boson}[])
-    sector = KC.CollisionKernelSector{Boson}(
-        parameter, basis, external, kinematic, support
+    support = KC.FrequencySupport(
+        KC.EnergyShell{Boson}[], KC.PrincipalValueSupport{Boson}[]
     )
-    n(momentum) = KC.OccupationPolynomial(
-        KC.OccupationAtom(linear_response_ϕ, momentum), one(C)
-    )
+    sector = KC.CollisionKernelSector{Boson}(parameter, basis, external, kinematic, support)
+    n(momentum) =
+        KC.OccupationPolynomial(KC.OccupationAtom(linear_response_ϕ, momentum), one(C))
     polynomial = -4 * n(k) * n(q)
     kernel = KC.CollisionKernel{C,Boson,1,0,KC.HomogeneousWignerContext}(
         Dict(sector => polynomial),
@@ -81,7 +80,7 @@ end
     energy_projection = @inferred KC.energy_moment_projection(fixture.kernel)
     @test KC.moment_test_function(energy_projection) isa KC.EnergyMoment
     @test KC.moment_weight(energy_projection, fixture.sector) ==
-          KC.EnergyForm(KC.DispersionAtom(linear_response_ϕ, fixture.k))
+        KC.EnergyForm(KC.DispersionAtom(linear_response_ϕ, fixture.k))
 
     descriptor = LinearResponseCustomMoment(:quadrupole)
     custom_projection = @inferred KC.project_collision_moment(fixture.kernel, descriptor)
@@ -92,5 +91,5 @@ end
     @test KC.moment_test_function(linearized_projection) isa KC.EnergyMoment
     @test KC.projected_collision(linearized_projection) isa KC.LinearizedCollisionKernel
     @test @inferred(KC.linearize_collision_moment(linearized_projection)) ===
-          linearized_projection
+        linearized_projection
 end
