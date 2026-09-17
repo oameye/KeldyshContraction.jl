@@ -29,9 +29,7 @@ function reusable_gc_quotient_loop_momenta(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{KC.OccupationMonomial{S},D}[
-                    transformed_monomial => transformed_coefficient
-                ]
+                contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
                 KC._push_kernel_polynomial!(
                     out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
                 )
@@ -56,17 +54,15 @@ function _measure_prepared_pair_15(expression, workspace)
     nauty_quotient_loop_momenta(expression)
     reusable_gc_quotient_loop_momenta(expression, workspace)
     nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 15 evals = 1
-    gc_trial = @benchmark reusable_gc_quotient_loop_momenta(
-        $expression, $workspace
-    ) samples = 15 evals = 1
+    gc_trial = @benchmark reusable_gc_quotient_loop_momenta($expression, $workspace) samples =
+        15 evals = 1
     return median(nauty_trial), median(gc_trial)
 end
 
 function _measure_prepared_pair_41(expression, workspace)
     nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 41 evals = 1
-    gc_trial = @benchmark reusable_gc_quotient_loop_momenta(
-        $expression, $workspace
-    ) samples = 41 evals = 1
+    gc_trial = @benchmark reusable_gc_quotient_loop_momenta($expression, $workspace) samples =
+        41 evals = 1
     return median(nauty_trial), median(gc_trial)
 end
 
@@ -81,9 +77,7 @@ end
 cases = corpus_cases()
 workspaces = [_prepared_workspace(expression) for (_, expression) in cases]
 println(
-    "prepared packed-GC/Nauty corpus: ",
-    length(cases),
-    " generated production-shaped cases",
+    "prepared packed-GC/Nauty corpus: ", length(cases), " generated production-shaped cases"
 )
 
 semantic_failures = String[]
