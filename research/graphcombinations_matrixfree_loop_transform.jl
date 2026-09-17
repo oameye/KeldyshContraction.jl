@@ -121,10 +121,14 @@ function _matrixfree_momentum_polynomial(
     workspace::KC._LoopGCQuotientWorkspace,
     external_index::Int,
 ) where {C<:Number}
-    terms = Pair{KC.MomentumMonomial,C}[
-        _matrixfree_momentum_monomial(monomial, workspace, external_index) => coefficient
-        for (monomial, coefficient) in polynomial
-    ]
+    terms = Pair{KC.MomentumMonomial,C}[]
+    sizehint!(terms, length(polynomial))
+    for (monomial, coefficient) in polynomial
+        transformed = _matrixfree_momentum_monomial(monomial, workspace, external_index)
+        normalized, factor, nonzero = KC._projective_kinematic_monomial(transformed)
+        nonzero || continue
+        push!(terms, normalized => coefficient * convert(C, factor))
+    end
     return KC.MomentumPolynomial{C}(terms)
 end
 
@@ -288,8 +292,8 @@ println("matrix-free packed-GC residual corpus: ", length(cases), " cases")
     @test length(cases) == length(RESIDUAL_TWO_LOOP_LABELS)
     for (index, (_, expression)) in enumerate(cases)
         workspace = workspaces[index]
-        @test matrixfree_gc_quotient(expression, workspace) ==
-            prepared_dense_gc_quotient(expression, workspace)
+        @test KC.loop_quotient_terms(matrixfree_gc_quotient(expression, workspace)) ==
+            KC.loop_quotient_terms(prepared_dense_gc_quotient(expression, workspace))
     end
 end
 
