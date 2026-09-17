@@ -82,6 +82,32 @@ using ExplicitImports
     all_concrete(KeldyshContraction.LinewidthPower{KeldyshContraction.Boson})
     all_concrete(KeldyshContraction.WidthAwarePowerCounting{KeldyshContraction.Boson})
     all_concrete(
+        KeldyshContraction.OccupationLinearization{
+            KeldyshContraction.ComplexRationals,KeldyshContraction.Boson
+        },
+    )
+    all_concrete(
+        KeldyshContraction.LinearizedCollisionKernel{
+            KeldyshContraction.ComplexRationals,
+            KeldyshContraction.Boson,
+            1,
+            0,
+            KeldyshContraction.HomogeneousWignerContext,
+        },
+    )
+    all_concrete(
+        KeldyshContraction.CollisionMomentProjection{
+            KeldyshContraction.NumberMoment,
+            KeldyshContraction.CollisionKernel{
+                KeldyshContraction.ComplexRationals,
+                KeldyshContraction.Boson,
+                1,
+                0,
+                KeldyshContraction.HomogeneousWignerContext,
+            },
+        },
+    )
+    all_concrete(
         KeldyshContraction.ExceptionalFrequencyClassification{KeldyshContraction.Boson,2,0}
     )
 

@@ -78,6 +78,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("collision_momentum_quotient.jl")
     include("collision_momentum_projective.jl")
     include("collision_kernel_api.jl")
+    include("collision_linear_response.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
     include("propagator_algebra/legacy_momentum_routing.jl")
@@ -113,6 +114,11 @@ const ComplexRationals = Complex{Rational{Int64}}
     LorentzianConvolutionUnsupported,
     LinewidthPower,
     WidthAwarePowerCounting,
+    OccupationLinearization,
+    LinearizedCollisionKernel,
+    CollisionMomentProjection,
+    NumberMoment,
+    EnergyMoment,
     field_families,
     target_family,
     parameters,
@@ -132,6 +138,10 @@ const ComplexRationals = Complex{Rational{Int64}}
     reduced_blocked_terms,
     reduced_trotter_terms,
     collision_kernel_terms,
+    occupation_linearization_terms,
+    linearized_collision_terms,
+    moment_test_function,
+    projected_collision,
     spectral_line_family,
     spectral_line_momentum,
     spectral_data,
@@ -164,7 +174,14 @@ const ComplexRationals = Complex{Rational{Int64}}
     lorentzian_spectral_reduction,
     lorentzian_convolution_reduction,
     evaluate_spectral_weight,
-    evaluate_spectral_convolution
+    evaluate_spectral_convolution,
+    occupation_linearization,
+    linearize_collision_kernel,
+    project_collision_moment,
+    number_moment_projection,
+    energy_moment_projection,
+    moment_weight,
+    linearize_collision_moment
 
     # Small workflow surface intended for ordinary unqualified use.
     export @qfields,
