@@ -83,9 +83,13 @@ function BackgroundOccupationLinearization{C,S}(
 end
 
 Base.length(linearization::BackgroundOccupationLinearization) = length(linearization.terms)
-Base.isempty(linearization::BackgroundOccupationLinearization) = isempty(linearization.terms)
+function Base.isempty(linearization::BackgroundOccupationLinearization)
+    return isempty(linearization.terms)
+end
 Base.iszero(linearization::BackgroundOccupationLinearization) = isempty(linearization.terms)
-Base.iterate(linearization::BackgroundOccupationLinearization) = iterate(linearization.terms)
+function Base.iterate(linearization::BackgroundOccupationLinearization)
+    return iterate(linearization.terms)
+end
 function Base.iterate(linearization::BackgroundOccupationLinearization, state)
     return iterate(linearization.terms, state)
 end
@@ -95,8 +99,11 @@ end
 Base.IteratorSize(::Type{<:BackgroundOccupationLinearization}) = Base.HasLength()
 
 """Return the exact variation-channel coefficients evaluated at the background state."""
-background_occupation_linearization_terms(linearization::BackgroundOccupationLinearization) =
-    linearization.terms
+function background_occupation_linearization_terms(
+    linearization::BackgroundOccupationLinearization
+)
+    return linearization.terms
+end
 
 """Evaluate an exact occupation-space Fréchet derivative at a supplied background state."""
 function evaluate_occupation_linearization(
@@ -135,7 +142,9 @@ gradient_order(::BackgroundLinearizedCollisionKernel{C,S,O,G}) where {C,S,O,G} =
 wigner_context(kernel::BackgroundLinearizedCollisionKernel) = kernel.context
 
 """Return the canonical sector-to-background-response mapping."""
-background_linearized_collision_terms(kernel::BackgroundLinearizedCollisionKernel) = kernel.terms
+function background_linearized_collision_terms(kernel::BackgroundLinearizedCollisionKernel)
+    return kernel.terms
+end
 
 Base.length(kernel::BackgroundLinearizedCollisionKernel) = length(kernel.terms)
 Base.isempty(kernel::BackgroundLinearizedCollisionKernel) = isempty(kernel.terms)
@@ -156,7 +165,9 @@ function evaluate_collision_background(
 end
 
 """Linearize a collision kernel and evaluate its coefficients at a supplied background state."""
-function linearize_collision_kernel(kernel::CollisionKernel, background::OccupationBackground)
+function linearize_collision_kernel(
+    kernel::CollisionKernel, background::OccupationBackground
+)
     return evaluate_collision_background(linearize_collision_kernel(kernel), background)
 end
 
