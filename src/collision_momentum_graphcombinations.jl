@@ -118,21 +118,23 @@ function _write_loop_basis_indices!(
     external::MomentumVariable,
 )
     external_index = 0
-    loop_slot = 0
     @inbounds for basis_index in eachindex(basis.variables)
-        if basis.variables[basis_index] == external
-            iszero(external_index) || throw(
-                ArgumentError("external momentum must occur exactly once in the momentum basis")
-            )
-            external_index = basis_index
-        else
-            loop_slot += 1
-            workspace.loop_indices[loop_slot] = basis_index
-        end
+        basis.variables[basis_index] == external || continue
+        iszero(external_index) || throw(
+            ArgumentError("external momentum must occur exactly once in the momentum basis")
+        )
+        external_index = basis_index
     end
     iszero(external_index) && throw(
         ArgumentError("external momentum must occur exactly once in the momentum basis")
     )
+
+    loop_slot = 0
+    @inbounds for basis_index in eachindex(basis.variables)
+        basis_index == external_index && continue
+        loop_slot += 1
+        workspace.loop_indices[loop_slot] = basis_index
+    end
     return external_index
 end
 
