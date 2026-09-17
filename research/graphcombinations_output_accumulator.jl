@@ -50,9 +50,7 @@ function prepared_current_output(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{KC.OccupationMonomial{S},D}[
-                    transformed_monomial => transformed_coefficient
-                ]
+                contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
                 KC._push_kernel_polynomial!(
                     out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
                 )
@@ -78,9 +76,7 @@ function _accumulate_kernel_atom!(
 
     for (kinematic_monomial, kinematic_coefficient) in KC.kinematic_factor(sector)
         iszero(kinematic_coefficient) && continue
-        unit_kinematic = KC.MomentumPolynomial(
-            kinematic_monomial, one(KC.ComplexRationals)
-        )
+        unit_kinematic = KC.MomentumPolynomial(kinematic_monomial, one(KC.ComplexRationals))
         unit_sector = KC.CollisionKernelSector{S}(
             KC.parameters(sector),
             KC.momentum_basis(sector),
@@ -111,9 +107,7 @@ function _accumulate_kernel_atom!(
 end
 
 function _materialize_accumulator(
-    accumulator::Dict{
-        KC.CollisionKernelSector{S},Dict{KC.OccupationMonomial{S},C}
-    },
+    accumulator::Dict{KC.CollisionKernelSector{S},Dict{KC.OccupationMonomial{S},C}}
 ) where {C<:Number,S<:KC.Statistics}
     out = Dict{KC.CollisionKernelSector{S},KC.OccupationPolynomial{C,S}}()
     sizehint!(out, length(accumulator))
@@ -135,9 +129,7 @@ function accumulated_output(
     workspace::KC._LoopGCQuotientWorkspace,
 ) where {C<:Number,S<:KC.Statistics,O,G,Ctx<:KC.AbstractWignerContext}
     D = promote_type(C, KC.ComplexRationals, Rational{Int})
-    accumulator = Dict{
-        KC.CollisionKernelSector{S},Dict{KC.OccupationMonomial{S},D}
-    }()
+    accumulator = Dict{KC.CollisionKernelSector{S},Dict{KC.OccupationMonomial{S},D}}()
 
     for (sector, polynomial) in KC.occupation_reduced_terms(expression)
         for (occupation_monomial, occupation_coefficient) in polynomial
@@ -201,9 +193,12 @@ current_ratios = Tuple{String,Float64}[]
         prepared_current_output(expression, workspace)
         accumulated_output(expression, workspace)
 
-        nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 41 evals = 1
-        current_trial = @benchmark prepared_current_output($expression, $workspace) samples = 41 evals = 1
-        accumulator_trial = @benchmark accumulated_output($expression, $workspace) samples = 41 evals = 1
+        nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 41 evals =
+            1
+        current_trial = @benchmark prepared_current_output($expression, $workspace) samples =
+            41 evals = 1
+        accumulator_trial = @benchmark accumulated_output($expression, $workspace) samples =
+            41 evals = 1
         nauty = median(nauty_trial)
         current = median(current_trial)
         accumulator = median(accumulator_trial)
