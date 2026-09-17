@@ -30,7 +30,7 @@ jobs:
       - name: Instantiate baseline environment
         run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
       - name: Pin exact GraphCombinations research candidate
-        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="49205e4f7eb9a198b5142f1745aa0e0cb96c3bfd")'
+        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="155eeadd245b2112bee6c85574063b5d92888a58")'
       - name: Run package tests
         run: julia --project=. -e 'using Pkg; Pkg.test()'
 
@@ -45,7 +45,7 @@ jobs:
       - name: Instantiate baseline environment
         run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
       - name: Pin exact GraphCombinations research candidate
-        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="49205e4f7eb9a198b5142f1745aa0e0cb96c3bfd")'
+        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="155eeadd245b2112bee6c85574063b5d92888a58")'
       - name: Add benchmark harness
         run: julia --project=. -e 'using Pkg; Pkg.add("BenchmarkTools")'
       - name: Compare GC candidate quotient with retained Nauty oracle
