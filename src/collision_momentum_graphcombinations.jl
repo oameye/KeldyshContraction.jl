@@ -14,6 +14,36 @@ end
 
 const _LoopGCCanonicalizationCache = Dict{Int,_LoopGCCanonicalizationBuffers}
 
+mutable struct _LoopGCQuotientWorkspace
+    cache::_LoopGCCanonicalizationCache
+    builder::_LoopCanonicalGraphBuilder
+    loop_indices::Vector{Int}
+    pair_vertices::Vector{Int}
+    positive_vertices::Vector{Int}
+    negative_vertices::Vector{Int}
+    loop_incidences::Vector{Vector{Tuple{Int,MomentumCoefficient}}}
+    ordered_slots::Vector{Int}
+    loop_permutation::Vector{Int}
+    loop_signs::Vector{Int}
+    external_shifts::Vector{Int}
+end
+
+function _LoopGCQuotientWorkspace()
+    return _LoopGCQuotientWorkspace(
+        _LoopGCCanonicalizationCache(),
+        _LoopCanonicalGraphBuilder(),
+        Int[],
+        Int[],
+        Int[],
+        Int[],
+        Vector{Vector{Tuple{Int,MomentumCoefficient}}}(),
+        Int[],
+        Int[],
+        Int[],
+        Int[],
+    )
+end
+
 function _LoopGCCanonicalizationBuffers(num_vertices::Int)
     return _LoopGCCanonicalizationBuffers(
         GC.DirectedCanonicalizationWorkspace(num_vertices),
@@ -56,30 +86,99 @@ function _loop_gc_buffers!(cache::_LoopGCCanonicalizationCache, num_vertices::In
     return buffers
 end
 
+function _prepare_loop_gc_workspace!(workspace::_LoopGCQuotientWorkspace, nloops::Int)
+    empty!(workspace.builder.colors)
+    empty!(workspace.builder.edges)
+
+    resize!(workspace.loop_indices, nloops)
+    resize!(workspace.pair_vertices, nloops)
+    resize!(workspace.positive_vertices, nloops)
+    resize!(workspace.negative_vertices, nloops)
+    resize!(workspace.ordered_slots, nloops)
+    resize!(workspace.loop_permutation, nloops)
+    resize!(workspace.loop_signs, nloops)
+    resize!(workspace.external_shifts, nloops)
+
+    while length(workspace.loop_incidences) < nloops
+        push!(workspace.loop_incidences, Tuple{Int,MomentumCoefficient}[])
+    end
+    @inbounds for slot in 1:nloops
+        empty!(workspace.loop_incidences[slot])
+        workspace.ordered_slots[slot] = slot
+        workspace.loop_permutation[slot] = 0
+        workspace.loop_signs[slot] = 1
+        workspace.external_shifts[slot] = 0
+    end
+    return workspace
+end
+
+function _write_loop_basis_indices!(
+    workspace::_LoopGCQuotientWorkspace,
+    basis::MomentumBasis,
+    external::MomentumVariable,
+)
+    external_index = 0
+    loop_slot = 0
+    @inbounds for basis_index in eachindex(basis.variables)
+        if basis.variables[basis_index] == external
+            iszero(external_index) || throw(
+                ArgumentError("external momentum must occur exactly once in the momentum basis")
+            )
+            external_index = basis_index
+        else
+            loop_slot += 1
+            workspace.loop_indices[loop_slot] = basis_index
+        end
+    end
+    iszero(external_index) && throw(
+        ArgumentError("external momentum must occur exactly once in the momentum basis")
+    )
+    return external_index
+end
+
+function _order_loop_slots!(
+    workspace::_LoopGCQuotientWorkspace,
+    buffers::_LoopGCCanonicalizationBuffers,
+    nloops::Int,
+)
+    @inbounds for index in 2:nloops
+        slot = workspace.ordered_slots[index]
+        rank = GC.canonical_rank(buffers.buffer, workspace.pair_vertices[slot])
+        position = index - 1
+        while position >= 1
+            previous_slot = workspace.ordered_slots[position]
+            previous_rank = GC.canonical_rank(
+                buffers.buffer, workspace.pair_vertices[previous_slot]
+            )
+            rank < previous_rank || break
+            workspace.ordered_slots[position + 1] = previous_slot
+            position -= 1
+        end
+        workspace.ordered_slots[position + 1] = slot
+    end
+    return workspace.ordered_slots
+end
+
 function _graphcombinations_projective_canonical_loop_transform(
     sector::ReducedCollisionSector{S},
     monomial::OccupationMonomial{S},
-    cache::_LoopGCCanonicalizationCache,
+    workspace::_LoopGCQuotientWorkspace,
 ) where {S<:Statistics}
     basis = momentum_basis(sector)
     external = external_wigner_momentum(sector)
-    external_index = _external_basis_index(basis, external)
-    loop_indices = _loop_basis_indices(basis, external)
-    nloops = length(loop_indices)
+    nloops = length(basis) - 1
+    _prepare_loop_gc_workspace!(workspace, nloops)
+    external_index = _write_loop_basis_indices!(workspace, basis, external)
 
-    builder = _LoopCanonicalGraphBuilder()
+    builder = workspace.builder
     root = _add_loop_vertex!(builder, _loop_graph_color(1))
-    pair_vertices = Vector{Int}(undef, nloops)
-    positive_vertices = Vector{Int}(undef, nloops)
-    negative_vertices = Vector{Int}(undef, nloops)
-    loop_incidences = [Tuple{Int,MomentumCoefficient}[] for _ in 1:nloops]
     for slot in 1:nloops
         pair = _add_loop_vertex!(builder, _loop_graph_color(2))
         positive = _add_loop_vertex!(builder, _loop_graph_color(3))
         negative = _add_loop_vertex!(builder, _loop_graph_color(3))
-        pair_vertices[slot] = pair
-        positive_vertices[slot] = positive
-        negative_vertices[slot] = negative
+        workspace.pair_vertices[slot] = pair
+        workspace.positive_vertices[slot] = positive
+        workspace.negative_vertices[slot] = negative
         _add_loop_edge!(builder, root, pair)
         _add_loop_edge!(builder, pair, positive)
         _add_loop_edge!(builder, pair, negative)
@@ -91,32 +190,37 @@ function _graphcombinations_projective_canonical_loop_transform(
         sector,
         monomial,
         external_index,
-        loop_indices,
-        positive_vertices,
-        negative_vertices,
-        loop_incidences,
+        workspace.loop_indices,
+        workspace.positive_vertices,
+        workspace.negative_vertices,
+        workspace.loop_incidences,
     )
 
-    buffers = _loop_gc_buffers!(cache, length(builder.colors))
+    buffers = _loop_gc_buffers!(workspace.cache, length(builder.colors))
     _prepare_loop_gc_graph!(buffers, builder)
     GC.canonicalize_directed!(
         buffers.buffer, buffers.workspace, buffers.graph, buffers.labels
     )
 
-    ordered_slots = sortperm(
-        1:nloops; by=slot -> GC.canonical_rank(buffers.buffer, pair_vertices[slot])
-    )
-    loop_permutation = zeros(Int, nloops)
-    loop_signs = ones(Int, nloops)
-    for (new_slot, old_slot) in enumerate(ordered_slots)
-        loop_permutation[old_slot] = new_slot
-        positive_rank = GC.canonical_rank(buffers.buffer, positive_vertices[old_slot])
-        negative_rank = GC.canonical_rank(buffers.buffer, negative_vertices[old_slot])
-        loop_signs[old_slot] = positive_rank < negative_rank ? 1 : -1
+    _order_loop_slots!(workspace, buffers, nloops)
+    @inbounds for new_slot in 1:nloops
+        old_slot = workspace.ordered_slots[new_slot]
+        workspace.loop_permutation[old_slot] = new_slot
+        positive_rank = GC.canonical_rank(
+            buffers.buffer, workspace.positive_vertices[old_slot]
+        )
+        negative_rank = GC.canonical_rank(
+            buffers.buffer, workspace.negative_vertices[old_slot]
+        )
+        workspace.loop_signs[old_slot] = positive_rank < negative_rank ? 1 : -1
     end
 
     return loop_permutation_transform(
-        basis, external, loop_permutation, loop_signs, zeros(Int, nloops)
+        basis,
+        external,
+        workspace.loop_permutation,
+        workspace.loop_signs,
+        workspace.external_shifts,
     )
 end
 
@@ -125,14 +229,14 @@ function _quotient_loop_momenta_graphcombinations(
 ) where {C<:Number,S<:Statistics,O,G,Ctx<:AbstractWignerContext}
     D = promote_type(C, ComplexRationals, Rational{Int})
     out = Dict{CollisionKernelSector{S},OccupationPolynomial{D,S}}()
-    cache = _LoopGCCanonicalizationCache()
+    workspace = _LoopGCQuotientWorkspace()
 
     for (sector, polynomial) in occupation_reduced_terms(expression)
         for (occupation_monomial, occupation_coefficient) in polynomial
             for (kinematic_monomial, kinematic_coefficient) in kinematic_factor(sector)
                 atom_sector = _kinematic_atom_sector(sector, kinematic_monomial)
                 transform = _graphcombinations_projective_canonical_loop_transform(
-                    atom_sector, occupation_monomial, cache
+                    atom_sector, occupation_monomial, workspace
                 )
                 transformed_sector, support_factor = _transform_kernel_sector(
                     atom_sector, transform
@@ -144,7 +248,9 @@ function _quotient_loop_momenta_graphcombinations(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
+                contribution = Pair{OccupationMonomial{S},D}[
+                    transformed_monomial => transformed_coefficient
+                ]
                 _push_kernel_polynomial!(
                     out, transformed_sector, OccupationPolynomial{D,S}(contribution)
                 )
