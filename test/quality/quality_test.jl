@@ -107,6 +107,21 @@ using ExplicitImports
             },
         },
     )
+    all_concrete(KeldyshContraction.OccupationBackground{Rational{Int64},typeof(identity)})
+    all_concrete(
+        KeldyshContraction.BackgroundOccupationLinearization{
+            Rational{Int64},KeldyshContraction.Boson
+        },
+    )
+    all_concrete(
+        KeldyshContraction.BackgroundLinearizedCollisionKernel{
+            Rational{Int64},
+            KeldyshContraction.Boson,
+            1,
+            0,
+            KeldyshContraction.HomogeneousWignerContext,
+        },
+    )
     all_concrete(
         KeldyshContraction.ExceptionalFrequencyClassification{KeldyshContraction.Boson,2,0}
     )

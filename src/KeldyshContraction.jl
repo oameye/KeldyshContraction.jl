@@ -79,6 +79,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("collision_momentum_projective.jl")
     include("collision_kernel_api.jl")
     include("collision_linear_response.jl")
+    include("collision_background_response.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
     include("propagator_algebra/legacy_momentum_routing.jl")
@@ -119,6 +120,9 @@ const ComplexRationals = Complex{Rational{Int64}}
     CollisionMomentProjection,
     NumberMoment,
     EnergyMoment,
+    OccupationBackground,
+    BackgroundOccupationLinearization,
+    BackgroundLinearizedCollisionKernel,
     field_families,
     target_family,
     parameters,
@@ -142,6 +146,12 @@ const ComplexRationals = Complex{Rational{Int64}}
     linearized_collision_terms,
     moment_test_function,
     projected_collision,
+    occupation_background_value,
+    evaluate_occupation_polynomial,
+    background_occupation_linearization_terms,
+    evaluate_occupation_linearization,
+    background_linearized_collision_terms,
+    evaluate_collision_background,
     spectral_line_family,
     spectral_line_momentum,
     spectral_data,
