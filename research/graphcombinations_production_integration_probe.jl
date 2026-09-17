@@ -109,17 +109,54 @@ function gc_requotient_terms(
     return out
 end
 
+function nauty_transform_sweep(expression::KC.OccupationReducedExpression)
+    result = nothing
+    for (sector, polynomial) in KC.occupation_reduced_terms(expression)
+        for (occupation_monomial, _) in polynomial
+            for (kinematic_monomial, _) in KC.kinematic_factor(sector)
+                atom_sector = KC._kinematic_atom_sector(sector, kinematic_monomial)
+                result = KC._projective_canonical_loop_transform(
+                    atom_sector, occupation_monomial
+                )
+            end
+        end
+    end
+    return result
+end
+
+function gc_transform_sweep!(workspace::KC._LoopGCQuotientWorkspace, expression)
+    result = nothing
+    for (sector, polynomial) in KC.occupation_reduced_terms(expression)
+        for (occupation_monomial, _) in polynomial
+            for (kinematic_monomial, _) in KC.kinematic_factor(sector)
+                atom_sector = KC._kinematic_atom_sector(sector, kinematic_monomial)
+                result = KC._graphcombinations_projective_canonical_loop_transform(
+                    atom_sector, occupation_monomial, workspace
+                )
+            end
+        end
+    end
+    return result
+end
+
 function report_quotient_benchmark(nloops::Int, expression)
     nauty_quotient_loop_momenta(expression)
     KC.quotient_loop_momenta(expression)
-    KC._loop_gc_capacities(expression)
+    graph_capacity, loop_capacity = KC._loop_gc_capacities(expression)
+    workspace = KC._LoopGCQuotientWorkspace(graph_capacity, loop_capacity)
+    nauty_transform_sweep(expression)
+    gc_transform_sweep!(workspace, expression)
 
     nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 11 evals = 1
     gc_trial = @benchmark KC.quotient_loop_momenta($expression) samples = 11 evals = 1
     capacity_trial = @benchmark KC._loop_gc_capacities($expression) samples = 51 evals = 1
+    nauty_transform_trial = @benchmark nauty_transform_sweep($expression) samples = 11 evals = 1
+    gc_transform_trial = @benchmark gc_transform_sweep!($workspace, $expression) samples = 11 evals = 1
     nauty = median(nauty_trial)
     gc = median(gc_trial)
     capacity = median(capacity_trial)
+    nauty_transform = median(nauty_transform_trial)
+    gc_transform = median(gc_transform_trial)
     println(
         "$nloops-loop full quotient: Nauty ",
         round(nauty.time / 1.0e3; digits=2),
@@ -138,7 +175,6 @@ function report_quotient_benchmark(nloops::Int, expression)
         "; memory ratio=",
         round(gc.memory / nauty.memory; digits=3),
     )
-    graph_capacity, loop_capacity = KC._loop_gc_capacities(expression)
     println(
         "$nloops-loop capacity scan: ",
         round(capacity.time / 1.0e3; digits=2),
@@ -150,6 +186,22 @@ function report_quotient_benchmark(nloops::Int, expression)
         graph_capacity,
         "; loop_capacity=",
         loop_capacity,
+    )
+    println(
+        "$nloops-loop canonical transform sweep: Nauty ",
+        round(nauty_transform.time / 1.0e3; digits=2),
+        " μs / ",
+        nauty_transform.memory,
+        " B / ",
+        nauty_transform.allocs,
+        " allocs; GC warmed workspace ",
+        round(gc_transform.time / 1.0e3; digits=2),
+        " μs / ",
+        gc_transform.memory,
+        " B / ",
+        gc_transform.allocs,
+        " allocs; time ratio=",
+        round(gc_transform.time / nauty_transform.time; digits=3),
     )
     return nothing
 end
