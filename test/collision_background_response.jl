@@ -63,7 +63,9 @@ end
     )
     @test isempty(zero_response)
 
-    linear_response = @inferred KC.evaluate_occupation_linearization(symbolic, zero_background)
+    linear_response = @inferred KC.evaluate_occupation_linearization(
+        symbolic, zero_background
+    )
     linear_terms = Dict(KC.background_occupation_linearization_terms(linear_response))
     @test length(linear_terms) == 1
     @test linear_terms[q_atom] == 3 // 1
