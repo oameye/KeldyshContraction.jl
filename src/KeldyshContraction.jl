@@ -65,6 +65,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("finite_width_spectral.jl")
     include("finite_width_convolution.jl")
     include("finite_width_frequency_collision.jl")
+    include("finite_width_collision_evaluation.jl")
     include("canonical_frequency_expression.jl")
     include("causal_frequency_integration.jl")
     include("affine_singular_support.jl")
@@ -121,6 +122,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     FiniteWidthFrequencyTerm,
     FiniteWidthFrequencyExpression,
     FiniteWidthFrequencyCollision,
+    FiniteWidthEvaluatedExpression,
+    FiniteWidthEvaluatedCollision,
     field_families,
     target_family,
     parameters,
@@ -171,6 +174,9 @@ const ComplexRationals = Complex{Rational{Int64}}
     finite_width_spectral_reduction,
     finite_width_convolution_reduction,
     finite_width_frequency_collision,
+    finite_width_resolved_terms,
+    finite_width_unsupported_terms,
+    evaluate_finite_width_collision,
     lorentzian_spectral_data_from_retarded_self_energy,
     lorentzian_spectral_value,
     lorentzian_integrated_power,
