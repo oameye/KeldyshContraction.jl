@@ -7,25 +7,49 @@
 struct _LoopGCCanonicalizationBuffers
     workspace::GC.DirectedCanonicalizationWorkspace
     buffer::GC.DirectedCanonicalizationBuffer
+    graph::GC.DirectedGCGraph
+    labels::Vector{Int}
+    color_order::Vector{_LoopGraphColor}
 end
 
 const _LoopGCCanonicalizationCache = Dict{Int,_LoopGCCanonicalizationBuffers}
 
-function _loop_gc_graph(builder::_LoopCanonicalGraphBuilder)
-    color_classes = sort!(unique(copy(builder.colors)))
-    labels = Int[searchsortedfirst(color_classes, color) for color in builder.colors]
-    edges = Pair{Int,Int}[source => target for (source, target) in builder.edges]
-    return GC.DirectedGCGraph(edges, length(labels)), labels
+function _LoopGCCanonicalizationBuffers(num_vertices::Int)
+    return _LoopGCCanonicalizationBuffers(
+        GC.DirectedCanonicalizationWorkspace(num_vertices),
+        GC.DirectedCanonicalizationBuffer(num_vertices),
+        GC.DirectedGCGraph(Pair{Int,Int}[], num_vertices),
+        Vector{Int}(undef, num_vertices),
+        Vector{_LoopGraphColor}(undef, num_vertices),
+    )
+end
+
+function _prepare_loop_gc_graph!(
+    buffers::_LoopGCCanonicalizationBuffers, builder::_LoopCanonicalGraphBuilder
+)
+    num_vertices = length(builder.colors)
+    buffers.graph.num_vertices == num_vertices ||
+        throw(DimensionMismatch("cached directed graph has the wrong size"))
+
+    copyto!(buffers.color_order, builder.colors)
+    sort!(buffers.color_order)
+    @inbounds for vertex in eachindex(builder.colors)
+        buffers.labels[vertex] = searchsortedfirst(buffers.color_order, builder.colors[vertex])
+    end
+
+    fill!(buffers.graph.multiplicities, 0)
+    @inbounds for (source, target) in builder.edges
+        slot = (source - 1) * num_vertices + target
+        buffers.graph.multiplicities[slot] += 1
+    end
+    return buffers
 end
 
 function _loop_gc_buffers!(cache::_LoopGCCanonicalizationCache, num_vertices::Int)
     if haskey(cache, num_vertices)
         return cache[num_vertices]
     end
-    buffers = _LoopGCCanonicalizationBuffers(
-        GC.DirectedCanonicalizationWorkspace(num_vertices),
-        GC.DirectedCanonicalizationBuffer(num_vertices),
-    )
+    buffers = _LoopGCCanonicalizationBuffers(num_vertices)
     cache[num_vertices] = buffers
     return buffers
 end
@@ -71,9 +95,11 @@ function _graphcombinations_projective_canonical_loop_transform(
         loop_incidences,
     )
 
-    graph, labels = _loop_gc_graph(builder)
-    buffers = _loop_gc_buffers!(cache, graph.num_vertices)
-    GC.canonicalize_directed!(buffers.buffer, buffers.workspace, graph, labels)
+    buffers = _loop_gc_buffers!(cache, length(builder.colors))
+    _prepare_loop_gc_graph!(buffers, builder)
+    GC.canonicalize_directed!(
+        buffers.buffer, buffers.workspace, buffers.graph, buffers.labels
+    )
 
     ordered_slots = sortperm(
         1:nloops; by=slot -> GC.canonical_rank(buffers.buffer, pair_vertices[slot])
@@ -116,7 +142,9 @@ function _quotient_loop_momenta_graphcombinations(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
+                contribution = Pair{OccupationMonomial{S},D}[
+                    transformed_monomial => transformed_coefficient
+                ]
                 _push_kernel_polynomial!(
                     out, transformed_sector, OccupationPolynomial{D,S}(contribution)
                 )
