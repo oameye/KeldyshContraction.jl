@@ -113,7 +113,10 @@ target_family(kernel::LinearizedCollisionKernel) = kernel.target
 parameters(kernel::LinearizedCollisionKernel) = kernel.parameter
 gradient_order(::LinearizedCollisionKernel{C,S,O,G}) where {C,S,O,G} = Val(G)
 wigner_context(kernel::LinearizedCollisionKernel) = kernel.context
+
+"""Return the canonical sector-to-Fréchet-derivative mapping of a linearized collision kernel."""
 linearized_collision_terms(kernel::LinearizedCollisionKernel) = kernel.terms
+
 Base.length(kernel::LinearizedCollisionKernel) = length(kernel.terms)
 Base.isempty(kernel::LinearizedCollisionKernel) = isempty(kernel.terms)
 
