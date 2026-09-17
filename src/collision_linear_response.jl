@@ -45,7 +45,9 @@ Base.length(linearization::OccupationLinearization) = length(linearization.terms
 Base.isempty(linearization::OccupationLinearization) = isempty(linearization.terms)
 Base.iszero(linearization::OccupationLinearization) = isempty(linearization.terms)
 Base.iterate(linearization::OccupationLinearization) = iterate(linearization.terms)
-Base.iterate(linearization::OccupationLinearization, state) = iterate(linearization.terms, state)
+function Base.iterate(linearization::OccupationLinearization, state)
+    return iterate(linearization.terms, state)
+end
 function Base.eltype(::Type{OccupationLinearization{C,S}}) where {C,S}
     return Pair{OccupationAtom{S},OccupationPolynomial{C,S}}
 end
@@ -82,9 +84,7 @@ function occupation_linearization(
             deleteat!(residual_factors, i)
             residual = OccupationMonomial(residual_factors)
             derivative_coefficient = convert(D, coefficient) * convert(D, multiplicity)
-            contribution = OccupationPolynomial{D,S}([
-                residual => derivative_coefficient,
-            ])
+            contribution = OccupationPolynomial{D,S}([residual => derivative_coefficient])
             push!(raw, atom => contribution)
             i = j + 1
         end
@@ -100,9 +100,7 @@ The phase-space sector, shell/PV support, derivative kinematics, perturbative pr
 Wigner context are unchanged. Only each nonlinear occupation polynomial is replaced by its exact
 Fréchet derivative.
 """
-struct LinearizedCollisionKernel{
-    C<:Number,S<:Statistics,O,G,Ctx<:AbstractWignerContext
-}
+struct LinearizedCollisionKernel{C<:Number,S<:Statistics,O,G,Ctx<:AbstractWignerContext}
     terms::Dict{CollisionKernelSector{S},OccupationLinearization{C,S}}
     target::FieldFamily{S}
     parameter::ParameterMonomial
@@ -130,10 +128,7 @@ function linearize_collision_kernel(
         iszero(linearization) || (out[sector] = linearization)
     end
     return LinearizedCollisionKernel{D,S,O,G,Ctx}(
-        out,
-        target_family(kernel),
-        parameters(kernel),
-        wigner_context(kernel),
+        out, target_family(kernel), parameters(kernel), wigner_context(kernel)
     )
 end
 
@@ -168,22 +163,32 @@ function project_collision_moment(kernel::K, moment::M) where {K<:CollisionKerne
 end
 
 """Attach an explicit moment/test-function descriptor to a linearized collision kernel."""
-function project_collision_moment(kernel::K, moment::M) where {K<:LinearizedCollisionKernel,M}
+function project_collision_moment(
+    kernel::K, moment::M
+) where {K<:LinearizedCollisionKernel,M}
     return CollisionMomentProjection{M,K}(moment, kernel)
 end
 
 """Construct the formal particle-number collision moment `Ṅ = ∫ C`."""
-number_moment_projection(kernel::CollisionKernel) = project_collision_moment(kernel, NumberMoment())
-number_moment_projection(kernel::LinearizedCollisionKernel) =
-    project_collision_moment(kernel, NumberMoment())
+function number_moment_projection(kernel::CollisionKernel)
+    return project_collision_moment(kernel, NumberMoment())
+end
+function number_moment_projection(kernel::LinearizedCollisionKernel)
+    return project_collision_moment(kernel, NumberMoment())
+end
 
 """Construct the formal energy collision moment `Ė = ∫ ε_k C`."""
-energy_moment_projection(kernel::CollisionKernel) = project_collision_moment(kernel, EnergyMoment())
-energy_moment_projection(kernel::LinearizedCollisionKernel) =
-    project_collision_moment(kernel, EnergyMoment())
+function energy_moment_projection(kernel::CollisionKernel)
+    return project_collision_moment(kernel, EnergyMoment())
+end
+function energy_moment_projection(kernel::LinearizedCollisionKernel)
+    return project_collision_moment(kernel, EnergyMoment())
+end
 
 """Exact test-function weight for the particle-number moment."""
-moment_weight(::NumberMoment, ::CollisionKernelSector, ::FieldFamily) = one(EnergyCoefficient)
+function moment_weight(::NumberMoment, ::CollisionKernelSector, ::FieldFamily)
+    return one(EnergyCoefficient)
+end
 
 """Exact external quasiparticle-energy test function for one canonical collision sector."""
 function moment_weight(
@@ -199,14 +204,18 @@ end
 function moment_weight(
     projection::CollisionMomentProjection{NumberMoment,K}, sector::CollisionKernelSector
 ) where {K}
-    return moment_weight(NumberMoment(), sector, target_family(projected_collision(projection)))
+    return moment_weight(
+        NumberMoment(), sector, target_family(projected_collision(projection))
+    )
 end
 
 """Resolve the exact energy weight for one sector of a projection."""
 function moment_weight(
     projection::CollisionMomentProjection{EnergyMoment,K}, sector::CollisionKernelSector
 ) where {K}
-    return moment_weight(EnergyMoment(), sector, target_family(projected_collision(projection)))
+    return moment_weight(
+        EnergyMoment(), sector, target_family(projected_collision(projection))
+    )
 end
 
 """
@@ -224,6 +233,8 @@ function linearize_collision_moment(
     )
 end
 
-linearize_collision_moment(
+function linearize_collision_moment(
     projection::CollisionMomentProjection{M,K}
-) where {M,K<:LinearizedCollisionKernel} = projection
+) where {M,K<:LinearizedCollisionKernel}
+    return projection
+end
