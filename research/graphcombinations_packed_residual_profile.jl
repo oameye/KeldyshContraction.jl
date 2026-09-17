@@ -15,7 +15,9 @@ function _profile_case(label, expression)
     atom_sector, monomial = _single_atom(expression)
     workspace = KC._LoopGCQuotientWorkspace(graph_capacity, loop_capacity)
 
-    KC._graphcombinations_projective_canonical_loop_transform(atom_sector, monomial, workspace)
+    KC._graphcombinations_projective_canonical_loop_transform(
+        atom_sector, monomial, workspace
+    )
     storage = workspace.canonicalization
     KC._canonicalize_loop_builder!(storage, workspace.builder)
 
@@ -23,7 +25,8 @@ function _profile_case(label, expression)
         @benchmark KC._loop_gc_capacities($expression) samples = 101 evals = 1
     )
     workspace_ctor = median(
-        @benchmark KC._LoopGCQuotientWorkspace($graph_capacity, $loop_capacity) samples = 101 evals = 1
+        @benchmark KC._LoopGCQuotientWorkspace($graph_capacity, $loop_capacity) samples =
+            101 evals = 1
     )
     packed_search = median(
         @benchmark GC.canonicalize_directed_packed!(
@@ -31,7 +34,8 @@ function _profile_case(label, expression)
         ) samples = 101 evals = 1
     )
     builder_canonicalization = median(
-        @benchmark KC._canonicalize_loop_builder!($storage, $(workspace.builder)) samples = 101 evals = 1
+        @benchmark KC._canonicalize_loop_builder!($storage, $(workspace.builder)) samples =
+            101 evals = 1
     )
     preallocated_transform = median(
         @benchmark KC._graphcombinations_projective_canonical_loop_transform(
@@ -46,7 +50,7 @@ function _profile_case(label, expression)
     )
 
     us(x) = round(x.time / 1.0e3; digits=2)
-    println(
+    return println(
         label,
         " | capacity=",
         graph_capacity,
@@ -85,10 +89,12 @@ function _profile_case(label, expression)
 end
 
 profile_cases = (
-    "boson/shell/pair/dense" => corpus_expression(Boson, gc_corpus_ϕ, 2, :shell, :pair, :dense),
+    "boson/shell/pair/dense" =>
+        corpus_expression(Boson, gc_corpus_ϕ, 2, :shell, :pair, :dense),
     "fermion/shell/none/dense" =>
         corpus_expression(Fermion, gc_corpus_ψ, 2, :shell, :none, :dense),
-    "boson/none/none/dense" => corpus_expression(Boson, gc_corpus_ϕ, 2, :none, :none, :dense),
+    "boson/none/none/dense" =>
+        corpus_expression(Boson, gc_corpus_ϕ, 2, :none, :none, :dense),
     "boson/none/none/sparse" =>
         corpus_expression(Boson, gc_corpus_ϕ, 2, :none, :none, :sparse),
     "boson/none/pair/coupled" =>
