@@ -77,6 +77,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("trotter_frequency_reduction.jl")
     include("trotter_frequency_collision.jl")
     include("collision_frequency_assembly.jl")
+    include("finite_width_occupation_reduction.jl")
     include("collision_momentum_quotient.jl")
     include("collision_momentum_projective.jl")
     include("collision_kernel_api.jl")
@@ -124,6 +125,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     FiniteWidthFrequencyCollision,
     FiniteWidthEvaluatedExpression,
     FiniteWidthEvaluatedCollision,
+    FiniteWidthOccupationCollision,
     field_families,
     target_family,
     parameters,
@@ -177,6 +179,10 @@ const ComplexRationals = Complex{Rational{Int64}}
     finite_width_resolved_terms,
     finite_width_unsupported_terms,
     evaluate_finite_width_collision,
+    finite_width_occupation_terms,
+    finite_width_unsupported_offset_terms,
+    finite_width_unsupported_distribution_terms,
+    finite_width_occupation_collision,
     lorentzian_spectral_data_from_retarded_self_energy,
     lorentzian_spectral_value,
     lorentzian_integrated_power,

@@ -29,3 +29,22 @@ KeldyshContraction.FiniteWidthEvaluatedExpression
 KeldyshContraction.FiniteWidthEvaluatedCollision
 KeldyshContraction.evaluate_finite_width_collision
 ```
+
+## Occupation lowering at fixed spectral data
+
+Once the spectral weights have been evaluated, the resolved branch can be lowered with the same statistics-generic algebra as the strict-quasiparticle collision compiler,
+
+```math
+F_S=1+2\sigma_S n_S,
+\qquad
+C_n=\frac{\sigma_S}{2}I_{\mathrm{package}}.
+```
+
+The original affine split is recombined here: only the distribution-coefficient branch receives the external target factor before `F -> n`. Unsupported finite-width frequency structures remain explicit and are not assigned an occupation-space value.
+
+This stage treats the supplied `LorentzianSpectralModel` as fixed. If a linewidth is itself generated from the state, `Γ=Γ[n]`, a self-consistent linear response must also differentiate that spectral input. The resulting `δΓ` chain-rule contribution is a later response layer rather than part of fixed-model occupation lowering.
+
+```@docs
+KeldyshContraction.FiniteWidthOccupationCollision
+KeldyshContraction.finite_width_occupation_collision
+```
