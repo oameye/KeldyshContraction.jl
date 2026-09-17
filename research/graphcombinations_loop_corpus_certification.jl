@@ -12,7 +12,9 @@ const CORPUS_SUPPORTS = (:none, :shell, :pv, :mixed)
 const CORPUS_KINEMATICS = (:none, :single, :pair, :mixed, :quartic)
 const CORPUS_OCCUPATIONS = (:sparse, :repeated, :coupled, :dense)
 
-function _corpus_support(::Type{S}, family, k, q, r, p, kind::Symbol) where {S<:KC.Statistics}
+function _corpus_support(
+    ::Type{S}, family, k, q, r, p, kind::Symbol
+) where {S<:KC.Statistics}
     energy(momentum) = KC.EnergyForm(KC.DispersionAtom(family, momentum))
     shells = KC.EnergyShell{S}[]
     principal_values = KC.PrincipalValueSupport{S}[]
@@ -48,7 +50,9 @@ function _corpus_kinematic(k, q, r, kind::Symbol)
     return KC.MomentumPolynomial(KC.MomentumMonomial(components), one(C))
 end
 
-function _corpus_monomial(::Type{S}, family, k, loops, q, r, kind::Symbol) where {S<:KC.Statistics}
+function _corpus_monomial(
+    ::Type{S}, family, k, loops, q, r, kind::Symbol
+) where {S<:KC.Statistics}
     momenta = if kind === :sparse
         [q]
     elseif kind === :repeated
@@ -61,7 +65,9 @@ function _corpus_monomial(::Type{S}, family, k, loops, q, r, kind::Symbol) where
     else
         error("unknown occupation corpus kind: $kind")
     end
-    atoms = KC.OccupationAtom{S}[KC.OccupationAtom(family, momentum) for momentum in momenta]
+    atoms = KC.OccupationAtom{S}[
+        KC.OccupationAtom(family, momentum) for momentum in momenta
+    ]
     return KC.OccupationMonomial(atoms)
 end
 
@@ -117,9 +123,7 @@ function nauty_quotient_loop_momenta(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{KC.OccupationMonomial{S},D}[
-                    transformed_monomial => transformed_coefficient
-                ]
+                contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
                 KC._push_kernel_polynomial!(
                     out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
                 )
@@ -190,9 +194,7 @@ function gc_requotient_terms(
             )
             transformed_monomial = KC.transform_loop_momenta(monomial, transform)
             transformed_coefficient = convert(D, coefficient) * convert(D, support_factor)
-            contribution = Pair{KC.OccupationMonomial{S},D}[
-                transformed_monomial => transformed_coefficient
-            ]
+            contribution = Pair{KC.OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
             KC._push_kernel_polynomial!(
                 out, transformed_sector, KC.OccupationPolynomial{D,S}(contribution)
             )
@@ -226,18 +228,24 @@ function corpus_cases()
     return cases
 end
 
-function _measure_pair(expression; samples::Int)
+function _measure_pair_15(expression)
     nauty_quotient_loop_momenta(expression)
     KC.quotient_loop_momenta(expression)
-    nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = $samples evals = 1
-    gc_trial = @benchmark KC.quotient_loop_momenta($expression) samples = $samples evals = 1
+    nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 15 evals = 1
+    gc_trial = @benchmark KC.quotient_loop_momenta($expression) samples = 15 evals = 1
+    return median(nauty_trial), median(gc_trial)
+end
+
+function _measure_pair_41(expression)
+    nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 41 evals = 1
+    gc_trial = @benchmark KC.quotient_loop_momenta($expression) samples = 41 evals = 1
     return median(nauty_trial), median(gc_trial)
 end
 
 function _confirmed_measurement(expression)
-    nauty, gc = _measure_pair(expression; samples=15)
+    nauty, gc = _measure_pair_15(expression)
     if gc.time > nauty.time || gc.memory > nauty.memory
-        nauty, gc = _measure_pair(expression; samples=41)
+        nauty, gc = _measure_pair_41(expression)
     end
     return nauty, gc
 end
@@ -256,7 +264,8 @@ best_ratio = ("", Inf)
         nauty = nauty_quotient_loop_momenta(expression)
         gc = KC.quotient_loop_momenta(expression)
         gc_terms = KC.loop_quotient_terms(gc)
-        exact = gc_requotient_terms(gc) == gc_terms && gc_requotient_terms(nauty) == gc_terms
+        exact =
+            gc_requotient_terms(gc) == gc_terms && gc_requotient_terms(nauty) == gc_terms
         if !exact
             push!(semantic_failures, label)
         end
