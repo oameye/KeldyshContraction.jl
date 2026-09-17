@@ -150,8 +150,10 @@ function report_quotient_benchmark(nloops::Int, expression)
     nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 11 evals = 1
     gc_trial = @benchmark KC.quotient_loop_momenta($expression) samples = 11 evals = 1
     capacity_trial = @benchmark KC._loop_gc_capacities($expression) samples = 51 evals = 1
-    nauty_transform_trial = @benchmark nauty_transform_sweep($expression) samples = 11 evals = 1
-    gc_transform_trial = @benchmark gc_transform_sweep!($workspace, $expression) samples = 11 evals = 1
+    nauty_transform_trial = @benchmark nauty_transform_sweep($expression) samples = 11 evals =
+        1
+    gc_transform_trial = @benchmark gc_transform_sweep!($workspace, $expression) samples =
+        11 evals = 1
     nauty = median(nauty_trial)
     gc = median(gc_trial)
     capacity = median(capacity_trial)
