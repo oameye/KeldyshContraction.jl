@@ -112,11 +112,14 @@ end
 function report_quotient_benchmark(nloops::Int, expression)
     nauty_quotient_loop_momenta(expression)
     KC.quotient_loop_momenta(expression)
+    KC._loop_gc_capacities(expression)
 
     nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 11 evals = 1
     gc_trial = @benchmark KC.quotient_loop_momenta($expression) samples = 11 evals = 1
+    capacity_trial = @benchmark KC._loop_gc_capacities($expression) samples = 51 evals = 1
     nauty = median(nauty_trial)
     gc = median(gc_trial)
+    capacity = median(capacity_trial)
     println(
         "$nloops-loop full quotient: Nauty ",
         round(nauty.time / 1.0e3; digits=2),
@@ -134,6 +137,19 @@ function report_quotient_benchmark(nloops::Int, expression)
         round(gc.time / nauty.time; digits=3),
         "; memory ratio=",
         round(gc.memory / nauty.memory; digits=3),
+    )
+    graph_capacity, loop_capacity = KC._loop_gc_capacities(expression)
+    println(
+        "$nloops-loop capacity scan: ",
+        round(capacity.time / 1.0e3; digits=2),
+        " μs / ",
+        capacity.memory,
+        " B / ",
+        capacity.allocs,
+        " allocs; graph_capacity=",
+        graph_capacity,
+        "; loop_capacity=",
+        loop_capacity,
     )
     return nothing
 end
