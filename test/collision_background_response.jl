@@ -57,7 +57,9 @@ end
     @test terms[q_atom] == 11 // 1
 
     zero_background = KC.OccupationBackground(Rational{Int64}, _ -> 0 // 1)
-    zero_response = @inferred KC.evaluate_occupation_linearization(symbolic, zero_background)
+    zero_response = @inferred KC.evaluate_occupation_linearization(
+        symbolic, zero_background
+    )
     @test isempty(zero_response)
 end
 
@@ -98,7 +100,8 @@ end
     projection = @inferred KC.energy_moment_projection(fixture.kernel)
     evaluated_projection = @inferred KC.linearize_collision_moment(projection, background)
     @test KC.moment_test_function(evaluated_projection) isa KC.EnergyMoment
-    @test KC.projected_collision(evaluated_projection) isa KC.BackgroundLinearizedCollisionKernel
+    @test KC.projected_collision(evaluated_projection) isa
+        KC.BackgroundLinearizedCollisionKernel
     @test KC.moment_weight(evaluated_projection, fixture.sector) ==
         KC.EnergyForm(KC.DispersionAtom(background_response_ϕ, fixture.k))
 
