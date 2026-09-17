@@ -42,9 +42,79 @@ C_n=\frac{\sigma_S}{2}I_{\mathrm{package}}.
 
 The original affine split is recombined here: only the distribution-coefficient branch receives the external target factor before `F -> n`. Unsupported finite-width frequency structures remain explicit and are not assigned an occupation-space value.
 
-This stage treats the supplied `LorentzianSpectralModel` as fixed. If a linewidth is itself generated from the state, `Γ=Γ[n]`, a self-consistent linear response must also differentiate that spectral input. The resulting `δΓ` chain-rule contribution is a later response layer rather than part of fixed-model occupation lowering.
+This stage treats the supplied `LorentzianSpectralModel` as fixed. If a linewidth is itself generated from the state, `\Gamma=\Gamma[n]`, a self-consistent linear response must also differentiate that spectral input.
 
 ```@docs
 KeldyshContraction.FiniteWidthOccupationCollision
 KeldyshContraction.finite_width_occupation_collision
+```
+
+## Spectral-data response
+
+The finite-width spectral model has an explicit line-resolved first variation
+
+```math
+(E,\Gamma,Z)\longrightarrow (\delta E,\delta\Gamma,\delta Z).
+```
+
+For one line with multiplicity `m`,
+
+```math
+B_m(Z,\Gamma)
+=\binom{2m-2}{m-1}\frac{Z^m}{\Gamma^{m-1}},
+```
+
+and the implementation differentiates this expression directly. In particular,
+
+```math
+\delta\!\left(\frac{2Z^2}{\Gamma}\right)
+=\frac{4Z}{\Gamma}\,\delta Z
+-\frac{2Z^2}{\Gamma^2}\,\delta\Gamma.
+```
+
+For residual Cauchy convolutions, the same exact stored frequency geometry is reused while propagating the line-energy, linewidth, and residue variations through the mismatch, effective linewidth, and residue product. The microscopic `ω_external` is held fixed. It remains distinct from any collective center-time response frequency.
+
+A model variation is explicit: when a response channel is supplied, missing required line variations are errors rather than implicit zeros.
+
+```@docs
+KeldyshContraction.LorentzianSpectralDataVariation
+KeldyshContraction.LorentzianSpectralModelVariation
+KeldyshContraction.spectral_data_variation
+KeldyshContraction.spectral_energy_variation
+KeldyshContraction.spectral_linewidth_variation
+KeldyshContraction.spectral_residue_variation
+KeldyshContraction.lorentzian_integrated_power_variation
+KeldyshContraction.evaluate_spectral_weight_variation
+KeldyshContraction.evaluate_spectral_convolution_variation
+```
+
+## Self-consistent finite-width response
+
+When the spectral data depend on the kinetic state, the collision response must differentiate both the statistical polynomial and its finite-width spectral weight. For each resolved physical term,
+
+```math
+\delta(WP)=\bar W\,\delta P+\bar P\,\delta W.
+```
+
+`OccupationBackground` evaluates the occupation polynomial and its exact Fréchet derivative at a supplied background. `OccupationSpectralResponse` separately maps explicit occupation-variation channels to line-resolved spectral-model variations. `FiniteWidthCollisionLinearization` retains the two contributions independently as well as their sum, with the original `FiniteWidthFrequencyTerm` as the key.
+
+This separation is important for a self-consistent linewidth such as `\Gamma[n]`: the second term contains the response of the spectral width and must not be lost by linearizing only the fixed-model occupation polynomial. Unsupported finite-width structures remain explicit. The operation does not integrate loop momenta or introduce trap, Chapman--Enskog, moment-projection, or collective-mode semantics.
+
+```@docs
+KeldyshContraction.OccupationBackground
+KeldyshContraction.occupation_background_value
+KeldyshContraction.evaluate_occupation_polynomial
+KeldyshContraction.OccupationLinearization
+KeldyshContraction.occupation_linearization
+KeldyshContraction.occupation_linearization_terms
+KeldyshContraction.BackgroundOccupationLinearization
+KeldyshContraction.evaluate_occupation_linearization
+KeldyshContraction.background_occupation_linearization_terms
+KeldyshContraction.OccupationSpectralResponse
+KeldyshContraction.spectral_occupation_response_terms
+KeldyshContraction.FiniteWidthCollisionLinearization
+KeldyshContraction.finite_width_linearized_terms
+KeldyshContraction.finite_width_occupation_response_terms
+KeldyshContraction.finite_width_spectral_response_terms
+KeldyshContraction.linearize_finite_width_collision
 ```
