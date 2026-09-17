@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  acceptance:
+  tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -33,6 +33,19 @@ jobs:
         run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="595434694dc2b8379b30c651f510c955e05b3c23")'
       - name: Run package tests
         run: julia --project=. -e 'using Pkg; Pkg.test()'
+
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - name: Instantiate baseline environment
+        run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - name: Pin exact GraphCombinations research candidate
+        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="595434694dc2b8379b30c651f510c955e05b3c23")'
       - name: Add benchmark harness
         run: julia --project=. -e 'using Pkg; Pkg.add("BenchmarkTools")'
       - name: Compare GC candidate quotient with retained Nauty oracle
@@ -41,6 +54,7 @@ jobs:
           set -o pipefail
           julia --project=. research/graphcombinations_production_integration_probe.jl 2>&1 | tee graphcombinations-production-integration.log
       - name: Preserve production integration diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: graphcombinations-production-integration
