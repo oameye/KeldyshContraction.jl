@@ -77,6 +77,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("trotter_frequency_collision.jl")
     include("collision_frequency_assembly.jl")
     include("spectral_self_energy_kernel.jl")
+    include("spectral_self_energy_background.jl")
     include("collision_momentum_quotient.jl")
     include("collision_momentum_projective.jl")
     include("collision_kernel_api.jl")
@@ -118,6 +119,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     OccupationBackground,
     SpectralSelfEnergySector,
     SpectralSelfEnergyKernel,
+    BackgroundSpectralSelfEnergyKernel,
     field_families,
     target_family,
     parameters,
@@ -142,8 +144,10 @@ const ComplexRationals = Complex{Rational{Int64}}
     occupation_background_value,
     evaluate_occupation_polynomial,
     spectral_self_energy_terms,
+    background_spectral_self_energy_terms,
     spectral_self_energy_blocked_terms,
     spectral_self_energy_trotter_terms,
+    evaluate_spectral_self_energy_background,
     spectral_line_family,
     spectral_line_momentum,
     spectral_data,
