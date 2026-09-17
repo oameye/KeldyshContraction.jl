@@ -1,16 +1,12 @@
 """
 Typed occupation background used to evaluate a collision linearization.
 
-The evaluator receives an `OccupationAtom` and must return a value convertible to `V`. Declaring
-`V` explicitly keeps background evaluation type-stable while allowing numerical or symbolic
-number types.
+The evaluator receives an `OccupationAtom` and must return a value convertible to `V`. Construct
+as `OccupationBackground(f, V)`; the evaluator-first order keeps the API compatible with Julia
+`do` blocks while declaring `V` explicitly for type-stable numerical or symbolic evaluation.
 """
 struct OccupationBackground{V<:Number,F}
     evaluator::F
-end
-
-function OccupationBackground(::Type{V}, evaluator::F) where {V<:Number,F}
-    return OccupationBackground{V,F}(evaluator)
 end
 
 function OccupationBackground(evaluator::F, ::Type{V}) where {V<:Number,F}
