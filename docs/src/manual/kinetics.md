@@ -215,7 +215,7 @@ then `occupation_linearization` constructs the canonical first Fréchet derivati
 
 with exact integer multiplicities and exact polynomial coefficients. `linearize_collision_kernel` applies this operation sector by sector while leaving perturbative provenance, routed momenta, derivative kinematics, shell/PV support, gradient order and Wigner context unchanged.
 
-A supplied background is a separate operation. `OccupationBackground(V, f)` declares both the evaluator and its value type. Evaluating the symbolic derivative at `\bar n` gives
+A supplied background is a separate operation. `OccupationBackground(f, V)` declares the evaluator and its value type in an order compatible with Julia `do` blocks. Evaluating the symbolic derivative at `\bar n` gives
 
 ```math
 \delta C\big|_{\bar n}
