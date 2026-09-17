@@ -34,7 +34,9 @@ function _prepare_loop_gc_graph!(
     copyto!(buffers.color_order, builder.colors)
     sort!(buffers.color_order)
     @inbounds for vertex in eachindex(builder.colors)
-        buffers.labels[vertex] = searchsortedfirst(buffers.color_order, builder.colors[vertex])
+        buffers.labels[vertex] = searchsortedfirst(
+            buffers.color_order, builder.colors[vertex]
+        )
     end
 
     fill!(buffers.graph.multiplicities, 0)
@@ -142,9 +144,7 @@ function _quotient_loop_momenta_graphcombinations(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{OccupationMonomial{S},D}[
-                    transformed_monomial => transformed_coefficient
-                ]
+                contribution = Pair{OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
                 _push_kernel_polynomial!(
                     out, transformed_sector, OccupationPolynomial{D,S}(contribution)
                 )
