@@ -1,4 +1,4 @@
-name: GraphCombinations production loop backend
+name: GraphCombinations loop backend research
 
 on:
   pull_request:
@@ -20,7 +20,6 @@ on:
 
 jobs:
   acceptance:
-    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -28,13 +27,15 @@ jobs:
         with:
           version: '1'
       - uses: julia-actions/cache@v3
-      - name: Instantiate registered production dependency
+      - name: Instantiate baseline environment
         run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - name: Pin exact GraphCombinations research candidate
+        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="595434694dc2b8379b30c651f510c955e05b3c23")'
       - name: Run package tests
         run: julia --project=. -e 'using Pkg; Pkg.test()'
       - name: Add benchmark harness
         run: julia --project=. -e 'using Pkg; Pkg.add("BenchmarkTools")'
-      - name: Compare production GC quotient with retained Nauty oracle
+      - name: Compare GC candidate quotient with retained Nauty oracle
         shell: bash
         run: |
           set -o pipefail
@@ -46,7 +47,6 @@ jobs:
           path: graphcombinations-production-integration.log
 
   format:
-    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
