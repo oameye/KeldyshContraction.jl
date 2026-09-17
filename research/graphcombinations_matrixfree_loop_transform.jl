@@ -72,13 +72,12 @@ function _prepare_matrixfree_gauge!(
 end
 
 function _matrixfree_momentum(
-    momentum::KC.LinearMomentum,
-    workspace::KC._LoopGCQuotientWorkspace,
-    external_index::Int,
+    momentum::KC.LinearMomentum, workspace::KC._LoopGCQuotientWorkspace, external_index::Int
 )
     n = length(momentum)
-    n == length(workspace.loop_indices) + 1 ||
-        throw(DimensionMismatch("momentum and signed loop permutation use different basis sizes"))
+    n == length(workspace.loop_indices) + 1 || throw(
+        DimensionMismatch("momentum and signed loop permutation use different basis sizes"),
+    )
     coefficients = Vector{KC.MomentumCoefficient}(undef, n)
     coefficients[external_index] = momentum[external_index]
     @inbounds for old_slot in eachindex(workspace.loop_permutation)
@@ -123,19 +122,20 @@ function _matrixfree_momentum_polynomial(
     external_index::Int,
 ) where {C<:Number}
     terms = Pair{KC.MomentumMonomial,C}[
-        _matrixfree_momentum_monomial(monomial, workspace, external_index) => coefficient for
-        (monomial, coefficient) in polynomial
+        _matrixfree_momentum_monomial(monomial, workspace, external_index) => coefficient
+        for (monomial, coefficient) in polynomial
     ]
     return KC.MomentumPolynomial{C}(terms)
 end
 
 function _matrixfree_energy_form(
-    form::KC.EnergyForm{S},
-    workspace::KC._LoopGCQuotientWorkspace,
-    external_index::Int,
+    form::KC.EnergyForm{S}, workspace::KC._LoopGCQuotientWorkspace, external_index::Int
 ) where {S<:KC.Statistics}
-    KC.energy_basis_size(form) == length(workspace.loop_indices) + 1 ||
-        throw(DimensionMismatch("energy form and signed loop permutation use different basis sizes"))
+    KC.energy_basis_size(form) == length(workspace.loop_indices) + 1 || throw(
+        DimensionMismatch(
+            "energy form and signed loop permutation use different basis sizes"
+        ),
+    )
     terms = Pair{KC.DispersionAtom{S},KC.EnergyCoefficient}[
         KC.DispersionAtom{S}(
             atom.family, _matrixfree_momentum(atom.momentum, workspace, external_index)
@@ -184,7 +184,9 @@ function _matrixfree_sector(
         KC.parameters(sector),
         KC.momentum_basis(sector),
         KC.external_wigner_momentum(sector),
-        _matrixfree_momentum_polynomial(KC.kinematic_factor(sector), workspace, external_index),
+        _matrixfree_momentum_polynomial(
+            KC.kinematic_factor(sector), workspace, external_index
+        ),
         support,
     )
     return transformed, factor
@@ -273,8 +275,8 @@ end
 
 function residual_cases()
     return [
-        label => expression for (label, expression) in corpus_cases() if
-        label in RESIDUAL_TWO_LOOP_LABELS
+        label => expression for
+        (label, expression) in corpus_cases() if label in RESIDUAL_TWO_LOOP_LABELS
     ]
 end
 
@@ -302,9 +304,12 @@ dense_ratios = Tuple{String,Float64}[]
         prepared_dense_gc_quotient(expression, workspace)
         matrixfree_gc_quotient(expression, workspace)
 
-        nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 41 evals = 1
-        dense_trial = @benchmark prepared_dense_gc_quotient($expression, $workspace) samples = 41 evals = 1
-        matrixfree_trial = @benchmark matrixfree_gc_quotient($expression, $workspace) samples = 41 evals = 1
+        nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 41 evals =
+            1
+        dense_trial = @benchmark prepared_dense_gc_quotient($expression, $workspace) samples =
+            41 evals = 1
+        matrixfree_trial = @benchmark matrixfree_gc_quotient($expression, $workspace) samples =
+            41 evals = 1
         nauty = median(nauty_trial)
         dense = median(dense_trial)
         matrixfree = median(matrixfree_trial)
