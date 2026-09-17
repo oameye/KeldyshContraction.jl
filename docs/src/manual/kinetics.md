@@ -176,6 +176,16 @@ KeldyshContraction.reduced_blocked_terms
 KeldyshContraction.reduced_trotter_terms
 ```
 
+### Supplied occupation backgrounds
+
+A supplied occupation state is represented by a typed evaluator. This is deliberately only an algebraic substitution boundary: it evaluates exact occupation polynomials but does not choose a momentum integral, trap, quadrature, or closure.
+
+```@docs
+KeldyshContraction.OccupationBackground
+KeldyshContraction.occupation_background_value
+KeldyshContraction.evaluate_occupation_polynomial
+```
+
 A blocked causal term is not silently assigned a finite strict-quasiparticle value. If a research calculation intentionally wants only the finite regular branch, that choice is explicit:
 
 ```julia

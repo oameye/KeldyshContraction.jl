@@ -71,6 +71,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("exceptional_frequency_classification.jl")
     include("statistical_frequency_algebra.jl")
     include("collision_statistical_algebra.jl")
+    include("occupation_background.jl")
     include("canonical_frequency_collision.jl")
     include("trotter_frequency_reduction.jl")
     include("trotter_frequency_collision.jl")
@@ -113,6 +114,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     LorentzianConvolutionUnsupported,
     LinewidthPower,
     WidthAwarePowerCounting,
+    OccupationBackground,
     field_families,
     target_family,
     parameters,
@@ -132,6 +134,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     reduced_blocked_terms,
     reduced_trotter_terms,
     collision_kernel_terms,
+    occupation_background_value,
+    evaluate_occupation_polynomial,
     spectral_line_family,
     spectral_line_momentum,
     spectral_data,
