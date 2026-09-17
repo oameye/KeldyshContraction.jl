@@ -69,6 +69,36 @@ E_k=\varepsilon_k+\operatorname{Re}\Sigma^R_k,
 
 while the quasiparticle residue `Z` remains an independently supplied datum. Frequency-dependent self-consistency and derivative corrections to `Z` are deliberately outside this algebraic conversion.
 
+### Generated linewidth kernel
+
+The linewidth can also be generated from the same microscopic self-energy. `spectral_self_energy_kernel` starts from a `KineticSelfEnergy`, forms
+
+```math
+A_\Sigma=i(\Sigma^R-\Sigma^A),
+```
+
+runs that expression through the same exact Trotter/frequency reduction used by the collision compiler, and substitutes `F = 1 + 2σn`. The important normalization distinction is explicit: this path uses `occupation_substitute` directly and never applies the collision conversion `C_n=σ I/2`.
+
+The resulting `SpectralSelfEnergyKernel` therefore represents the quasiparticle linewidth object itself. Finite shell/PV sectors are stored as occupation polynomials, while causal blockers and unresolved finite-Trotter states remain inspectable. No background distribution, momentum quadrature, trap model, or finite-width prescription is inserted by this step.
+
+For bosonic two-body loss, the first-order generated oracle is
+
+```math
+A_{\Sigma,\gamma}(k)=\Gamma_\gamma(k)
+=4\gamma\int_q n_q,
+```
+
+with the vacuum contribution cancelled by the equal-time regularisation. Evaluating this kernel on a physical background supplies the `Γ` entering the Lorentzian spectral data; that downstream background evaluation is separate from the compiler object itself.
+
+```@docs
+KeldyshContraction.SpectralSelfEnergySector
+KeldyshContraction.SpectralSelfEnergyKernel
+KeldyshContraction.spectral_self_energy_terms
+KeldyshContraction.spectral_self_energy_blocked_terms
+KeldyshContraction.spectral_self_energy_trotter_terms
+KeldyshContraction.spectral_self_energy_kernel
+```
+
 For integer multiplicity `m`, the analytic line integral is
 
 ```math

@@ -76,6 +76,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("trotter_frequency_reduction.jl")
     include("trotter_frequency_collision.jl")
     include("collision_frequency_assembly.jl")
+    include("spectral_self_energy_kernel.jl")
     include("collision_momentum_quotient.jl")
     include("collision_momentum_projective.jl")
     include("collision_kernel_api.jl")
@@ -115,6 +116,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     LinewidthPower,
     WidthAwarePowerCounting,
     OccupationBackground,
+    SpectralSelfEnergySector,
+    SpectralSelfEnergyKernel,
     field_families,
     target_family,
     parameters,
@@ -128,6 +131,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     advanced_component,
     collision_offset,
     collision_distribution_coefficient,
+    momentum_basis,
+    external_wigner_momentum,
     kinematic_factor,
     frequency_support,
     reduced_regular_terms,
@@ -136,6 +141,9 @@ const ComplexRationals = Complex{Rational{Int64}}
     collision_kernel_terms,
     occupation_background_value,
     evaluate_occupation_polynomial,
+    spectral_self_energy_terms,
+    spectral_self_energy_blocked_terms,
+    spectral_self_energy_trotter_terms,
     spectral_line_family,
     spectral_line_momentum,
     spectral_data,
@@ -168,7 +176,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     lorentzian_spectral_reduction,
     lorentzian_convolution_reduction,
     evaluate_spectral_weight,
-    evaluate_spectral_convolution
+    evaluate_spectral_convolution,
+    spectral_self_energy_kernel
 
     # Small workflow surface intended for ordinary unqualified use.
     export @qfields,
