@@ -12,6 +12,7 @@ pages = [
         "Propagators and self-energy" => "manual/propagators.md",
         "Fourier and Wigner representations" => "manual/transforms.md",
         "Kinetic reduction" => "manual/kinetics.md",
+        "Moment and linear-response projection" => "manual/collision_projection.md",
     ],
     "Examples" => [
         "Bosonic scattering and two-body loss" => "examples/bosonic_transport.md",
