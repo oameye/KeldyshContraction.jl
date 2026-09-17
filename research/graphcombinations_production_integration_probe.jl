@@ -67,8 +67,7 @@ function gc_oracle_workspace(
         3 + 3 * nloops + KC._projective_support_vertex_count(sector, external_index)
 
     for atom in monomial
-        graph_capacity +=
-            1 + KC._loop_incidence_vertex_count(atom.momentum, external_index)
+        graph_capacity += 1 + KC._loop_incidence_vertex_count(atom.momentum, external_index)
     end
 
     kinematic_capacity = 0
