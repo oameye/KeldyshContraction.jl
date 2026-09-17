@@ -197,4 +197,53 @@ KeldyshContraction.kinematic_factor
 KeldyshContraction.frequency_support
 ```
 
+## Moment and linear-response projection
+
+The collision kernel can be linearized exactly before any phase-space closure. If
+
+```math
+C[n]=\sum_m c_m\prod_a n_a^{p_{ma}},
+```
+
+then `occupation_linearization` constructs the canonical first Fréchet derivative
+
+```math
+\delta C
+=
+\sum_a \delta n_a\,\frac{\partial C}{\partial n_a},
+```
+
+with exact integer multiplicities and exact polynomial coefficients. `linearize_collision_kernel` applies this operation sector by sector while leaving perturbative provenance, routed momenta, derivative kinematics, shell/PV support, gradient order and Wigner context unchanged.
+
+Moment projection is deliberately separate from phase-space integration. `CollisionMomentProjection` attaches an explicit test-function descriptor to either a nonlinear or linearized collision object. The package provides exact built-in descriptors for
+
+```math
+\dot N = \int C,
+\qquad
+\dot E = \int \varepsilon_k C,
+```
+
+through `NumberMoment` and `EnergyMoment`. Arbitrary concrete user descriptors can be attached with `project_collision_moment`; downstream trap, measure, closure or quadrature code may interpret them without forcing that physics into the collision compiler. In particular, the later breathing-mode basis can use the same projection boundary without hard-coding `r²`, `r\!\cdot\!k`, or `k²` into the core IR.
+
+```@docs
+KeldyshContraction.OccupationLinearization
+KeldyshContraction.LinearizedCollisionKernel
+KeldyshContraction.CollisionMomentProjection
+KeldyshContraction.NumberMoment
+KeldyshContraction.EnergyMoment
+KeldyshContraction.occupation_linearization
+KeldyshContraction.occupation_linearization_terms
+KeldyshContraction.linearize_collision_kernel
+KeldyshContraction.linearized_collision_terms
+KeldyshContraction.project_collision_moment
+KeldyshContraction.number_moment_projection
+KeldyshContraction.energy_moment_projection
+KeldyshContraction.moment_test_function
+KeldyshContraction.projected_collision
+KeldyshContraction.moment_weight
+KeldyshContraction.linearize_collision_moment
+```
+
+This layer produces exact projected collision integrands. It does not yet choose a background distribution, evaluate phase-space integrals, close a moment basis, or solve the collective-mode pole equation; those are subsequent #342 stages.
+
 For the underlying equations and approximation boundaries, see [Quantum kinetic theory](../theory/kinetics.md).
