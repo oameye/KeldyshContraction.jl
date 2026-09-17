@@ -63,12 +63,14 @@ jobs:
 
           path = Path("research/graphcombinations_matrixfree_loop_transform.jl")
           text = path.read_text()
-          old = """        @test matrixfree_gc_quotient(expression, workspace) ==
-            prepared_dense_gc_quotient(expression, workspace)
-"""
-          new = """        @test KC.loop_quotient_terms(matrixfree_gc_quotient(expression, workspace)) ==
-            KC.loop_quotient_terms(prepared_dense_gc_quotient(expression, workspace))
-"""
+          old = (
+              "        @test matrixfree_gc_quotient(expression, workspace) ==\n"
+              "            prepared_dense_gc_quotient(expression, workspace)\n"
+          )
+          new = (
+              "        @test KC.loop_quotient_terms(matrixfree_gc_quotient(expression, workspace)) ==\n"
+              "            KC.loop_quotient_terms(prepared_dense_gc_quotient(expression, workspace))\n"
+          )
           if text.count(old) != 1:
               raise SystemExit("matrix-free semantic oracle patch target not found")
           path.write_text(text.replace(old, new, 1))
