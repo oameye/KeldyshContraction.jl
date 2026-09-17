@@ -1,7 +1,7 @@
 include("direct_one_loop_quotient_probe.jl")
 
 function reflected_one_loop_expression(
-    expression::KC.OccupationReducedExpression{C,S,O,G,Ctx},
+    expression::KC.OccupationReducedExpression{C,S,O,G,Ctx}
 ) where {C<:Number,S<:KC.Statistics,O,G,Ctx<:KC.AbstractWignerContext}
     out = Dict{KC.ReducedCollisionSector{S},KC.OccupationPolynomial{C,S}}()
     for (sector, polynomial) in KC.occupation_reduced_terms(expression)
