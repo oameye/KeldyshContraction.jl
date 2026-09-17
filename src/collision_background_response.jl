@@ -13,6 +13,10 @@ function OccupationBackground(::Type{V}, evaluator::F) where {V<:Number,F}
     return OccupationBackground{V,F}(evaluator)
 end
 
+function OccupationBackground(evaluator::F, ::Type{V}) where {V<:Number,F}
+    return OccupationBackground{V,F}(evaluator)
+end
+
 """Evaluate one occupation atom in a typed background state."""
 function occupation_background_value(
     background::OccupationBackground{V}, atom::OccupationAtom
