@@ -215,7 +215,18 @@ then `occupation_linearization` constructs the canonical first Fréchet derivati
 
 with exact integer multiplicities and exact polynomial coefficients. `linearize_collision_kernel` applies this operation sector by sector while leaving perturbative provenance, routed momenta, derivative kinematics, shell/PV support, gradient order and Wigner context unchanged.
 
-Moment projection is deliberately separate from phase-space integration. `CollisionMomentProjection` attaches an explicit test-function descriptor to either a nonlinear or linearized collision object. The package provides exact built-in descriptors for
+A supplied background is a separate operation. `OccupationBackground(V, f)` declares both the evaluator and its value type. Evaluating the symbolic derivative at `\bar n` gives
+
+```math
+\delta C\big|_{\bar n}
+=
+\sum_a \delta n_a
+\left.\frac{\partial C}{\partial n_a}\right|_{\bar n},
+```
+
+while retaining the exact variation atom and collision sector. Vanishing channels and sectors are removed canonically. The background evaluator may return numerical or symbolic numbers; it does not choose a phase-space measure, closure, or trap model.
+
+Moment projection remains separate from phase-space integration. `CollisionMomentProjection` attaches an explicit test-function descriptor to nonlinear, symbolic-linearized, or background-evaluated collision data. The package provides exact built-in descriptors for
 
 ```math
 \dot N = \int C,
@@ -231,10 +242,19 @@ KeldyshContraction.LinearizedCollisionKernel
 KeldyshContraction.CollisionMomentProjection
 KeldyshContraction.NumberMoment
 KeldyshContraction.EnergyMoment
+KeldyshContraction.OccupationBackground
+KeldyshContraction.BackgroundOccupationLinearization
+KeldyshContraction.BackgroundLinearizedCollisionKernel
 KeldyshContraction.occupation_linearization
 KeldyshContraction.occupation_linearization_terms
 KeldyshContraction.linearize_collision_kernel
 KeldyshContraction.linearized_collision_terms
+KeldyshContraction.occupation_background_value
+KeldyshContraction.evaluate_occupation_polynomial
+KeldyshContraction.evaluate_occupation_linearization
+KeldyshContraction.background_occupation_linearization_terms
+KeldyshContraction.evaluate_collision_background
+KeldyshContraction.background_linearized_collision_terms
 KeldyshContraction.project_collision_moment
 KeldyshContraction.number_moment_projection
 KeldyshContraction.energy_moment_projection
@@ -244,6 +264,6 @@ KeldyshContraction.moment_weight
 KeldyshContraction.linearize_collision_moment
 ```
 
-This layer produces exact projected collision integrands. It does not yet choose a background distribution, evaluate phase-space integrals, close a moment basis, or solve the collective-mode pole equation; those are subsequent #342 stages.
+This layer now supplies the exact linearized response at a user-provided background. It still does not evaluate phase-space integrals, close a moment basis, construct the projected matrix, or solve the collective-mode pole equation; those are the next #342 stages.
 
 For the underlying equations and approximation boundaries, see [Quantum kinetic theory](../theory/kinetics.md).
