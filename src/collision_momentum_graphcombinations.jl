@@ -183,7 +183,9 @@ function _external_basis_index_noalloc(
     @inbounds for basis_index in eachindex(basis.variables)
         basis.variables[basis_index] == external || continue
         iszero(external_index) || throw(
-            ArgumentError("external momentum must occur exactly once in the momentum basis")
+            ArgumentError(
+                "external momentum must occur exactly once in the momentum basis"
+            ),
         )
         external_index = basis_index
     end
@@ -255,8 +257,8 @@ function _loop_gc_capacities(expression::OccupationReducedExpression)
         )
         nloops = length(basis) - 1
         loop_capacity = max(loop_capacity, nloops)
-        fixed_vertices = 3 + 3 * nloops +
-                         _projective_support_vertex_count(sector, external_index)
+        fixed_vertices =
+            3 + 3 * nloops + _projective_support_vertex_count(sector, external_index)
 
         for (occupation_monomial, _) in polynomial
             occupation_vertices = 0
@@ -290,7 +292,9 @@ function _order_loop_slots!(
         position = index - 1
         while position >= 1
             previous_slot = workspace.ordered_slots[position]
-            previous_rank = GC.canonical_rank(buffer, workspace.pair_vertices[previous_slot])
+            previous_rank = GC.canonical_rank(
+                buffer, workspace.pair_vertices[previous_slot]
+            )
             rank < previous_rank || break
             workspace.ordered_slots[position + 1] = previous_slot
             position -= 1
@@ -381,9 +385,7 @@ function _quotient_loop_momenta_graphcombinations(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{OccupationMonomial{S},D}[
-                    transformed_monomial => transformed_coefficient
-                ]
+                contribution = Pair{OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
                 _push_kernel_polynomial!(
                     out, transformed_sector, OccupationPolynomial{D,S}(contribution)
                 )
