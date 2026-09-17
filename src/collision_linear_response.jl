@@ -7,12 +7,18 @@ multiplicity, and equal variation atoms are merged canonically.
 """
 struct OccupationLinearization{C<:Number,S<:Statistics}
     terms::Vector{Pair{OccupationAtom{S},OccupationPolynomial{C,S}}}
+
+    function OccupationLinearization{C,S}(
+        terms::Vector{Pair{OccupationAtom{S},OccupationPolynomial{C,S}}}, ::Val{:raw}
+    ) where {C<:Number,S<:Statistics}
+        return new{C,S}(terms)
+    end
 end
 
 function _canonical_occupation_linearization(
     terms::Vector{Pair{OccupationAtom{S},OccupationPolynomial{C,S}}}
 ) where {C<:Number,S<:Statistics}
-    isempty(terms) && return OccupationLinearization{C,S}(terms)
+    isempty(terms) && return OccupationLinearization{C,S}(terms, Val(:raw))
     sort!(terms; by=first)
     out = Pair{OccupationAtom{S},OccupationPolynomial{C,S}}[]
     sizehint!(out, length(terms))
@@ -26,7 +32,13 @@ function _canonical_occupation_linearization(
             push!(out, atom => polynomial)
         end
     end
-    return OccupationLinearization{C,S}(out)
+    return OccupationLinearization{C,S}(out, Val(:raw))
+end
+
+function OccupationLinearization{C,S}(
+    terms::Vector{Pair{OccupationAtom{S},OccupationPolynomial{C,S}}}
+) where {C<:Number,S<:Statistics}
+    return _canonical_occupation_linearization(copy(terms))
 end
 
 Base.length(linearization::OccupationLinearization) = length(linearization.terms)
@@ -69,8 +81,7 @@ function occupation_linearization(
             residual_factors = copy(factors)
             deleteat!(residual_factors, i)
             residual = OccupationMonomial(residual_factors)
-            derivative_coefficient =
-                convert(D, coefficient) * convert(D, multiplicity)
+            derivative_coefficient = convert(D, coefficient) * convert(D, multiplicity)
             contribution = OccupationPolynomial{D,S}([
                 residual => derivative_coefficient,
             ])
@@ -151,19 +162,24 @@ moment_test_function(projection::CollisionMomentProjection) = projection.moment
 """Return the nonlinear or linearized collision object carried by the projection."""
 projected_collision(projection::CollisionMomentProjection) = projection.collision
 
-"""Attach an explicit moment/test-function descriptor to a collision kernel."""
-function project_collision_moment(
-    kernel::Union{CollisionKernel,LinearizedCollisionKernel}, moment
-)
-    return CollisionMomentProjection(moment, kernel)
+"""Attach an explicit moment/test-function descriptor to a nonlinear collision kernel."""
+function project_collision_moment(kernel::K, moment::M) where {K<:CollisionKernel,M}
+    return CollisionMomentProjection{M,K}(moment, kernel)
+end
+
+"""Attach an explicit moment/test-function descriptor to a linearized collision kernel."""
+function project_collision_moment(kernel::K, moment::M) where {K<:LinearizedCollisionKernel,M}
+    return CollisionMomentProjection{M,K}(moment, kernel)
 end
 
 """Construct the formal particle-number collision moment `Ṅ = ∫ C`."""
-number_moment_projection(kernel::Union{CollisionKernel,LinearizedCollisionKernel}) =
+number_moment_projection(kernel::CollisionKernel) = project_collision_moment(kernel, NumberMoment())
+number_moment_projection(kernel::LinearizedCollisionKernel) =
     project_collision_moment(kernel, NumberMoment())
 
 """Construct the formal energy collision moment `Ė = ∫ ε_k C`."""
-energy_moment_projection(kernel::Union{CollisionKernel,LinearizedCollisionKernel}) =
+energy_moment_projection(kernel::CollisionKernel) = project_collision_moment(kernel, EnergyMoment())
+energy_moment_projection(kernel::LinearizedCollisionKernel) =
     project_collision_moment(kernel, EnergyMoment())
 
 """Exact test-function weight for the particle-number moment."""
@@ -179,10 +195,18 @@ function moment_weight(
     return EnergyForm(DispersionAtom(target, basis_momentum(basis, external_index)))
 end
 
-"""Resolve a package-provided exact moment weight for one sector of a projection."""
-function moment_weight(projection::CollisionMomentProjection, sector::CollisionKernelSector)
-    collision = projected_collision(projection)
-    return moment_weight(moment_test_function(projection), sector, target_family(collision))
+"""Resolve the exact particle-number weight for one sector of a projection."""
+function moment_weight(
+    projection::CollisionMomentProjection{NumberMoment,K}, sector::CollisionKernelSector
+) where {K}
+    return moment_weight(NumberMoment(), sector, target_family(projected_collision(projection)))
+end
+
+"""Resolve the exact energy weight for one sector of a projection."""
+function moment_weight(
+    projection::CollisionMomentProjection{EnergyMoment,K}, sector::CollisionKernelSector
+) where {K}
+    return moment_weight(EnergyMoment(), sector, target_family(projected_collision(projection)))
 end
 
 """
@@ -194,8 +218,9 @@ test function before or after occupation-space linearization.
 function linearize_collision_moment(
     projection::CollisionMomentProjection{M,K}
 ) where {M,K<:CollisionKernel}
-    return CollisionMomentProjection(
-        moment_test_function(projection), linearize_collision_kernel(projected_collision(projection))
+    linearized = linearize_collision_kernel(projected_collision(projection))
+    return CollisionMomentProjection{M,typeof(linearized)}(
+        moment_test_function(projection), linearized
     )
 end
 
