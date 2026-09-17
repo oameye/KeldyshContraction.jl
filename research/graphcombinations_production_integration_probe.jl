@@ -55,16 +55,44 @@ function reduced_sector(sector::KC.CollisionKernelSector{S}) where {S<:KC.Statis
     )
 end
 
+function gc_oracle_workspace(
+    sector::KC.ReducedCollisionSector, monomial::KC.OccupationMonomial
+)
+    basis = KC.momentum_basis(sector)
+    external_index = KC._external_basis_index_noalloc(
+        basis, KC.external_wigner_momentum(sector)
+    )
+    nloops = length(basis) - 1
+    graph_capacity =
+        3 + 3 * nloops + KC._projective_support_vertex_count(sector, external_index)
+
+    for atom in monomial
+        graph_capacity +=
+            1 + KC._loop_incidence_vertex_count(atom.momentum, external_index)
+    end
+
+    kinematic_capacity = 0
+    for (kinematic_monomial, _) in KC.kinematic_factor(sector)
+        vertices = 1
+        for component in kinematic_monomial
+            vertices += KC._projective_component_vertex_count(component)
+        end
+        kinematic_capacity = max(kinematic_capacity, vertices)
+    end
+    graph_capacity += kinematic_capacity
+    return KC._LoopGCQuotientWorkspace(graph_capacity, nloops)
+end
+
 function gc_requotient_terms(
     expression::KC.LoopQuotientedExpression{C,S}
 ) where {C<:Number,S<:KC.Statistics}
     D = promote_type(C, KC.ComplexRationals, Rational{Int})
     out = Dict{KC.CollisionKernelSector{S},KC.OccupationPolynomial{D,S}}()
-    workspace = KC._LoopGCQuotientWorkspace()
 
     for (sector, polynomial) in KC.loop_quotient_terms(expression)
         source_sector = reduced_sector(sector)
         for (monomial, coefficient) in polynomial
+            workspace = gc_oracle_workspace(source_sector, monomial)
             transform = KC._graphcombinations_projective_canonical_loop_transform(
                 source_sector, monomial, workspace
             )
