@@ -1,0 +1,33 @@
+name: GC propagator canonicalization research
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - research-gc-propagator-canonicalization
+    paths:
+      - research/graphcombinations_propagator_canonicalization_oracle.jl
+      - .github/workflows/GCPropagatorCanonicalizationResearch.yml
+
+permissions:
+  contents: read
+
+jobs:
+  oracle:
+    name: GC/Nauty physical oracle
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.10.12'
+      - uses: julia-actions/cache@v3
+      - name: Pin exact GraphCombinations v0.4.0 kernel
+        run: |
+          julia --project=. --color=yes -e '
+            using Pkg
+            Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="131d7353eb968cce8ef008004282284a32918a3e")
+          '
+      - name: Run physical canonicalization oracle
+        run: julia --project=. --color=yes research/graphcombinations_propagator_canonicalization_oracle.jl
