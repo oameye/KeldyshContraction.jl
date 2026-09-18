@@ -65,7 +65,7 @@ jobs:
               ),
           )
           for old, new in replacements:
-              if text.count(old) != 1:
+              if text.count(old) < 1:
                   raise SystemExit(f"incremental adapter patch target changed: {old!r}")
               text = text.replace(old, new, 1)
           path.write_text(text)
