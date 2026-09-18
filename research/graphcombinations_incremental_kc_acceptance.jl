@@ -31,13 +31,15 @@ function _measure_pair_15(expression, workspace)
     nauty_quotient_loop_momenta(expression)
     matrixfree_gc_quotient(expression, workspace)
     nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 15 evals = 1
-    gc_trial = @benchmark matrixfree_gc_quotient($expression, $workspace) samples = 15 evals = 1
+    gc_trial = @benchmark matrixfree_gc_quotient($expression, $workspace) samples = 15 evals =
+        1
     return median(nauty_trial), median(gc_trial)
 end
 
 function _measure_pair_41(expression, workspace)
     nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 41 evals = 1
-    gc_trial = @benchmark matrixfree_gc_quotient($expression, $workspace) samples = 41 evals = 1
+    gc_trial = @benchmark matrixfree_gc_quotient($expression, $workspace) samples = 41 evals =
+        1
     return median(nauty_trial), median(gc_trial)
 end
 
@@ -82,29 +84,46 @@ end
         ratio > worst_ratio[2] && (worst_ratio = (label, ratio))
         ratio < best_ratio[2] && (best_ratio = (label, ratio))
         gc.time > nauty.time && push!(time_regressions, (label, ratio))
-        gc.memory > nauty.memory && push!(memory_regressions, (label, gc.memory, nauty.memory))
+        gc.memory > nauty.memory &&
+            push!(memory_regressions, (label, gc.memory, nauty.memory))
 
         matrixfree_gc_quotient(expression, workspace)
         stats = _incremental_stats(workspace)
         println(
             "KC-ACCEPT|",
             label,
-            "|gc_ns=", gc.time,
-            "|nauty_ns=", nauty.time,
-            "|ratio=", round(ratio; digits=3),
-            "|gc_mem=", gc.memory,
-            "|nauty_mem=", nauty.memory,
-            "|vertices=", stats.vertices,
-            "|levels=", stats.levels,
-            "|generated=", stats.generated,
-            "|retained=", stats.retained,
-            "|trace_discards=", stats.discarded_by_trace,
-            "|max_frontier=", stats.max_frontier,
-            "|paths=", stats.experimental_paths,
-            "|image_matches=", stats.image_matches,
-            "|quotient_discards=", stats.quotient_discards,
-            "|generators=", stats.generators,
-            "|orbit_skips=", stats.orbit_skips,
+            "|gc_ns=",
+            gc.time,
+            "|nauty_ns=",
+            nauty.time,
+            "|ratio=",
+            round(ratio; digits=3),
+            "|gc_mem=",
+            gc.memory,
+            "|nauty_mem=",
+            nauty.memory,
+            "|vertices=",
+            stats.vertices,
+            "|levels=",
+            stats.levels,
+            "|generated=",
+            stats.generated,
+            "|retained=",
+            stats.retained,
+            "|trace_discards=",
+            stats.discarded_by_trace,
+            "|max_frontier=",
+            stats.max_frontier,
+            "|paths=",
+            stats.experimental_paths,
+            "|image_matches=",
+            stats.image_matches,
+            "|quotient_discards=",
+            stats.quotient_discards,
+            "|generators=",
+            stats.generators,
+            "|orbit_skips=",
+            stats.orbit_skips,
         )
     end
 
