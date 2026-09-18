@@ -7,7 +7,9 @@ on:
       - research-gc-propagator-canonicalization
     paths:
       - research/graphcombinations_propagator_canonicalization_oracle.jl
+      - research/graphcombinations_propagator_gc_adapter.jl
       - research/graphcombinations_propagator_canonicalization_benchmark.jl
+      - research/graphcombinations_propagator_wick_oracle.jl
       - .github/workflows/GCPropagatorCanonicalizationResearch.yml
 
 permissions:
@@ -34,3 +36,5 @@ jobs:
         run: julia --project=. --color=yes research/graphcombinations_propagator_canonicalization_oracle.jl
       - name: Benchmark reusable physical canonicalization
         run: julia --project=. --color=yes research/graphcombinations_propagator_canonicalization_benchmark.jl
+      - name: Certify real Wick workloads
+        run: julia --project=. --color=yes research/graphcombinations_propagator_wick_oracle.jl
