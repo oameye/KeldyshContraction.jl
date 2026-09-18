@@ -65,6 +65,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("finite_width_spectral.jl")
     include("finite_width_convolution.jl")
     include("finite_width_spectral_variation.jl")
+    include("finite_width_external_projection.jl")
     include("canonical_frequency_expression.jl")
     include("causal_frequency_integration.jl")
     include("affine_singular_support.jl")
@@ -160,6 +161,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     convolution_external_coefficient,
     convolution_energy_mismatch,
     convolution_effective_linewidth,
+    external_spectral_projection_mismatch,
+    external_spectral_projection_linewidth,
     spectral_line,
     spectral_multiplicity,
     linewidth_exponent,
@@ -174,7 +177,9 @@ const ComplexRationals = Complex{Rational{Int64}}
     evaluate_spectral_weight,
     evaluate_spectral_convolution,
     evaluate_spectral_weight_variation,
-    evaluate_spectral_convolution_variation
+    evaluate_spectral_convolution_variation,
+    evaluate_external_spectral_projection,
+    evaluate_external_spectral_projection_variation
 
     # Small workflow surface intended for ordinary unqualified use.
     export @qfields,
