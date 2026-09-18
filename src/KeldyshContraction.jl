@@ -65,6 +65,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("finite_width_spectral.jl")
     include("finite_width_convolution.jl")
     include("finite_width_spectral_variation.jl")
+    include("finite_width_external_projection.jl")
     include("finite_width_frequency_collision.jl")
     include("finite_width_collision_evaluation.jl")
     include("canonical_frequency_expression.jl")
@@ -84,6 +85,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("spectral_self_energy_background.jl")
     include("finite_width_occupation_reduction.jl")
     include("finite_width_collision_response.jl")
+    include("finite_width_external_collision_response.jl")
     include("collision_momentum_quotient.jl")
     include("collision_momentum_projective.jl")
     include("collision_kernel_api.jl")
@@ -139,6 +141,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     BackgroundOccupationLinearization,
     OccupationSpectralResponse,
     FiniteWidthCollisionLinearization,
+    ExternalSpectralCollisionLinearization,
     SpectralSelfEnergySector,
     SpectralSelfEnergyKernel,
     BackgroundSpectralSelfEnergyKernel,
@@ -193,6 +196,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     convolution_external_coefficient,
     convolution_energy_mismatch,
     convolution_effective_linewidth,
+    external_spectral_projection_mismatch,
+    external_spectral_projection_linewidth,
     spectral_line,
     spectral_multiplicity,
     linewidth_exponent,
@@ -221,6 +226,10 @@ const ComplexRationals = Complex{Rational{Int64}}
     finite_width_occupation_response_terms,
     finite_width_spectral_response_terms,
     linearize_finite_width_collision,
+    external_spectral_linearized_terms,
+    external_spectral_occupation_response_terms,
+    external_spectral_model_response_terms,
+    linearize_external_spectral_collision,
     lorentzian_spectral_data_from_retarded_self_energy,
     lorentzian_spectral_value,
     lorentzian_integrated_power,
@@ -231,6 +240,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     evaluate_spectral_convolution,
     evaluate_spectral_weight_variation,
     evaluate_spectral_convolution_variation,
+    evaluate_external_spectral_projection,
+    evaluate_external_spectral_projection_variation,
     spectral_self_energy_kernel
 
     # Small workflow surface intended for ordinary unqualified use.

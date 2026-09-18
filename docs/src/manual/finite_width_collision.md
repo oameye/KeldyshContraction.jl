@@ -119,6 +119,49 @@ KeldyshContraction.finite_width_spectral_response_terms
 KeldyshContraction.linearize_finite_width_collision
 ```
 
+## External spectral projection
+
+`FiniteWidthCollisionLinearization` above is a response at fixed microscopic `ω_external`. A momentum-occupation collision may instead require the remaining external spectral line to be integrated as part of the microscopic spectral measure. For a residual convolution,
+
+```math
+W_{\mathrm{int}}(\omega)
+=JZ_{\mathrm{int}}
+\frac{\Gamma_{\mathrm{int}}}
+{(\beta\omega+\Delta_0)^2+\Gamma_{\mathrm{int}}^2/4},
+```
+
+Cauchy stability gives
+
+```math
+\int\frac{d\omega}{2\pi}A_{\mathrm{ext}}(\omega)W_{\mathrm{int}}(\omega)
+=JZ_{\mathrm{ext}}Z_{\mathrm{int}}
+\frac{\Gamma_{\mathrm{full}}}
+{\Delta E^2+\Gamma_{\mathrm{full}}^2/4},
+```
+
+with
+
+```math
+\Gamma_{\mathrm{full}}
+=\Gamma_{\mathrm{int}}+|\beta|\Gamma_{\mathrm{ext}}.
+```
+
+`ExternalSpectralCollisionLinearization` is deliberately a distinct representation of this fully projected microscopic response. `linearize_external_spectral_collision` differentiates the occupation polynomial and the complete spectral measure, including the external line. For a factorized internal frequency integral, the normalized external spectral integral contributes its residue `Z_ext`; for a residual convolution, the full external Cauchy projection is used.
+
+This operation removes the microscopic external spectral frequency by integration. It does **not** introduce the collective center-time response frequency `Ω`, a trap model, a Chapman--Enskog closure, or a moment-space pole equation.
+
+```@docs
+KeldyshContraction.external_spectral_projection_mismatch
+KeldyshContraction.external_spectral_projection_linewidth
+KeldyshContraction.evaluate_external_spectral_projection
+KeldyshContraction.evaluate_external_spectral_projection_variation
+KeldyshContraction.ExternalSpectralCollisionLinearization
+KeldyshContraction.external_spectral_linearized_terms
+KeldyshContraction.external_spectral_occupation_response_terms
+KeldyshContraction.external_spectral_model_response_terms
+KeldyshContraction.linearize_external_spectral_collision
+```
+
 ## Generated microscopic linewidth
 
 The Lorentzian linewidth can be produced from the same generated Keldysh self-energy rather than inferred from the collision kernel. `spectral_self_energy_kernel` forms
