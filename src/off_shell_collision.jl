@@ -27,10 +27,8 @@ gradient_order(::OffShellCollisionExpression{C,S,O,E1,E2,G}) where {C,S,O,E1,E2,
 wigner_context(collision::OffShellCollisionExpression) = collision.context
 target_family(collision::OffShellCollisionExpression) = collision.target
 
-"""Return the distribution-independent part `I₀ = im * Σᴷ`."""
 collision_offset(collision::OffShellCollisionExpression) = collision.offset
 
-"""Return the coefficient `I₁ = -A_Σ` of the external statistical distribution."""
 function collision_distribution_coefficient(collision::OffShellCollisionExpression)
     return collision.distribution_coefficient
 end

@@ -2,6 +2,7 @@ using KeldyshContraction, Test
 import KeldyshContraction as KC
 
 @qfields collision_api_ϕ::Boson
+@qfields collision_api_ψ::Fermion
 
 function collision_api_loss_propagator()
     c = collision_api_ϕ[Classical]
@@ -17,6 +18,46 @@ function collision_api_loss_propagator()
             2 * bar(c) * bar(q) * (c(plus) * q(plus) + c(minus) * q(minus))
         )
     L = InteractionLagrangian(loss, :γ)
+    return DressedPropagator(L, Val(1), Val(3); preserve_regularisation=true)
+end
+
+function collision_api_pwave_loss_propagator()
+    ψ1, ψ2 = collision_api_ψ[One], collision_api_ψ[Two]
+    bψ1, bψ2 = bar(ψ1), bar(ψ2)
+
+    ψplus = ψ1 + ψ2
+    ∂ψplus = partial(ψ1, :x) + partial(ψ2, :x)
+    ψminus = ψ1 - ψ2
+    ∂ψminus = partial(ψ1, :x) - partial(ψ2, :x)
+    bψplus = bψ1 + bψ2
+    ∂bψplus = partial(bψ1, :x) + partial(bψ2, :x)
+    bψminus = bψ2 - bψ1
+    ∂bψminus = partial(bψ2, :x) - partial(bψ1, :x)
+
+    Pplus_dagger = ∂bψplus * bψplus
+    Pminus_dagger = ∂bψminus * bψminus
+
+    plus = KC.Regularisation.Plus
+    minus = KC.Regularisation.Minus
+    ψplus_minus = ψ1(minus) + ψ2(minus)
+    ∂ψplus_minus = partial(ψ1(minus), :x) + partial(ψ2(minus), :x)
+    ψplus_plus = ψ1(plus) + ψ2(plus)
+    ∂ψplus_plus = partial(ψ1(plus), :x) + partial(ψ2(plus), :x)
+    ψminus_plus = ψ1(plus) - ψ2(plus)
+    ∂ψminus_plus = partial(ψ1(plus), :x) - partial(ψ2(plus), :x)
+
+    Pplus_minus = ψplus_minus * ∂ψplus_minus
+    Pplus_plus = ψplus_plus * ∂ψplus_plus
+    Pminus_plus = ψminus_plus * ∂ψminus_plus
+
+    loss =
+        (1 // 8) *
+        im *
+        (
+            (Pplus_dagger - Pminus_dagger) * Pplus_minus -
+            (Pplus_plus - Pminus_plus) * Pminus_dagger
+        )
+    L = InteractionLagrangian(loss, :γp)
     return DressedPropagator(L, Val(1), Val(3); preserve_regularisation=true)
 end
 
@@ -55,27 +96,130 @@ end
     stages = explicit_collision_pipeline(G)
 
     displays = (
-        (G, "G^{R,A,K}"),
-        (stages.GF, "G_F^{R,A,K}"),
-        (stages.ΣF, "\\Sigma_F^{R,A,K}"),
-        (stages.ΣW, "\\Sigma_W^{R,A,K}"),
-        (stages.KΣ, "G^K=-iFA"),
-        (stages.I, "I_{\\mathrm{coll}}"),
-        (stages.SD, "G^R=D-\\frac{i}{2}A"),
-        (stages.R, "\\operatorname{PV}"),
-        (stages.N, "F=1+2n"),
-        (stages.Q, "q_i\\sim \\pm q_{\\pi(i)}"),
-        (stages.C, "C_n(k)="),
+        (G, "G^K\\!\\left(x_1,x_2\\right)"),
+        (stages.GF, "G_F^K\\!\\left(k\\right)"),
+        (stages.ΣF, "\\Sigma_F^K\\!\\left(k\\right)"),
+        (stages.ΣW, "\\Sigma_W^K\\!\\left(X,k\\right)"),
+        (stages.KΣ, "\\Sigma_{\\mathrm{kin}}^K\\!\\left(k\\right)"),
+        (stages.I, "I_{\\mathrm{coll}}(k)"),
+        (stages.SD, "I_{\\mathrm{coll}}(k)"),
+        (stages.R, "I_{\\mathrm{reg}}(k)"),
+        (stages.N, "C_n^{\\mathrm{reg}}(k)"),
+        (stages.Q, "C_n^{\\mathrm{quot}}(k)"),
+        (stages.C, "C_n(k)"),
     )
 
     for (value, expected) in displays
         rendered = sprint(show, MIME"text/latex"(), value)
-        @test startswith(rendered, "\\[")
+        @test startswith(rendered, "\$\$")
         @test occursin(expected, rendered)
-        @test endswith(rendered, "\\]")
+        @test occursin("\\gamma", rendered)
+        @test endswith(rendered, "\$\$")
+        @test !occursin("\\[", rendered)
+        @test !occursin("\\Delta t", rendered)
     end
+
+    routed = sprint(show, MIME"text/latex"(), stages.GF)
+    @test occursin(r"G_\{[^}]+,[+-]\}\^\{[KRA]\}", routed)
+    @test !occursin(r"G\^\{[KRA],", routed)
+
+    sd = sprint(show, MIME"text/latex"(), stages.SD)
+    @test occursin(r"[AD]_\{[^}]+,[+-]\}", sd)
+    @test !occursin("0^+", sd)
 
     @test occursin("Kadanoff-Baym", sprint(show, MIME"text/plain"(), stages.I))
     @test occursin("causal blockers: 0", sprint(show, MIME"text/plain"(), stages.R))
-    @test occursin("canonical sectors:", sprint(show, MIME"text/plain"(), stages.C))
+    @test occursin("C_n(k) =", sprint(show, MIME"text/plain"(), stages.C))
+end
+
+@testset "indexed momentum components use one LaTeX subscript" begin
+    basis = KC.MomentumBasis(3)
+    external = basis[1]
+    q1x = KC.MomentumComponent(KC.basis_momentum(basis, 2), :x)
+    q2x = KC.MomentumComponent(KC.basis_momentum(basis, 3), :x)
+
+    q1 = KC._component_string(q1x, basis, external, true)
+    q2 = KC._component_string(q2x, basis, external, true)
+
+    @test q1 == "q_{1,x}"
+    @test q2 == "q_{2,x}"
+    @test !occursin(r"q_\{\d+\}_\{", q1)
+    @test !occursin(r"q_\{\d+\}_\{", q2)
+end
+
+@testset "compact display basis reconstructs physical factors" begin
+    fermion_basis = KC.MomentumBasis(4)
+    fermion_external = fermion_basis[1]
+    fermion_family = field_family(collision_api_ψ[One])
+    fermion_atoms = [
+        KC.OccupationAtom{Fermion}(fermion_family, KC.basis_momentum(fermion_basis, index))
+        for index in 1:4
+    ]
+    fermion_n = [KC.OccupationPolynomial(atom, 1 // 1) for atom in fermion_atoms]
+    vacancy = [one(polynomial) - polynomial for polynomial in fermion_n]
+    gain_loss =
+        vacancy[1] * vacancy[2] * fermion_n[3] * fermion_n[4] -
+        fermion_n[1] * fermion_n[2] * vacancy[3] * vacancy[4]
+
+    expanded = KC._expanded_polynomial_string(
+        gain_loss, fermion_basis, fermion_external, true
+    )
+    compact = KC._compact_distribution_string(
+        gain_loss, fermion_basis, fermion_external, true
+    )
+
+    @test ncodeunits(compact) < ncodeunits(expanded)
+    @test occursin("\\left(1-n_{", compact)
+    @test occursin(" - ", compact)
+
+    boson_basis = KC.MomentumBasis(2)
+    boson_external = boson_basis[1]
+    boson_family = field_family(collision_api_ϕ[Classical])
+    boson_atoms = [
+        KC.OccupationAtom{Boson}(boson_family, KC.basis_momentum(boson_basis, index)) for
+        index in 1:2
+    ]
+    boson_n = [KC.OccupationPolynomial(atom, 1 // 1) for atom in boson_atoms]
+    stimulated = (one(boson_n[1]) + boson_n[1]) * boson_n[2]
+    physical = KC._physical_basis_occupation_string(
+        stimulated, boson_basis, boson_external, true
+    )
+    @test physical !== nothing
+    @test occursin("\\left(1+n_{", physical)
+end
+
+@testset "collision-stage displays render computed p-wave physics" begin
+    stages = explicit_collision_pipeline(collision_api_pwave_loss_propagator())
+
+    sd = sprint(show, MIME"text/latex"(), stages.SD)
+    reduced = sprint(show, MIME"text/latex"(), stages.R)
+    occupation = sprint(show, MIME"text/latex"(), stages.N)
+    quotiented = sprint(show, MIME"text/latex"(), stages.Q)
+    kernel = sprint(show, MIME"text/latex"(), stages.C)
+
+    @test occursin("γp", sd)
+    @test occursin("A_{", sd)
+    @test occursin("F_{", sd)
+    @test occursin("_{x}", sd)
+
+    @test occursin("γp", reduced)
+    @test occursin("F_{", reduced)
+    @test occursin("_{x}", reduced)
+
+    for rendered in (occupation, quotiented, kernel)
+        @test occursin("γp", rendered)
+        @test occursin("n_{", rendered)
+        @test occursin("_{x}", rendered)
+        @test occursin("k", rendered)
+        @test occursin("q", rendered)
+    end
+
+    @test occursin("\\left(k - q\\right)_{x}^2", kernel)
+    @test !occursin("q_i\\sim", quotiented)
+    @test !occursin("\\mathcal K", kernel)
+
+    plain_kernel = sprint(show, MIME"text/plain"(), stages.C)
+    @test occursin("γp", plain_kernel)
+    @test occursin("n_", plain_kernel)
+    @test occursin("_x", plain_kernel)
 end
