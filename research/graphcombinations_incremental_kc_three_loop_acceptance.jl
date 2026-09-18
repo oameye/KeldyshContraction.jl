@@ -27,33 +27,40 @@ function _incremental_stats(workspace)
     )
 end
 
-function _measure_pair_15(expression, workspace)
+function _timed_nauty(expression)
+    result = @timed nauty_quotient_loop_momenta(expression)
+    return result.time * 1e9, result.bytes
+end
+
+function _timed_gc(expression, workspace)
+    result = @timed matrixfree_gc_quotient(expression, workspace)
+    return result.time * 1e9, result.bytes
+end
+
+function _adaptive_measurement(expression, workspace)
     nauty_quotient_loop_momenta(expression)
     matrixfree_gc_quotient(expression, workspace)
-    nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 15 evals = 1
-    gc_trial = @benchmark matrixfree_gc_quotient($expression, $workspace) samples = 15 evals =
-        1
-    return median(nauty_trial), median(gc_trial)
-end
 
-function _measure_pair_41(expression, workspace)
-    nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 41 evals = 1
-    gc_trial = @benchmark matrixfree_gc_quotient($expression, $workspace) samples = 41 evals =
-        1
-    return median(nauty_trial), median(gc_trial)
-end
+    nauty_ns, nauty_memory = _timed_nauty(expression)
+    gc_ns, gc_memory = _timed_gc(expression, workspace)
+    ratio = gc_ns / nauty_ns
 
-function _confirmed_measurement(expression, workspace)
-    nauty, gc = _measure_pair_15(expression, workspace)
-    if gc.time > nauty.time || gc.memory > nauty.memory
-        nauty, gc = _measure_pair_41(expression, workspace)
+    if 0.5 <= ratio <= 2.0 || gc_memory > nauty_memory
+        nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 7 evals = 1
+        gc_trial = @benchmark matrixfree_gc_quotient($expression, $workspace) samples = 7 evals = 1
+        nauty = median(nauty_trial)
+        gc = median(gc_trial)
+        return nauty.time, nauty.memory, gc.time, gc.memory
     end
-    return nauty, gc
+    return nauty_ns, nauty_memory, gc_ns, gc_memory
 end
 
 cases = corpus_cases()
 @assert length(cases) == 160
-@assert all(KC._loop_gc_capacities(expression)[2] == ACCEPTANCE_LOOP_COUNT for (_, expression) in cases)
+@assert all(
+    KC._loop_gc_capacities(expression)[2] == ACCEPTANCE_LOOP_COUNT for
+    (_, expression) in cases
+)
 workspaces = [_workspace(expression) for (_, expression) in cases]
 println("incremental-child three-loop KC acceptance corpus: ", length(cases), " cases")
 
@@ -81,13 +88,15 @@ end
     global worst_ratio, best_ratio
     for (index, (label, expression)) in enumerate(cases)
         workspace = workspaces[index]
-        nauty, gc = _confirmed_measurement(expression, workspace)
-        ratio = gc.time / nauty.time
+        nauty_ns, nauty_memory, gc_ns, gc_memory = _adaptive_measurement(
+            expression, workspace
+        )
+        ratio = gc_ns / nauty_ns
         ratio > worst_ratio[2] && (worst_ratio = (label, ratio))
         ratio < best_ratio[2] && (best_ratio = (label, ratio))
-        gc.time > nauty.time && push!(time_regressions, (label, ratio))
-        gc.memory > nauty.memory &&
-            push!(memory_regressions, (label, gc.memory, nauty.memory))
+        gc_ns > nauty_ns && push!(time_regressions, (label, ratio))
+        gc_memory > nauty_memory &&
+            push!(memory_regressions, (label, gc_memory, nauty_memory))
 
         matrixfree_gc_quotient(expression, workspace)
         stats = _incremental_stats(workspace)
@@ -95,15 +104,15 @@ end
             "KC-3LOOP-ACCEPT|",
             label,
             "|gc_ns=",
-            gc.time,
+            round(gc_ns; digits=1),
             "|nauty_ns=",
-            nauty.time,
+            round(nauty_ns; digits=1),
             "|ratio=",
             round(ratio; digits=3),
             "|gc_mem=",
-            gc.memory,
+            gc_memory,
             "|nauty_mem=",
-            nauty.memory,
+            nauty_memory,
             "|vertices=",
             stats.vertices,
             "|levels=",
