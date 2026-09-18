@@ -39,7 +39,9 @@ if !isempty(inside)
     println("largest one-word case: ", last(inside).first, " => ", last(inside).second)
 end
 if !isempty(outside)
-    println("smallest over-boundary case: ", first(outside).first, " => ", first(outside).second)
+    println(
+        "smallest over-boundary case: ", first(outside).first, " => ", first(outside).second
+    )
     println("over-boundary cases:")
     for (label, capacity) in outside
         println("  ", label, ": ", capacity)
