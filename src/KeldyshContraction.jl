@@ -84,6 +84,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("spectral_self_energy_background.jl")
     include("finite_width_occupation_reduction.jl")
     include("finite_width_collision_response.jl")
+    include("collision_projection_core.jl")
+    include("finite_width_projected_matrix.jl")
     include("collision_momentum_quotient.jl")
     include("collision_momentum_projective.jl")
     include("collision_kernel_api.jl")
@@ -142,6 +144,10 @@ const ComplexRationals = Complex{Rational{Int64}}
     SpectralSelfEnergySector,
     SpectralSelfEnergyKernel,
     BackgroundSpectralSelfEnergyKernel,
+    CollisionProjectionBasis,
+    CollisionPerturbationClosure,
+    CollisionProjectionFunctional,
+    ProjectedCollisionMatrix,
     field_families,
     target_family,
     parameters,
@@ -221,6 +227,11 @@ const ComplexRationals = Complex{Rational{Int64}}
     finite_width_occupation_response_terms,
     finite_width_spectral_response_terms,
     linearize_finite_width_collision,
+    left_projection_basis,
+    right_perturbation_basis,
+    perturbation_amplitude,
+    project_collision_channel,
+    projected_collision_matrix,
     lorentzian_spectral_data_from_retarded_self_energy,
     lorentzian_spectral_value,
     lorentzian_integrated_power,

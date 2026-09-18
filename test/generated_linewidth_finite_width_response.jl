@@ -121,6 +121,25 @@ function generated_scalar_linewidth(kernel, occupation_value, γ_value)
     return γ_value * unit_normalized_loop_integral(sector, coefficient)
 end
 
+function generated_resolved_finite_width_response(response, term)
+    terms = KC.finite_width_linearized_terms(response)
+    occupation = KC.finite_width_occupation_response_terms(response)
+    spectral = KC.finite_width_spectral_response_terms(response)
+    unsupported_offset = KC.finite_width_unsupported_offset_terms(response)
+    unsupported_distribution = KC.finite_width_unsupported_distribution_terms(response)
+
+    return typeof(response)(
+        typeof(terms)(term => terms[term]),
+        typeof(occupation)(term => occupation[term]),
+        typeof(spectral)(term => spectral[term]),
+        typeof(unsupported_offset)(),
+        typeof(unsupported_distribution)(),
+        KC.target_family(response),
+        KC.parameters(response),
+        KC.wigner_context(response),
+    )
+end
+
 @testset "generated linewidth closes self-consistent finite-width loss response" begin
     linewidth_kernel = generated_width_response_linewidth_kernel()
     collision = generated_width_response_collision()
@@ -211,4 +230,41 @@ end
         KC.finite_width_unsupported_offset_terms(frozen)
     @test KC.finite_width_unsupported_distribution_terms(full) ==
         KC.finite_width_unsupported_distribution_terms(frozen)
+
+    resolved = generated_resolved_finite_width_response(full, term)
+    basis = KC.CollisionProjectionBasis((:number,), (:selected_mode,))
+    closure = KC.CollisionPerturbationClosure(
+        (_, varied) -> isequal(varied, atom) ? 1 // 1 : 0 // 1, Rational{Int}
+    )
+    ProjectionValue = typeof(full_terms[atom])
+    functional = KC.CollisionProjectionFunctional(
+        (_, sector, varied, response) -> begin
+            @test isequal(sector, term)
+            @test isequal(varied, atom)
+            return response
+        end, ProjectionValue
+    )
+    projected = @inferred KC.projected_collision_matrix(
+        resolved, basis, closure, functional
+    )
+    @test KC.left_projection_basis(projected) == (:number,)
+    @test KC.right_perturbation_basis(projected) == (:selected_mode,)
+    @test KC.matrix(projected) == reshape(ProjectionValue[full_terms[atom]], 1, 1)
+
+    unresolved_offset = typeof(KC.finite_width_unsupported_offset_terms(resolved))(
+        term => one(ProjectionValue)
+    )
+    unresolved = typeof(resolved)(
+        KC.finite_width_linearized_terms(resolved),
+        KC.finite_width_occupation_response_terms(resolved),
+        KC.finite_width_spectral_response_terms(resolved),
+        unresolved_offset,
+        typeof(KC.finite_width_unsupported_distribution_terms(resolved))(),
+        KC.target_family(resolved),
+        KC.parameters(resolved),
+        KC.wigner_context(resolved),
+    )
+    @test_throws ArgumentError KC.projected_collision_matrix(
+        unresolved, basis, closure, functional
+    )
 end
