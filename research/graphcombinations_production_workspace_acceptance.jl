@@ -5,26 +5,32 @@ import KeldyshContraction as KC
 
 include(ENV["KC_CORPUS_DEFS"])
 
-function _measure_prepared_pair_15(expression, workspace)
+function _timed_nauty(expression)
+    result = @timed nauty_quotient_loop_momenta(expression)
+    return result.time * 1e9, result.bytes
+end
+
+function _timed_prepared_gc(expression, workspace)
+    result = @timed KC.quotient_loop_momenta(expression, workspace)
+    return result.time * 1e9, result.bytes
+end
+
+function _adaptive_prepared_measurement(expression, workspace)
     nauty_quotient_loop_momenta(expression)
     KC.quotient_loop_momenta(expression, workspace)
-    nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 15 evals = 1
-    gc_trial = @benchmark KC.quotient_loop_momenta($expression, $workspace) samples = 15 evals = 1
-    return median(nauty_trial), median(gc_trial)
-end
 
-function _measure_prepared_pair_41(expression, workspace)
-    nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 41 evals = 1
-    gc_trial = @benchmark KC.quotient_loop_momenta($expression, $workspace) samples = 41 evals = 1
-    return median(nauty_trial), median(gc_trial)
-end
+    nauty_ns, nauty_memory = _timed_nauty(expression)
+    gc_ns, gc_memory = _timed_prepared_gc(expression, workspace)
+    ratio = gc_ns / nauty_ns
 
-function _confirmed_prepared_measurement(expression, workspace)
-    nauty, gc = _measure_prepared_pair_15(expression, workspace)
-    if gc.time > nauty.time || gc.memory > nauty.memory
-        nauty, gc = _measure_prepared_pair_41(expression, workspace)
+    if ratio >= 0.5 || gc_memory > nauty_memory
+        nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 7 evals = 1
+        gc_trial = @benchmark KC.quotient_loop_momenta($expression, $workspace) samples = 7 evals = 1
+        nauty = median(nauty_trial)
+        gc = median(gc_trial)
+        return nauty.time, nauty.memory, gc.time, gc.memory
     end
-    return nauty, gc
+    return nauty_ns, nauty_memory, gc_ns, gc_memory
 end
 
 cases = corpus_cases()
@@ -58,19 +64,21 @@ end
     global worst_ratio, best_ratio
     for (index, (label, expression)) in enumerate(cases)
         workspace = workspaces[index]
-        nauty, gc = _confirmed_prepared_measurement(expression, workspace)
-        ratio = gc.time / nauty.time
+        nauty_ns, nauty_memory, gc_ns, gc_memory = _adaptive_prepared_measurement(
+            expression, workspace
+        )
+        ratio = gc_ns / nauty_ns
         if ratio > worst_ratio[2]
             worst_ratio = (label, ratio)
         end
         if ratio < best_ratio[2]
             best_ratio = (label, ratio)
         end
-        if gc.time > nauty.time
+        if gc_ns > nauty_ns
             push!(time_regressions, (label, ratio))
         end
-        if gc.memory > nauty.memory
-            push!(memory_regressions, (label, gc.memory, nauty.memory))
+        if gc_memory > nauty_memory
+            push!(memory_regressions, (label, gc_memory, nauty_memory))
         end
         println(
             lpad(index, 3),
@@ -79,15 +87,15 @@ end
             " ",
             label,
             ": time=",
-            round(gc.time / 1.0e3; digits=2),
+            round(gc_ns / 1.0e3; digits=2),
             "/",
-            round(nauty.time / 1.0e3; digits=2),
+            round(nauty_ns / 1.0e3; digits=2),
             " μs prepared-GC/Nauty (",
             round(ratio; digits=3),
             "x), memory=",
-            gc.memory,
+            gc_memory,
             "/",
-            nauty.memory,
+            nauty_memory,
             " B",
         )
     end
