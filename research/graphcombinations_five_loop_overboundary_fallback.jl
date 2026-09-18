@@ -1,6 +1,7 @@
 using BenchmarkTools
 using Test
 
+import GraphCombinations as GC
 import KeldyshContraction as KC
 
 include(ENV["KC_CORPUS_DEFS"])
@@ -20,7 +21,8 @@ function _repeat_if_close(expression, workspace, nauty_ns, gc_ns)
     ratio = gc_ns / nauty_ns
     0.5 <= ratio <= 2.0 || return nauty_ns, gc_ns
     nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 7 evals = 1
-    gc_trial = @benchmark matrixfree_gc_quotient($expression, $workspace) samples = 7 evals = 1
+    gc_trial = @benchmark matrixfree_gc_quotient($expression, $workspace) samples = 7 evals =
+        1
     return median(nauty_trial).time, median(gc_trial).time
 end
 
@@ -31,7 +33,9 @@ overboundary = [
     (label, expression) in cases if KC._loop_gc_capacities(expression)[1] > 64
 ]
 @assert length(overboundary) == 4
-@assert all(KC._loop_gc_capacities(expression)[2] == 5 for (_, expression, _) in overboundary)
+@assert all(
+    KC._loop_gc_capacities(expression)[2] == 5 for (_, expression, _) in overboundary
+)
 
 # Compile the common code path on a cheap five-loop case before timing the four >64 cases.
 warm_expression = first(cases)[2]
@@ -87,4 +91,6 @@ end
 
 println("semantic failures: ", length(semantic_failures))
 println("worst fallback/Nauty time ratio: ", round(maximum(last, time_ratios); digits=3))
-println("worst fallback/Nauty memory ratio: ", round(maximum(last, memory_ratios); digits=3))
+println(
+    "worst fallback/Nauty memory ratio: ", round(maximum(last, memory_ratios); digits=3)
+)
