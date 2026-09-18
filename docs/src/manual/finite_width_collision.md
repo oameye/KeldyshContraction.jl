@@ -119,6 +119,36 @@ KeldyshContraction.finite_width_spectral_response_terms
 KeldyshContraction.linearize_finite_width_collision
 ```
 
+## Finite-dimensional projection
+
+A fully resolved `FiniteWidthCollisionLinearization` can be projected with the same response-agnostic basis, perturbation closure, and left projection functional used by the strict-quasiparticle collision stack. For
+
+```math
+\delta C=\sum_{s,a} c_{s,a}\,\delta n_a,
+```
+
+a right-basis closure supplies the perturbation amplitude `\psi_j(a)` and the left functional performs the explicit downstream phase-space or moment projection,
+
+```math
+K_{ij}=\sum_{s,a}\mathcal P_i[s,a,c_{s,a}\psi_j(a)].
+```
+
+The finite-width coefficients `c_{s,a}` already contain the complete self-consistent product-rule response `\bar W\,\delta P+\bar P\,\delta W`. KC still does not choose the trap basis, phase-space quadrature, Chapman--Enskog closure, collective-mode frequency, or pole condition.
+
+Projection requires complete finite-width resolution. If either the offset or distribution branch still contains unsupported sectors, `projected_collision_matrix` throws instead of silently discarding them.
+
+```@docs
+KeldyshContraction.CollisionProjectionBasis
+KeldyshContraction.CollisionPerturbationClosure
+KeldyshContraction.CollisionProjectionFunctional
+KeldyshContraction.ProjectedCollisionMatrix
+KeldyshContraction.left_projection_basis
+KeldyshContraction.right_perturbation_basis
+KeldyshContraction.perturbation_amplitude
+KeldyshContraction.project_collision_channel
+KeldyshContraction.projected_collision_matrix
+```
+
 ## Generated microscopic linewidth
 
 The Lorentzian linewidth can be produced from the same generated Keldysh self-energy rather than inferred from the collision kernel. `spectral_self_energy_kernel` forms
