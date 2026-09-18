@@ -1,4 +1,4 @@
-# Research GraphCombinations backend for the physical dummy-loop quotient.
+# GraphCombinations backend for the physical dummy-loop quotient.
 #
 # The Nauty projective transform in `collision_momentum_projective.jl` remains an
 # independent private oracle. Public Boson/Fermion quotienting is specialized below
@@ -55,7 +55,7 @@ end
     function _LoopGCCanonicalizationStorage(capacity::Int)
         return _LoopGCCanonicalizationStorage(
             GC.DirectedSimpleCanonicalizationWorkspace(
-                capacity; frontier_capacity=max(4096, 64 * capacity)
+                capacity; frontier_capacity=32
             ),
             GC.DirectedCanonicalizationBuffer(capacity),
             GC.DirectedGCGraphBuffer(capacity),
