@@ -114,14 +114,13 @@ end
 
     model = KC.LorentzianSpectralModel(
         Dict(
-            line => KC.LorentzianSpectralData(quadratic_energy(line, values), Γbar, 1 // 1) for
-            line in lines
+            line => KC.LorentzianSpectralData(quadratic_energy(line, values), Γbar, 1 // 1)
+            for line in lines
         ),
     )
     variation = KC.LorentzianSpectralModelVariation(
         Dict(
-            line => KC.LorentzianSpectralDataVariation(0 // 1, δΓ, 0 // 1) for
-            line in lines
+            line => KC.LorentzianSpectralDataVariation(0 // 1, δΓ, 0 // 1) for line in lines
         ),
     )
 
@@ -131,7 +130,8 @@ end
 
     @test abs(mismatch) == 1 // 1
     @test width == 1 // 1
-    @test KC.evaluate_external_spectral_projection(reduction, model, external_line) == 4J / 5
+    @test KC.evaluate_external_spectral_projection(reduction, model, external_line) ==
+        4J / 5
     @test KC.evaluate_external_spectral_projection_variation(
         reduction, model, variation, external_line
     ) == 12J / 25
