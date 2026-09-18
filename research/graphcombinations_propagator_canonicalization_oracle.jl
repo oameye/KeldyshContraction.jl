@@ -3,6 +3,7 @@ using Combinatorics
 
 import GraphCombinations as GC
 import KeldyshContraction as KC
+using KeldyshContraction: @qfields, Boson
 
 function _gc_direct_graph(vs, graph_positions)
     edges = Pair{Int,Int}[]
@@ -90,9 +91,9 @@ function add_orbit!(cases, label, vs; exhaustive=true)
     return nothing
 end
 
-KC.@qfields ϕ::KC.Boson
+@qfields ϕ::Boson
 c, q = ϕ[KC.Classical], ϕ[KC.Quantum]
-KC.@qfields χ::KC.Boson
+@qfields χ::Boson
 χc, χq = χ[KC.Classical], χ[KC.Quantum]
 
 cases = Pair{String,Any}[]
