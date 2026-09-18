@@ -261,7 +261,13 @@ function reduce_frequency_collision(collision::SpectralDispersiveCollision)
     return reduce_frequency_collision(canonical_frequency_collision(collision))
 end
 
-"""Regular strict-QP collision after exact `F -> n` substitution and collision normalization."""
+"""
+Regular strict-QP expression after exact `F -> n` substitution.
+
+The normalization is fixed by the construction path. Public collision reduction applies
+`C_n = σ I_package/2`; other physical observables can reuse the same occupation and loop-momentum
+algebra without acquiring that collision-specific factor.
+"""
 struct OccupationReducedExpression{C<:Number,S<:Statistics,O,G,Ctx<:AbstractWignerContext}
     terms::Dict{ReducedCollisionSector{S},OccupationPolynomial{C,S}}
     target::FieldFamily{S}
@@ -279,6 +285,20 @@ occupation_reduced_terms(expression::OccupationReducedExpression) = expression.t
 Base.length(expression::OccupationReducedExpression) = length(expression.terms)
 Base.isempty(expression::OccupationReducedExpression) = isempty(expression.terms)
 
+function _occupation_reduced_expression(
+    collision::ReducedFrequencyCollision{C,S,O,E1,E2,G,Ctx}, lower::F
+) where {C<:Number,S<:Statistics,O,E1,E2,G,Ctx<:AbstractWignerContext,F}
+    D = promote_type(C, Rational{Int})
+    terms = Dict{ReducedCollisionSector{S},OccupationPolynomial{D,S}}()
+    for (sector, statistical) in collision.regular
+        occupation = lower(statistical)
+        iszero(occupation) || (terms[sector] = occupation)
+    end
+    return OccupationReducedExpression{D,S,O,G,Ctx}(
+        terms, target_family(collision), parameters(collision), wigner_context(collision)
+    )
+end
+
 """
     occupation_reduced_expression(collision)
 
@@ -286,16 +306,6 @@ Project only the finite regular branch to occupation variables using `F_S = 1 + 
 `C_n = σ_S I_package/2`. Typed causal blockers and unresolved Trotter states remain in the input
 `ReducedFrequencyCollision` and are deliberately absent from this regular occupation expression.
 """
-function occupation_reduced_expression(
-    collision::ReducedFrequencyCollision{C,S,O,E1,E2,G,Ctx}
-) where {C<:Number,S<:Statistics,O,E1,E2,G,Ctx<:AbstractWignerContext}
-    D = promote_type(C, Rational{Int})
-    terms = Dict{ReducedCollisionSector{S},OccupationPolynomial{D,S}}()
-    for (sector, statistical) in collision.regular
-        occupation = occupation_collision_polynomial(statistical)
-        iszero(occupation) || (terms[sector] = occupation)
-    end
-    return OccupationReducedExpression{D,S,O,G,Ctx}(
-        terms, target_family(collision), parameters(collision), wigner_context(collision)
-    )
+function occupation_reduced_expression(collision::ReducedFrequencyCollision)
+    return _occupation_reduced_expression(collision, occupation_collision_polynomial)
 end

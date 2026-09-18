@@ -118,3 +118,41 @@ KeldyshContraction.finite_width_occupation_response_terms
 KeldyshContraction.finite_width_spectral_response_terms
 KeldyshContraction.linearize_finite_width_collision
 ```
+
+## Generated microscopic linewidth
+
+The Lorentzian linewidth can be produced from the same generated Keldysh self-energy rather than inferred from the collision kernel. `spectral_self_energy_kernel` forms
+
+```math
+A_\Sigma=i(\Sigma^R-\Sigma^A)=-2\operatorname{Im}\Sigma^R
+```
+
+and reduces it with the same exact causal-frequency and occupation algebra as the collision compiler, but without the collision normalization factor. The resulting `SpectralSelfEnergyKernel` retains its routed loop momentum, perturbative parameter, kinematic support, and unresolved causal/Trotter provenance.
+
+Evaluating that kernel on an occupation background still leaves the loop integral explicit. For first-order bosonic two-body loss,
+
+```math
+\Gamma_\gamma(k)=4\gamma\int_q n_q,
+```
+
+so a downstream calculation may supply both
+
+```math
+\bar\Gamma=4\gamma\int_q\bar n_q,
+\qquad
+\delta\Gamma=4\gamma\int_q\delta n_q
+```
+
+and use them as the linewidth and linewidth variation in the generic finite-width response above. KC deliberately does not turn this boundary into a quadrature, trap, or mode-projection API.
+
+```@docs
+KeldyshContraction.SpectralSelfEnergySector
+KeldyshContraction.SpectralSelfEnergyKernel
+KeldyshContraction.BackgroundSpectralSelfEnergyKernel
+KeldyshContraction.spectral_self_energy_terms
+KeldyshContraction.background_spectral_self_energy_terms
+KeldyshContraction.spectral_self_energy_blocked_terms
+KeldyshContraction.spectral_self_energy_trotter_terms
+KeldyshContraction.spectral_self_energy_kernel
+KeldyshContraction.evaluate_spectral_self_energy_background
+```
