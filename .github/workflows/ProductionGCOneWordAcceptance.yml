@@ -6,8 +6,11 @@ on:
     branches:
       - production-gc-oneword-matrixfree-loop-quotient
     paths:
+      - src/KeldyshContraction.jl
       - src/collision_momentum_graphcombinations.jl
+      - src/collision_momentum_workspace.jl
       - research/graphcombinations_loop_corpus_certification.jl
+      - research/graphcombinations_production_workspace_acceptance.jl
       - .github/workflows/ProductionGCOneWordAcceptance.yml
 
 permissions:
@@ -36,17 +39,21 @@ jobs:
             Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="131d7353eb968cce8ef008004282284a32918a3e")
             Pkg.add("BenchmarkTools")
           '
-      - name: Extract loop corpus
+      - name: Extract loop corpus definitions
         shell: bash
         run: |
           sed 's/const CORPUS_LOOP_COUNTS = 1:5/const CORPUS_LOOP_COUNTS = ${{ matrix.loops }}:${{ matrix.loops }}/' \
-            research/graphcombinations_loop_corpus_certification.jl \
-            > /tmp/production-gc-${{ matrix.loops }}-loop-corpus.jl
-      - name: Certify production quotient against Nauty
+            research/graphcombinations_loop_corpus_certification.jl | \
+            awk '/^cases = corpus_cases\(\)/ { exit } { print }' \
+            > /tmp/production-gc-${{ matrix.loops }}-loop-corpus-defs.jl
+      - name: Certify prepared production quotient against Nauty
         shell: bash
+        env:
+          KC_CORPUS_DEFS: /tmp/production-gc-${{ matrix.loops }}-loop-corpus-defs.jl
         run: |
           set -o pipefail
-          julia --project=. --color=yes /tmp/production-gc-${{ matrix.loops }}-loop-corpus.jl \
+          julia --project=. --color=yes \
+            research/graphcombinations_production_workspace_acceptance.jl \
             2>&1 | tee production-gc-${{ matrix.loops }}-loop-corpus.log
       - name: Preserve diagnostics
         if: always()
