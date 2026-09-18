@@ -1,0 +1,62 @@
+name: GraphCombinations five-loop over-boundary fallback
+
+on:
+  push:
+    branches:
+      - research-gc-five-loop-overboundary-fallback
+    paths:
+      - '.github/workflows/GraphCombinationsFiveLoopOverboundaryFallback.yml'
+      - 'research/graphcombinations_five_loop_overboundary_fallback.jl'
+      - 'research/graphcombinations_matrixfree_loop_transform.jl'
+      - 'research/graphcombinations_loop_corpus_certification.jl'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  overboundary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.10.12'
+      - uses: julia-actions/cache@v3
+      - name: Pin exact GC #202 tree and benchmark harness
+        run: |
+          julia --project=. --color=yes -e '
+            using Pkg
+            Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="efa49195c9fe2896e6c5d88b3b4ea3706a7edc83")
+            Pkg.add("BenchmarkTools")
+          '
+      - name: Extract full five-loop KC corpus definitions
+        shell: bash
+        run: |
+          sed 's/const CORPUS_LOOP_COUNTS = 1:5/const CORPUS_LOOP_COUNTS = 5:5/' \
+            research/graphcombinations_loop_corpus_certification.jl | \
+            awk '/^cases = corpus_cases\(\)/ { exit } { print }' > /tmp/kc_corpus_defs.jl
+      - name: Extract matrix-free #367 implementation without its residual runner
+        shell: bash
+        run: |
+          awk '
+            started && /^cases = residual_cases\(\)/ { exit }
+            started { print }
+            /include\(ENV\["KC_CORPUS_DEFS"\]\)/ { started = 1 }
+          ' research/graphcombinations_matrixfree_loop_transform.jl > /tmp/kc_matrixfree_defs.jl
+      - name: Certify and benchmark exact general fallback
+        shell: bash
+        env:
+          KC_CORPUS_DEFS: /tmp/kc_corpus_defs.jl
+          KC_MATRIXFREE_DEFS: /tmp/kc_matrixfree_defs.jl
+        run: |
+          set -o pipefail
+          julia --project=. --color=yes research/graphcombinations_five_loop_overboundary_fallback.jl \
+            2>&1 | tee graphcombinations-five-loop-overboundary-fallback.log
+      - name: Preserve diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphcombinations-five-loop-overboundary-fallback
+          path: graphcombinations-five-loop-overboundary-fallback.log
