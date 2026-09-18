@@ -103,7 +103,7 @@ end
     values[loop_indices[1]] = (0 // 1, 1 // 1)
     values[loop_indices[2]] = (1 // 1, 1 // 1)
 
-    energies = sort(quadratic_energy(line, values) for line in lines)
+    energies = sort([quadratic_energy(line, values) for line in lines])
     @test energies == [1 // 2, 1 // 2, 1 // 1, 2 // 1]
 
     γ_value = 1 // 16
