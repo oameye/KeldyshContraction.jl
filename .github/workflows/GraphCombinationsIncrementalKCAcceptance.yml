@@ -1,0 +1,108 @@
+name: GraphCombinations incremental KC acceptance
+
+on:
+  push:
+    branches:
+      - research-gc-incremental-child-kc-acceptance
+    paths:
+      - '.github/workflows/GraphCombinationsIncrementalKCAcceptance.yml'
+      - 'research/graphcombinations_incremental_kc_acceptance.jl'
+      - 'research/graphcombinations_matrixfree_loop_transform.jl'
+      - 'research/graphcombinations_loop_corpus_certification.jl'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  two-loop-corpus:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.10.12'
+      - uses: julia-actions/cache@v3
+      - name: Route KC research adapter through GC incremental-child kernel
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/collision_momentum_graphcombinations.jl")
+          text = path.read_text()
+
+          marker = "@static if isdefined(GC, :DirectedGCGraphBuffer)\n"
+          include = (
+              'include(joinpath(dirname(dirname(pathof(GC))), "research", '
+              '"packed_incremental_child_refinement.jl"))\n\n'
+          )
+          if text.count(marker) != 1:
+              raise SystemExit("incremental include marker changed")
+          text = text.replace(marker, include + marker, 1)
+
+          replacements = (
+              (
+                  "workspace::GC.DirectedCanonicalizationWorkspace",
+                  "workspace::PackedLevelwiseIncrementalWorkspace",
+              ),
+              (
+                  "GC.DirectedCanonicalizationWorkspace(capacity),",
+                  "PackedLevelwiseIncrementalWorkspace(capacity; frontier_capacity=max(4096, 64 * capacity)),",
+              ),
+              (
+                  "        GC.canonicalize_directed!(\n"
+                  "            storage.buffer, storage.workspace, storage.graph, storage.labels\n"
+                  "        )",
+                  "        active_colors = @view storage.labels[1:num_vertices]\n"
+                  "        canonicalize_levelwise_incremental!(\n"
+                  "            storage.buffer,\n"
+                  "            storage.workspace,\n"
+                  "            GC._directed_graph_view(storage.graph),\n"
+                  "            active_colors,\n"
+                  "        )",
+              ),
+          )
+          for old, new in replacements:
+              if text.count(old) < 1:
+                  raise SystemExit(f"incremental adapter patch target changed: {old!r}")
+              text = text.replace(old, new, 1)
+          path.write_text(text)
+          PY
+      - name: Pin exact GC #202 candidate and benchmark harness
+        run: |
+          julia --project=. --color=yes -e '
+            using Pkg
+            Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="efa49195c9fe2896e6c5d88b3b4ea3706a7edc83")
+            Pkg.add("BenchmarkTools")
+          '
+      - name: Extract full two-loop KC corpus definitions
+        shell: bash
+        run: |
+          sed 's/const CORPUS_LOOP_COUNTS = 1:5/const CORPUS_LOOP_COUNTS = 2:2/' \
+            research/graphcombinations_loop_corpus_certification.jl | \
+            awk '/^cases = corpus_cases\(\)/ { exit } { print }' > /tmp/kc_corpus_defs.jl
+      - name: Extract matrix-free #367 implementation without its residual runner
+        shell: bash
+        run: |
+          awk '
+            started && /^cases = residual_cases\(\)/ { exit }
+            started { print }
+            /include\(ENV\["KC_CORPUS_DEFS"\]\)/ { started = 1 }
+          ' research/graphcombinations_matrixfree_loop_transform.jl > /tmp/kc_matrixfree_defs.jl
+      - name: Certify full two-loop KC acceptance corpus
+        shell: bash
+        env:
+          KC_CORPUS_DEFS: /tmp/kc_corpus_defs.jl
+          KC_MATRIXFREE_DEFS: /tmp/kc_matrixfree_defs.jl
+        run: |
+          set -o pipefail
+          julia --project=. --color=yes research/graphcombinations_incremental_kc_acceptance.jl \
+            2>&1 | tee graphcombinations-incremental-kc-acceptance.log
+      - name: Preserve diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphcombinations-incremental-kc-acceptance
+          path: graphcombinations-incremental-kc-acceptance.log
