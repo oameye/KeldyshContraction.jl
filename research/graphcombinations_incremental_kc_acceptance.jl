@@ -1,6 +1,7 @@
 using BenchmarkTools
 using Test
 
+import GraphCombinations as GC
 import KeldyshContraction as KC
 
 include(ENV["KC_CORPUS_DEFS"])
