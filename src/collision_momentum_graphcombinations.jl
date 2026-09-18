@@ -393,7 +393,6 @@ function _graphcombinations_projective_canonical_loop_transform(
     )
 end
 
-
 function _prepare_matrixfree_gc_gauge!(
     sector::ReducedCollisionSector{S},
     monomial::OccupationMonomial{S},
@@ -444,15 +443,11 @@ function _prepare_matrixfree_gc_gauge!(
 end
 
 function _matrixfree_gc_momentum(
-    momentum::LinearMomentum,
-    workspace::_LoopGCQuotientWorkspace,
-    external_index::Int,
+    momentum::LinearMomentum, workspace::_LoopGCQuotientWorkspace, external_index::Int
 )
     n = length(momentum)
     n == length(workspace.loop_indices) + 1 || throw(
-        DimensionMismatch(
-            "momentum and signed loop permutation use different basis sizes"
-        ),
+        DimensionMismatch("momentum and signed loop permutation use different basis sizes"),
     )
     coefficients = Vector{MomentumCoefficient}(undef, n)
     coefficients[external_index] = momentum[external_index]
@@ -460,8 +455,7 @@ function _matrixfree_gc_momentum(
         old_index = workspace.loop_indices[old_slot]
         new_slot = workspace.loop_permutation[old_slot]
         new_index = workspace.loop_indices[new_slot]
-        coefficients[new_index] =
-            workspace.loop_signs[old_slot] * momentum[old_index]
+        coefficients[new_index] = workspace.loop_signs[old_slot] * momentum[old_index]
     end
     return LinearMomentum(coefficients)
 end
@@ -473,23 +467,18 @@ function _matrixfree_gc_occupation_monomial(
 ) where {S<:Statistics}
     atoms = OccupationAtom{S}[
         OccupationAtom{S}(
-            atom.family,
-            _matrixfree_gc_momentum(atom.momentum, workspace, external_index),
+            atom.family, _matrixfree_gc_momentum(atom.momentum, workspace, external_index)
         ) for atom in monomial
     ]
     return OccupationMonomial(atoms)
 end
 
 function _matrixfree_gc_momentum_monomial(
-    monomial::MomentumMonomial,
-    workspace::_LoopGCQuotientWorkspace,
-    external_index::Int,
+    monomial::MomentumMonomial, workspace::_LoopGCQuotientWorkspace, external_index::Int
 )
     factors = MomentumComponent[
         MomentumComponent(
-            _matrixfree_gc_momentum(
-                component.momentum, workspace, external_index
-            ),
+            _matrixfree_gc_momentum(component.momentum, workspace, external_index),
             component.axis,
         ) for component in monomial
     ]
@@ -504,9 +493,7 @@ function _matrixfree_gc_momentum_polynomial(
     terms = Pair{MomentumMonomial,C}[]
     sizehint!(terms, length(polynomial))
     for (monomial, coefficient) in polynomial
-        transformed = _matrixfree_gc_momentum_monomial(
-            monomial, workspace, external_index
-        )
+        transformed = _matrixfree_gc_momentum_monomial(monomial, workspace, external_index)
         normalized, factor, nonzero = _projective_kinematic_monomial(transformed)
         nonzero || continue
         push!(terms, normalized => coefficient * convert(C, factor))
@@ -515,9 +502,7 @@ function _matrixfree_gc_momentum_polynomial(
 end
 
 function _matrixfree_gc_energy_form(
-    form::EnergyForm{S},
-    workspace::_LoopGCQuotientWorkspace,
-    external_index::Int,
+    form::EnergyForm{S}, workspace::_LoopGCQuotientWorkspace, external_index::Int
 ) where {S<:Statistics}
     energy_basis_size(form) == length(workspace.loop_indices) + 1 || throw(
         DimensionMismatch(
@@ -526,17 +511,14 @@ function _matrixfree_gc_energy_form(
     )
     terms = Pair{DispersionAtom{S},EnergyCoefficient}[
         DispersionAtom{S}(
-            atom.family,
-            _matrixfree_gc_momentum(atom.momentum, workspace, external_index),
+            atom.family, _matrixfree_gc_momentum(atom.momentum, workspace, external_index)
         ) => coefficient for (atom, coefficient) in form
     ]
     return EnergyForm(energy_basis_size(form), terms)
 end
 
 function _matrixfree_gc_frequency_support(
-    support::FrequencySupport{S},
-    workspace::_LoopGCQuotientWorkspace,
-    external_index::Int,
+    support::FrequencySupport{S}, workspace::_LoopGCQuotientWorkspace, external_index::Int
 ) where {S<:Statistics}
     shells = EnergyShell{S}[]
     principal_values = PrincipalValueSupport{S}[]
@@ -553,9 +535,7 @@ function _matrixfree_gc_frequency_support(
     end
     for principal_value in support.principal_values
         transformed, pv_factor = principal_value_support(
-            _matrixfree_gc_energy_form(
-                principal_value.energy, workspace, external_index
-            )
+            _matrixfree_gc_energy_form(principal_value.energy, workspace, external_index)
         )
         push!(principal_values, transformed)
         factor *= pv_factor
@@ -608,23 +588,16 @@ function _quotient_loop_momenta_graphcombinations(
                     convert(D, occupation_coefficient) *
                     convert(D, kinematic_coefficient) *
                     convert(D, support_factor)
-                contribution = Pair{OccupationMonomial{S},D}[
-                    transformed_monomial => transformed_coefficient
-                ]
+                contribution = Pair{OccupationMonomial{S},D}[transformed_monomial => transformed_coefficient]
                 _push_kernel_polynomial!(
-                    out,
-                    transformed_sector,
-                    OccupationPolynomial{D,S}(contribution),
+                    out, transformed_sector, OccupationPolynomial{D,S}(contribution)
                 )
             end
         end
     end
 
     return LoopQuotientedExpression{D,S,O,G,Ctx}(
-        out,
-        target_family(expression),
-        parameters(expression),
-        wigner_context(expression),
+        out, target_family(expression), parameters(expression), wigner_context(expression)
     )
 end
 
