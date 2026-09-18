@@ -10,9 +10,9 @@ function _gc_direct_graph(vs, graph_positions)
     seen = Set{Tuple{Int,Int}}()
     simple = true
     for item in vs
-        out, in = KC.positions(item)
-        source = KC.position_vertex(graph_positions, out)
-        target = KC.position_vertex(graph_positions, in)
+        source_position, target_position = KC.positions(item)
+        source = KC.position_vertex(graph_positions, source_position)
+        target = KC.position_vertex(graph_positions, target_position)
         key = (source, target)
         if key in seen
             simple = false
@@ -36,9 +36,15 @@ function _gc_colored_graph(vs, graph_positions)
         color_index = searchsortedfirst(colors, KC.propagator_color(item))
         edge_vertex = npositions + i
         labels[edge_vertex] = 3 + color_index
-        out, in = KC.positions(item)
-        push!(edges, KC.position_vertex(graph_positions, out) => edge_vertex)
-        push!(edges, edge_vertex => KC.position_vertex(graph_positions, in))
+        source_position, target_position = KC.positions(item)
+        push!(
+            edges,
+            KC.position_vertex(graph_positions, source_position) => edge_vertex,
+        )
+        push!(
+            edges,
+            edge_vertex => KC.position_vertex(graph_positions, target_position),
+        )
     end
     return GC.DirectedGCGraph(edges, length(labels)), labels
 end
