@@ -54,9 +54,7 @@ end
 
     function _LoopGCCanonicalizationStorage(capacity::Int)
         return _LoopGCCanonicalizationStorage(
-            GC.DirectedSimpleCanonicalizationWorkspace(
-                capacity; frontier_capacity=32
-            ),
+            GC.DirectedSimpleCanonicalizationWorkspace(capacity; frontier_capacity=32),
             GC.DirectedCanonicalizationBuffer(capacity),
             GC.DirectedGCGraphBuffer(capacity),
             Vector{Int}(undef, capacity),

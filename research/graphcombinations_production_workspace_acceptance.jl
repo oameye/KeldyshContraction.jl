@@ -24,8 +24,10 @@ function _adaptive_prepared_measurement(expression, workspace)
     ratio = gc_ns / nauty_ns
 
     if ratio >= 0.5 || gc_memory > nauty_memory
-        nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 7 evals = 1
-        gc_trial = @benchmark KC.quotient_loop_momenta($expression, $workspace) samples = 7 evals = 1
+        nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 7 evals =
+            1
+        gc_trial = @benchmark KC.quotient_loop_momenta($expression, $workspace) samples = 7 evals =
+            1
         nauty = median(nauty_trial)
         gc = median(gc_trial)
         return nauty.time, nauty.memory, gc.time, gc.memory
