@@ -70,7 +70,12 @@ end
 function _twopi_formal_pairings(
     args_nc::Vector{Field{S}}, ::Val{E}, ::Val{E2}
 ) where {S<:Statistics,E,E2}
-    destroys, creates = prepare_args(args_nc, Val(E))
+    destroys = Field{S}[field for field in args_nc if is_unbarred(field)]
+    creates = Field{S}[field for field in args_nc if is_barred(field)]
+    length(destroys) == E && length(creates) == E ||
+        return Tuple{TwoPIDiagram{S,E,E2},Int}[]
+    reverse!(creates)
+
     candidates = _twopi_formal_candidates(destroys, creates, Val(E))
 
     matching_weights = Dict{NTuple{E,UInt8},Int}()
@@ -103,7 +108,11 @@ function _twopi_formal_pairings(
     return result
 end
 
-function _twopi_uniform_field_count(L::InteractionLagrangian)
+const TwoPIInteractionLagrangian{C,S} = Union{
+    InteractionLagrangian{C,S},ChargedInteractionLagrangian{C,S}
+}
+
+function _twopi_uniform_field_count(L::TwoPIInteractionLagrangian)
     counts = unique(length(term.args_nc) for term in terms(L.lagrangian))
     length(counts) == 1 || throw(
         ArgumentError(
@@ -114,18 +123,22 @@ function _twopi_uniform_field_count(L::InteractionLagrangian)
 end
 
 """
-    TwoPIEffectiveAction(L::InteractionLagrangian, ::Val{order}, ::Val{edges})
+    TwoPIEffectiveAction(L, ::Val{order}, ::Val{edges})
 
 Generate the connected 2PI vacuum contribution ``Γ₂`` at fixed interaction order directly from
-`L`. `edges` is the number of full propagator lines in each vacuum diagram, so for a uniform
-`N`-field interaction it must satisfy `2edges == order*N`.
+an ordinary or charged interaction `L`. `edges` is the number of full propagator lines in each
+vacuum diagram, so for a uniform `N`-field interaction it must satisfy `2edges == order*N`.
 
 The generator uses formal full-propagator Wick matching. In particular, it does not impose
 `G_qq = 0`, causal vacuum-loop cancellation, equal-time retarded/advanced simplification, or any
 other physical-propagator reduction before the effective action is differentiated.
+
+For charged interactions, barred and unbarred fields are collected from each selected product of
+vertices by their actual orientation. Vertex combinations that cannot form a complete vacuum Wick
+matching therefore contribute no diagram rather than being reinterpreted by field order.
 """
 function TwoPIEffectiveAction(
-    L::InteractionLagrangian{C,S}, ::Val{O}, ::Val{E}
+    L::TwoPIInteractionLagrangian{C,S}, ::Val{O}, ::Val{E}
 ) where {C<:Number,S<:Statistics,O,E}
     O > 0 || throw(ArgumentError("2PI interaction order must be positive"))
     field_count = _twopi_uniform_field_count(L)
