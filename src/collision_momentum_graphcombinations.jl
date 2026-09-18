@@ -72,10 +72,7 @@ end
         )
         GC.load_directed_graph!(storage.graph, builder.edges, num_vertices)
         GC.canonicalize_directed_simple!(
-            storage.buffer,
-            storage.workspace,
-            GC._directed_graph_view(storage.graph),
-            @view(storage.labels[1:num_vertices]),
+            storage.buffer, storage.workspace, storage.graph, storage.labels
         )
         return storage.buffer
     end
