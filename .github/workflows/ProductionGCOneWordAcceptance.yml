@@ -33,7 +33,7 @@ jobs:
         run: |
           julia --project=. --color=yes -e '
             using Pkg
-            Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="3fe8d20c5c01fd1abce079646a1a40a37d75271a")
+            Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="3e06b53d2feecaa5dd2e03bc7e4f7618bfc14d3f")
             Pkg.add("BenchmarkTools")
           '
       - name: Extract loop corpus
