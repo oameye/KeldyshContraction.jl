@@ -80,6 +80,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("collision_kernel_api.jl")
     include("collision_linear_response.jl")
     include("collision_background_response.jl")
+    include("collision_projection_core.jl")
     include("collision_projected_matrix.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
