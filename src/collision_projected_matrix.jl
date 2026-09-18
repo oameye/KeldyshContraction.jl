@@ -40,10 +40,11 @@ end
 """
 Typed left projection functional for one already-closed collision-response channel.
 
-Its evaluator receives `(left, sector, atom, response)`, where `response` is the exact
-background response coefficient multiplied by the right-basis amplitude. The functional may then
-perform an analytic phase-space integral, moment closure, or another explicit downstream
-projection. No such rule is hidden in this type.
+Its evaluator receives `(left, sector, atom, response)`, where `sector` is the inspectable sector
+key of the supplied response representation and `response` is the exact background response
+coefficient multiplied by the right-basis amplitude. The functional may then perform an analytic
+phase-space integral, moment closure, or another explicit downstream projection. No such rule is
+hidden in this type.
 """
 struct CollisionProjectionFunctional{V<:Number,F}
     evaluator::F
@@ -57,7 +58,7 @@ end
 function project_collision_channel(
     functional::CollisionProjectionFunctional{V},
     left,
-    sector::CollisionKernelSector,
+    sector,
     atom::OccupationAtom,
     response,
 )::V where {V<:Number}

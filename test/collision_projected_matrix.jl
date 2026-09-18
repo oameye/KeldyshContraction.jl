@@ -76,3 +76,20 @@ end
     )
     @test KC.matrix(projected) == reshape(Rational{Int64}[-60 // 1], 1, 1)
 end
+
+@testset "projection functional accepts inspectable non-QP sector keys" begin
+    fixture = projected_matrix_fixture()
+    functional = KC.CollisionProjectionFunctional(
+        Rational{Int64}
+    ) do left, sector, atom, response
+        @test left === :number
+        @test sector === :finite_width_term
+        @test atom == fixture.k_atom
+        return 2 * response
+    end
+
+    projected = @inferred KC.project_collision_channel(
+        functional, :number, :finite_width_term, fixture.k_atom, 3 // 1
+    )
+    @test projected == 6 // 1
+end
