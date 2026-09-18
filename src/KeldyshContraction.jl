@@ -77,6 +77,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("collision_momentum_quotient.jl")
     include("collision_momentum_projective.jl")
     include("collision_momentum_graphcombinations.jl")
+    include("collision_momentum_workspace.jl")
     include("collision_kernel_api.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
@@ -140,6 +141,7 @@ const ComplexRationals = Complex{Rational{Int64}}
         spectral_dispersive_collision,
         reduce_frequency_collision,
         occupation_reduced_expression,
+        LoopMomentumQuotientWorkspace,
         quotient_loop_momenta,
         CollisionKernel,
         collision_kernel
