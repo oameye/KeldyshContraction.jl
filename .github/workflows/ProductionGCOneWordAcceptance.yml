@@ -11,6 +11,7 @@ on:
       - src/collision_momentum_workspace.jl
       - research/graphcombinations_loop_corpus_certification.jl
       - research/graphcombinations_production_workspace_acceptance.jl
+      - docs/src/manual/kinetics.md
       - .github/workflows/ProductionGCOneWordAcceptance.yml
 
 permissions:
