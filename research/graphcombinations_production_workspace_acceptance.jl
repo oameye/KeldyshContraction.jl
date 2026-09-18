@@ -34,8 +34,8 @@ function _adaptive_prepared_measurement(expression, workspace)
         if gc.time > nauty.time
             nauty_trial = @benchmark nauty_quotient_loop_momenta($expression) samples = 41 evals =
                 1
-            gc_trial = @benchmark KC.quotient_loop_momenta($expression, $workspace) samples = 41 evals =
-                1
+            gc_trial = @benchmark KC.quotient_loop_momenta($expression, $workspace) samples =
+                41 evals = 1
             nauty = median(nauty_trial)
             gc = median(gc_trial)
         end
