@@ -1,0 +1,1 @@
+Acceptance evidence is produced by ProductionGCOneWordAcceptance.yml against the exact production source commit immediately preceding this documentation-only checkpoint.
