@@ -105,6 +105,12 @@ jobs:
           show-versioninfo: true
           version: ${{ matrix.version }}
       - uses: julia-actions/cache@v3
+      - name: Pin exact production GraphCombinations candidate
+        run: |
+          julia --project=. --color=yes -e '
+            using Pkg
+            Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="131d7353eb968cce8ef008004282284a32918a3e")
+          '
       - uses: julia-actions/julia-buildpkg@v1
       - name: Set up pinned test environment
         run: |
@@ -129,6 +135,12 @@ jobs:
         with:
           version: '1'
       - uses: julia-actions/cache@v3
+      - name: Pin exact production GraphCombinations candidate
+        run: |
+          julia --project=. --color=yes -e '
+            using Pkg
+            Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="131d7353eb968cce8ef008004282284a32918a3e")
+          '
       - uses: julia-actions/julia-buildpkg@v1
       - name: Set up pinned docs environment
         run: |
