@@ -1,4 +1,4 @@
-# Research GraphCombinations backend for the physical dummy-loop quotient.
+# GraphCombinations backend for the physical dummy-loop quotient.
 #
 # The Nauty projective transform in `collision_momentum_projective.jl` remains an
 # independent private oracle. Public Boson/Fermion quotienting is specialized below
@@ -43,7 +43,38 @@ function _prepare_loop_gc_labels!(
     return num_vertices
 end
 
-@static if isdefined(GC, :DirectedGCGraphBuffer)
+@static if isdefined(GC, :DirectedSimpleCanonicalizationWorkspace)
+    struct _LoopGCCanonicalizationStorage
+        workspace::GC.DirectedSimpleCanonicalizationWorkspace
+        buffer::GC.DirectedCanonicalizationBuffer
+        graph::GC.DirectedGCGraphBuffer
+        labels::Vector{Int}
+        color_order::Vector{_LoopGraphColor}
+    end
+
+    function _LoopGCCanonicalizationStorage(capacity::Int)
+        return _LoopGCCanonicalizationStorage(
+            GC.DirectedSimpleCanonicalizationWorkspace(capacity; frontier_capacity=32),
+            GC.DirectedCanonicalizationBuffer(capacity),
+            GC.DirectedGCGraphBuffer(capacity),
+            Vector{Int}(undef, capacity),
+            Vector{_LoopGraphColor}(undef, capacity),
+        )
+    end
+
+    function _canonicalize_loop_builder!(
+        storage::_LoopGCCanonicalizationStorage, builder::_LoopCanonicalGraphBuilder
+    )
+        num_vertices = _prepare_loop_gc_labels!(
+            storage.labels, storage.color_order, builder
+        )
+        GC.load_directed_graph!(storage.graph, builder.edges, num_vertices)
+        GC.canonicalize_directed_simple!(
+            storage.buffer, storage.workspace, storage.graph, storage.labels
+        )
+        return storage.buffer
+    end
+elseif isdefined(GC, :DirectedGCGraphBuffer)
     struct _LoopGCCanonicalizationStorage
         workspace::GC.DirectedCanonicalizationWorkspace
         buffer::GC.DirectedCanonicalizationBuffer
@@ -360,6 +391,176 @@ function _graphcombinations_projective_canonical_loop_transform(
     )
 end
 
+function _prepare_matrixfree_gc_gauge!(
+    sector::ReducedCollisionSector{S},
+    monomial::OccupationMonomial{S},
+    workspace::_LoopGCQuotientWorkspace,
+) where {S<:Statistics}
+    basis = momentum_basis(sector)
+    external = external_wigner_momentum(sector)
+    nloops = length(basis) - 1
+    _prepare_loop_gc_workspace!(workspace, nloops)
+    external_index = _write_loop_basis_indices!(workspace, basis, external)
+
+    builder = workspace.builder
+    root = _add_loop_vertex!(builder, _loop_graph_color(1))
+    for slot in 1:nloops
+        pair = _add_loop_vertex!(builder, _loop_graph_color(2))
+        positive = _add_loop_vertex!(builder, _loop_graph_color(3))
+        negative = _add_loop_vertex!(builder, _loop_graph_color(3))
+        workspace.pair_vertices[slot] = pair
+        workspace.positive_vertices[slot] = positive
+        workspace.negative_vertices[slot] = negative
+        _add_loop_edge!(builder, root, pair)
+        _add_loop_edge!(builder, pair, positive)
+        _add_loop_edge!(builder, pair, negative)
+    end
+
+    _add_projective_loop_semantics!(
+        builder,
+        root,
+        sector,
+        monomial,
+        external_index,
+        workspace.loop_indices,
+        workspace.positive_vertices,
+        workspace.negative_vertices,
+        workspace.loop_incidences,
+    )
+
+    buffer = _canonicalize_loop_builder!(workspace.canonicalization, builder)
+    _order_loop_slots!(workspace, buffer, nloops)
+    @inbounds for new_slot in 1:nloops
+        old_slot = workspace.ordered_slots[new_slot]
+        workspace.loop_permutation[old_slot] = new_slot
+        positive_rank = GC.canonical_rank(buffer, workspace.positive_vertices[old_slot])
+        negative_rank = GC.canonical_rank(buffer, workspace.negative_vertices[old_slot])
+        workspace.loop_signs[old_slot] = positive_rank < negative_rank ? 1 : -1
+    end
+    return external_index
+end
+
+function _matrixfree_gc_momentum(
+    momentum::LinearMomentum, workspace::_LoopGCQuotientWorkspace, external_index::Int
+)
+    n = length(momentum)
+    n == length(workspace.loop_indices) + 1 || throw(
+        DimensionMismatch("momentum and signed loop permutation use different basis sizes"),
+    )
+    coefficients = Vector{MomentumCoefficient}(undef, n)
+    coefficients[external_index] = momentum[external_index]
+    @inbounds for old_slot in eachindex(workspace.loop_permutation)
+        old_index = workspace.loop_indices[old_slot]
+        new_slot = workspace.loop_permutation[old_slot]
+        new_index = workspace.loop_indices[new_slot]
+        coefficients[new_index] = workspace.loop_signs[old_slot] * momentum[old_index]
+    end
+    return LinearMomentum(coefficients)
+end
+
+function _matrixfree_gc_occupation_monomial(
+    monomial::OccupationMonomial{S},
+    workspace::_LoopGCQuotientWorkspace,
+    external_index::Int,
+) where {S<:Statistics}
+    atoms = OccupationAtom{S}[
+        OccupationAtom{S}(
+            atom.family, _matrixfree_gc_momentum(atom.momentum, workspace, external_index)
+        ) for atom in monomial
+    ]
+    return OccupationMonomial(atoms)
+end
+
+function _matrixfree_gc_momentum_monomial(
+    monomial::MomentumMonomial, workspace::_LoopGCQuotientWorkspace, external_index::Int
+)
+    factors = MomentumComponent[
+        MomentumComponent(
+            _matrixfree_gc_momentum(component.momentum, workspace, external_index),
+            component.axis,
+        ) for component in monomial
+    ]
+    return MomentumMonomial(factors)
+end
+
+function _matrixfree_gc_momentum_polynomial(
+    polynomial::MomentumPolynomial{C},
+    workspace::_LoopGCQuotientWorkspace,
+    external_index::Int,
+) where {C<:Number}
+    terms = Pair{MomentumMonomial,C}[]
+    sizehint!(terms, length(polynomial))
+    for (monomial, coefficient) in polynomial
+        transformed = _matrixfree_gc_momentum_monomial(monomial, workspace, external_index)
+        normalized, factor, nonzero = _projective_kinematic_monomial(transformed)
+        nonzero || continue
+        push!(terms, normalized => coefficient * convert(C, factor))
+    end
+    return MomentumPolynomial{C}(terms)
+end
+
+function _matrixfree_gc_energy_form(
+    form::EnergyForm{S}, workspace::_LoopGCQuotientWorkspace, external_index::Int
+) where {S<:Statistics}
+    energy_basis_size(form) == length(workspace.loop_indices) + 1 || throw(
+        DimensionMismatch(
+            "energy form and signed loop permutation use different basis sizes"
+        ),
+    )
+    terms = Pair{DispersionAtom{S},EnergyCoefficient}[
+        DispersionAtom{S}(
+            atom.family, _matrixfree_gc_momentum(atom.momentum, workspace, external_index)
+        ) => coefficient for (atom, coefficient) in form
+    ]
+    return EnergyForm(energy_basis_size(form), terms)
+end
+
+function _matrixfree_gc_frequency_support(
+    support::FrequencySupport{S}, workspace::_LoopGCQuotientWorkspace, external_index::Int
+) where {S<:Statistics}
+    shells = EnergyShell{S}[]
+    principal_values = PrincipalValueSupport{S}[]
+    factor = one(MomentumCoefficient)
+    sizehint!(shells, length(support.shells))
+    sizehint!(principal_values, length(support.principal_values))
+
+    for shell in support.shells
+        transformed, shell_factor = energy_shell(
+            _matrixfree_gc_energy_form(shell.energy, workspace, external_index)
+        )
+        push!(shells, transformed)
+        factor *= shell_factor
+    end
+    for principal_value in support.principal_values
+        transformed, pv_factor = principal_value_support(
+            _matrixfree_gc_energy_form(principal_value.energy, workspace, external_index)
+        )
+        push!(principal_values, transformed)
+        factor *= pv_factor
+    end
+    return FrequencySupport(shells, principal_values), factor
+end
+
+function _matrixfree_gc_sector(
+    sector::ReducedCollisionSector{S},
+    workspace::_LoopGCQuotientWorkspace,
+    external_index::Int,
+) where {S<:Statistics}
+    support, factor = _matrixfree_gc_frequency_support(
+        frequency_support(sector), workspace, external_index
+    )
+    transformed = CollisionKernelSector{S}(
+        parameters(sector),
+        momentum_basis(sector),
+        external_wigner_momentum(sector),
+        _matrixfree_gc_momentum_polynomial(
+            kinematic_factor(sector), workspace, external_index
+        ),
+        support,
+    )
+    return transformed, factor
+end
+
 function _quotient_loop_momenta_graphcombinations(
     expression::OccupationReducedExpression{C,S,O,G,Ctx}
 ) where {C<:Number,S<:Statistics,O,G,Ctx<:AbstractWignerContext}
@@ -372,14 +573,14 @@ function _quotient_loop_momenta_graphcombinations(
         for (occupation_monomial, occupation_coefficient) in polynomial
             for (kinematic_monomial, kinematic_coefficient) in kinematic_factor(sector)
                 atom_sector = _kinematic_atom_sector(sector, kinematic_monomial)
-                transform = _graphcombinations_projective_canonical_loop_transform(
+                external_index = _prepare_matrixfree_gc_gauge!(
                     atom_sector, occupation_monomial, workspace
                 )
-                transformed_sector, support_factor = _transform_kernel_sector(
-                    atom_sector, transform
+                transformed_sector, support_factor = _matrixfree_gc_sector(
+                    atom_sector, workspace, external_index
                 )
-                transformed_monomial = transform_loop_momenta(
-                    occupation_monomial, transform
+                transformed_monomial = _matrixfree_gc_occupation_monomial(
+                    occupation_monomial, workspace, external_index
                 )
                 transformed_coefficient =
                     convert(D, occupation_coefficient) *
