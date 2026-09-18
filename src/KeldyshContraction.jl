@@ -59,6 +59,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("twopi_self_energy.jl")
 
     include("propagator_algebra/fourier_transform.jl")
+    include("twopi_fourier_self_energy.jl")
     include("skeleton_self_energy.jl")
     include("propagator_algebra/wigner.jl")
     include("propagator_algebra/spectral_statistical.jl")
@@ -116,7 +117,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     twopi_terms,
     twopi_self_energy,
     twopi_self_energy_terms,
-    physical_self_energy
+    physical_self_energy,
+    twopi_fourier_self_energy
 
     # Small workflow surface intended for ordinary unqualified use.
     export @qfields,
