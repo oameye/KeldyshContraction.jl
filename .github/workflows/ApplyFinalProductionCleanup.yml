@@ -1,0 +1,63 @@
+name: Apply final production integration cleanup
+
+on:
+  push:
+    branches:
+      - production-gc-oneword-matrixfree-loop-quotient
+    paths:
+      - .github/workflows/ApplyFinalProductionCleanup.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: production-gc-oneword-matrixfree-loop-quotient
+      - name: Finalize production source and exact GC pin
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path("src/collision_momentum_graphcombinations.jl")
+          text = source.read_text()
+          replacements = (
+              (
+                  "# Research GraphCombinations backend for the physical dummy-loop quotient.",
+                  "# GraphCombinations backend for the physical dummy-loop quotient.",
+              ),
+              (
+                  "# Temporary research fallback for registered GraphCombinations v0.4.0. This branch\n"
+                  "    # disappears once the capacity API from GraphCombinations#163 is released.",
+                  "# Compatibility fallback for registered GraphCombinations versions predating the\n"
+                  "    # reusable directed-input buffer and prepared simple-directed canonicalizer.",
+              ),
+          )
+          for old, new in replacements:
+              if text.count(old) != 1:
+                  raise SystemExit(f"source cleanup target changed: {old!r}")
+              text = text.replace(old, new, 1)
+          source.write_text(text)
+
+          workflow = Path(".github/workflows/ProductionGCOneWordAcceptance.yml")
+          text = workflow.read_text()
+          old = "3e06b53d2feecaa5dd2e03bc7e4f7618bfc14d3f"
+          new = "131d7353eb968cce8ef008004282284a32918a3e"
+          if text.count(old) != 1:
+              raise SystemExit("GC pin target changed")
+          workflow.write_text(text.replace(old, new, 1))
+          PY
+          git rm .github/workflows/ApplyFinalProductionCleanup.yml
+          git diff --check
+      - name: Commit final production tree
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/collision_momentum_graphcombinations.jl .github/workflows/ProductionGCOneWordAcceptance.yml
+          git commit -m "chore: freeze production GC integration"
+          git push origin HEAD:production-gc-oneword-matrixfree-loop-quotient
