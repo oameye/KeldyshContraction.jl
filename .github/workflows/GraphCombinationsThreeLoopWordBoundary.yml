@@ -1,0 +1,47 @@
+name: GraphCombinations three-loop word boundary
+
+on:
+  push:
+    branches:
+      - research-gc-three-loop-word-boundary
+    paths:
+      - '.github/workflows/GraphCombinationsThreeLoopWordBoundary.yml'
+      - 'research/graphcombinations_three_loop_word_boundary.jl'
+      - 'research/graphcombinations_loop_corpus_certification.jl'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.10.12'
+      - uses: julia-actions/cache@v3
+      - name: Instantiate
+        run: julia --project=. --color=yes -e 'using Pkg; Pkg.instantiate()'
+      - name: Extract full three-loop KC corpus definitions
+        shell: bash
+        run: |
+          sed 's/const CORPUS_LOOP_COUNTS = 1:5/const CORPUS_LOOP_COUNTS = 3:3/' \
+            research/graphcombinations_loop_corpus_certification.jl | \
+            awk '/^cases = corpus_cases\(\)/ { exit } { print }' > /tmp/kc_corpus_defs.jl
+      - name: Inventory one-word boundary
+        shell: bash
+        env:
+          KC_CORPUS_DEFS: /tmp/kc_corpus_defs.jl
+        run: |
+          set -o pipefail
+          julia --project=. --color=yes research/graphcombinations_three_loop_word_boundary.jl \
+            2>&1 | tee graphcombinations-three-loop-word-boundary.log
+      - name: Preserve diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphcombinations-three-loop-word-boundary
+          path: graphcombinations-three-loop-word-boundary.log
