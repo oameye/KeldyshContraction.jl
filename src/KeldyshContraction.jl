@@ -34,6 +34,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("keldysh_algebra/hashing.jl")
     include("parameters.jl")
     include("InteractionLagrangian.jl")
+    include("charged_interaction_lagrangian.jl")
 
     # Propagators
     include("propagator_algebra/propagator.jl")
@@ -96,6 +97,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     # in the manual or canonical examples. Representation and compiler IR remain private.
     @public Regularisation,
     field_families,
+    field_charge,
     target_family,
     parameters,
     matrix,
@@ -135,6 +137,7 @@ const ComplexRationals = Complex{Rational{Int64}}
         SelfEnergy,
         TwoPIEffectiveAction,
         InteractionLagrangian,
+        ChargedInteractionLagrangian,
         convert_coefficients,
         rationalize_coefficients,
         @syms,

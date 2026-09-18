@@ -25,6 +25,8 @@ Kadanoff--Baym equation.
 
 ```@docs
 TwoPIEffectiveAction
+ChargedInteractionLagrangian
+KeldyshContraction.field_charge
 KeldyshContraction.twopi_terms
 KeldyshContraction.twopi_self_energy
 KeldyshContraction.twopi_self_energy_terms
@@ -86,6 +88,28 @@ dependent. The present implementation certifies the oriented complex-boson facto
 independently generated skeleton self-energy. Fermionic 2PI differentiation remains explicitly
 unsupported until its convention is independently derived and tested.
 
+## Charged auxiliary interactions
+
+`ChargedInteractionLagrangian` extends the interaction boundary without weakening the existing
+`InteractionLagrangian` conservation contract. Each field family receives an immutable integer
+U(1) charge, and every monomial must have zero orientation-weighted charge.
+
+For the Hubbard--Stratonovich two-body-loss vertex,
+
+```math
+\bar\chi\psi^2 + \chi\bar\psi^2,
+```
+
+the assignments are `qψ = 1` and `qχ = 2`. Thus `bar(χ) ψ ψ` is neutral because
+`-2 + 1 + 1 = 0`, although it does not contain equal raw numbers of barred and unbarred fields.
+The ordinary interaction representation continues to reject this monomial.
+
+The formal vacuum matcher evaluates the complete selected vertex product before pairing. Products
+that do not contain equal total numbers of unbarred and barred fields have no complete Wick
+matching and contribute zero. At leading nonzero order the charged cubic interaction therefore
+selects one vertex of each orientation and produces the connected `G²D` 2PI skeleton without an
+HS-specific topology path.
+
 ## Fixed shape
 
 The current constructor follows KC's explicit static-shape convention:
@@ -119,18 +143,3 @@ physical_self_energy(twopi_self_energy(TwoPIEffectiveAction(...)))
 ```
 
 diagram by diagram, with exact multiplicities and Keldysh components.
-
-## Current interaction boundary
-
-The current compiler accepts interactions already representable by `InteractionLagrangian`. Its
-barred/unbarred conservation invariant is intentionally unchanged.
-
-The cubic charged Hubbard--Stratonovich interaction used for two-body loss,
-
-```math
-\bar\chi\psi^2 + \chi\bar\psi^2,
-```
-
-requires an auxiliary/charged interaction representation because the auxiliary field carries a
-different U(1) charge. That extension belongs to the next 2PI layers rather than weakening the
-existing interaction contract.
