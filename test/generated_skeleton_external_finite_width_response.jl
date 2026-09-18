@@ -134,6 +134,29 @@ function skeleton_external_scalar_linewidth(kernel, occupation_value, γ_value)
     return γ_value * unit_normalized_loop_integral(sector, coefficient)
 end
 
+function skeleton_resolved_external_response(response, term)
+    terms = KC.external_spectral_linearized_terms(response)
+    occupation = KC.external_spectral_occupation_response_terms(response)
+    spectral = KC.external_spectral_model_response_terms(response)
+    unsupported_offset = KC.finite_width_unsupported_offset_terms(response)
+    unsupported_distribution = KC.finite_width_unsupported_distribution_terms(response)
+
+    return typeof(response)(
+        typeof(terms)(term => terms[term]),
+        typeof(occupation)(term => occupation[term]),
+        if haskey(spectral, term)
+            typeof(spectral)(term => spectral[term])
+        else
+            typeof(spectral)()
+        end,
+        typeof(unsupported_offset)(),
+        typeof(unsupported_distribution)(),
+        KC.target_family(response),
+        KC.parameters(response),
+        KC.wigner_context(response),
+    )
+end
+
 @testset "generated skeleton loss closes the full external finite-width response" begin
     ordinary_collision = skeleton_external_response_collision(; skeleton=false)
     skeleton_collision = skeleton_external_response_collision(; skeleton=true)
@@ -182,10 +205,17 @@ end
     )
     atom, δP = first(KC.background_occupation_linearization_terms(background_linearization))
     Pbar = KC.evaluate_occupation_polynomial(polynomial, background)
-    response = KC.OccupationSpectralResponse(Dict(atom => model_variation))
+    full_spectral_response = KC.OccupationSpectralResponse(Dict(atom => model_variation))
+    Variation = typeof(model_variation)
+    frozen_spectral_response = KC.OccupationSpectralResponse(
+        Dict{KC.OccupationAtom{Boson},Variation}()
+    )
 
+    frozen = @inferred KC.linearize_external_spectral_collision(
+        skeleton_collision, model, background, frozen_spectral_response
+    )
     full = @inferred KC.linearize_external_spectral_collision(
-        skeleton_collision, model, background, response
+        skeleton_collision, model, background, full_spectral_response
     )
 
     J = KC.convolution_jacobian(reduction)
@@ -201,6 +231,11 @@ end
         reduction, model, model_variation, external_line
     ) == expected_δweight
 
+    frozen_terms = Dict(
+        KC.background_occupation_linearization_terms(
+            KC.external_spectral_linearized_terms(frozen)[term]
+        ),
+    )
     occupation_terms = Dict(
         KC.background_occupation_linearization_terms(
             KC.external_spectral_occupation_response_terms(full)[term]
@@ -217,8 +252,53 @@ end
         ),
     )
 
-    @test occupation_terms[atom] == expected_weight * δP
+    @test frozen_terms[atom] == expected_weight * δP
+    @test occupation_terms[atom] == frozen_terms[atom]
     @test spectral_terms[atom] == Pbar * expected_δweight
     @test full_terms[atom] == occupation_terms[atom] + spectral_terms[atom]
-    @test full_terms[atom] != occupation_terms[atom]
+    @test full_terms[atom] != frozen_terms[atom]
+
+    resolved_frozen = skeleton_resolved_external_response(frozen, term)
+    resolved_full = skeleton_resolved_external_response(full, term)
+    basis = KC.CollisionProjectionBasis((:number,), (:selected_mode,))
+    closure = KC.CollisionPerturbationClosure(
+        (_, varied) -> isequal(varied, atom) ? 1 // 1 : 0 // 1, Rational{Int}
+    )
+    ProjectionValue = typeof(full_terms[atom])
+    functional = KC.CollisionProjectionFunctional(
+        (_, sector, varied, closed_response) -> begin
+            @test isequal(sector, term)
+            @test isequal(varied, atom)
+            return closed_response
+        end,
+        ProjectionValue,
+    )
+    projected_frozen = @inferred KC.projected_collision_matrix(
+        resolved_frozen, basis, closure, functional
+    )
+    projected_full = @inferred KC.projected_collision_matrix(
+        resolved_full, basis, closure, functional
+    )
+    @test KC.left_projection_basis(projected_full) == (:number,)
+    @test KC.right_perturbation_basis(projected_full) == (:selected_mode,)
+    @test KC.matrix(projected_frozen) == reshape(ProjectionValue[frozen_terms[atom]], 1, 1)
+    @test KC.matrix(projected_full) == reshape(ProjectionValue[full_terms[atom]], 1, 1)
+    @test KC.matrix(projected_full) != KC.matrix(projected_frozen)
+
+    unresolved_offset = typeof(KC.finite_width_unsupported_offset_terms(resolved_full))(
+        term => one(ProjectionValue)
+    )
+    unresolved = typeof(resolved_full)(
+        KC.external_spectral_linearized_terms(resolved_full),
+        KC.external_spectral_occupation_response_terms(resolved_full),
+        KC.external_spectral_model_response_terms(resolved_full),
+        unresolved_offset,
+        typeof(KC.finite_width_unsupported_distribution_terms(resolved_full))(),
+        KC.target_family(resolved_full),
+        KC.parameters(resolved_full),
+        KC.wigner_context(resolved_full),
+    )
+    @test_throws ArgumentError KC.projected_collision_matrix(
+        unresolved, basis, closure, functional
+    )
 end
