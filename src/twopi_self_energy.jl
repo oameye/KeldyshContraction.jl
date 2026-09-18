@@ -225,3 +225,38 @@ function physical_self_energy(
         target_family(Σ),
     )
 end
+
+"""
+    SelfEnergy(Γ₂::TwoPIEffectiveAction, target::FieldFamily)
+
+Lower a bosonic 2PI effective action to KC's ordinary physical [`SelfEnergy`](@ref)
+representation for `target`.
+
+This is the high-level 2PI counterpart of `SelfEnergy(G::DressedPropagator)`. It is deliberately
+a thin semantic lowering through [`twopi_self_energy`](@ref) followed by
+[`physical_self_energy`](@ref); no separate graph or projection path is introduced.
+"""
+function SelfEnergy(
+    Γ::TwoPIEffectiveAction{C,Boson,O,E,E2}, target::FieldFamily{Boson}
+) where {C<:Number,O,E,E2}
+    return physical_self_energy(twopi_self_energy(Γ, target))
+end
+
+"""
+    SelfEnergy(Γ₂::TwoPIEffectiveAction)
+
+Lower a single-family bosonic 2PI effective action to the ordinary physical
+[`SelfEnergy`](@ref) representation.
+
+For a multi-family effective action, such as the Hubbard--Stratonovich `G²D` theory, the target
+family is physically meaningful and must be supplied explicitly with `SelfEnergy(Γ₂, target)`.
+"""
+function SelfEnergy(Γ::TwoPIEffectiveAction{C,Boson,O,E,E2}) where {C<:Number,O,E,E2}
+    families = field_families(Γ)
+    length(families) == 1 || throw(
+        ArgumentError(
+            "a multi-family 2PI effective action requires an explicit self-energy target",
+        ),
+    )
+    return SelfEnergy(Γ, only(families))
+end

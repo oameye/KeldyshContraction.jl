@@ -9,19 +9,18 @@ At fixed interaction order it generates the connected vacuum skeleton contributi
 \Gamma_2[G]
 ```
 
-directly from the interaction action. The intended compiler chain is
+directly from the interaction action. The current compiler milestone is
 
 ```text
 interaction action
     -> TwoPIEffectiveAction
     -> graph functional derivative
-    -> proper self-energy Σ[G]
-    -> Dyson / Kadanoff--Baym representation
-    -> Fourier / Wigner / kinetic compiler
+    -> physical SelfEnergy
 ```
 
-The first two diagrammatic stages are implemented here. KC does not solve a Dyson or
-Kadanoff--Baym equation.
+This reaches self-energy compiler parity with KC's existing 1PI route. Dyson/Kadanoff--Baym
+equation IR, self-consistent Fourier/Wigner routing, and numerical solution are deliberately
+deferred beyond this milestone.
 
 ```@docs
 TwoPIEffectiveAction
@@ -110,6 +109,33 @@ matching and contribute zero. At leading nonzero order the charged cubic interac
 selects one vertex of each orientation and produces the connected `G²D` 2PI skeleton without an
 HS-specific topology path.
 
+## Self-energy solver parity
+
+The high-level 2PI route lowers to the same physical `SelfEnergy` compiler object as the existing
+1PI route:
+
+```julia
+Σ1 = SelfEnergy(G)          # existing 1PI compiler
+Σ2 = SelfEnergy(Γ2)         # single-family 2PI compiler
+Σψ = SelfEnergy(Γ2, ψ)      # explicit target in a multi-family theory
+Ωχ = SelfEnergy(Γ2, χ)
+```
+
+`SelfEnergy(Γ2, target)` is only a thin semantic lowering of
+
+```julia
+physical_self_energy(twopi_self_energy(Γ2, target))
+```
+
+and does not introduce another graph derivative or physical projection path. The target-free form
+is accepted only when `Γ2` contains one field family; multi-family theories require an explicit
+target.
+
+Once lowered, `order`, `statistics`, `parameters`, `target_family`, `matrix`, and the retarded,
+advanced, and Keldysh component accessors have exactly the same meaning as for the existing 1PI
+`SelfEnergy` result. This `SelfEnergy` boundary is the stopping point of the current 2PI
+infrastructure program.
+
 ## Fixed shape
 
 The current constructor follows KC's explicit static-shape convention:
@@ -138,7 +164,7 @@ ordinary generated self-energy; it is not the semantic foundation of the 2PI com
 The certification invariant is
 
 ```text
-physical_self_energy(twopi_self_energy(TwoPIEffectiveAction(...)))
+SelfEnergy(TwoPIEffectiveAction(...))
     == independently generated skeleton_self_energy(...)
 ```
 
