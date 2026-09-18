@@ -31,3 +31,39 @@ KeldyshContraction.lorentzian_integrated_power_variation
 KeldyshContraction.evaluate_spectral_weight_variation
 KeldyshContraction.evaluate_spectral_convolution_variation
 ```
+
+## External spectral projection
+
+The internal finite-width convolution is an off-shell collision weight at fixed microscopic external frequency. A momentum-occupation collision may require one further spectral projection over that external line. If
+
+```math
+W_{\rm int}(\omega)
+=J Z_{\rm int}\frac{\Gamma_{\rm int}}
+{(\beta\omega+\Delta_0)^2+\Gamma_{\rm int}^2/4},
+```
+
+then convolution with the normalized external Lorentzian is again exact:
+
+```math
+\int\frac{d\omega}{2\pi}A_{\rm ext}(\omega)W_{\rm int}(\omega)
+=J Z_{\rm ext}Z_{\rm int}
+\frac{\Gamma_{\rm full}}
+{\Delta E^2+\Gamma_{\rm full}^2/4},
+```
+
+where
+
+```math
+\Gamma_{\rm full}=\Gamma_{\rm int}+|\beta|\Gamma_{\rm ext},
+\qquad
+\Delta E=\beta E_{\rm ext}+\Delta_0.
+```
+
+This is still a microscopic spectral integration. It is distinct from any collective center-time response frequency or moment-space pole condition. The exact directional derivative includes variations of the external line as well as every internal line.
+
+```@docs
+KeldyshContraction.external_spectral_projection_mismatch
+KeldyshContraction.external_spectral_projection_linewidth
+KeldyshContraction.evaluate_external_spectral_projection
+KeldyshContraction.evaluate_external_spectral_projection_variation
+```
