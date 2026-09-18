@@ -37,40 +37,43 @@ function _gc_colored_graph(vs, graph_positions)
         edge_vertex = npositions + i
         labels[edge_vertex] = 3 + color_index
         source_position, target_position = KC.positions(item)
-        push!(
-            edges,
-            KC.position_vertex(graph_positions, source_position) => edge_vertex,
-        )
-        push!(
-            edges,
-            edge_vertex => KC.position_vertex(graph_positions, target_position),
-        )
+        push!(edges, KC.position_vertex(graph_positions, source_position) => edge_vertex)
+        push!(edges, edge_vertex => KC.position_vertex(graph_positions, target_position))
     end
     return GC.DirectedGCGraph(edges, length(labels)), labels
 end
 
-function gc_physical_permutation(vs, graph_positions)
+function gc_physical_witnesses(vs, graph_positions)
     direct_graph, direct_colors, simple = _gc_direct_graph(vs, graph_positions)
     capacity = length(graph_positions) + length(vs)
     workspace = GC.DirectedCanonicalizationWorkspace(capacity)
     buffer = GC.DirectedCanonicalizationBuffer(capacity)
     GC.canonicalize_directed!(buffer, workspace, direct_graph, direct_colors)
 
-    use_direct = isone(GC.canonical_automorphism_order(buffer)) ||
-                 (simple && KC.uniform_coloring(vs))
+    direct_automorphisms = GC.canonical_automorphism_order(buffer)
+    use_direct = isone(direct_automorphisms) || (simple && KC.uniform_coloring(vs))
     if !use_direct
         colored_graph, colored_colors = _gc_colored_graph(vs, graph_positions)
         GC.canonicalize_directed!(buffer, workspace, colored_graph, colored_colors)
     end
-    return [GC.canonical_rank(buffer, old_vertex) for old_vertex in 1:buffer.num_vertices]
+
+    n = buffer.num_vertices
+    canonical_to_old = [GC.original_vertex(buffer, rank) for rank in 1:n]
+    old_to_canonical = [GC.canonical_rank(buffer, old_vertex) for old_vertex in 1:n]
+    return (;
+        canonical_to_old,
+        old_to_canonical,
+        use_direct,
+        simple,
+        direct_automorphisms,
+        final_automorphisms=GC.canonical_automorphism_order(buffer),
+    )
 end
 
-function gc_physical_canonicalize(vs::Vector{T}) where {T}
-    isempty(vs) && return copy(vs)
-    graph_positions = KC.canonicalization_positions(vs)
-    permutation = gc_physical_permutation(vs, graph_positions)
+function canonicalize_with_permutation(vs::Vector{T}, graph_positions, permutation) where {T}
     mapping = KC.make_permutation_dict(permutation, graph_positions, vs)
-    return T[KC.relabel_bulk_positions(item, mapping) for item in vs]
+    canonical = T[KC.relabel_bulk_positions(item, mapping) for item in vs]
+    return canonical, mapping
 end
 
 function bulk_count(vs)
@@ -95,6 +98,14 @@ function add_orbit!(cases, label, vs; exhaustive=true)
         end
     end
     return nothing
+end
+
+family(label) = first(split(label, "/"))
+
+function compact_map(mapping)
+    pairs = collect(mapping)
+    sort!(pairs; by=p -> string(first(p)))
+    return join(("$(first(p))=>$(last(p))" for p in pairs), ", ")
 end
 
 @qfields ϕ::Boson
@@ -186,33 +197,134 @@ add_orbit!(
     ],
 )
 
-println("GC/Nauty physical canonicalization oracle: ", length(cases), " cases")
-permutation_mismatches = String[]
-physical_mismatches = String[]
+println("GC/Nauty physical canonicalization diagnostic: ", length(cases), " cases")
 
-@testset "GC physical canonicalization oracle" begin
+records = NamedTuple[]
+seed_gc_outputs = Dict{String,Any}()
+seed_nauty_outputs = Dict{String,Any}()
+
+@testset "GC witness consistency" begin
     for (label, vs) in cases
         graph_positions = KC.canonicalization_positions(vs)
-        gc_perm = gc_physical_permutation(vs, graph_positions)
+        witnesses = gc_physical_witnesses(vs, graph_positions)
+        n = length(witnesses.canonical_to_old)
+        @test sort(witnesses.canonical_to_old) == collect(1:n)
+        @test sort(witnesses.old_to_canonical) == collect(1:n)
+        @test all(
+            witnesses.canonical_to_old[witnesses.old_to_canonical[old_vertex]] == old_vertex for
+            old_vertex in 1:n
+        )
+
         nauty_perm = KC.canonicalization_permutation(vs, graph_positions)
-        if gc_perm != nauty_perm
-            push!(permutation_mismatches, label)
+        gc_original, gc_original_map =
+            canonicalize_with_permutation(vs, graph_positions, witnesses.canonical_to_old)
+        gc_inverse, gc_inverse_map =
+            canonicalize_with_permutation(vs, graph_positions, witnesses.old_to_canonical)
+        nauty_output, nauty_map = canonicalize_with_permutation(vs, graph_positions, nauty_perm)
+        @test nauty_output == KC.canonicalize(vs)
+
+        fam = family(label)
+        if label == fam
+            seed_gc_outputs[fam] = gc_original
+            seed_nauty_outputs[fam] = nauty_output
         end
 
-        gc_canonical = gc_physical_canonicalize(vs)
-        nauty_canonical = KC.canonicalize(vs)
-        if gc_canonical != nauty_canonical
-            push!(physical_mismatches, label)
-        end
-        @test gc_canonical == nauty_canonical
+        push!(records, (;
+            label,
+            family=fam,
+            graph_positions,
+            witnesses,
+            nauty_perm,
+            gc_original_map,
+            gc_inverse_map,
+            nauty_map,
+            original_perm_equal=witnesses.canonical_to_old == nauty_perm,
+            inverse_perm_equal=witnesses.old_to_canonical == nauty_perm,
+            original_map_equal=gc_original_map == nauty_map,
+            inverse_map_equal=gc_inverse_map == nauty_map,
+            original_output_equal=gc_original == nauty_output,
+            inverse_output_equal=gc_inverse == nauty_output,
+            gc_original,
+            gc_inverse,
+            nauty_output,
+        ))
     end
 end
 
-println("canonical-permutation mismatches: ", length(permutation_mismatches))
-for label in permutation_mismatches
-    println("  ", label)
+println()
+println("aggregate comparison")
+for field in (
+    :original_perm_equal,
+    :inverse_perm_equal,
+    :original_map_equal,
+    :inverse_map_equal,
+    :original_output_equal,
+    :inverse_output_equal,
+)
+    count_equal = count(r -> getproperty(r, field), records)
+    println("  ", field, ": ", count_equal, "/", length(records))
 end
-println("physical canonical-output mismatches: ", length(physical_mismatches))
-for label in physical_mismatches
-    println("  ", label)
+
+println()
+println("by family")
+for fam in unique(r.family for r in records)
+    rs = filter(r -> r.family == fam, records)
+    direct = count(r -> r.witnesses.use_direct, rs)
+    original = count(r -> r.original_output_equal, rs)
+    inverse = count(r -> r.inverse_output_equal, rs)
+    original_maps = count(r -> r.original_map_equal, rs)
+    inverse_maps = count(r -> r.inverse_map_equal, rs)
+    aut_orders = sort!(unique(r.witnesses.final_automorphisms for r in rs))
+    println(
+        "  ", fam,
+        ": cases=", length(rs),
+        " direct=", direct,
+        " original-output=", original,
+        " inverse-output=", inverse,
+        " original-map=", original_maps,
+        " inverse-map=", inverse_maps,
+        " final-aut=", aut_orders,
+    )
+end
+
+println()
+println("relabeling invariance against each family's seed")
+for fam in unique(r.family for r in records)
+    rs = filter(r -> r.family == fam, records)
+    gc_seed = seed_gc_outputs[fam]
+    nauty_seed = seed_nauty_outputs[fam]
+    gc_invariant = count(r -> r.gc_original == gc_seed, rs)
+    nauty_invariant = count(r -> r.nauty_output == nauty_seed, rs)
+    println(
+        "  ", fam,
+        ": GC-original=", gc_invariant, "/", length(rs),
+        " Nauty=", nauty_invariant, "/", length(rs),
+    )
+end
+
+mismatches = filter(r -> !r.original_output_equal, records)
+println()
+println("first detailed original-witness mismatches: ", min(length(mismatches), 12))
+for r in Iterators.take(mismatches, 12)
+    w = r.witnesses
+    println("CASE ", r.label)
+    println(
+        "  path=", w.use_direct ? "direct" : "colored",
+        " simple=", w.simple,
+        " direct-aut=", w.direct_automorphisms,
+        " final-aut=", w.final_automorphisms,
+    )
+    println("  positions=", r.graph_positions)
+    println("  nauty canonical->old=", r.nauty_perm)
+    println("  GC canonical->old=", w.canonical_to_old)
+    println("  GC old->canonical=", w.old_to_canonical)
+    println("  nauty map={", compact_map(r.nauty_map), "}")
+    println("  GC original map={", compact_map(r.gc_original_map), "}")
+    println("  GC inverse map={", compact_map(r.gc_inverse_map), "}")
+    println(
+        "  map equality: original=", r.original_map_equal,
+        " inverse=", r.inverse_map_equal,
+        "; output equality: original=", r.original_output_equal,
+        " inverse=", r.inverse_output_equal,
+    )
 end
