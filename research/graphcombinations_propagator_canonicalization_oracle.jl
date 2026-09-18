@@ -62,7 +62,7 @@ function gc_physical_permutation(vs, graph_positions)
         colored_graph, colored_colors = _gc_colored_graph(vs, graph_positions)
         GC.canonicalize_directed!(buffer, workspace, colored_graph, colored_colors)
     end
-    return [GC.original_vertex(buffer, rank) for rank in 1:buffer.num_vertices]
+    return [GC.canonical_rank(buffer, old_vertex) for old_vertex in 1:buffer.num_vertices]
 end
 
 function gc_physical_canonicalize(vs::Vector{T}) where {T}
