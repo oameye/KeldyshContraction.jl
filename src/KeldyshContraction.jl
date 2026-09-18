@@ -56,6 +56,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("fermionic_propagator_dispatch.jl")
 
     include("propagator_algebra/fourier_transform.jl")
+    include("skeleton_self_energy.jl")
     include("propagator_algebra/wigner.jl")
     include("propagator_algebra/spectral_statistical.jl")
     include("off_shell_collision.jl")
@@ -242,7 +243,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     evaluate_spectral_convolution_variation,
     evaluate_external_spectral_projection,
     evaluate_external_spectral_projection_variation,
-    spectral_self_energy_kernel
+    spectral_self_energy_kernel,
+    skeleton_self_energy
 
     # Small workflow surface intended for ordinary unqualified use.
     export @qfields,
