@@ -1,0 +1,55 @@
+name: Production GC one-word acceptance
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - production-gc-oneword-matrixfree-loop-quotient
+    paths:
+      - src/collision_momentum_graphcombinations.jl
+      - research/graphcombinations_loop_corpus_certification.jl
+      - .github/workflows/ProductionGCOneWordAcceptance.yml
+
+permissions:
+  contents: read
+
+jobs:
+  loop-corpus:
+    name: ${{ matrix.loops }}-loop corpus
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        loops: [2, 3]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.10.12'
+      - uses: julia-actions/cache@v3
+      - name: Pin exact production GraphCombinations candidate
+        run: |
+          julia --project=. --color=yes -e '
+            using Pkg
+            Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="3fe8d20c5c01fd1abce079646a1a40a37d75271a")
+            Pkg.add("BenchmarkTools")
+          '
+      - name: Extract loop corpus
+        shell: bash
+        run: |
+          sed 's/const CORPUS_LOOP_COUNTS = 1:5/const CORPUS_LOOP_COUNTS = ${{ matrix.loops }}:${{ matrix.loops }}/' \
+            research/graphcombinations_loop_corpus_certification.jl \
+            > /tmp/production-gc-${{ matrix.loops }}-loop-corpus.jl
+      - name: Certify production quotient against Nauty
+        shell: bash
+        run: |
+          set -o pipefail
+          julia --project=. --color=yes /tmp/production-gc-${{ matrix.loops }}-loop-corpus.jl \
+            2>&1 | tee production-gc-${{ matrix.loops }}-loop-corpus.log
+      - name: Preserve diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-gc-${{ matrix.loops }}-loop-corpus
+          path: production-gc-${{ matrix.loops }}-loop-corpus.log
