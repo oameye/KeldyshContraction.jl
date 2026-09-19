@@ -19,11 +19,7 @@ function _two_body_loss_regular_response_components(
     retarded = -(λ^2) * ΩR / QR
     advanced = -(λbar^2) * ΩA / QA
     keldysh =
-        (
-            -λ2 * ΩK +
-            2im * γ * (λ * ΩR + λbar * ΩA) -
-            2 * γ * λ2 * ΩR * ΩA
-        ) / denominator
+        (-λ2 * ΩK + 2im * γ * (λ * ΩR + λbar * ΩA) - 2 * γ * λ2 * ΩR * ΩA) / denominator
     full_keldysh = (-2 * γ - λ2 * ΩK) / denominator
 
     return (; keldysh, retarded, advanced, full_keldysh)
@@ -36,9 +32,7 @@ The three polarization components contain only physical ψ propagator lines. `pa
 the formal 2PI skeleton bookkeeping monomial; the physical non-perturbative pair parameters are
 stored separately as names because the resummed response is not a `ParameterMonomial`.
 """
-struct TwoBodyLossWignerHSResponse{
-    C<:Number,O,E1,E2,G,Ctx<:AbstractWignerContext
-}
+struct TwoBodyLossWignerHSResponse{C<:Number,O,E1,E2,G,Ctx<:AbstractWignerContext}
     keldysh::WignerDiagrams{C,Boson,E1,E2,G,Ctx}
     retarded::WignerDiagrams{C,Boson,E1,E2,G,Ctx}
     advanced::WignerDiagrams{C,Boson,E1,E2,G,Ctx}
@@ -58,7 +52,9 @@ keldysh_component(response::TwoBodyLossWignerHSResponse) = response.keldysh
 retarded_component(response::TwoBodyLossWignerHSResponse) = response.retarded
 advanced_component(response::TwoBodyLossWignerHSResponse) = response.advanced
 response_physical_family(response::TwoBodyLossWignerHSResponse) = response.physical_family
-response_coherent_parameter(response::TwoBodyLossWignerHSResponse) = response.coherent_parameter
+function response_coherent_parameter(response::TwoBodyLossWignerHSResponse)
+    return response.coherent_parameter
+end
 response_loss_parameter(response::TwoBodyLossWignerHSResponse) = response.loss_parameter
 
 function _assert_response_wigner_family(
@@ -135,7 +131,9 @@ function Base.isequal(
            isequal(a.context, b.context)
 end
 Base.:(==)(a::CompositeWignerDiagram, b::CompositeWignerDiagram) = isequal(a, b)
-function Base.hash(diagram::CompositeWignerDiagram{E1,E2,G,Ctx}, h::UInt) where {E1,E2,G,Ctx}
+function Base.hash(
+    diagram::CompositeWignerDiagram{E1,E2,G,Ctx}, h::UInt
+) where {E1,E2,G,Ctx}
     h = hash(CompositeWignerDiagram, h)
     h = hash(diagram.physical_edges, h)
     h = hash(diagram.physical_momenta, h)
@@ -148,9 +146,7 @@ function Base.hash(diagram::CompositeWignerDiagram{E1,E2,G,Ctx}, h::UInt) where 
 end
 
 """Collection of response-aware homogeneous Wigner graphs."""
-struct CompositeWignerDiagrams{
-    C<:Number,E1,E2,G,Ctx<:AbstractWignerContext
-}
+struct CompositeWignerDiagrams{C<:Number,E1,E2,G,Ctx<:AbstractWignerContext}
     diagrams::Dict{CompositeWignerDiagram{E1,E2,G,Ctx},Vector{WignerContribution{C}}}
     context::Ctx
 end
@@ -177,7 +173,9 @@ function _homogeneous_composite_wigner_diagram(
     graph::CompositeFourierDiagram{E1,E2}
 ) where {E1,E2}
     external_momentum_count(graph) == 1 || throw(
-        ArgumentError("response-aware Wigner lowering requires exactly one external momentum"),
+        ArgumentError(
+            "response-aware Wigner lowering requires exactly one external momentum"
+        ),
     )
     physical_count = E1 - 1
     response_index = response_edge_index(graph)
@@ -194,7 +192,8 @@ function _homogeneous_composite_wigner_diagram(
         push!(edges, source_edges[i])
         push!(momenta, routed[i])
     end
-    length(edges) == physical_count || error("invalid physical edge count in composite graph")
+    length(edges) == physical_count ||
+        error("invalid physical edge count in composite graph")
 
     basis = momentum_basis(graph)
     isempty(basis.variables) && error("response-aware Wigner input has no momentum basis")
@@ -216,9 +215,7 @@ function _homogeneous_composite_wigner_diagrams(
 ) where {C<:Number,E1,E2}
     physical_count = E1 - 1
     context = HomogeneousWignerContext()
-    out = CompositeWignerDiagrams{
-        C,physical_count,E2,0,HomogeneousWignerContext
-    }(context)
+    out = CompositeWignerDiagrams{C,physical_count,E2,0,HomogeneousWignerContext}(context)
     for (graph, contributions) in diagrams
         wigner_graph = _homogeneous_composite_wigner_diagram(graph)
         values = Vector{WignerContribution{C}}(undef, length(contributions))
@@ -234,9 +231,7 @@ function _homogeneous_composite_wigner_diagrams(
 end
 
 """Physical response-aware self-energy after homogeneous Wigner lowering."""
-struct CompositeWignerSelfEnergy{
-    C<:Number,O,E1,E2,G,Ctx<:AbstractWignerContext,R
-}
+struct CompositeWignerSelfEnergy{C<:Number,O,E1,E2,G,Ctx<:AbstractWignerContext,R}
     keldysh::CompositeWignerDiagrams{C,E1,E2,G,Ctx}
     retarded::CompositeWignerDiagrams{C,E1,E2,G,Ctx}
     advanced::CompositeWignerDiagrams{C,E1,E2,G,Ctx}
@@ -254,10 +249,12 @@ keldysh_component(self_energy::CompositeWignerSelfEnergy) = self_energy.keldysh
 retarded_component(self_energy::CompositeWignerSelfEnergy) = self_energy.retarded
 advanced_component(self_energy::CompositeWignerSelfEnergy) = self_energy.advanced
 response_polarization(self_energy::CompositeWignerSelfEnergy) = self_energy.response
-response_coherent_parameter(self_energy::CompositeWignerSelfEnergy) =
-    response_coherent_parameter(self_energy.response)
-response_loss_parameter(self_energy::CompositeWignerSelfEnergy) =
-    response_loss_parameter(self_energy.response)
+function response_coherent_parameter(self_energy::CompositeWignerSelfEnergy)
+    return response_coherent_parameter(self_energy.response)
+end
+function response_loss_parameter(self_energy::CompositeWignerSelfEnergy)
+    return response_loss_parameter(self_energy.response)
+end
 
 """
     response_wigner_transform(Σ::CompositeFourierSelfEnergy; gradient_order=Val(0))
@@ -290,14 +287,14 @@ function _response_wigner_transform(
     )
 end
 
-function _response_wigner_transform(::CompositeFourierSelfEnergy, gradient_order::Val{G}) where {G}
+function _response_wigner_transform(
+    ::CompositeFourierSelfEnergy, gradient_order::Val{G}
+) where {G}
     return _unsupported_wigner_gradient(gradient_order)
 end
 
 """Pure-ψ polarization after spectral/statistical lowering."""
-struct TwoBodyLossKineticHSResponse{
-    C<:Number,O,E1,E2,G,Ctx<:AbstractWignerContext
-}
+struct TwoBodyLossKineticHSResponse{C<:Number,O,E1,E2,G,Ctx<:AbstractWignerContext}
     keldysh::KineticExpression{C,Boson,E1,E2,G,Ctx}
     retarded::KineticExpression{C,Boson,E1,E2,G,Ctx}
     advanced::KineticExpression{C,Boson,E1,E2,G,Ctx}
@@ -317,7 +314,9 @@ keldysh_component(response::TwoBodyLossKineticHSResponse) = response.keldysh
 retarded_component(response::TwoBodyLossKineticHSResponse) = response.retarded
 advanced_component(response::TwoBodyLossKineticHSResponse) = response.advanced
 response_physical_family(response::TwoBodyLossKineticHSResponse) = response.physical_family
-response_coherent_parameter(response::TwoBodyLossKineticHSResponse) = response.coherent_parameter
+function response_coherent_parameter(response::TwoBodyLossKineticHSResponse)
+    return response.coherent_parameter
+end
 response_loss_parameter(response::TwoBodyLossKineticHSResponse) = response.loss_parameter
 
 function _assert_response_kinetic_family(
@@ -326,7 +325,9 @@ function _assert_response_kinetic_family(
     for (term, _) in expression
         for line in kinetic_lines(term)
             isequal(line.family, family) || throw(
-                ArgumentError("response kinetic polarization contains a nonphysical field family"),
+                ArgumentError(
+                    "response kinetic polarization contains a nonphysical field family"
+                ),
             )
         end
     end
@@ -364,11 +365,13 @@ end
 
 response_component(factor::TwoBodyLossResponseFactor) = factor.component
 response_momentum(factor::TwoBodyLossResponseFactor) = factor.momentum
-Base.isequal(a::TwoBodyLossResponseFactor, b::TwoBodyLossResponseFactor) =
-    a.component === b.component && isequal(a.momentum, b.momentum)
+function Base.isequal(a::TwoBodyLossResponseFactor, b::TwoBodyLossResponseFactor)
+    return a.component === b.component && isequal(a.momentum, b.momentum)
+end
 Base.:(==)(a::TwoBodyLossResponseFactor, b::TwoBodyLossResponseFactor) = isequal(a, b)
-Base.hash(factor::TwoBodyLossResponseFactor, h::UInt) =
-    hash(TwoBodyLossResponseFactor, hash(factor.momentum, hash(factor.component, h)))
+function Base.hash(factor::TwoBodyLossResponseFactor, h::UInt)
+    return hash(TwoBodyLossResponseFactor, hash(factor.momentum, hash(factor.component, h)))
+end
 
 """One physical ψ kinetic term multiplied by one exact nested pair response."""
 struct CompositeKineticTerm{E1,E2}
@@ -410,9 +413,7 @@ function Base.hash(term::CompositeKineticTerm{E1,E2}, h::UInt) where {E1,E2}
 end
 
 """Numeric linear combination of physical kinetic terms with exact nested response factors."""
-struct CompositeKineticExpression{
-    C<:Number,E1,E2,G,Ctx<:AbstractWignerContext
-}
+struct CompositeKineticExpression{C<:Number,E1,E2,G,Ctx<:AbstractWignerContext}
     terms::Dict{CompositeKineticTerm{E1,E2},C}
     context::Ctx
 end
@@ -432,7 +433,9 @@ Base.length(expression::CompositeKineticExpression) = length(expression.terms)
 Base.isempty(expression::CompositeKineticExpression) = isempty(expression.terms)
 Base.iszero(expression::CompositeKineticExpression) = isempty(expression.terms)
 Base.iterate(expression::CompositeKineticExpression) = iterate(expression.terms)
-Base.iterate(expression::CompositeKineticExpression, state) = iterate(expression.terms, state)
+function Base.iterate(expression::CompositeKineticExpression, state)
+    return iterate(expression.terms, state)
+end
 
 function Base.push!(
     expression::CompositeKineticExpression{C,E1,E2,G,Ctx},
@@ -459,7 +462,9 @@ function Base.:+(
     b::CompositeKineticExpression{C2,E1,E2,G,Ctx},
 ) where {C1<:Number,C2<:Number,E1,E2,G,Ctx<:AbstractWignerContext}
     isequal(a.context, b.context) || throw(
-        ArgumentError("cannot add composite kinetic expressions with different Wigner contexts"),
+        ArgumentError(
+            "cannot add composite kinetic expressions with different Wigner contexts"
+        ),
     )
     D = promote_type(C1, C2)
     out = CompositeKineticExpression{D,E1,E2,G,Ctx}(a.context)
@@ -497,8 +502,9 @@ function _lower_composite_kinetic_term(
     lines = Vector{KineticLine{Boson}}(undef, E1)
     keldysh_count = Int8(0)
     @inbounds for i in 1:E1
-        line, is_statistical =
-            _lower_kinetic_line(graph.physical_edges[i], graph.physical_momenta[i])
+        line, is_statistical = _lower_kinetic_line(
+            graph.physical_edges[i], graph.physical_momenta[i]
+        )
         lines[i] = line
         keldysh_count += is_statistical
     end
@@ -541,9 +547,7 @@ function kinetic_expression(
 end
 
 """Response-aware physical ψ self-energy with no auxiliary-field kinetic lines."""
-struct CompositeKineticSelfEnergy{
-    C<:Number,O,E1,E2,G,Ctx<:AbstractWignerContext,R
-}
+struct CompositeKineticSelfEnergy{C<:Number,O,E1,E2,G,Ctx<:AbstractWignerContext,R}
     keldysh::CompositeKineticExpression{C,E1,E2,G,Ctx}
     retarded::CompositeKineticExpression{C,E1,E2,G,Ctx}
     advanced::CompositeKineticExpression{C,E1,E2,G,Ctx}
@@ -561,10 +565,12 @@ keldysh_component(self_energy::CompositeKineticSelfEnergy) = self_energy.keldysh
 retarded_component(self_energy::CompositeKineticSelfEnergy) = self_energy.retarded
 advanced_component(self_energy::CompositeKineticSelfEnergy) = self_energy.advanced
 response_polarization(self_energy::CompositeKineticSelfEnergy) = self_energy.response
-response_coherent_parameter(self_energy::CompositeKineticSelfEnergy) =
-    response_coherent_parameter(self_energy.response)
-response_loss_parameter(self_energy::CompositeKineticSelfEnergy) =
-    response_loss_parameter(self_energy.response)
+function response_coherent_parameter(self_energy::CompositeKineticSelfEnergy)
+    return response_coherent_parameter(self_energy.response)
+end
+function response_loss_parameter(self_energy::CompositeKineticSelfEnergy)
+    return response_loss_parameter(self_energy.response)
+end
 
 function kinetic_expression(
     self_energy::CompositeWignerSelfEnergy{C,O,E1,E2,0,Ctx,R}
@@ -611,24 +617,31 @@ end
 order(::CompositeOffShellCollisionExpression{C,O}) where {C,O} = O
 statistics(::CompositeOffShellCollisionExpression) = Boson
 target_family(collision::CompositeOffShellCollisionExpression) = collision.target
-gradient_order(::CompositeOffShellCollisionExpression{C,O,E1,E2,G}) where {C,O,E1,E2,G} = Val(G)
+function gradient_order(
+    ::CompositeOffShellCollisionExpression{C,O,E1,E2,G}
+) where {C,O,E1,E2,G}
+    return Val(G)
+end
 wigner_context(collision::CompositeOffShellCollisionExpression) = collision.context
 collision_offset(collision::CompositeOffShellCollisionExpression) = collision.offset
 function collision_distribution_coefficient(collision::CompositeOffShellCollisionExpression)
     return collision.distribution_coefficient
 end
 response_polarization(collision::CompositeOffShellCollisionExpression) = collision.response
-response_coherent_parameter(collision::CompositeOffShellCollisionExpression) =
-    response_coherent_parameter(collision.response)
-response_loss_parameter(collision::CompositeOffShellCollisionExpression) =
-    response_loss_parameter(collision.response)
+function response_coherent_parameter(collision::CompositeOffShellCollisionExpression)
+    return response_coherent_parameter(collision.response)
+end
+function response_loss_parameter(collision::CompositeOffShellCollisionExpression)
+    return response_loss_parameter(collision.response)
+end
 
 function off_shell_collision_expression(
     self_energy::CompositeKineticSelfEnergy{C,O,E1,E2,0,Ctx,R}
 ) where {C<:Number,O,E1,E2,Ctx<:AbstractWignerContext,R}
     D = kinetic_coefficient_type(C)
     offset = convert(D, im) * self_energy.keldysh
-    distribution_coefficient = -convert(D, im) * (self_energy.retarded - self_energy.advanced)
+    distribution_coefficient =
+        -convert(D, im) * (self_energy.retarded - self_energy.advanced)
     return CompositeOffShellCollisionExpression{D,O,E1,E2,0,Ctx,R}(
         offset,
         distribution_coefficient,
