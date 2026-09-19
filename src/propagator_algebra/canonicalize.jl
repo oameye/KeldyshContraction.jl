@@ -183,6 +183,7 @@ const GC_PHYSICAL_MAX_VERTICES = 64
 mutable struct PhysicalCanonicalizationWorkspace
     search::GC.DirectedCanonicalizationWorkspace
     result::GC.DirectedCanonicalizationBuffer
+    active_size::Int
     search_cache::Vector{GC.DirectedCanonicalizationWorkspace}
     result_cache::Vector{GC.DirectedCanonicalizationBuffer}
     cache_sizes::Vector{Int}
@@ -202,6 +203,7 @@ function PhysicalCanonicalizationWorkspace(capacity::Integer)
     return PhysicalCanonicalizationWorkspace(
         search,
         result,
+        n,
         GC.DirectedCanonicalizationWorkspace[search],
         GC.DirectedCanonicalizationBuffer[result],
         Int[n],
@@ -216,9 +218,7 @@ end
     )
 end
 
-@inline function _activate_gc_workspace!(
-    scratch::PhysicalCanonicalizationWorkspace, n::Int
-)
+@inline function _activate_gc_workspace!(scratch::PhysicalCanonicalizationWorkspace, n::Int)
     1 <= n <= scratch.capacity || throw(
         DimensionMismatch("physical canonicalization graph exceeds workspace capacity")
     )
@@ -226,6 +226,7 @@ end
         if scratch.cache_sizes[i] == n
             scratch.search = scratch.search_cache[i]
             scratch.result = scratch.result_cache[i]
+            scratch.active_size = n
             return nothing
         end
     end
@@ -237,6 +238,7 @@ end
     push!(scratch.cache_sizes, n)
     scratch.search = search
     scratch.result = result
+    scratch.active_size = n
     return nothing
 end
 
@@ -264,7 +266,9 @@ function _gc_direct_position_graph!(
         simple &= iszero(scratch.multiplicities[slot])
         scratch.multiplicities[slot] += 1
     end
-    return GC.DirectedGCGraph(n, scratch.multiplicities), position_labels(graph_positions), simple
+    return GC.DirectedGCGraph(n, scratch.multiplicities),
+    position_labels(graph_positions),
+    simple
 end
 
 function _gc_colored_subdivision_graph!(
@@ -308,8 +312,9 @@ function _gc_physical_witness!(
     npositions = length(graph_positions)
     npositions <= scratch.capacity || return false
 
-    direct_graph, vertex_colors, simple =
-        _gc_direct_position_graph!(scratch, vs, graph_positions)
+    direct_graph, vertex_colors, simple = _gc_direct_position_graph!(
+        scratch, vs, graph_positions
+    )
     GC.canonicalize_directed!(scratch.result, scratch.search, direct_graph, vertex_colors)
 
     use_direct =
@@ -319,8 +324,9 @@ function _gc_physical_witness!(
 
     ncolored = npositions + length(vs)
     ncolored <= scratch.capacity || return false
-    colored_graph, colored_colors =
-        _gc_colored_subdivision_graph!(scratch, vs, graph_positions)
+    colored_graph, colored_colors = _gc_colored_subdivision_graph!(
+        scratch, vs, graph_positions
+    )
     GC.canonicalize_directed!(scratch.result, scratch.search, colored_graph, colored_colors)
     return true
 end
@@ -421,13 +427,13 @@ function make_permutation_dict(
 end
 
 function _gc_permutation_dict(
-    buffer::GC.DirectedCanonicalizationBuffer, graph_positions::Vector{Position}, vs
+    scratch::PhysicalCanonicalizationWorkspace, graph_positions::Vector{Position}, vs
 )
     npositions = length(graph_positions)
     canonical_bulk = Position[]
     sizehint!(canonical_bulk, npositions)
-    @inbounds for rank in 1:buffer.num_vertices
-        original_vertex = GC.original_vertex(buffer, rank)
+    @inbounds for rank in 1:scratch.active_size
+        original_vertex = GC.original_vertex(scratch.result, rank)
         original_vertex <= npositions || continue
         old_position = graph_positions[original_vertex]
         is_bulk(old_position) && push!(canonical_bulk, old_position)
@@ -538,7 +544,7 @@ function _canonicalize_typed(
     graph_positions::Vector{Position},
 ) where {T}
     if _gc_physical_witness!(scratch, vs, graph_positions)
-        permutation_map = _gc_permutation_dict(scratch.result, graph_positions, vs)
+        permutation_map = _gc_permutation_dict(scratch, graph_positions, vs)
     else
         physical_permutation = canonicalization_permutation(vs, graph_positions)
         permutation_map = make_permutation_dict(physical_permutation, graph_positions, vs)
@@ -564,12 +570,16 @@ end
 
 canonicalize(vs::Vector{Contraction{S}}) where {S<:Statistics} = _canonicalize_typed(vs)
 canonicalize(vs::Vector{Edge{S}}) where {S<:Statistics} = _canonicalize_typed(vs)
-canonicalize(
+function canonicalize(
     vs::Vector{Contraction{S}}, scratch::PhysicalCanonicalizationWorkspace
-) where {S<:Statistics} = _canonicalize_typed(vs, scratch)
-canonicalize(
+) where {S<:Statistics}
+    return _canonicalize_typed(vs, scratch)
+end
+function canonicalize(
     vs::Vector{Edge{S}}, scratch::PhysicalCanonicalizationWorkspace
-) where {S<:Statistics} = _canonicalize_typed(vs, scratch)
+) where {S<:Statistics}
+    return _canonicalize_typed(vs, scratch)
+end
 
 """
 Canonicalize physical contractions and compute the established uncolored topology signature.
