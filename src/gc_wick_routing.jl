@@ -1,10 +1,12 @@
 # Production crossover for the symmetry-aware GraphCombinations Wick backend.
 #
-# The direct matcher remains the low-order path. Production-shaped certification shows that
-# quotient generation already wins for five-edge bosons, while five-edge fermions still pay more
-# for signed transport than they save. From seven edges onward GC wins for both statistics.
+# The direct matcher remains the low-order path. Production-shaped certification shows mixed
+# results at five edges: GC wins for the coherent bosonic workload, but the colored two-body-loss
+# workload allocates more, and low-order fermions likewise do not improve robustly. From seven
+# edges onward GC wins in both time and allocations across coherent, lossy, plain-fermion, and
+# derivative-fermion workloads.
 
-@inline _use_gc_wick(::Type{Boson}, ::Val{E}) where {E} = E >= 5
+@inline _use_gc_wick(::Type{Boson}, ::Val{E}) where {E} = E >= 7
 @inline _use_gc_wick(::Type{Fermion}, ::Val{E}) where {E} = E >= 7
 
 @inline function _production_wick_pairings(
