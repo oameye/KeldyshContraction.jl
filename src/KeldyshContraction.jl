@@ -50,6 +50,7 @@ const ComplexRationals = Complex{Rational{Int64}}
 
     include("wick_contractions.jl")
     include("filters.jl")
+    include("gc_wick_backend.jl")
     include("self_energy.jl")
 
     # Statistics extensions
