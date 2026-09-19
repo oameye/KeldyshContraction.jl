@@ -123,8 +123,9 @@ for (label, vs) in benchmarks
 
     if label == "forced-relation-fallback"
         graph_positions = KC.canonicalization_positions(vs)
-        direct_graph, vertex_colors, simple =
-            gc_direct_graph!(native_scratch.direct, vs, graph_positions)
+        direct_graph, vertex_colors, simple = gc_direct_graph!(
+            native_scratch.direct, vs, graph_positions
+        )
         GC.canonicalize_directed!(
             native_scratch.direct.result,
             native_scratch.direct.search,
