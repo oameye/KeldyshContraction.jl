@@ -1,5 +1,5 @@
 using KeldyshContraction, Test
-const GC = KeldyshContraction.GC
+const GraphComb = KeldyshContraction.GC
 using KeldyshContraction:
     canonicalize,
     Bulk,
@@ -176,10 +176,10 @@ c, q = ϕ[Classical], ϕ[Quantum]
         direct_graph, vertex_colors, simple = _gc_direct_position_graph!(
             scratch, forced1, graph_positions
         )
-        GC.canonicalize_directed!(
+        GraphComb.canonicalize_directed!(
             scratch.result, scratch.search, direct_graph, vertex_colors
         )
-        @test GC.canonical_automorphism_order(scratch.result) == 2
+        @test GraphComb.canonical_automorphism_order(scratch.result) == 2
         @test simple
         @test !uniform_coloring(forced1)
         @test _gc_physical_witness!(scratch, forced1, graph_positions)
