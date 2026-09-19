@@ -1,4 +1,5 @@
 include(joinpath(@__DIR__, "graphcombinations_propagator_gc_adapter.jl"))
+include(joinpath(@__DIR__, "graphcombinations_propagator_native_adapter.jl"))
 using KeldyshContraction: @qfields, Boson
 
 function best_batch_time(f, repetitions; samples=7)
@@ -77,34 +78,52 @@ push!(benchmarks, "parallel-2-node" => [
 ])
 
 capacity = maximum(length(KC.canonicalization_positions(vs)) + length(vs) for (_, vs) in benchmarks)
-scratch = GCPhysicalCanonicalizationWorkspace(capacity)
+gadget_scratch = GCPhysicalCanonicalizationWorkspace(capacity)
+native_scratch = GCNativePhysicalCanonicalizationWorkspace(capacity)
 
 println()
 println("production-shaped warmed canonicalization benchmark")
 println("  reusable GC capacity: ", capacity)
-println("  direct graph storage and witness transport are caller-reused")
+println("  compares old subdivision gadget, native-only, native hybrid, and Nauty")
 println("  times are best-of-7 batch means; allocations are warmed batch means")
 
 for (label, vs) in benchmarks
-    gc_call = () -> gc_physical_canonicalize!(scratch, vs)
+    gadget_call = () -> gc_physical_canonicalize!(gadget_scratch, vs)
+    native_call = () -> gc_native_physical_canonicalize!(native_scratch, vs)
+    hybrid_call = () -> gc_native_hybrid_physical_canonicalize!(native_scratch, vs)
     nauty_call = () -> KC.canonicalize(vs)
 
     for _ in 1:100
-        gc_call()
+        gadget_call()
+        native_call()
+        hybrid_call()
         nauty_call()
     end
 
     repetitions = label == "5-node" ? 200 : 1000
-    gc_time = best_batch_time(gc_call, repetitions)
+    gadget_time = best_batch_time(gadget_call, repetitions)
+    native_time = best_batch_time(native_call, repetitions)
+    hybrid_time = best_batch_time(hybrid_call, repetitions)
     nauty_time = best_batch_time(nauty_call, repetitions)
-    gc_alloc = allocation_per_call(gc_call, repetitions)
+    gadget_alloc = allocation_per_call(gadget_call, repetitions)
+    native_alloc = allocation_per_call(native_call, repetitions)
+    hybrid_alloc = allocation_per_call(hybrid_call, repetitions)
     nauty_alloc = allocation_per_call(nauty_call, repetitions)
 
     println(
-        "  ", label,
-        ": GC/Nauty time=", round(gc_time / nauty_time; digits=3), "x",
-        " alloc=", round(gc_alloc / nauty_alloc; digits=3), "x",
-        " [GC ", round(gc_time * 1e6; digits=2), " us, ", round(gc_alloc; digits=1), " B",
-        "; Nauty ", round(nauty_time * 1e6; digits=2), " us, ", round(nauty_alloc; digits=1), " B]",
+        "MICRO\t", label,
+        "\tgadget_over_nauty=", round(gadget_time / nauty_time; digits=3),
+        "\tnative_over_nauty=", round(native_time / nauty_time; digits=3),
+        "\thybrid_over_nauty=", round(hybrid_time / nauty_time; digits=3),
+        "\tnative_over_gadget=", round(native_time / gadget_time; digits=3),
+        "\thybrid_over_gadget=", round(hybrid_time / gadget_time; digits=3),
+        "\tgadget_us=", round(gadget_time * 1e6; digits=3),
+        "\tnative_us=", round(native_time * 1e6; digits=3),
+        "\thybrid_us=", round(hybrid_time * 1e6; digits=3),
+        "\tnauty_us=", round(nauty_time * 1e6; digits=3),
+        "\tgadget_B=", round(gadget_alloc; digits=1),
+        "\tnative_B=", round(native_alloc; digits=1),
+        "\thybrid_B=", round(hybrid_alloc; digits=1),
+        "\tnauty_B=", round(nauty_alloc; digits=1),
     )
 end
