@@ -27,11 +27,7 @@ function _gc_causal_policy(lookup::Dict{NTuple{4,Int},Contraction{S}}) where {S<
     max_target_vertex = maximum(cell[3] for cell in keys(lookup))
     max_target_color = maximum(cell[4] for cell in keys(lookup))
     kinds = zeros(
-        Int8,
-        max_source_vertex,
-        max_source_color,
-        max_target_vertex,
-        max_target_color,
+        Int8, max_source_vertex, max_source_color, max_target_vertex, max_target_color
     )
     for (cell, contraction) in lookup
         kinds[cell...] = _gc_causal_kind(contraction)
