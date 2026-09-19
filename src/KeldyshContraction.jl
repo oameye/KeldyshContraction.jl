@@ -60,6 +60,7 @@ const ComplexRationals = Complex{Rational{Int64}}
 
     include("propagator_algebra/fourier_transform.jl")
     include("twopi_fourier_self_energy.jl")
+    include("composite_response.jl")
     include("skeleton_self_energy.jl")
     include("propagator_algebra/wigner.jl")
     include("propagator_algebra/spectral_statistical.jl")
