@@ -26,3 +26,5 @@ jobs:
       - uses: julia-actions/julia-buildpkg@v1
       - name: Run production crossover benchmark
         run: julia --project=. --color=yes research/gc_weighted_wick_production_benchmark.jl
+      - name: Run colored and derivative crossover benchmark
+        run: julia --project=. --color=yes research/gc_weighted_wick_colored_benchmark.jl
