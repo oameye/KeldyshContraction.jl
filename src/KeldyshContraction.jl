@@ -66,6 +66,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("propagator_algebra/spectral_statistical.jl")
     include("off_shell_collision.jl")
     include("spectral_dispersive_collision.jl")
+    # Exact pair response remains off shell until a dedicated response spectral backend exists.
     include("composite_response_kinetics.jl")
     include("frequency_support.jl")
     include("full_rank_frequency_reduction.jl")
