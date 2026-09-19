@@ -1,5 +1,5 @@
 using KeldyshContraction, Test
-import GraphCombinations as GC
+const GC = KeldyshContraction.GC
 using KeldyshContraction:
     canonicalize,
     Bulk,
