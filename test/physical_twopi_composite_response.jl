@@ -10,8 +10,7 @@ function composite_response_hs_interaction()
     χq = composite_response_χ[Quantum]
 
     # KC-native symmetric Keldysh rotation certified in C3.
-    forward =
-        (1 // 2) * ψc^2 * bar(χq) + ψc * ψq * bar(χc) + (1 // 2) * ψq^2 * bar(χq)
+    forward = (1 // 2) * ψc^2 * bar(χq) + ψc * ψq * bar(χc) + (1 // 2) * ψq^2 * bar(χq)
     return ChargedInteractionLagrangian(
         -im * (forward + bar(forward)),
         composite_response_ψ => 1,
@@ -38,9 +37,8 @@ end
 
     Ω = KC.response_polarization(Σ)
     @test KC.target_family(Ω) === composite_response_χ
-    for component in (
-        KC.keldysh_component(Ω), KC.retarded_component(Ω), KC.advanced_component(Ω)
-    )
+    for component in
+        (KC.keldysh_component(Ω), KC.retarded_component(Ω), KC.advanced_component(Ω))
         @test !isempty(component)
         for (graph, contributions) in component
             @test graph.external_count == 1
@@ -74,9 +72,7 @@ end
 
             physical = KC.physical_contractions(graph)
             @test length(physical) == 1
-            @test all(
-                edge -> KC.field_family(edge.out) === composite_response_ψ, physical
-            )
+            @test all(edge -> KC.field_family(edge.out) === composite_response_ψ, physical)
             @test !isempty(contributions)
         end
     end
@@ -100,9 +96,6 @@ end
 
     polarization = KC.twopi_fourier_self_energy(Γ2, composite_response_χ)
     @test_throws ArgumentError KC.TwoBodyLossHSResponse(
-        polarization,
-        composite_response_χ;
-        coherent_parameter=:g,
-        loss_parameter=:g,
+        polarization, composite_response_χ; coherent_parameter=:g, loss_parameter=:g
     )
 end
