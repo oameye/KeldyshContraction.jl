@@ -8,6 +8,7 @@ on:
     paths:
       - research/graphcombinations_propagator_canonicalization_oracle.jl
       - research/graphcombinations_propagator_gc_adapter.jl
+      - research/graphcombinations_propagator_native_adapter.jl
       - research/graphcombinations_propagator_canonicalization_benchmark.jl
       - research/graphcombinations_propagator_wick_oracle.jl
       - .github/workflows/GCPropagatorCanonicalizationResearch.yml
@@ -26,11 +27,11 @@ jobs:
         with:
           version: '1.10.12'
       - uses: julia-actions/cache@v3
-      - name: Pin exact GraphCombinations v0.4.0 kernel
+      - name: Pin exact GraphCombinations native-relation kernel
         run: |
           julia --project=. --color=yes -e '
             using Pkg
-            Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="131d7353eb968cce8ef008004282284a32918a3e")
+            Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="f5fa566d9d0219d7fbc49dfce234403eefa9397f")
           '
       - name: Run physical canonicalization oracle
         run: julia --project=. --color=yes research/graphcombinations_propagator_canonicalization_oracle.jl
