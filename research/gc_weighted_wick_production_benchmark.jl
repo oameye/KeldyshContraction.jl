@@ -271,9 +271,7 @@ end
 
 @qfields bench_ϕ::Boson
 c, q = bench_ϕ[Classical], bench_ϕ[Quantum]
-boson_vertex = -(
-    0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
-)
+boson_vertex = -(0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2))
 L_b = InteractionLagrangian(boson_vertex, :g)
 
 @qfields bench_ψ::Fermion
