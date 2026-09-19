@@ -20,12 +20,10 @@ function TwoBodyLossHSResponse(
     coherent_parameter::Symbol=:g,
     loss_parameter::Symbol=:γ,
 ) where {C<:Number,O,E1,E2}
-    isequal(target_family(polarization), family) || throw(
-        ArgumentError("HS response family must equal the polarization target family")
-    )
-    coherent_parameter == loss_parameter && throw(
-        ArgumentError("coherent and loss parameters must be distinct")
-    )
+    isequal(target_family(polarization), family) ||
+        throw(ArgumentError("HS response family must equal the polarization target family"))
+    coherent_parameter == loss_parameter &&
+        throw(ArgumentError("coherent and loss parameters must be distinct"))
     return TwoBodyLossHSResponse{C,O,E1,E2}(
         polarization, family, coherent_parameter, loss_parameter
     )
@@ -60,8 +58,9 @@ fourier_diagram(diagram::CompositeFourierDiagram) = diagram.fourier
 coordinate_diagram(diagram::CompositeFourierDiagram) = coordinate_diagram(diagram.fourier)
 momentum_basis(diagram::CompositeFourierDiagram) = momentum_basis(diagram.fourier)
 edge_momenta(diagram::CompositeFourierDiagram) = edge_momenta(diagram.fourier)
-external_momentum_count(diagram::CompositeFourierDiagram) =
-    external_momentum_count(diagram.fourier)
+function external_momentum_count(diagram::CompositeFourierDiagram)
+    return external_momentum_count(diagram.fourier)
+end
 loop_momentum_count(diagram::CompositeFourierDiagram) = loop_momentum_count(diagram.fourier)
 response_edge_index(diagram::CompositeFourierDiagram) = Int(diagram.response_edge)
 
@@ -69,16 +68,21 @@ function _composite_response_edge(diagram::CompositeFourierDiagram)
     return contractions(coordinate_diagram(diagram))[response_edge_index(diagram)]
 end
 
-response_family(diagram::CompositeFourierDiagram) = field_family(_composite_response_edge(diagram).out)
-response_component(diagram::CompositeFourierDiagram) =
-    propagator_type(_composite_response_edge(diagram))
-response_momentum(diagram::CompositeFourierDiagram) =
-    edge_momenta(diagram)[response_edge_index(diagram)]
+function response_family(diagram::CompositeFourierDiagram)
+    return field_family(_composite_response_edge(diagram).out)
+end
+function response_component(diagram::CompositeFourierDiagram)
+    return propagator_type(_composite_response_edge(diagram))
+end
+function response_momentum(diagram::CompositeFourierDiagram)
+    return edge_momenta(diagram)[response_edge_index(diagram)]
+end
 
 function physical_contractions(diagram::CompositeFourierDiagram)
     index = response_edge_index(diagram)
     return Contraction{Boson}[
-        edge for (i, edge) in enumerate(contractions(coordinate_diagram(diagram))) if i != index
+        edge for
+        (i, edge) in enumerate(contractions(coordinate_diagram(diagram))) if i != index
     ]
 end
 
@@ -101,17 +105,16 @@ end
 
 function CompositeFourierDiagrams{C,E1,E2}() where {C<:Number,E1,E2}
     K = CompositeFourierDiagram{E1,E2}
-    return CompositeFourierDiagrams{C,E1,E2}(
-        Dict{K,Vector{FourierContribution{C}}}()
-    )
+    return CompositeFourierDiagrams{C,E1,E2}(Dict{K,Vector{FourierContribution{C}}}())
 end
 
 Base.length(collection::CompositeFourierDiagrams) = length(collection.diagrams)
 Base.isempty(collection::CompositeFourierDiagrams) = isempty(collection.diagrams)
 Base.iszero(collection::CompositeFourierDiagrams) = isempty(collection.diagrams)
 Base.iterate(collection::CompositeFourierDiagrams) = iterate(collection.diagrams)
-Base.iterate(collection::CompositeFourierDiagrams, state) =
-    iterate(collection.diagrams, state)
+function Base.iterate(collection::CompositeFourierDiagrams, state)
+    return iterate(collection.diagrams, state)
+end
 function Base.isequal(
     a::CompositeFourierDiagrams{C,E1,E2}, b::CompositeFourierDiagrams{C,E1,E2}
 ) where {C<:Number,E1,E2}
@@ -165,13 +168,18 @@ end
 
 statistics(::CompositeFourierSelfEnergy) = Boson
 target_family(self_energy::CompositeFourierSelfEnergy) = self_energy.target
-response_family(self_energy::CompositeFourierSelfEnergy) = response_family(self_energy.response)
-response_polarization(self_energy::CompositeFourierSelfEnergy) =
-    response_polarization(self_energy.response)
-response_coherent_parameter(self_energy::CompositeFourierSelfEnergy) =
-    response_coherent_parameter(self_energy.response)
-response_loss_parameter(self_energy::CompositeFourierSelfEnergy) =
-    response_loss_parameter(self_energy.response)
+function response_family(self_energy::CompositeFourierSelfEnergy)
+    return response_family(self_energy.response)
+end
+function response_polarization(self_energy::CompositeFourierSelfEnergy)
+    return response_polarization(self_energy.response)
+end
+function response_coherent_parameter(self_energy::CompositeFourierSelfEnergy)
+    return response_coherent_parameter(self_energy.response)
+end
+function response_loss_parameter(self_energy::CompositeFourierSelfEnergy)
+    return response_loss_parameter(self_energy.response)
+end
 keldysh_component(self_energy::CompositeFourierSelfEnergy) = self_energy.keldysh
 retarded_component(self_energy::CompositeFourierSelfEnergy) = self_energy.retarded
 advanced_component(self_energy::CompositeFourierSelfEnergy) = self_energy.advanced
@@ -182,7 +190,8 @@ function _composite_response_edge_index(
     found = 0
     for (index, edge) in enumerate(contractions(coordinate_diagram(graph)))
         isequal(field_family(edge.out), family) || continue
-        found == 0 || throw(ArgumentError("composite graph contains multiple response edges"))
+        found == 0 ||
+            throw(ArgumentError("composite graph contains multiple response edges"))
         found = index
     end
     found == 0 && throw(ArgumentError("composite graph is missing its response edge"))
@@ -238,7 +247,9 @@ function twopi_composite_fourier_self_energy(
             cut = contractions_source[cut_index]
             isequal(field_family(cut.out), target) || continue
 
-            component = _twopi_physical_component(keldysh_index(cut.in), keldysh_index(cut.out))
+            component = _twopi_physical_component(
+                keldysh_index(cut.in), keldysh_index(cut.out)
+            )
             iszero(component) && continue
 
             internal = Contraction{Boson}[
@@ -252,12 +263,17 @@ function twopi_composite_fourier_self_energy(
             )
             routed, kinematic, _ = _canonical_fourier_source(source)
             amputated = _amputate_fourier_graph(routed, Val(SE), Val(ST))
-            response_index = _composite_response_edge_index(amputated, response_family_field)
+            response_index = _composite_response_edge_index(
+                amputated, response_family_field
+            )
             graph = CompositeFourierDiagram(amputated, response_index)
 
             all(
-                edge -> isequal(field_family(edge.out), target), physical_contractions(graph)
-            ) || throw(ArgumentError("composite outer graph contains a nonphysical field family"))
+                edge -> isequal(field_family(edge.out), target),
+                physical_contractions(graph),
+            ) || throw(
+                ArgumentError("composite outer graph contains a nonphysical field family"),
+            )
 
             destination = if component == 0x01
                 components[PropagatorType.Retarded]
