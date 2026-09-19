@@ -16,7 +16,9 @@ function GCPhysicalCanonicalizationWorkspace(capacity::Integer)
     )
 end
 
-@inline function clear_active_multiplicities!(scratch::GCPhysicalCanonicalizationWorkspace, n::Int)
+@inline function clear_active_multiplicities!(
+    scratch::GCPhysicalCanonicalizationWorkspace, n::Int
+)
     @inbounds for i in 1:(n * n)
         scratch.multiplicities[i] = 0
     end
@@ -39,7 +41,9 @@ function gc_direct_graph!(scratch::GCPhysicalCanonicalizationWorkspace, vs, grap
     return graph, KC.position_labels(graph_positions), simple
 end
 
-function gc_colored_graph!(scratch::GCPhysicalCanonicalizationWorkspace, vs, graph_positions)
+function gc_colored_graph!(
+    scratch::GCPhysicalCanonicalizationWorkspace, vs, graph_positions
+)
     colors = KC.propagator_colors(vs)
     npositions = length(graph_positions)
     n = npositions + length(vs)
@@ -62,15 +66,20 @@ function gc_colored_graph!(scratch::GCPhysicalCanonicalizationWorkspace, vs, gra
     return GC.DirectedGCGraph(n, scratch.multiplicities), labels
 end
 
-function gc_physical_witness!(scratch::GCPhysicalCanonicalizationWorkspace, vs, graph_positions)
+function gc_physical_witness!(
+    scratch::GCPhysicalCanonicalizationWorkspace, vs, graph_positions
+)
     direct_graph, direct_colors, simple = gc_direct_graph!(scratch, vs, graph_positions)
     GC.canonicalize_directed!(scratch.result, scratch.search, direct_graph, direct_colors)
 
-    use_direct = isone(GC.canonical_automorphism_order(scratch.result)) ||
-                 (simple && KC.uniform_coloring(vs))
+    use_direct =
+        isone(GC.canonical_automorphism_order(scratch.result)) ||
+        (simple && KC.uniform_coloring(vs))
     if !use_direct
         colored_graph, colored_colors = gc_colored_graph!(scratch, vs, graph_positions)
-        GC.canonicalize_directed!(scratch.result, scratch.search, colored_graph, colored_colors)
+        GC.canonicalize_directed!(
+            scratch.result, scratch.search, colored_graph, colored_colors
+        )
     end
     return scratch.result
 end
@@ -103,7 +112,9 @@ function gc_make_permutation_dict(buffer, graph_positions, vs)
     return mapping
 end
 
-function gc_physical_canonicalize!(scratch::GCPhysicalCanonicalizationWorkspace, vs::Vector{T}) where {T}
+function gc_physical_canonicalize!(
+    scratch::GCPhysicalCanonicalizationWorkspace, vs::Vector{T}
+) where {T}
     isempty(vs) && return copy(vs)
     graph_positions = KC.canonicalization_positions(vs)
     witness = gc_physical_witness!(scratch, vs, graph_positions)

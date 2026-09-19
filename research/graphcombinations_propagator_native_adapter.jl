@@ -76,13 +76,16 @@ function gc_native_hybrid_physical_canonicalize!(
 ) where {T}
     isempty(vs) && return copy(vs)
     graph_positions = KC.canonicalization_positions(vs)
-    direct_graph, vertex_colors, simple = gc_direct_graph!(scratch.direct, vs, graph_positions)
+    direct_graph, vertex_colors, simple = gc_direct_graph!(
+        scratch.direct, vs, graph_positions
+    )
     GC.canonicalize_directed!(
         scratch.direct.result, scratch.direct.search, direct_graph, vertex_colors
     )
 
-    use_direct = isone(GC.canonical_automorphism_order(scratch.direct.result)) ||
-                 (simple && KC.uniform_coloring(vs))
+    use_direct =
+        isone(GC.canonical_automorphism_order(scratch.direct.result)) ||
+        (simple && KC.uniform_coloring(vs))
     if use_direct
         mapping = gc_make_permutation_dict(scratch.direct.result, graph_positions, vs)
         return T[KC.relabel_bulk_positions(item, mapping) for item in vs]

@@ -41,12 +41,7 @@ function compare_native_fields(
     ps = map(KC.position, args_nc)
     skip = KC.has_in(ps) && KC.has_out(ps)
     candidates = KC.wick_candidates(
-        destroys,
-        creates,
-        Val(E);
-        regularise,
-        _set_reg_to_zero,
-        skip_external_pair=skip,
+        destroys, creates, Val(E); regularise, _set_reg_to_zero, skip_external_pair=skip
     )
 
     matching_weights = Dict{NTuple{E,UInt8},Int}()
@@ -185,13 +180,22 @@ function compare_native_interaction(
         add!(total, stats)
         collect_corpus && append!(corpus, component_corpus)
         println(
-            "NATIVE_SEMANTICS\t", label, "\t", component,
-            "\tcalls=", stats.calls,
-            "\thybrid_oracle=", stats.hybrid_oracle_equal,
-            "\tnative_oracle=", stats.native_oracle_equal,
-            "\thybrid_topology=", stats.hybrid_topology_equal,
-            "\tnative_topology=", stats.native_topology_equal,
-            "\tterm_weights=", stats.term_weight_checks,
+            "NATIVE_SEMANTICS\t",
+            label,
+            "\t",
+            component,
+            "\tcalls=",
+            stats.calls,
+            "\thybrid_oracle=",
+            stats.hybrid_oracle_equal,
+            "\tnative_oracle=",
+            stats.native_oracle_equal,
+            "\thybrid_topology=",
+            stats.hybrid_topology_equal,
+            "\tnative_topology=",
+            stats.native_topology_equal,
+            "\tterm_weights=",
+            stats.term_weight_checks,
         )
     end
 
@@ -202,35 +206,60 @@ function compare_native_interaction(
     return total, corpus
 end
 
-function native_best_corpus_time(f; samples=5)
+function native_best_corpus_time(f, repetitions; samples=7)
     best = Inf
     for _ in 1:samples
-        elapsed = @elapsed f()
+        elapsed = @elapsed for _ in 1:repetitions
+            f()
+        end
         best = min(best, elapsed)
     end
-    return best
+    return best / repetitions
+end
+
+function native_hybrid_path_counts(
+    corpus, scratch::GCNativePhysicalCanonicalizationWorkspace
+)
+    direct = 0
+    for contractions in corpus
+        graph_positions = KC.canonicalization_positions(contractions)
+        direct_graph, vertex_colors, simple = gc_direct_graph!(
+            scratch.direct, contractions, graph_positions
+        )
+        GC.canonicalize_directed!(
+            scratch.direct.result, scratch.direct.search, direct_graph, vertex_colors
+        )
+        use_direct =
+            isone(GC.canonical_automorphism_order(scratch.direct.result)) ||
+            (simple && KC.uniform_coloring(contractions))
+        direct += Int(use_direct)
+    end
+    return direct, length(corpus) - direct
 end
 
 function benchmark_native_corpus(label, corpus, gadget_scratch, native_scratch)
     isempty(corpus) && return nothing
+    direct_paths, relation_paths = native_hybrid_path_counts(corpus, native_scratch)
     gadget_batch = () -> begin
         for contractions in corpus
             gc_physical_canonicalize!(gadget_scratch, contractions)
         end
         nothing
     end
-    native_batch = () -> begin
-        for contractions in corpus
-            gc_native_physical_canonicalize!(native_scratch, contractions)
+    native_batch =
+        () -> begin
+            for contractions in corpus
+                gc_native_physical_canonicalize!(native_scratch, contractions)
+            end
+            nothing
         end
-        nothing
-    end
-    hybrid_batch = () -> begin
-        for contractions in corpus
-            gc_native_hybrid_physical_canonicalize!(native_scratch, contractions)
+    hybrid_batch =
+        () -> begin
+            for contractions in corpus
+                gc_native_hybrid_physical_canonicalize!(native_scratch, contractions)
+            end
+            nothing
         end
-        nothing
-    end
     nauty_batch = () -> begin
         for contractions in corpus
             KC.canonicalize(contractions)
@@ -242,30 +271,54 @@ function benchmark_native_corpus(label, corpus, gadget_scratch, native_scratch)
     native_batch()
     hybrid_batch()
     nauty_batch()
-    gadget_time = native_best_corpus_time(gadget_batch)
-    native_time = native_best_corpus_time(native_batch)
-    hybrid_time = native_best_corpus_time(hybrid_batch)
-    nauty_time = native_best_corpus_time(nauty_batch)
+    timing_repetitions = max(1, cld(50_000, length(corpus)))
+    gadget_time = native_best_corpus_time(gadget_batch, timing_repetitions)
+    native_time = native_best_corpus_time(native_batch, timing_repetitions)
+    hybrid_time = native_best_corpus_time(hybrid_batch, timing_repetitions)
+    nauty_time = native_best_corpus_time(nauty_batch, timing_repetitions)
     gadget_bytes = @allocated gadget_batch()
     native_bytes = @allocated native_batch()
     hybrid_bytes = @allocated hybrid_batch()
     nauty_bytes = @allocated nauty_batch()
     println(
-        "NATIVE_CORPUS\t", label,
-        "\tcalls=", length(corpus),
-        "\tgadget_over_nauty=", round(gadget_time / nauty_time; digits=3),
-        "\tnative_over_nauty=", round(native_time / nauty_time; digits=3),
-        "\thybrid_over_nauty=", round(hybrid_time / nauty_time; digits=3),
-        "\tnative_over_gadget=", round(native_time / gadget_time; digits=3),
-        "\thybrid_over_gadget=", round(hybrid_time / gadget_time; digits=3),
-        "\tgadget_ms=", round(gadget_time * 1e3; digits=3),
-        "\tnative_ms=", round(native_time * 1e3; digits=3),
-        "\thybrid_ms=", round(hybrid_time * 1e3; digits=3),
-        "\tnauty_ms=", round(nauty_time * 1e3; digits=3),
-        "\tgadget_bytes=", gadget_bytes,
-        "\tnative_bytes=", native_bytes,
-        "\thybrid_bytes=", hybrid_bytes,
-        "\tnauty_bytes=", nauty_bytes,
+        "NATIVE_CORPUS\t",
+        label,
+        "\tcalls=",
+        length(corpus),
+        "\tdirect_paths=",
+        direct_paths,
+        "\trelation_paths=",
+        relation_paths,
+        "\ttiming_repetitions=",
+        timing_repetitions,
+        "\ttimed_calls=",
+        timing_repetitions * length(corpus),
+        "\tgadget_over_nauty=",
+        round(gadget_time / nauty_time; digits=3),
+        "\tnative_over_nauty=",
+        round(native_time / nauty_time; digits=3),
+        "\thybrid_over_nauty=",
+        round(hybrid_time / nauty_time; digits=3),
+        "\tnative_over_gadget=",
+        round(native_time / gadget_time; digits=3),
+        "\thybrid_over_gadget=",
+        round(hybrid_time / gadget_time; digits=3),
+        "\tgadget_ms=",
+        round(gadget_time * 1e3; digits=3),
+        "\tnative_ms=",
+        round(native_time * 1e3; digits=3),
+        "\thybrid_ms=",
+        round(hybrid_time * 1e3; digits=3),
+        "\tnauty_ms=",
+        round(nauty_time * 1e3; digits=3),
+        "\tgadget_bytes=",
+        gadget_bytes,
+        "\tnative_bytes=",
+        native_bytes,
+        "\thybrid_bytes=",
+        hybrid_bytes,
+        "\tnauty_bytes=",
+        nauty_bytes,
     )
     return nothing
 end
@@ -276,21 +329,27 @@ native_scratch = GCNativePhysicalCanonicalizationWorkspace(32)
 @qfields ϕnative::Boson
 c, q = ϕnative[Classical], ϕnative[Quantum]
 
-elastic = -(
-    0.5 * (c^2 + q^2) * bar(c) * bar(q) +
-    0.5 * c * q * (bar(c)^2 + bar(q)^2)
-)
+elastic = -(0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2))
 L_g = InteractionLagrangian(elastic, :g)
 
 loss =
-    0.5 * bar(c) * bar(q) *
-    (c(KC.Regularisation.Minus) * c(KC.Regularisation.Minus) +
-     q(KC.Regularisation.Minus) * q(KC.Regularisation.Minus)) -
-    0.5 * c(KC.Regularisation.Plus) * q(KC.Regularisation.Plus) *
+    0.5 *
+    bar(c) *
+    bar(q) *
+    (
+        c(KC.Regularisation.Minus) * c(KC.Regularisation.Minus) +
+        q(KC.Regularisation.Minus) * q(KC.Regularisation.Minus)
+    ) -
+    0.5 *
+    c(KC.Regularisation.Plus) *
+    q(KC.Regularisation.Plus) *
     (bar(c) * bar(c) + bar(q) * bar(q)) +
-    bar(c) * bar(q) *
-    (c(KC.Regularisation.Plus) * q(KC.Regularisation.Plus) +
-     c(KC.Regularisation.Minus) * q(KC.Regularisation.Minus))
+    bar(c) *
+    bar(q) *
+    (
+        c(KC.Regularisation.Plus) * q(KC.Regularisation.Plus) +
+        c(KC.Regularisation.Minus) * q(KC.Regularisation.Minus)
+    )
 L_γ = InteractionLagrangian(loss, :γ)
 
 @testset "native GC physical canonicalization on real Wick workloads" begin
@@ -300,8 +359,14 @@ L_γ = InteractionLagrangian(loss, :γ)
     )
     add!(totals, stats)
     stats, gamma2_corpus = compare_native_interaction(
-        "boson_gamma2", L_γ, 2, 5, native_scratch;
-        simplify=true, _set_reg_to_zero=true, collect_corpus=true,
+        "boson_gamma2",
+        L_γ,
+        2,
+        5,
+        native_scratch;
+        simplify=true,
+        _set_reg_to_zero=true,
+        collect_corpus=true,
     )
     add!(totals, stats)
     stats, g3_corpus = compare_native_interaction(
@@ -314,13 +379,11 @@ L_γ = InteractionLagrangian(loss, :γ)
     fermion_vertex = ψ₁ * ψ₂ * bar(ψ₁) * bar(ψ₂)
     L_f = InteractionLagrangian(fermion_vertex, :u)
     stats, f2_corpus = compare_native_interaction(
-        "fermion_quartic2", L_f, 2, 5, native_scratch;
-        simplify=false, collect_corpus=true,
+        "fermion_quartic2", L_f, 2, 5, native_scratch; simplify=false, collect_corpus=true
     )
     add!(totals, stats)
     stats, f3_corpus = compare_native_interaction(
-        "fermion_quartic3", L_f, 3, 7, native_scratch;
-        simplify=false, collect_corpus=true,
+        "fermion_quartic3", L_f, 3, 7, native_scratch; simplify=false, collect_corpus=true
     )
     add!(totals, stats)
 
@@ -328,22 +391,32 @@ L_γ = InteractionLagrangian(loss, :γ)
     derivative_vertex = ψ₁ * ∂xψ₂ * bar(ψ₁) * bar(∂xψ₂)
     L_p = InteractionLagrangian(derivative_vertex, :γ)
     stats, fp2_corpus = compare_native_interaction(
-        "fermion_derivative2", L_p, 2, 5, native_scratch;
-        simplify=false, collect_corpus=true,
+        "fermion_derivative2",
+        L_p,
+        2,
+        5,
+        native_scratch;
+        simplify=false,
+        collect_corpus=true,
     )
     add!(totals, stats)
 
-    @test totals.calls == 28_868
+    @test totals.calls == 14_347
     @test totals.hybrid_oracle_equal == totals.calls
     @test totals.native_oracle_equal == totals.calls
     @test totals.hybrid_topology_equal == totals.calls
     @test totals.native_topology_equal == totals.calls
     println(
-        "NATIVE_TOTAL\tcalls=", totals.calls,
-        "\thybrid_oracle=", totals.hybrid_oracle_equal,
-        "\tnative_oracle=", totals.native_oracle_equal,
-        "\thybrid_topology=", totals.hybrid_topology_equal,
-        "\tnative_topology=", totals.native_topology_equal,
+        "NATIVE_TOTAL\tcalls=",
+        totals.calls,
+        "\thybrid_oracle=",
+        totals.hybrid_oracle_equal,
+        "\tnative_oracle=",
+        totals.native_oracle_equal,
+        "\thybrid_topology=",
+        totals.hybrid_topology_equal,
+        "\tnative_topology=",
+        totals.native_topology_equal,
     )
 
     println()
@@ -353,5 +426,7 @@ L_γ = InteractionLagrangian(loss, :γ)
     benchmark_native_corpus("boson_g3", g3_corpus, gadget_scratch, native_scratch)
     benchmark_native_corpus("fermion_quartic2", f2_corpus, gadget_scratch, native_scratch)
     benchmark_native_corpus("fermion_quartic3", f3_corpus, gadget_scratch, native_scratch)
-    benchmark_native_corpus("fermion_derivative2", fp2_corpus, gadget_scratch, native_scratch)
+    benchmark_native_corpus(
+        "fermion_derivative2", fp2_corpus, gadget_scratch, native_scratch
+    )
 end

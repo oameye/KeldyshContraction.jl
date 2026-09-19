@@ -38,12 +38,7 @@ function compare_fields(
     ps = map(KC.position, args_nc)
     skip = KC.has_in(ps) && KC.has_out(ps)
     candidates = KC.wick_candidates(
-        destroys,
-        creates,
-        Val(E);
-        regularise,
-        _set_reg_to_zero,
-        skip_external_pair=skip,
+        destroys, creates, Val(E); regularise, _set_reg_to_zero, skip_external_pair=skip
     )
 
     matching_weights = Dict{NTuple{E,UInt8},Int}()
@@ -176,24 +171,39 @@ function compare_interaction(
         add!(total, stats)
         collect_corpus && append!(corpus, component_corpus)
         println(
-            "SEMANTICS\t", label, "\t", component,
-            "\tcalls=", stats.calls,
-            "\tdirect_equal=", stats.direct_equal,
-            "\toracle_equal=", stats.oracle_equal,
-            "\ttopology_equal=", stats.topology_equal,
-            "\tterm_weights=", stats.term_weight_checks,
+            "SEMANTICS\t",
+            label,
+            "\t",
+            component,
+            "\tcalls=",
+            stats.calls,
+            "\tdirect_equal=",
+            stats.direct_equal,
+            "\toracle_equal=",
+            stats.oracle_equal,
+            "\ttopology_equal=",
+            stats.topology_equal,
+            "\tterm_weights=",
+            stats.term_weight_checks,
         )
     end
 
     @test total.oracle_equal == total.calls
     @test total.topology_equal == total.calls
     println(
-        "SEMANTICS\t", label, "\ttotal",
-        "\tcalls=", total.calls,
-        "\tdirect_equal=", total.direct_equal,
-        "\toracle_equal=", total.oracle_equal,
-        "\ttopology_equal=", total.topology_equal,
-        "\tterm_weights=", total.term_weight_checks,
+        "SEMANTICS\t",
+        label,
+        "\ttotal",
+        "\tcalls=",
+        total.calls,
+        "\tdirect_equal=",
+        total.direct_equal,
+        "\toracle_equal=",
+        total.oracle_equal,
+        "\ttopology_equal=",
+        total.topology_equal,
+        "\tterm_weights=",
+        total.term_weight_checks,
     )
     return total, corpus
 end
@@ -229,14 +239,22 @@ function benchmark_corpus(label, corpus, scratch)
     gc_bytes = @allocated gc_batch()
     nauty_bytes = @allocated nauty_batch()
     println(
-        "CORPUS\t", label,
-        "\tcalls=", length(corpus),
-        "\ttime_ratio=", round(gc_time / nauty_time; digits=3),
-        "\talloc_ratio=", round(gc_bytes / nauty_bytes; digits=3),
-        "\tgc_ms=", round(gc_time * 1e3; digits=3),
-        "\tnauty_ms=", round(nauty_time * 1e3; digits=3),
-        "\tgc_bytes=", gc_bytes,
-        "\tnauty_bytes=", nauty_bytes,
+        "CORPUS\t",
+        label,
+        "\tcalls=",
+        length(corpus),
+        "\ttime_ratio=",
+        round(gc_time / nauty_time; digits=3),
+        "\talloc_ratio=",
+        round(gc_bytes / nauty_bytes; digits=3),
+        "\tgc_ms=",
+        round(gc_time * 1e3; digits=3),
+        "\tnauty_ms=",
+        round(nauty_time * 1e3; digits=3),
+        "\tgc_bytes=",
+        gc_bytes,
+        "\tnauty_bytes=",
+        nauty_bytes,
     )
     return nothing
 end
@@ -246,28 +264,40 @@ scratch = GCPhysicalCanonicalizationWorkspace(32)
 @qfields ϕwick::Boson
 c, q = ϕwick[Classical], ϕwick[Quantum]
 
-elastic = -(
-    0.5 * (c^2 + q^2) * bar(c) * bar(q) +
-    0.5 * c * q * (bar(c)^2 + bar(q)^2)
-)
+elastic = -(0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2))
 L_g = InteractionLagrangian(elastic, :g)
 
 loss =
-    0.5 * bar(c) * bar(q) *
-    (c(KC.Regularisation.Minus) * c(KC.Regularisation.Minus) +
-     q(KC.Regularisation.Minus) * q(KC.Regularisation.Minus)) -
-    0.5 * c(KC.Regularisation.Plus) * q(KC.Regularisation.Plus) *
+    0.5 *
+    bar(c) *
+    bar(q) *
+    (
+        c(KC.Regularisation.Minus) * c(KC.Regularisation.Minus) +
+        q(KC.Regularisation.Minus) * q(KC.Regularisation.Minus)
+    ) -
+    0.5 *
+    c(KC.Regularisation.Plus) *
+    q(KC.Regularisation.Plus) *
     (bar(c) * bar(c) + bar(q) * bar(q)) +
-    bar(c) * bar(q) *
-    (c(KC.Regularisation.Plus) * q(KC.Regularisation.Plus) +
-     c(KC.Regularisation.Minus) * q(KC.Regularisation.Minus))
+    bar(c) *
+    bar(q) *
+    (
+        c(KC.Regularisation.Plus) * q(KC.Regularisation.Plus) +
+        c(KC.Regularisation.Minus) * q(KC.Regularisation.Minus)
+    )
 L_γ = InteractionLagrangian(loss, :γ)
 
 @testset "GC physical canonicalization on real Wick workloads" begin
     _, g2_corpus = compare_interaction("boson_g2", L_g, 2, 5, scratch; collect_corpus=true)
     _, gamma2_corpus = compare_interaction(
-        "boson_gamma2", L_γ, 2, 5, scratch;
-        simplify=true, _set_reg_to_zero=true, collect_corpus=true,
+        "boson_gamma2",
+        L_γ,
+        2,
+        5,
+        scratch;
+        simplify=true,
+        _set_reg_to_zero=true,
+        collect_corpus=true,
     )
     _, g3_corpus = compare_interaction("boson_g3", L_g, 3, 7, scratch; collect_corpus=true)
 
@@ -276,17 +306,17 @@ L_γ = InteractionLagrangian(loss, :γ)
     fermion_vertex = ψ₁ * ψ₂ * bar(ψ₁) * bar(ψ₂)
     L_f = InteractionLagrangian(fermion_vertex, :u)
     _, f2_corpus = compare_interaction(
-        "fermion_quartic2", L_f, 2, 5, scratch; simplify=false, collect_corpus=true,
+        "fermion_quartic2", L_f, 2, 5, scratch; simplify=false, collect_corpus=true
     )
     _, f3_corpus = compare_interaction(
-        "fermion_quartic3", L_f, 3, 7, scratch; simplify=false, collect_corpus=true,
+        "fermion_quartic3", L_f, 3, 7, scratch; simplify=false, collect_corpus=true
     )
 
     ∂xψ₂ = partial(ψ₂, :x)
     derivative_vertex = ψ₁ * ∂xψ₂ * bar(ψ₁) * bar(∂xψ₂)
     L_p = InteractionLagrangian(derivative_vertex, :γ)
     _, fp2_corpus = compare_interaction(
-        "fermion_derivative2", L_p, 2, 5, scratch; simplify=false, collect_corpus=true,
+        "fermion_derivative2", L_p, 2, 5, scratch; simplify=false, collect_corpus=true
     )
 
     println()

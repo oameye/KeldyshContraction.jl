@@ -27,57 +27,77 @@ end
 
 benchmarks = Pair{String,Any}[]
 
-push!(benchmarks, "2-node" => [
-    KC.Contraction(ψc(KC.Out()), KC.bar(ψq)(KC.Bulk(1))),
-    KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(2))),
-    KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.In())),
-])
+push!(
+    benchmarks,
+    "2-node" => [
+        KC.Contraction(ψc(KC.Out()), KC.bar(ψq)(KC.Bulk(1))),
+        KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(2))),
+        KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.In())),
+    ],
+)
 
-push!(benchmarks, "3-node" => [
-    KC.Contraction(ψc(KC.Out()), KC.bar(ψq)(KC.Bulk(2))),
-    KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.Bulk(1))),
-    KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.Bulk(3))),
-    KC.Contraction(ψc(KC.Bulk(3)), KC.bar(ψq)(KC.Bulk(2))),
-    KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(3))),
-    KC.Contraction(ψc(KC.Bulk(3)), KC.bar(ψq)(KC.Bulk(1))),
-    KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.In())),
-])
+push!(
+    benchmarks,
+    "3-node" => [
+        KC.Contraction(ψc(KC.Out()), KC.bar(ψq)(KC.Bulk(2))),
+        KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.Bulk(1))),
+        KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.Bulk(3))),
+        KC.Contraction(ψc(KC.Bulk(3)), KC.bar(ψq)(KC.Bulk(2))),
+        KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(3))),
+        KC.Contraction(ψc(KC.Bulk(3)), KC.bar(ψq)(KC.Bulk(1))),
+        KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.In())),
+    ],
+)
 
-push!(benchmarks, "4-node" => [
-    KC.Contraction(ψc(KC.Out()), KC.bar(ψq)(KC.Bulk(3))),
-    KC.Contraction(ψc(KC.Bulk(3)), KC.bar(ψq)(KC.Bulk(1))),
-    KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(4))),
-    KC.Contraction(ψc(KC.Bulk(4)), KC.bar(ψq)(KC.Bulk(2))),
-    KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.Bulk(3))),
-    KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.In())),
-])
+push!(
+    benchmarks,
+    "4-node" => [
+        KC.Contraction(ψc(KC.Out()), KC.bar(ψq)(KC.Bulk(3))),
+        KC.Contraction(ψc(KC.Bulk(3)), KC.bar(ψq)(KC.Bulk(1))),
+        KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(4))),
+        KC.Contraction(ψc(KC.Bulk(4)), KC.bar(ψq)(KC.Bulk(2))),
+        KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.Bulk(3))),
+        KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.In())),
+    ],
+)
 
-push!(benchmarks, "5-node" => [
-    KC.Contraction(ψc(KC.Out()), KC.bar(ψq)(KC.Bulk(5))),
-    KC.Contraction(ψc(KC.Bulk(5)), KC.bar(ψq)(KC.Bulk(1))),
-    KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(2))),
-    KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.Bulk(3))),
-    KC.Contraction(ψc(KC.Bulk(3)), KC.bar(ψq)(KC.Bulk(4))),
-    KC.Contraction(ψc(KC.Bulk(4)), KC.bar(ψq)(KC.Bulk(5))),
-    KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(3))),
-    KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.Bulk(4))),
-    KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.In())),
-])
+push!(
+    benchmarks,
+    "5-node" => [
+        KC.Contraction(ψc(KC.Out()), KC.bar(ψq)(KC.Bulk(5))),
+        KC.Contraction(ψc(KC.Bulk(5)), KC.bar(ψq)(KC.Bulk(1))),
+        KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(2))),
+        KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.Bulk(3))),
+        KC.Contraction(ψc(KC.Bulk(3)), KC.bar(ψq)(KC.Bulk(4))),
+        KC.Contraction(ψc(KC.Bulk(4)), KC.bar(ψq)(KC.Bulk(5))),
+        KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(3))),
+        KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.Bulk(4))),
+        KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.In())),
+    ],
+)
 
-push!(benchmarks, "colored-2-node" => [
-    KC.Contraction(ψc(KC.Out()), KC.bar(ψq)(KC.Bulk(1))),
-    KC.Contraction(ηc(KC.Bulk(1)), KC.bar(ηq)(KC.Bulk(2))),
-    KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.In())),
-])
+push!(
+    benchmarks,
+    "colored-2-node" => [
+        KC.Contraction(ψc(KC.Out()), KC.bar(ψq)(KC.Bulk(1))),
+        KC.Contraction(ηc(KC.Bulk(1)), KC.bar(ηq)(KC.Bulk(2))),
+        KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.In())),
+    ],
+)
 
-push!(benchmarks, "parallel-2-node" => [
-    KC.Contraction(ψc(KC.Out()), KC.bar(ψq)(KC.Bulk(1))),
-    KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(2))),
-    KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(2))),
-    KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.In())),
-])
+push!(
+    benchmarks,
+    "parallel-2-node" => [
+        KC.Contraction(ψc(KC.Out()), KC.bar(ψq)(KC.Bulk(1))),
+        KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(2))),
+        KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(2))),
+        KC.Contraction(ψc(KC.Bulk(2)), KC.bar(ψq)(KC.In())),
+    ],
+)
 
-capacity = maximum(length(KC.canonicalization_positions(vs)) + length(vs) for (_, vs) in benchmarks)
+capacity = maximum(
+    length(KC.canonicalization_positions(vs)) + length(vs) for (_, vs) in benchmarks
+)
 gadget_scratch = GCPhysicalCanonicalizationWorkspace(capacity)
 native_scratch = GCNativePhysicalCanonicalizationWorkspace(capacity)
 
@@ -111,19 +131,33 @@ for (label, vs) in benchmarks
     nauty_alloc = allocation_per_call(nauty_call, repetitions)
 
     println(
-        "MICRO\t", label,
-        "\tgadget_over_nauty=", round(gadget_time / nauty_time; digits=3),
-        "\tnative_over_nauty=", round(native_time / nauty_time; digits=3),
-        "\thybrid_over_nauty=", round(hybrid_time / nauty_time; digits=3),
-        "\tnative_over_gadget=", round(native_time / gadget_time; digits=3),
-        "\thybrid_over_gadget=", round(hybrid_time / gadget_time; digits=3),
-        "\tgadget_us=", round(gadget_time * 1e6; digits=3),
-        "\tnative_us=", round(native_time * 1e6; digits=3),
-        "\thybrid_us=", round(hybrid_time * 1e6; digits=3),
-        "\tnauty_us=", round(nauty_time * 1e6; digits=3),
-        "\tgadget_B=", round(gadget_alloc; digits=1),
-        "\tnative_B=", round(native_alloc; digits=1),
-        "\thybrid_B=", round(hybrid_alloc; digits=1),
-        "\tnauty_B=", round(nauty_alloc; digits=1),
+        "MICRO\t",
+        label,
+        "\tgadget_over_nauty=",
+        round(gadget_time / nauty_time; digits=3),
+        "\tnative_over_nauty=",
+        round(native_time / nauty_time; digits=3),
+        "\thybrid_over_nauty=",
+        round(hybrid_time / nauty_time; digits=3),
+        "\tnative_over_gadget=",
+        round(native_time / gadget_time; digits=3),
+        "\thybrid_over_gadget=",
+        round(hybrid_time / gadget_time; digits=3),
+        "\tgadget_us=",
+        round(gadget_time * 1e6; digits=3),
+        "\tnative_us=",
+        round(native_time * 1e6; digits=3),
+        "\thybrid_us=",
+        round(hybrid_time * 1e6; digits=3),
+        "\tnauty_us=",
+        round(nauty_time * 1e6; digits=3),
+        "\tgadget_B=",
+        round(gadget_alloc; digits=1),
+        "\tnative_B=",
+        round(native_alloc; digits=1),
+        "\thybrid_B=",
+        round(hybrid_alloc; digits=1),
+        "\tnauty_B=",
+        round(nauty_alloc; digits=1),
     )
 end
