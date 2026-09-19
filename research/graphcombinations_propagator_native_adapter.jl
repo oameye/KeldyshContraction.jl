@@ -83,11 +83,12 @@ function gc_native_hybrid_physical_canonicalize!(
 
     use_direct = isone(GC.canonical_automorphism_order(scratch.direct.result)) ||
                  (simple && KC.uniform_coloring(vs))
-    witness = if use_direct
-        scratch.direct.result
-    else
-        gc_native_relation_witness!(scratch, vs, graph_positions, vertex_colors)
+    if use_direct
+        mapping = gc_make_permutation_dict(scratch.direct.result, graph_positions, vs)
+        return T[KC.relabel_bulk_positions(item, mapping) for item in vs]
     end
+
+    witness = gc_native_relation_witness!(scratch, vs, graph_positions, vertex_colors)
     mapping = gc_make_permutation_dict(witness, graph_positions, vs)
     return T[KC.relabel_bulk_positions(item, mapping) for item in vs]
 end
