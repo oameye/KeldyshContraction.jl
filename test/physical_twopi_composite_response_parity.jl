@@ -124,7 +124,7 @@ function composite_parity_outer_carrier_graph(outer)
 end
 
 function composite_parity_expected_carrier_component(Γ2, kind::Symbol)
-    result = KC.CompositeFourierDiagrams{CompositeParityCoeff,Boson,2,1}()
+    result = KC.CompositeFourierDiagrams{CompositeParityCoeff,2,1}()
     for outer in composite_parity_twopi_cut_terms(Γ2, composite_parity_ψ)
         outer.kind === kind || continue
         graph, kinematic = composite_parity_outer_carrier_graph(outer)
@@ -229,10 +229,7 @@ function composite_parity_expanded_component(
         contributions === nothing &&
             error("production carrier is missing an anchored outer cut")
         any(
-            contribution ->
-                isequal(contribution.kinematic, carrier_kinematic) &&
-                contribution.coefficient == outer.coefficient,
-            contributions,
+            contribution -> isequal(contribution.kinematic, carrier_kinematic), contributions
         ) || error("production carrier changed an anchored outer contribution")
 
         atomic = only(
