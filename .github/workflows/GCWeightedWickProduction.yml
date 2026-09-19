@@ -10,6 +10,10 @@ permissions:
   actions: write
   contents: read
 
+concurrency:
+  group: gc-weighted-wick-production-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   targeted:
     name: Weighted Wick exactness
