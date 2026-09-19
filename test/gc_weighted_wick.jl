@@ -1,5 +1,7 @@
 using KeldyshContraction, Test
+using Combinatorics: permutations
 import KeldyshContraction as KC
+const GraphComb = KC.GC
 
 function signed_pairing_weights(pairings)
     weights = Dict{Any,Int}()
@@ -10,6 +12,135 @@ function signed_pairing_weights(pairings)
     end
     filter!(pair -> !iszero(last(pair)), weights)
     return weights
+end
+
+function port_cells(indices, ncolors)
+    vertices = Vector{Int}(undef, length(indices))
+    colors = Vector{Int}(undef, length(indices))
+    for i in eachindex(indices)
+        index = indices[i]
+        vertices[i] = fld(index - 1, ncolors) + 1
+        colors[i] = mod(index - 1, ncolors) + 1
+    end
+    return vertices, colors
+end
+
+function port_counts(vertices, colors, nvertices, ncolors)
+    counts = zeros(Int, nvertices, ncolors)
+    for i in eachindex(vertices)
+        counts[vertices[i], colors[i]] += 1
+    end
+    return counts
+end
+
+function canonical_port_edge_key(problem, edges, nvertices, nsource_colors, ntarget_colors)
+    state = GraphComb.ColoredPortState(
+        edges,
+        zeros(Int, nvertices, nsource_colors),
+        zeros(Int, nvertices, ntarget_colors),
+    )
+    canonical, _ = GraphComb.canonical_relabeling(problem, state)
+    tuples = [
+        (edge.source, edge.target, edge.source_color, edge.target_color) for
+        edge in GraphComb.port_edges(canonical)
+    ]
+    sort!(tuples)
+    return Tuple(tuples)
+end
+
+function brute_fermion_port_weights(
+    problem,
+    source_vertices,
+    source_colors,
+    target_vertices,
+    target_colors,
+    nvertices,
+    nsource_colors,
+    ntarget_colors,
+)
+    E = length(source_vertices)
+    weights = Dict{Any,BigInt}()
+    for permutation in permutations(1:E)
+        edges = GraphComb.ColoredPortEdge[
+            GraphComb.ColoredPortEdge(
+                source_vertices[k],
+                target_vertices[permutation[k]],
+                source_colors[k],
+                target_colors[permutation[k]],
+            ) for k in 1:E
+        ]
+        key = canonical_port_edge_key(
+            problem, edges, nvertices, nsource_colors, ntarget_colors
+        )
+        weight = BigInt(KC.pairing_sign(Fermion, permutation))
+        weights[key] = get(weights, key, big(0)) + weight
+    end
+    filter!(pair -> !iszero(last(pair)), weights)
+    return weights
+end
+
+function gc_fermion_port_weights(
+    problem,
+    source_vertices,
+    source_colors,
+    target_vertices,
+    target_colors,
+    nvertices,
+    nsource_colors,
+    ntarget_colors,
+)
+    transport = KC._GCFermionPortTransport(
+        source_vertices, source_colors, target_vertices, target_colors
+    )
+    completions = GraphComb.generate_weighted(problem; transport)
+    weights = Dict{Any,BigInt}()
+    for completion in completions
+        key = canonical_port_edge_key(
+            problem, completion.edges, nvertices, nsource_colors, ntarget_colors
+        )
+        weights[key] = get(weights, key, big(0)) + completion.weight
+    end
+    filter!(pair -> !iszero(last(pair)), weights)
+    return weights
+end
+
+function certify_fermion_port_problem(
+    source_indices, target_indices, nvertices, nsource_colors, ntarget_colors
+)
+    source_vertices, source_colors = port_cells(source_indices, nsource_colors)
+    target_vertices, target_colors = port_cells(target_indices, ntarget_colors)
+    source_ports = port_counts(
+        source_vertices, source_colors, nvertices, nsource_colors
+    )
+    target_ports = port_counts(
+        target_vertices, target_colors, nvertices, ntarget_colors
+    )
+    compatibility = trues(nvertices, nsource_colors, nvertices, ntarget_colors)
+    problem = GraphComb.ColoredPortProblem(
+        ones(Int, nvertices), source_ports, target_ports, compatibility
+    )
+
+    expected = brute_fermion_port_weights(
+        problem,
+        source_vertices,
+        source_colors,
+        target_vertices,
+        target_colors,
+        nvertices,
+        nsource_colors,
+        ntarget_colors,
+    )
+    actual = gc_fermion_port_weights(
+        problem,
+        source_vertices,
+        source_colors,
+        target_vertices,
+        target_colors,
+        nvertices,
+        nsource_colors,
+        ntarget_colors,
+    )
+    return actual == expected
 end
 
 @testset "GraphCombinations weighted Wick backend" begin
@@ -91,5 +222,28 @@ end
         end
         @test saw_nontrivial_automorphism
         @test saw_merged_transition
+    end
+
+    @testset "exhaustive fermionic port orientation" begin
+        problem_count = 0
+        for E in 1:3
+            assignments = collect(Iterators.product(ntuple(_ -> 1:2, E)...))
+            for source_indices in assignments, target_indices in assignments
+                @test certify_fermion_port_problem(
+                    source_indices, target_indices, 2, 1, 1
+                )
+                problem_count += 1
+            end
+        end
+        for E in 1:2
+            assignments = collect(Iterators.product(ntuple(_ -> 1:4, E)...))
+            for source_indices in assignments, target_indices in assignments
+                @test certify_fermion_port_problem(
+                    source_indices, target_indices, 2, 2, 2
+                )
+                problem_count += 1
+            end
+        end
+        @test problem_count == 356
     end
 end
