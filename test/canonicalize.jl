@@ -162,11 +162,11 @@ c, q = ϕ[Classical], ϕ[Quantum]
         # The untyped position graph is a symmetric directed 2-cycle, while the two
         # physical propagators have different colors. The released-GC selector must
         # therefore reject the direct witness and execute the colored subdivision fallback.
-        forced1 = KeldyshContraction.Contraction[
+        forced1 = [
             KeldyshContraction.Contraction(c(Bulk(1)), bar(q)(Bulk(2))),
             KeldyshContraction.Contraction(χc(Bulk(2)), bar(χq)(Bulk(1))),
         ]
-        forced2 = KeldyshContraction.Contraction[
+        forced2 = [
             KeldyshContraction.Contraction(c(Bulk(2)), bar(q)(Bulk(1))),
             KeldyshContraction.Contraction(χc(Bulk(1)), bar(χq)(Bulk(2))),
         ]
