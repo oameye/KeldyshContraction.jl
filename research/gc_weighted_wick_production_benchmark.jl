@@ -14,7 +14,7 @@ struct GCSearchStats
     completed_states::Int
     transitions::Int
     merged_transitions::Int
-    internal_canonicalizations::Int
+    internal_canonicalization::Int
     filter_survivors::Int
 end
 
@@ -105,21 +105,25 @@ function gc_search_stats(
     )
 end
 
-Base.:+(a::DirectSearchStats, b::DirectSearchStats) = DirectSearchStats(
-    a.completed + b.completed,
-    a.raw_keys + b.raw_keys,
-    a.cancelled_keys + b.cancelled_keys,
-    a.filter_survivors + b.filter_survivors,
-)
+function Base.:+(a::DirectSearchStats, b::DirectSearchStats)
+    return DirectSearchStats(
+        a.completed + b.completed,
+        a.raw_keys + b.raw_keys,
+        a.cancelled_keys + b.cancelled_keys,
+        a.filter_survivors + b.filter_survivors,
+    )
+end
 
-Base.:+(a::GCSearchStats, b::GCSearchStats) = GCSearchStats(
-    a.quotient_states + b.quotient_states,
-    a.completed_states + b.completed_states,
-    a.transitions + b.transitions,
-    a.merged_transitions + b.merged_transitions,
-    a.internal_canonicalizations + b.internal_canonicalizations,
-    a.filter_survivors + b.filter_survivors,
-)
+function Base.:+(a::GCSearchStats, b::GCSearchStats)
+    return GCSearchStats(
+        a.quotient_states + b.quotient_states,
+        a.completed_states + b.completed_states,
+        a.transitions + b.transitions,
+        a.merged_transitions + b.merged_transitions,
+        a.internal_canonicalization + b.internal_canonicalization,
+        a.filter_survivors + b.filter_survivors,
+    )
+end
 
 function direct_run(
     terms, ::Val{E}, ::Val{E2}; regularise=true, _set_reg_to_zero=true, simplify=true
@@ -128,12 +132,7 @@ function direct_run(
     for args_nc in terms
         output += length(
             KC._wick_contraction(
-                args_nc,
-                Val(E),
-                Val(E2);
-                regularise,
-                _set_reg_to_zero,
-                simplify,
+                args_nc, Val(E), Val(E2); regularise, _set_reg_to_zero, simplify
             ),
         )
     end
@@ -147,12 +146,7 @@ function gc_run(
     for args_nc in terms
         output += length(
             KC._gc_wick_contraction(
-                args_nc,
-                Val(E),
-                Val(E2);
-                regularise,
-                _set_reg_to_zero,
-                simplify,
+                args_nc, Val(E), Val(E2); regularise, _set_reg_to_zero, simplify
             ),
         )
     end
@@ -187,20 +181,10 @@ function certify_terms(
 ) where {E,E2}
     for args_nc in terms
         direct = KC._wick_contraction(
-            args_nc,
-            Val(E),
-            Val(E2);
-            regularise,
-            _set_reg_to_zero,
-            simplify,
+            args_nc, Val(E), Val(E2); regularise, _set_reg_to_zero, simplify
         )
         gc = KC._gc_wick_contraction(
-            args_nc,
-            Val(E),
-            Val(E2);
-            regularise,
-            _set_reg_to_zero,
-            simplify,
+            args_nc, Val(E), Val(E2); regularise, _set_reg_to_zero, simplify
         )
         semantic_weights(gc) == semantic_weights(direct) ||
             error("GC/direct semantic mismatch in production crossover benchmark")
@@ -256,7 +240,7 @@ function benchmark_workload(name, ::Type{S}, L, ::Val{O}, ::Val{E}; samples=3) w
                 gc_stats.completed_states,
                 gc_stats.transitions,
                 gc_stats.merged_transitions,
-                gc_stats.internal_canonicalizations,
+                gc_stats.internal_canonicalization,
                 gc_stats.filter_survivors,
                 direct_outputs,
                 direct_time,
@@ -278,10 +262,7 @@ end
 
 @qfields bench_ϕ::Boson
 c, q = bench_ϕ[Classical], bench_ϕ[Quantum]
-boson_vertex = -(
-    0.5 * (c^2 + q^2) * bar(c) * bar(q) +
-    0.5 * c * q * (bar(c)^2 + bar(q)^2)
-)
+boson_vertex = -(0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2))
 L_b = InteractionLagrangian(boson_vertex, :g)
 
 @qfields bench_ψ::Fermion
