@@ -16,8 +16,9 @@ end
     @testset "bosonic exactness" begin
         @qfields gcwick_ϕ::Boson
         c, q = gcwick_ϕ[Classical], gcwick_ϕ[Quantum]
-        elastic =
-            -(0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2))
+        elastic = -(
+            0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
+        )
 
         expression = c(KC.Out()) * bar(q)(KC.In()) * elastic
         for term in KC.terms(expression)
