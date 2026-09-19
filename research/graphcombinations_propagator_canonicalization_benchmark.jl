@@ -95,6 +95,14 @@ push!(
     ],
 )
 
+push!(
+    benchmarks,
+    "forced-relation-fallback" => [
+        KC.Contraction(ψc(KC.Bulk(1)), KC.bar(ψq)(KC.Bulk(2))),
+        KC.Contraction(ηc(KC.Bulk(2)), KC.bar(ηq)(KC.Bulk(1))),
+    ],
+)
+
 capacity = maximum(
     length(KC.canonicalization_positions(vs)) + length(vs) for (_, vs) in benchmarks
 )
@@ -112,6 +120,34 @@ for (label, vs) in benchmarks
     native_call = () -> gc_native_physical_canonicalize!(native_scratch, vs)
     hybrid_call = () -> gc_native_hybrid_physical_canonicalize!(native_scratch, vs)
     nauty_call = () -> KC.canonicalize(vs)
+
+    if label == "forced-relation-fallback"
+        graph_positions = KC.canonicalization_positions(vs)
+        direct_graph, vertex_colors, simple =
+            gc_direct_graph!(native_scratch.direct, vs, graph_positions)
+        GC.canonicalize_directed!(
+            native_scratch.direct.result,
+            native_scratch.direct.search,
+            direct_graph,
+            vertex_colors,
+        )
+        direct_order = GC.canonical_automorphism_order(native_scratch.direct.result)
+        @assert direct_order > 1
+        @assert simple
+        @assert !KC.uniform_coloring(vs)
+
+        nauty_output = nauty_call()
+        @assert KC.canonicalize(gadget_call()) == nauty_output
+        @assert KC.canonicalize(native_call()) == nauty_output
+        @assert KC.canonicalize(hybrid_call()) == nauty_output
+        println(
+            "FALLBACK\tforced-relation-fallback\tdirect_order=",
+            direct_order,
+            "\tsimple=",
+            simple,
+            "\tuniform=false\trelation_fallback=true",
+        )
+    end
 
     for _ in 1:100
         gadget_call()
