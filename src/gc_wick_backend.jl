@@ -36,9 +36,12 @@ function _gc_matching_positions(args_nc::Vector{Field{S}}) where {S<:Statistics}
     return result
 end
 
-function _gc_vertex_index(positions::Vector{Position}, field::Field{S}) where {S<:Statistics}
+function _gc_vertex_index(
+    positions::Vector{Position}, field::Field{S}
+) where {S<:Statistics}
     index = findfirst(p -> isequal(p, position(field)), positions)
-    isnothing(index) && error("Internal error: Wick field position is missing from port vertices.")
+    isnothing(index) &&
+        error("Internal error: Wick field position is missing from port vertices.")
     return index
 end
 
@@ -134,10 +137,12 @@ function GC.initial_port_weight(
     source_cells = Vector{NTuple{2,Int}}(undef, length(transport.source_vertices))
     target_cells = Vector{NTuple{2,Int}}(undef, length(transport.target_vertices))
     @inbounds for i in eachindex(source_cells)
-        source_cells[i] =
-            (witness.vertex_map[transport.source_vertices[i]], transport.source_colors[i])
-        target_cells[i] =
-            (witness.vertex_map[transport.target_vertices[i]], transport.target_colors[i])
+        source_cells[i] = (
+            witness.vertex_map[transport.source_vertices[i]], transport.source_colors[i]
+        )
+        target_cells[i] = (
+            witness.vertex_map[transport.target_vertices[i]], transport.target_colors[i]
+        )
     end
     return big(_gc_order_sign(source_cells) * _gc_order_sign(target_cells))
 end
@@ -165,7 +170,7 @@ function GC.transport_port_weight(
     isnothing(source_rank) && error("Internal error: selected Wick source slot is missing.")
     target_ranks = findall(==(target_cell), parent_targets)
     length(target_ranks) == multiplicity || error(
-        "Internal error: GC target multiplicity disagrees with the concrete fermionic slot count."
+        "Internal error: GC target multiplicity disagrees with the concrete fermionic slot count.",
     )
 
     residual_sources = copy(parent_sources)
@@ -231,7 +236,7 @@ function _gc_build_wick_problem(
             compatibility[cell...] = true
             if haskey(lookup, cell)
                 isequal(lookup[cell], contraction) || error(
-                    "Internal error: colored-port encoding merged distinct Wick contractions."
+                    "Internal error: colored-port encoding merged distinct Wick contractions.",
                 )
             else
                 lookup[cell] = contraction
@@ -262,7 +267,7 @@ function _gc_completion_contractions(
         edge = completion.edges[i]
         key = (edge.source, edge.source_color, edge.target, edge.target_color)
         haskey(lookup, key) || error(
-            "Internal error: canonical GC Wick edge has no physical contraction representative."
+            "Internal error: canonical GC Wick edge has no physical contraction representative.",
         )
         contractions[i] = lookup[key]
     end
