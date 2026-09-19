@@ -44,8 +44,7 @@ end
     # Exact component Dyson identities for D = D0 + D0 Ω D.
     @test DR == -im * λ - im * λ * ΩR * DR
     @test DA == -im * λbar - im * λbar * ΩA * DA
-    @test DK ==
-        -2 * γ - im * λ * ΩR * DK - 2 * γ * ΩA * DA - im * λ * ΩK * DA
+    @test DK == -2 * γ - im * λ * ΩR * DK - 2 * γ * ΩA * DA - im * λ * ΩK * DA
     @test response.keldysh == DK + 2 * γ
 
     # The linear-in-Ω coefficients are the frozen C3 native response table. Since Dreg has no
@@ -123,10 +122,7 @@ end
         @test !isempty(component)
         for (term, _) in component
             @test KC.external_wigner_momentum(term) == KC.MomentumVariable(1)
-            @test all(
-                line -> line.family === response_kinetics_ψ,
-                KC.kinetic_lines(term),
-            )
+            @test all(line -> line.family === response_kinetics_ψ, KC.kinetic_lines(term))
         end
     end
 
@@ -134,10 +130,7 @@ end
         @test !isempty(component)
         for (term, _) in component
             @test length(KC.kinetic_lines(term)) == 1
-            @test all(
-                line -> line.family === response_kinetics_ψ,
-                KC.kinetic_lines(term),
-            )
+            @test all(line -> line.family === response_kinetics_ψ, KC.kinetic_lines(term))
             @test KC.response_component(term) in (
                 KC.PropagatorType.Keldysh,
                 KC.PropagatorType.Retarded,
@@ -153,7 +146,8 @@ end
     @test KC.gradient_order(collision) == Val(0)
     @test !isempty(KC.collision_offset(collision))
     @test !isempty(KC.collision_distribution_coefficient(collision))
-    @test KC.response_physical_family(KC.response_polarization(collision)) === response_kinetics_ψ
+    @test KC.response_physical_family(KC.response_polarization(collision)) ===
+        response_kinetics_ψ
 
     # No quasiparticle shell is assumed for the exact resummed pair continuum.
     @test_throws ArgumentError spectral_dispersive_collision(collision)
