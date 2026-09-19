@@ -108,6 +108,12 @@ function CompositeFourierDiagrams{C,E1,E2}() where {C<:Number,E1,E2}
     return CompositeFourierDiagrams{C,E1,E2}(Dict{K,Vector{FourierContribution{C}}}())
 end
 
+function SmallCollections.default(
+    ::Type{CompositeFourierDiagrams{C,E1,E2}}
+) where {C<:Number,E1,E2}
+    return CompositeFourierDiagrams{C,E1,E2}()
+end
+
 Base.length(collection::CompositeFourierDiagrams) = length(collection.diagrams)
 Base.isempty(collection::CompositeFourierDiagrams) = isempty(collection.diagrams)
 Base.iszero(collection::CompositeFourierDiagrams) = isempty(collection.diagrams)
