@@ -75,16 +75,18 @@ end
         saw_nontrivial_automorphism = false
         saw_merged_transition = false
         for in_out in products
-            term = in_out * L(1).lagrangian * L(2).lagrangian
-            direct = KC._wick_contraction(
-                term.args_nc, Val(5), Val(1); regularise=false, simplify=false
-            )
-            gc, stats = KC._gc_wick_contraction_with_stats(
-                term.args_nc, Val(5), Val(1); regularise=false, simplify=false
-            )
-            @test signed_pairing_weights(gc) == signed_pairing_weights(direct)
-            saw_nontrivial_automorphism |= stats.automorphisms > 1
-            saw_merged_transition |= stats.merged_transitions > 0
+            expression = in_out * L(1).lagrangian * L(2).lagrangian
+            for term in KC.terms(expression)
+                direct = KC._wick_contraction(
+                    term.args_nc, Val(5), Val(1); regularise=false, simplify=false
+                )
+                gc, stats = KC._gc_wick_contraction_with_stats(
+                    term.args_nc, Val(5), Val(1); regularise=false, simplify=false
+                )
+                @test signed_pairing_weights(gc) == signed_pairing_weights(direct)
+                saw_nontrivial_automorphism |= stats.automorphisms > 1
+                saw_merged_transition |= stats.merged_transitions > 0
+            end
         end
         @test saw_nontrivial_automorphism
         @test saw_merged_transition
