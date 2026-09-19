@@ -35,9 +35,7 @@ end
 
 function canonical_port_edge_key(problem, edges, nvertices, nsource_colors, ntarget_colors)
     state = GraphComb.ColoredPortState(
-        edges,
-        zeros(Int, nvertices, nsource_colors),
-        zeros(Int, nvertices, ntarget_colors),
+        edges, zeros(Int, nvertices, nsource_colors), zeros(Int, nvertices, ntarget_colors)
     )
     canonical, _ = GraphComb.canonical_relabeling(problem, state)
     tuples = [
@@ -109,12 +107,8 @@ function certify_fermion_port_problem(
 )
     source_vertices, source_colors = port_cells(source_indices, nsource_colors)
     target_vertices, target_colors = port_cells(target_indices, ntarget_colors)
-    source_ports = port_counts(
-        source_vertices, source_colors, nvertices, nsource_colors
-    )
-    target_ports = port_counts(
-        target_vertices, target_colors, nvertices, ntarget_colors
-    )
+    source_ports = port_counts(source_vertices, source_colors, nvertices, nsource_colors)
+    target_ports = port_counts(target_vertices, target_colors, nvertices, ntarget_colors)
     compatibility = trues(nvertices, nsource_colors, nvertices, ntarget_colors)
     problem = GraphComb.ColoredPortProblem(
         ones(Int, nvertices), source_ports, target_ports, compatibility
@@ -229,18 +223,14 @@ end
         for E in 1:3
             assignments = collect(Iterators.product(ntuple(_ -> 1:2, E)...))
             for source_indices in assignments, target_indices in assignments
-                @test certify_fermion_port_problem(
-                    source_indices, target_indices, 2, 1, 1
-                )
+                @test certify_fermion_port_problem(source_indices, target_indices, 2, 1, 1)
                 problem_count += 1
             end
         end
         for E in 1:2
             assignments = collect(Iterators.product(ntuple(_ -> 1:4, E)...))
             for source_indices in assignments, target_indices in assignments
-                @test certify_fermion_port_problem(
-                    source_indices, target_indices, 2, 2, 2
-                )
+                @test certify_fermion_port_problem(source_indices, target_indices, 2, 2, 2)
                 problem_count += 1
             end
         end
