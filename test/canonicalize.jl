@@ -1,6 +1,7 @@
 using KeldyshContraction, Test
 import GraphCombinations as GC
-using KeldyshContraction: canonicalize,
+using KeldyshContraction:
+    canonicalize,
     Bulk,
     In,
     Out,
@@ -172,14 +173,17 @@ c, q = ϕ[Classical], ϕ[Quantum]
         ]
         scratch = PhysicalCanonicalizationWorkspace(4)
         graph_positions = canonicalization_positions(forced1)
-        direct_graph, vertex_colors, simple =
-            _gc_direct_position_graph!(scratch, forced1, graph_positions)
-        GC.canonicalize_directed!(scratch.result, scratch.search, direct_graph, vertex_colors)
+        direct_graph, vertex_colors, simple = _gc_direct_position_graph!(
+            scratch, forced1, graph_positions
+        )
+        GC.canonicalize_directed!(
+            scratch.result, scratch.search, direct_graph, vertex_colors
+        )
         @test GC.canonical_automorphism_order(scratch.result) == 2
         @test simple
         @test !uniform_coloring(forced1)
         @test _gc_physical_witness!(scratch, forced1, graph_positions)
-        @test scratch.result.num_vertices == 4
+        @test scratch.active_size == 4
 
         canonical_forced1 = canonicalize(forced1, scratch)
         canonical_forced2 = canonicalize(forced2, scratch)
