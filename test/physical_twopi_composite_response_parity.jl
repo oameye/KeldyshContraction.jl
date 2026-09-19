@@ -229,7 +229,8 @@ function composite_parity_expanded_component(
         contributions === nothing &&
             error("production carrier is missing an anchored outer cut")
         any(
-            contribution -> isequal(contribution.kinematic, carrier_kinematic), contributions
+            contribution -> isequal(contribution.kinematic, carrier_kinematic),
+            contributions,
         ) || error("production carrier changed an anchored outer contribution")
 
         atomic = only(
