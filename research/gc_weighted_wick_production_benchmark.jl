@@ -15,6 +15,7 @@ struct GCSearchStats
     transitions::Int
     merged_transitions::Int
     internal_canonicalization::Int
+    pruned_transitions::Int
     filter_survivors::Int
 end
 
@@ -89,11 +90,12 @@ function gc_search_stats(
     problem, lookup, transport = KC._gc_build_wick_problem(
         args_nc, Val(E); regularise, _set_reg_to_zero
     )
-    completions, stats = KC.GC.generate_weighted_with_stats(problem; transport)
+    policy = KC._gc_causal_policy(lookup)
+    completions, stats = KC.GC.generate_weighted_with_stats(problem; policy, transport)
     survivors = 0
     for completion in completions
         contractions = KC._gc_completion_contractions(completion, lookup, Val(E))
-        KC.passes_wick_filters(contractions) && (survivors += 1)
+        KC.is_connected(contractions) && (survivors += 1)
     end
     return GCSearchStats(
         sum(stats.layer_states),
@@ -101,6 +103,7 @@ function gc_search_stats(
         stats.transitions,
         stats.merged_transitions,
         stats.canonicalization_calls,
+        stats.pruned_transitions,
         survivors,
     )
 end
@@ -121,6 +124,7 @@ function Base.:+(a::GCSearchStats, b::GCSearchStats)
         a.transitions + b.transitions,
         a.merged_transitions + b.merged_transitions,
         a.internal_canonicalization + b.internal_canonicalization,
+        a.pruned_transitions + b.pruned_transitions,
         a.filter_survivors + b.filter_survivors,
     )
 end
@@ -161,7 +165,11 @@ function gc_build_all(terms, ::Val{E}; regularise=true, _set_reg_to_zero=true) w
 end
 
 function gc_generate_all(prepared)
-    return [KC.GC.generate_weighted(first(x); transport=x[3]) for x in prepared]
+    return [
+        KC.GC.generate_weighted(
+            first(x); policy=KC._gc_causal_policy(x[2]), transport=x[3]
+        ) for x in prepared
+    ]
 end
 
 function best_measurement(f, samples::Int)
@@ -201,7 +209,7 @@ function benchmark_workload(name, ::Type{S}, L, ::Val{O}, ::Val{E}; samples=3) w
     certify_terms(terms, Val(E), Val(E2); kwargs...)
 
     direct_stats = DirectSearchStats(0, 0, 0, 0)
-    gc_stats = GCSearchStats(0, 0, 0, 0, 0, 0)
+    gc_stats = GCSearchStats(0, 0, 0, 0, 0, 0, 0)
     for args_nc in terms
         direct_stats += direct_search_stats(
             args_nc, Val(E); regularise, _set_reg_to_zero=true
@@ -241,6 +249,7 @@ function benchmark_workload(name, ::Type{S}, L, ::Val{O}, ::Val{E}; samples=3) w
                 gc_stats.transitions,
                 gc_stats.merged_transitions,
                 gc_stats.internal_canonicalization,
+                gc_stats.pruned_transitions,
                 gc_stats.filter_survivors,
                 direct_outputs,
                 direct_time,
@@ -262,7 +271,9 @@ end
 
 @qfields bench_ϕ::Boson
 c, q = bench_ϕ[Classical], bench_ϕ[Quantum]
-boson_vertex = -(0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2))
+boson_vertex = -(
+    0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
+)
 L_b = InteractionLagrangian(boson_vertex, :g)
 
 @qfields bench_ψ::Fermion
@@ -273,9 +284,9 @@ L_f = InteractionLagrangian(fermion_vertex, :u)
 println(
     "workload\tstatistics\torder\tedges\tterms\tdirect_completed\tdirect_raw_keys\t",
     "direct_cancelled_keys\tdirect_physical_canon\tgc_quotient_states\tgc_completed_states\t",
-    "gc_transitions\tgc_merged_transitions\tgc_internal_canon\tgc_physical_canon\toutputs\t",
-    "direct_s\tgc_s\ttime_ratio\tdirect_bytes\tgc_bytes\talloc_ratio\tgc_build_s\t",
-    "gc_build_bytes\tgc_generate_s\tgc_generate_bytes",
+    "gc_transitions\tgc_merged_transitions\tgc_internal_canon\tgc_pruned_transitions\t",
+    "gc_physical_canon\toutputs\tdirect_s\tgc_s\ttime_ratio\tdirect_bytes\tgc_bytes\t",
+    "alloc_ratio\tgc_build_s\tgc_build_bytes\tgc_generate_s\tgc_generate_bytes",
 )
 
 benchmark_workload("boson_g2", Boson, L_b, Val(2), Val(5); samples=3)
