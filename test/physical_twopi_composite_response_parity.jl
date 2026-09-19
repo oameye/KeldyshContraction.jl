@@ -124,7 +124,7 @@ function composite_parity_outer_carrier_graph(outer)
 end
 
 function composite_parity_expected_carrier_component(Γ2, kind::Symbol)
-    result = KC.CompositeFourierDiagrams{CompositeParityCoeff,2,1}()
+    result = KC.CompositeFourierDiagrams{CompositeParityCoeff,Boson,2,1}()
     for outer in composite_parity_twopi_cut_terms(Γ2, composite_parity_ψ)
         outer.kind === kind || continue
         graph, kinematic = composite_parity_outer_carrier_graph(outer)
@@ -214,7 +214,9 @@ function composite_parity_anchored_fourier_sunset(outer, contractions)
     return amputated, kinematic
 end
 
-function composite_parity_expanded_component(Γ2, carrier, component_kind::Symbol, sector::Symbol)
+function composite_parity_expanded_component(
+    Γ2, carrier, component_kind::Symbol, sector::Symbol
+)
     result = KC.FourierDiagrams{CompositeParityCoeff,Boson,3,1}()
     outer_terms = composite_parity_twopi_cut_terms(Γ2, composite_parity_ψ)
     bubble_terms = composite_parity_twopi_cut_terms(Γ2, composite_parity_χ)
@@ -224,11 +226,12 @@ function composite_parity_expanded_component(Γ2, carrier, component_kind::Symbo
         outer.kind === component_kind || continue
         carrier_graph, carrier_kinematic = composite_parity_outer_carrier_graph(outer)
         contributions = get(carrier_component.diagrams, carrier_graph, nothing)
-        contributions === nothing && error("production carrier is missing an anchored outer cut")
+        contributions === nothing &&
+            error("production carrier is missing an anchored outer cut")
         any(
             contribution ->
                 isequal(contribution.kinematic, carrier_kinematic) &&
-                    contribution.coefficient == outer.coefficient,
+                contribution.coefficient == outer.coefficient,
             contributions,
         ) || error("production carrier changed an anchored outer contribution")
 
@@ -245,9 +248,8 @@ function composite_parity_expanded_component(Γ2, carrier, component_kind::Symbo
         response_kind === composite_parity_line_kind(hs) ||
             error("production carrier changed the response Keldysh component")
 
-        for (Ωkind, response_coefficient) in composite_parity_response_terms(
-            response_kind, sector
-        )
+        for (Ωkind, response_coefficient) in
+            composite_parity_response_terms(response_kind, sector)
             for bubble in bubble_terms
                 bubble.kind === Ωkind || continue
                 contractions = KC.Contraction{Boson}[atomic]
@@ -374,7 +376,9 @@ end
     gamma2_direct = composite_parity_canonical_collision(direct[:γ2])
     @test isempty(KC.shifted_frequency_terms(gamma2_expanded))
     @test isempty(KC.shifted_frequency_terms(gamma2_direct))
-    @test all(==(composite_parity_ψ), composite_parity_statistical_families(gamma2_expanded))
+    @test all(
+        ==(composite_parity_ψ), composite_parity_statistical_families(gamma2_expanded)
+    )
 
     expanded_reduction = KC.reduce_canonical_trotter_frequencies(gamma2_expanded)
     direct_reduction = KC.reduce_canonical_trotter_frequencies(gamma2_direct)
