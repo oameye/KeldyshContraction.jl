@@ -41,7 +41,7 @@ end
             bar(c)(KC.In()) *
             L_b(1).lagrangian *
             L_b(2).lagrangian *
-            L_b(3).lagrangian
+            L_b(3).lagrangian,
         ),
     )
     direct_b3 = KC._wick_contraction(
