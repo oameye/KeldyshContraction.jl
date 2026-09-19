@@ -15,6 +15,7 @@ on:
       - .github/workflows/GCPropagatorCanonicalizationResearch.yml
 
 permissions:
+  actions: write
   contents: read
 
 jobs:
