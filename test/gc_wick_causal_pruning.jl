@@ -63,7 +63,9 @@ end
     ψ₁, ψ₂ = causal_ψ[One], causal_ψ[Two]
     fermion_vertex = ψ₁ * ψ₂ * bar(ψ₁) * bar(ψ₂)
     L_f = InteractionLagrangian(fermion_vertex)
-    products = KC.propagator_external_products(Fermion, KC.propagator_fields(L_f, nothing)...)
+    products = KC.propagator_external_products(
+        Fermion, KC.propagator_fields(L_f, nothing)...
+    )
 
     fermion_pruned = 0
     for in_out in products
