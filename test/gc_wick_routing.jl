@@ -39,7 +39,9 @@ end
     ψ₁, ψ₂ = routing_ψ[One], routing_ψ[Two]
     fermion_vertex = ψ₁ * ψ₂ * bar(ψ₁) * bar(ψ₂)
     L_f = InteractionLagrangian(fermion_vertex)
-    products = KC.propagator_external_products(Fermion, KC.propagator_fields(L_f, nothing)...)
+    products = KC.propagator_external_products(
+        Fermion, KC.propagator_fields(L_f, nothing)...
+    )
     fermion_term2 = first(KC.terms(first(products) * L_f(1).lagrangian * L_f(2).lagrangian))
     direct_f2 = KC._wick_contraction(
         fermion_term2.args_nc, Val(5), Val(1); regularise=false, simplify=false
@@ -50,7 +52,9 @@ end
     @test routing_pairing_weights(routed_f2) == routing_pairing_weights(direct_f2)
 
     fermion_term3 = first(
-        KC.terms(first(products) * L_f(1).lagrangian * L_f(2).lagrangian * L_f(3).lagrangian)
+        KC.terms(
+            first(products) * L_f(1).lagrangian * L_f(2).lagrangian * L_f(3).lagrangian
+        ),
     )
     direct_f3 = KC._wick_contraction(
         fermion_term3.args_nc, Val(7), Val(3); regularise=false, simplify=false
