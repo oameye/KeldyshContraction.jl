@@ -1,4 +1,5 @@
 using KeldyshContraction
+using Combinatorics
 import KeldyshContraction as KC
 
 struct DirectSearchStats
@@ -15,7 +16,6 @@ struct GCSearchStats
     merged_transitions::Int
     internal_canonicalizations::Int
     filter_survivors::Int
-    final_outputs::Int
 end
 
 function semantic_weights(pairings)
@@ -31,9 +31,9 @@ end
 
 function workload_terms(in_out, L, ::Val{O}) where {O}
     result = Vector{typeof(copy(in_out.args_nc))}()
-    for coefficients in KC.Combinatorics.multiexponents(length(L.lagrangian), O)
+    for coefficients in Combinatorics.multiexponents(length(L.lagrangian), O)
         idxs = KC.indices_from_counts(coefficients)
-        mult = KC.Combinatorics.multinomial(coefficients...)
+        mult = Combinatorics.multinomial(coefficients...)
         qmul = mult * prod(L(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
         push!(result, copy((in_out * qmul).args_nc))
     end
@@ -102,7 +102,6 @@ function gc_search_stats(
         stats.merged_transitions,
         stats.canonicalization_calls,
         survivors,
-        length(completions),
     )
 end
 
@@ -120,7 +119,6 @@ Base.:+(a::GCSearchStats, b::GCSearchStats) = GCSearchStats(
     a.merged_transitions + b.merged_transitions,
     a.internal_canonicalizations + b.internal_canonicalizations,
     a.filter_survivors + b.filter_survivors,
-    a.final_outputs + b.final_outputs,
 )
 
 function direct_run(
@@ -172,22 +170,6 @@ function gc_generate_all(prepared)
     return [KC.GC.generate_weighted(first(x); transport=x[3]) for x in prepared]
 end
 
-function gc_postprocess_all(generated, prepared, ::Val{E}; simplify=true) where {E}
-    outputs = 0
-    for i in eachindex(generated, prepared)
-        lookup = prepared[i][2]
-        canonical_scratch = KC.physical_canonicalization_workspace(Val(E))
-        weights = Dict{KC.FixedVector{E,KC.Contraction{eltype(first(values(lookup))).parameters[1]}},BigInt}()
-        # The concrete dictionary type above is intentionally avoided below; this stage is timed
-        # through the complete GC path instead. Keep this function as a placeholder for future
-        # decomposition without coupling the benchmark to KC's internal parametric representation.
-        outputs += length(generated[i])
-        canonical_scratch
-        weights
-    end
-    return outputs
-end
-
 function best_measurement(f, samples::Int)
     f()
     best_time = Inf
@@ -235,7 +217,7 @@ function benchmark_workload(name, ::Type{S}, L, ::Val{O}, ::Val{E}; samples=3) w
     certify_terms(terms, Val(E), Val(E2); kwargs...)
 
     direct_stats = DirectSearchStats(0, 0, 0, 0)
-    gc_stats = GCSearchStats(0, 0, 0, 0, 0, 0, 0)
+    gc_stats = GCSearchStats(0, 0, 0, 0, 0, 0)
     for args_nc in terms
         direct_stats += direct_search_stats(
             args_nc, Val(E); regularise, _set_reg_to_zero=true
