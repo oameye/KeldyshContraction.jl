@@ -180,9 +180,12 @@ end
 const GC_PHYSICAL_MAX_VERTICES = 64
 
 """Reusable released-GC scratch for physical propagator canonicalization."""
-struct PhysicalCanonicalizationWorkspace
+mutable struct PhysicalCanonicalizationWorkspace
     search::GC.DirectedCanonicalizationWorkspace
     result::GC.DirectedCanonicalizationBuffer
+    search_cache::Vector{GC.DirectedCanonicalizationWorkspace}
+    result_cache::Vector{GC.DirectedCanonicalizationBuffer}
+    cache_sizes::Vector{Int}
     multiplicities::Vector{Int}
     capacity::Int
 end
@@ -194,9 +197,14 @@ function PhysicalCanonicalizationWorkspace(capacity::Integer)
             "physical canonicalization workspace capacity must lie in 1:$GC_PHYSICAL_MAX_VERTICES",
         ),
     )
+    search = GC.DirectedCanonicalizationWorkspace(n)
+    result = GC.DirectedCanonicalizationBuffer(n)
     return PhysicalCanonicalizationWorkspace(
-        GC.DirectedCanonicalizationWorkspace(n),
-        GC.DirectedCanonicalizationBuffer(n),
+        search,
+        result,
+        GC.DirectedCanonicalizationWorkspace[search],
+        GC.DirectedCanonicalizationBuffer[result],
+        Int[n],
         zeros(Int, n * n),
         n,
     )
@@ -206,6 +214,30 @@ end
     return PhysicalCanonicalizationWorkspace(
         max(1, min(GC_PHYSICAL_MAX_VERTICES, 3 * Int(E)))
     )
+end
+
+@inline function _activate_gc_workspace!(
+    scratch::PhysicalCanonicalizationWorkspace, n::Int
+)
+    1 <= n <= scratch.capacity || throw(
+        DimensionMismatch("physical canonicalization graph exceeds workspace capacity")
+    )
+    @inbounds for i in eachindex(scratch.cache_sizes)
+        if scratch.cache_sizes[i] == n
+            scratch.search = scratch.search_cache[i]
+            scratch.result = scratch.result_cache[i]
+            return nothing
+        end
+    end
+
+    search = GC.DirectedCanonicalizationWorkspace(n)
+    result = GC.DirectedCanonicalizationBuffer(n)
+    push!(scratch.search_cache, search)
+    push!(scratch.result_cache, result)
+    push!(scratch.cache_sizes, n)
+    scratch.search = search
+    scratch.result = result
+    return nothing
 end
 
 @inline function _clear_physical_multiplicities!(
@@ -221,6 +253,7 @@ function _gc_direct_position_graph!(
     scratch::PhysicalCanonicalizationWorkspace, vs, graph_positions::Vector{Position}
 )
     n = length(graph_positions)
+    _activate_gc_workspace!(scratch, n)
     _clear_physical_multiplicities!(scratch, n)
     simple = true
     @inbounds for item in vs
@@ -240,6 +273,7 @@ function _gc_colored_subdivision_graph!(
     colors = propagator_colors(vs)
     npositions = length(graph_positions)
     n = npositions + length(vs)
+    _activate_gc_workspace!(scratch, n)
     _clear_physical_multiplicities!(scratch, n)
 
     labels = Vector{Int}(undef, n)
