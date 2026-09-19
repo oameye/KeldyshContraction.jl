@@ -13,7 +13,7 @@ function routing_pairing_weights(pairings)
 end
 
 @testset "GraphCombinations Wick production crossover" begin
-    @test KC._use_gc_wick(Boson, Val(5))
+    @test !KC._use_gc_wick(Boson, Val(5))
     @test KC._use_gc_wick(Boson, Val(7))
     @test !KC._use_gc_wick(Fermion, Val(5))
     @test KC._use_gc_wick(Fermion, Val(7))
@@ -24,16 +24,33 @@ end
         0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
     )
     L_b = InteractionLagrangian(boson_vertex)
-    boson_term = first(
+    boson_term2 = first(
         KC.terms(c(KC.Out()) * bar(c)(KC.In()) * L_b(1).lagrangian * L_b(2).lagrangian)
     )
-    direct_b = KC._wick_contraction(
-        boson_term.args_nc, Val(5), Val(1); regularise=true, simplify=true
+    direct_b2 = KC._wick_contraction(
+        boson_term2.args_nc, Val(5), Val(1); regularise=true, simplify=true
     )
-    routed_b = KC._production_wick_pairings(
-        boson_term.args_nc, Val(5), Val(1); regularise=true, simplify=true
+    routed_b2 = KC._production_wick_pairings(
+        boson_term2.args_nc, Val(5), Val(1); regularise=true, simplify=true
     )
-    @test routing_pairing_weights(routed_b) == routing_pairing_weights(direct_b)
+    @test routing_pairing_weights(routed_b2) == routing_pairing_weights(direct_b2)
+
+    boson_term3 = first(
+        KC.terms(
+            c(KC.Out()) *
+            bar(c)(KC.In()) *
+            L_b(1).lagrangian *
+            L_b(2).lagrangian *
+            L_b(3).lagrangian
+        ),
+    )
+    direct_b3 = KC._wick_contraction(
+        boson_term3.args_nc, Val(7), Val(3); regularise=true, simplify=true
+    )
+    routed_b3 = KC._production_wick_pairings(
+        boson_term3.args_nc, Val(7), Val(3); regularise=true, simplify=true
+    )
+    @test routing_pairing_weights(routed_b3) == routing_pairing_weights(direct_b3)
 
     @qfields routing_ψ::Fermion
     ψ₁, ψ₂ = routing_ψ[One], routing_ψ[Two]
