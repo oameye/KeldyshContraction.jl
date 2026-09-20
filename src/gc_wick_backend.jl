@@ -259,7 +259,7 @@ function _gc_completion_contractions(
     completion::GC.WeightedPortCompletion,
     lookup::Dict{NTuple{4,Int},Contraction{S}},
     ::Val{E},
-) where {S<:Statistics,E}
+)::Vector{Contraction{S}} where {S<:Statistics,E}
     length(completion.edges) == E ||
         error("Internal error: GraphCombinations returned an incomplete Wick matching.")
     contractions = Vector{Contraction{S}}(undef, E)
