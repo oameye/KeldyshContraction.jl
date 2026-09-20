@@ -92,9 +92,7 @@ function _onepi_wick_contraction(
         mult = Combinatorics.multinomial(coefficients...)
         qmul = mult * prod(L(i).lagrangian.arguments[j] for (i, j) in pairs(idxs))
         term = prefactor * in_out * qmul
-        _onepi_wick_contraction!(
-            diagrams, term; regularise, simplify, _set_reg_to_zero
-        )
+        _onepi_wick_contraction!(diagrams, term; regularise, simplify, _set_reg_to_zero)
     end
     return diagrams
 end
