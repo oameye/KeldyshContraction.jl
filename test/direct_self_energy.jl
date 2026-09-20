@@ -42,12 +42,8 @@ end
         )
     L_loss = InteractionLagrangian(loss, :γ)
     reference_loss = SelfEnergy(
-        DressedPropagator(
-            L_loss, Val(2), Val(5); preserve_regularisation=true
-        )
+        DressedPropagator(L_loss, Val(2), Val(5); preserve_regularisation=true)
     )
-    direct_loss = SelfEnergy(
-        L_loss, Val(2), Val(5); preserve_regularisation=true
-    )
+    direct_loss = SelfEnergy(L_loss, Val(2), Val(5); preserve_regularisation=true)
     test_direct_self_energy_equal(direct_loss, reference_loss)
 end
