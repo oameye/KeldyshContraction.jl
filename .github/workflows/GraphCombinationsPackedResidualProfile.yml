@@ -1,0 +1,81 @@
+name: GraphCombinations packed residual profile
+
+on:
+  pull_request:
+    branches:
+      - research-gc-nauty-loop-corpus
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+    paths:
+      - '.github/workflows/GraphCombinationsPackedResidualProfile.yml'
+      - 'research/graphcombinations_packed_residual_profile.jl'
+      - 'research/graphcombinations_loop_corpus_certification.jl'
+      - 'src/**'
+      - 'Project.toml'
+  workflow_dispatch:
+
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - name: Route KC loop adapter through packed candidate
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/collision_momentum_graphcombinations.jl")
+          text = path.read_text()
+          replacements = (
+              (
+                  "workspace::GC.DirectedCanonicalizationWorkspace\n        buffer::GC.DirectedCanonicalizationBuffer\n        graph::GC.DirectedGCGraphBuffer",
+                  "workspace::GC.PackedDirectedCanonicalizationWorkspace\n        buffer::GC.DirectedCanonicalizationBuffer\n        graph::GC.DirectedGCGraphBuffer",
+              ),
+              (
+                  "GC.DirectedCanonicalizationWorkspace(capacity),",
+                  "GC.PackedDirectedCanonicalizationWorkspace(capacity),",
+              ),
+              (
+                  "GC.canonicalize_directed!(\n            storage.buffer, storage.workspace, storage.graph, storage.labels\n        )",
+                  "GC.canonicalize_directed_packed!(\n            storage.buffer, storage.workspace, storage.graph, storage.labels\n        )",
+              ),
+          )
+          for old, new in replacements:
+              if text.count(old) < 1:
+                  raise SystemExit(f"packed adapter patch target not found: {old!r}")
+              text = text.replace(old, new, 1)
+          path.write_text(text)
+          PY
+      - name: Instantiate baseline environment
+        run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - name: Pin exact GraphCombinations packed candidate
+        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="f8ff5edf0f7b1cec29a4046d19b1d48e597c2859")'
+      - name: Add benchmark harness
+        run: julia --project=. -e 'using Pkg; Pkg.add("BenchmarkTools")'
+      - name: Extract corpus definitions without running corpus
+        shell: bash
+        run: |
+          awk '/^cases = corpus_cases\(\)/ { exit } { print }' \
+            research/graphcombinations_loop_corpus_certification.jl > /tmp/kc_corpus_defs.jl
+      - name: Profile residual packed cost
+        shell: bash
+        env:
+          KC_CORPUS_DEFS: /tmp/kc_corpus_defs.jl
+        run: |
+          set -o pipefail
+          julia --project=. research/graphcombinations_packed_residual_profile.jl 2>&1 | tee packed-residual-profile.log
+      - name: Preserve profile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphcombinations-packed-residual-profile
+          path: packed-residual-profile.log

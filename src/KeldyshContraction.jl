@@ -15,6 +15,7 @@ using TermInterface: TermInterface
 using SymbolicUtils: SymbolicUtils, @syms, arguments
 using Combinatorics: Combinatorics
 using SmallCollections: SmallCollections, FixedVector
+import GraphCombinations as GC
 using NautyGraphs: NautyGraphs
 using Graphs: Graphs
 using DispatchDoctor: @stable
@@ -49,10 +50,14 @@ const ComplexRationals = Complex{Rational{Int64}}
 
     include("wick_contractions.jl")
     include("filters.jl")
+    include("gc_wick_backend.jl")
     include("self_energy.jl")
 
     # Statistics extensions
     include("fermionic_keldysh.jl")
+    include("gc_wick_causal_pruning.jl")
+    include("gc_self_energy_pruning.jl")
+    include("gc_wick_routing.jl")
     include("fermionic_propagator_dispatch.jl")
 
     include("propagator_algebra/fourier_transform.jl")
@@ -75,6 +80,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("collision_frequency_assembly.jl")
     include("collision_momentum_quotient.jl")
     include("collision_momentum_projective.jl")
+    include("collision_momentum_graphcombinations.jl")
+    include("collision_momentum_workspace.jl")
     include("collision_kernel_api.jl")
 
     # Legacy private routing used only by the pre-Fourier collision reducer.
@@ -138,6 +145,7 @@ const ComplexRationals = Complex{Rational{Int64}}
         spectral_dispersive_collision,
         reduce_frequency_collision,
         occupation_reduced_expression,
+        LoopMomentumQuotientWorkspace,
         quotient_loop_momenta,
         CollisionKernel,
         collision_kernel
