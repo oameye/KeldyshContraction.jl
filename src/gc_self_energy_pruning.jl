@@ -143,7 +143,67 @@ end
     return reachable
 end
 
-function _gc_onepi_reachable(
+@inline function _gc_single_residual_bulk_edge(
+    policy::_GCOnePIPruningPolicy, state::GC.ColoredPortState
+)::Tuple{Int,Int}
+    sources = GC.source_port_counts(state)
+    targets = GC.target_port_counts(state)
+    source_vertex = 0
+    source_color = 0
+    target_vertex = 0
+    target_color = 0
+
+    for vertex in axes(sources, 1), color in axes(sources, 2)
+        iszero(sources[vertex, color]) && continue
+        source_vertex = vertex
+        source_color = color
+        break
+    end
+    iszero(source_vertex) && return 0, 0
+
+    for vertex in axes(targets, 1), color in axes(targets, 2)
+        iszero(targets[vertex, color]) && continue
+        target_vertex = vertex
+        target_color = color
+        break
+    end
+    iszero(target_vertex) && return 0, 0
+
+    _gc_bulk_allowed(policy, source_vertex, source_color, target_vertex, target_color) ||
+        return 0, 0
+    return source_vertex, target_vertex
+end
+
+function _gc_onepi_reachable_single_residual(
+    policy::_GCOnePIPruningPolicy,
+    state::GC.ColoredPortState,
+    skipped_bulk_edge::Int,
+    source::Int,
+    possible_source::Int,
+    possible_target::Int,
+)::UInt128
+    edges = GC.port_edges(state)
+    reachable = _gc_port_vertex_bit(source)
+
+    previous = zero(UInt128)
+    while reachable != previous
+        previous = reachable
+
+        bulk_index = 0
+        for edge in edges
+            _gc_bulk_cell(policy, edge) || continue
+            bulk_index += 1
+            bulk_index == skipped_bulk_edge && continue
+            reachable = _gc_connect_onepi_vertices(reachable, edge.source, edge.target)
+        end
+
+        iszero(possible_source) ||
+            (reachable = _gc_connect_onepi_vertices(reachable, possible_source, possible_target))
+    end
+    return reachable
+end
+
+function _gc_onepi_reachable_generic(
     policy::_GCOnePIPruningPolicy,
     state::GC.ColoredPortState,
     skipped_bulk_edge::Int,
@@ -188,13 +248,20 @@ end
 
 function (policy::_GCOnePIPruningPolicy)(state::GC.ColoredPortState)::Bool
     edges = GC.port_edges(state)
-    policy.total_edges - length(edges) > policy.max_residual_pairs && return true
+    residual_pairs = policy.total_edges - length(edges)
+    residual_pairs > policy.max_residual_pairs && return true
 
     bulk_count = 0
     for edge in edges
         _gc_bulk_cell(policy, edge) && (bulk_count += 1)
     end
     bulk_count < 3 && return true
+
+    possible_source, possible_target = if residual_pairs <= 1
+        _gc_single_residual_bulk_edge(policy, state)
+    else
+        (0, 0)
+    end
 
     for skipped in 1:bulk_count
         bulk_index = 0
@@ -210,7 +277,13 @@ function (policy::_GCOnePIPruningPolicy)(state::GC.ColoredPortState)::Bool
         end
 
         iszero(source) && continue
-        reachable = _gc_onepi_reachable(policy, state, skipped, source)
+        reachable = if residual_pairs <= 1
+            _gc_onepi_reachable_single_residual(
+                policy, state, skipped, source, possible_source, possible_target
+            )
+        else
+            _gc_onepi_reachable_generic(policy, state, skipped, source)
+        end
         bulk_index = 0
         for edge in edges
             _gc_bulk_cell(policy, edge) || continue
