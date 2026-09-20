@@ -107,11 +107,18 @@ function _gc_wick_contraction_with_stats(
     _set_reg_to_zero=false,
     simplify=false,
     causal_pruning=true,
+    onepi_pruning=false,
 ) where {S<:Union{Boson,Fermion},E,E2}
     problem, lookup, transport = _gc_build_wick_problem(
         args_nc, Val(E); regularise, _set_reg_to_zero
     )
-    policy = causal_pruning ? _gc_causal_policy(lookup) : GC.AcceptAllPortPolicy()
+    causal_policy = causal_pruning ? _gc_causal_policy(lookup) : GC.AcceptAllPortPolicy()
+    policy = if onepi_pruning
+        onepi_policy = _gc_onepi_policy(lookup, Val(E))
+        causal_pruning ? _GCAndPortPolicy(causal_policy, onepi_policy) : onepi_policy
+    else
+        causal_policy
+    end
     completions, stats = GC.generate_weighted_with_stats(problem; policy, transport)
 
     canonical_scratch = physical_canonicalization_workspace(Val(E))
@@ -124,6 +131,7 @@ function _gc_wick_contraction_with_stats(
         else
             passes_wick_filters(contractions) || continue
         end
+        onepi_pruning && !is_irreducible(contractions) && continue
 
         final_contractions, simplification_sign = if simplify
             advanced_to_retarded(contractions, 1)
