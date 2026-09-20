@@ -117,7 +117,9 @@ function _gc_wick_contraction_with_stats(
     canonical_scratch = physical_canonicalization_workspace(Val(E))
     canonical_weights = Dict{FixedVector{E,Contraction{S}},BigInt}()
     for completion in completions
-        contractions = _gc_completion_contractions(completion, lookup, Val(E))::Vector{Contraction{S}}
+        contractions = _gc_completion_contractions(
+            completion, lookup, Val(E)
+        )::Vector{Contraction{S}}
         if causal_pruning
             is_connected(contractions) || continue
         else
