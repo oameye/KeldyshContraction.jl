@@ -52,12 +52,7 @@ function _direct_self_energy(
 
     components = map(external_products) do external_product
         diagrams = _onepi_wick_contraction(
-            external_product,
-            L,
-            order,
-            edges;
-            simplify,
-            _set_reg_to_zero=set_reg_to_zero,
+            external_product, L, order, edges; simplify, _set_reg_to_zero=set_reg_to_zero
         )
         filter_nonzero!(diagrams)
         return diagrams
