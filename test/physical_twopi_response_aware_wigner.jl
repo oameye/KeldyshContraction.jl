@@ -28,28 +28,21 @@ import KeldyshContraction as KC
     linear = KC._two_body_loss_regular_response_linear(g, γ, ΩK, ΩR, ΩA)
     sectors = KC._two_body_loss_regular_response_linear_sectors(ΩK, ΩR, ΩA)
     reconstructed = (
-        keldysh=
-            g^2 * sectors.g2.keldysh +
-            g * γ * sectors.gγ.keldysh +
-            γ^2 * sectors.γ2.keldysh,
-        retarded=
-            g^2 * sectors.g2.retarded +
-            g * γ * sectors.gγ.retarded +
-            γ^2 * sectors.γ2.retarded,
-        advanced=
-            g^2 * sectors.g2.advanced +
-            g * γ * sectors.gγ.advanced +
-            γ^2 * sectors.γ2.advanced,
+        keldysh=g^2 * sectors.g2.keldysh +
+                g * γ * sectors.gγ.keldysh +
+                γ^2 * sectors.γ2.keldysh,
+        retarded=g^2 * sectors.g2.retarded +
+                 g * γ * sectors.gγ.retarded +
+                 γ^2 * sectors.γ2.retarded,
+        advanced=g^2 * sectors.g2.advanced +
+                 g * γ * sectors.gγ.advanced +
+                 γ^2 * sectors.γ2.advanced,
     )
     @test linear == reconstructed
 
-    @test sectors.g2 == (keldysh=-ΩK, retarded=-ΩR, advanced=-ΩA)
-    @test sectors.gγ == (
-        keldysh=2im * (ΩR + ΩA), retarded=2im * ΩR, advanced=-2im * ΩA
-    )
-    @test sectors.γ2 == (
-        keldysh=-ΩK + 2ΩR - 2ΩA, retarded=ΩR, advanced=ΩA
-    )
+    @test sectors.g2 == (keldysh=(-ΩK), retarded=(-ΩR), advanced=(-ΩA))
+    @test sectors.gγ == (keldysh=2im * (ΩR + ΩA), retarded=2im * ΩR, advanced=-2im * ΩA)
+    @test sectors.γ2 == (keldysh=(-ΩK + 2ΩR - 2ΩA), retarded=ΩR, advanced=ΩA)
 end
 
 @qfields response_wigner_ψ::Boson response_wigner_χ::Boson
@@ -72,11 +65,7 @@ end
 @testset "response-aware homogeneous Wigner carrier" begin
     Γ2 = @inferred TwoPIEffectiveAction(response_wigner_hs_interaction(), Val(2), Val(3))
     fourier = @inferred KC.twopi_composite_fourier_self_energy(
-        Γ2,
-        response_wigner_ψ,
-        response_wigner_χ;
-        coherent_parameter=:g,
-        loss_parameter=:γ,
+        Γ2, response_wigner_ψ, response_wigner_χ; coherent_parameter=:g, loss_parameter=:γ
     )
     wigner = @inferred KC.response_aware_wigner_transform(fourier)
 
