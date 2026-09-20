@@ -168,11 +168,7 @@ function _gc_onepi_reachable(
                     for target_color in axes(targets, 2)
                         iszero(targets[target_vertex, target_color]) && continue
                         _gc_bulk_allowed(
-                            policy,
-                            source_vertex,
-                            source_color,
-                            target_vertex,
-                            target_color,
+                            policy, source_vertex, source_color, target_vertex, target_color
                         ) || continue
                         reachable = _gc_connect_onepi_vertices(
                             reachable, source_vertex, target_vertex
