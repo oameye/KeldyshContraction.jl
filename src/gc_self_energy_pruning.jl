@@ -197,8 +197,11 @@ function _gc_onepi_reachable_single_residual(
             reachable = _gc_connect_onepi_vertices(reachable, edge.source, edge.target)
         end
 
-        iszero(possible_source) ||
-            (reachable = _gc_connect_onepi_vertices(reachable, possible_source, possible_target))
+        iszero(possible_source) || (
+            reachable = _gc_connect_onepi_vertices(
+                reachable, possible_source, possible_target
+            )
+        )
     end
     return reachable
 end
