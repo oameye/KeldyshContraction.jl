@@ -58,6 +58,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("gc_wick_causal_pruning.jl")
     include("gc_self_energy_pruning.jl")
     include("gc_wick_routing.jl")
+    include("direct_self_energy.jl")
     include("fermionic_propagator_dispatch.jl")
 
     include("propagator_algebra/fourier_transform.jl")
