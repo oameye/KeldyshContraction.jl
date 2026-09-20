@@ -30,13 +30,19 @@ wick_contraction
 topologies
 ```
 
-`SelfEnergy` amputates the external lines and retains the irreducible two-point diagrams,
+`SelfEnergy` amputates the external lines and retains the irreducible two-point diagrams. If the dressed propagator is already needed, extract the self-energy from it directly,
 
 ```julia
 Σ = SelfEnergy(G)
 ```
 
-with the same retarded/advanced/Keldysh accessors.
+If only the self-energy is required, construct it directly from the interaction,
+
+```julia
+Σ = SelfEnergy(L, Val(2), Val(5))
+```
+
+which avoids materializing reducible dressed-propagator diagrams. Both routes produce the same fixed-order self-energy and support the same `target`, `simplify`, and regularisation choices used by `DressedPropagator`.
 
 ```@docs
 SelfEnergy
