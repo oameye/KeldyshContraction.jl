@@ -11,14 +11,16 @@ struct OnePIAggregateStats
     outputs::Int
 end
 
-Base.:+(a::OnePIAggregateStats, b::OnePIAggregateStats) = OnePIAggregateStats(
-    a.layer_states + b.layer_states,
-    a.completed_states + b.completed_states,
-    a.transitions + b.transitions,
-    a.canonicalization_calls + b.canonicalization_calls,
-    a.pruned_transitions + b.pruned_transitions,
-    a.outputs + b.outputs,
-)
+function Base.:+(a::OnePIAggregateStats, b::OnePIAggregateStats)
+    return OnePIAggregateStats(
+        a.layer_states + b.layer_states,
+        a.completed_states + b.completed_states,
+        a.transitions + b.transitions,
+        a.canonicalization_calls + b.canonicalization_calls,
+        a.pruned_transitions + b.pruned_transitions,
+        a.outputs + b.outputs,
+    )
+end
 
 function onepi_semantic_weights(pairings)
     weights = Dict{Any,Int}()
@@ -87,12 +89,7 @@ function run_onepi_corpus(
     aggregate = OnePIAggregateStats(0, 0, 0, 0, 0, 0)
     for args_nc in terms
         pairings, stats = onepi_pairings(
-            args_nc,
-            Val(E),
-            Val(E2);
-            onepi_pruning,
-            regularise,
-            simplify,
+            args_nc, Val(E), Val(E2); onepi_pruning, regularise, simplify
         )
         outputs = onepi_pruning ? pairings : baseline_onepi(pairings)
         aggregate += aggregate_onepi_stats(stats, length(outputs))
@@ -103,21 +100,11 @@ end
 function certify_onepi_corpus(terms, ::Val{E}, ::Val{E2}; regularise, simplify) where {E,E2}
     for args_nc in terms
         ordinary, _ = onepi_pairings(
-            args_nc,
-            Val(E),
-            Val(E2);
-            onepi_pruning=false,
-            regularise,
-            simplify,
+            args_nc, Val(E), Val(E2); onepi_pruning=false, regularise, simplify
         )
         expected = baseline_onepi(ordinary)
         direct, _ = onepi_pairings(
-            args_nc,
-            Val(E),
-            Val(E2);
-            onepi_pruning=true,
-            regularise,
-            simplify,
+            args_nc, Val(E), Val(E2); onepi_pruning=true, regularise, simplify
         )
         onepi_semantic_weights(direct) == onepi_semantic_weights(expected) ||
             error("direct 1PI semantic mismatch")
@@ -146,26 +133,19 @@ function benchmark_onepi_workload(
 
     certify_onepi_corpus(terms, Val(E), Val(E2); regularise, simplify)
 
-    baseline = () -> run_onepi_corpus(
-        terms,
-        Val(E),
-        Val(E2);
-        onepi_pruning=false,
-        regularise,
-        simplify,
-    )
-    direct = () -> run_onepi_corpus(
-        terms,
-        Val(E),
-        Val(E2);
-        onepi_pruning=true,
-        regularise,
-        simplify,
-    )
+    baseline =
+        () -> run_onepi_corpus(
+            terms, Val(E), Val(E2); onepi_pruning=false, regularise, simplify
+        )
+    direct =
+        () -> run_onepi_corpus(
+            terms, Val(E), Val(E2); onepi_pruning=true, regularise, simplify
+        )
 
     baseline_stats = baseline()
     direct_stats = direct()
-    baseline_stats.outputs == direct_stats.outputs || error("direct 1PI output-count mismatch")
+    baseline_stats.outputs == direct_stats.outputs ||
+        error("direct 1PI output-count mismatch")
 
     baseline_time, baseline_bytes = best_onepi_measurement(baseline; samples)
     direct_time, direct_bytes = best_onepi_measurement(direct; samples)
@@ -249,8 +229,12 @@ benchmark_onepi_workload("boson_g3", Boson, L_b, Val(3), Val(7); samples=2)
 benchmark_onepi_workload("boson_g4", Boson, L_b, Val(4), Val(9); samples=1)
 benchmark_onepi_workload("boson_gamma2", Boson, L_γ, Val(2), Val(5); samples=3)
 benchmark_onepi_workload("boson_gamma3", Boson, L_γ, Val(3), Val(7); samples=2)
-benchmark_onepi_workload("fermion_u2", Fermion, L_f, Val(2), Val(5); simplify=false, samples=3)
-benchmark_onepi_workload("fermion_u3", Fermion, L_f, Val(3), Val(7); simplify=false, samples=2)
+benchmark_onepi_workload(
+    "fermion_u2", Fermion, L_f, Val(2), Val(5); simplify=false, samples=3
+)
+benchmark_onepi_workload(
+    "fermion_u3", Fermion, L_f, Val(3), Val(7); simplify=false, samples=2
+)
 benchmark_onepi_workload(
     "fermion_derivative2", Fermion, L_p, Val(2), Val(5); simplify=false, samples=3
 )
