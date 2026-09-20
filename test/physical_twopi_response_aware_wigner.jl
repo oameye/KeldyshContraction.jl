@@ -12,7 +12,10 @@ import KeldyshContraction as KC
 
     λ = g - im * γ
     λbar = g + im * γ
-    D0 = Complex{Rational{Int}}[-2γ -im * λ; -im * λbar 0]
+    D0 = Complex{Rational{Int}}[
+        -2γ (-im * λ)
+        (-im * λbar) 0
+    ]
     Ω = Complex{Rational{Int}}[0 ΩA; ΩR ΩK]
     Dreg = Complex{Rational{Int}}[
         response.keldysh response.retarded
