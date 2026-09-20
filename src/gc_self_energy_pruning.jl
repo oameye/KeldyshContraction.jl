@@ -79,6 +79,15 @@ struct _GCOnePIPruningPolicy
     bulk_allowed::Array{Bool,4}
 end
 
+struct _GCAndPortPolicy{A,B}
+    first::A
+    second::B
+end
+
+@inline function (policy::_GCAndPortPolicy)(state::GC.ColoredPortState)::Bool
+    return policy.first(state) && policy.second(state)
+end
+
 function _gc_onepi_policy(lookup::Dict{NTuple{4,Int},Contraction{S}}) where {S<:Statistics}
     isempty(lookup) && return _GCOnePIPruningPolicy(falses(0, 0, 0, 0))
 
