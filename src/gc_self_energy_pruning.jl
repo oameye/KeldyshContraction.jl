@@ -61,10 +61,15 @@ all admissible continuations represented by `possible_edges`.
 contractions. This can only make the test weaker. Therefore a `true` result is continuation-safe:
 if an existing edge is still a bridge after every possible residual bulk connection is added,
 no physical completion can become one-particle irreducible.
+
+The existing `SelfEnergy` oracle treats fewer than two bulk contractions as irreducible, so the
+partial-state predicate deliberately does not reject until at least two bulk edges are realized.
 """
 function _has_unhealable_bulk_bridge(
     existing_edges::Vector{Tuple{Int,Int}}, possible_edges::Vector{Tuple{Int,Int}}
 )::Bool
+    length(existing_edges) < 2 && return false
+
     @inbounds for i in eachindex(existing_edges)
         source, target = existing_edges[i]
         source == target && continue
@@ -143,7 +148,7 @@ end
 
 function (policy::_GCOnePIPruningPolicy)(state::GC.ColoredPortState)::Bool
     existing = _gc_existing_bulk_edges(policy, state)
-    isempty(existing) && return true
+    length(existing) < 2 && return true
     possible = _gc_possible_bulk_edges(policy, state)
     return !_has_unhealable_bulk_bridge(existing, possible)
 end
