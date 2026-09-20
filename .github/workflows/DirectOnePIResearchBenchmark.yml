@@ -1,0 +1,32 @@
+name: Direct 1PI research benchmark
+
+on:
+  push:
+    branches:
+      - research-pr420-late-onepi-bench
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: direct-onepi-research-benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Direct 1PI benchmark
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.13'
+      - uses: julia-actions/cache@v3
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Run direct 1PI benchmark
+        run: julia --project=. --color=yes research/gc_direct_onepi_benchmark.jl
