@@ -114,7 +114,7 @@ function _gc_wick_contraction_with_stats(
     )
     causal_policy = causal_pruning ? _gc_causal_policy(lookup) : GC.AcceptAllPortPolicy()
     policy = if onepi_pruning
-        onepi_policy = _gc_onepi_policy(lookup)
+        onepi_policy = _gc_onepi_policy(lookup, Val(E))
         causal_pruning ? _GCAndPortPolicy(causal_policy, onepi_policy) : onepi_policy
     else
         causal_policy
