@@ -128,6 +128,17 @@ function _certify_reachable_states!(
     end
 end
 
+function _signed_pairing_weights(pairings)
+    weights = Dict{Any,Int}()
+    for (pairing, topology, multiplicity) in pairings
+        key = (pairing.contractions, topology)
+        weight = Int(pairing.sign) * multiplicity
+        weights[key] = get(weights, key, 0) + weight
+    end
+    filter!(pair -> !iszero(last(pair)), weights)
+    return weights
+end
+
 @testset "Continuation-safe 1PI pruning" begin
     # KC's oracle drops isolated vertices after edge removal. A two-edge chain is therefore
     # irreducible by the existing package semantics and must not be pruned.
@@ -185,4 +196,32 @@ end
         repeated_checked,
     )
     @test repeated_checked[] > 1
+
+    # The opt-in physical path must equal ordinary GC Wick generation followed by the established
+    # irreducibility oracle. This does not alter production routing; `onepi_pruning` defaults false.
+    @qfields gc1pi_ϕ::Boson
+    c, q = gc1pi_ϕ[Classical], gc1pi_ϕ[Quantum]
+    elastic = -(
+        0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
+    )
+    L = InteractionLagrangian(elastic)
+    expression = c(KC.Out()) * bar(c)(KC.In()) * L(1).lagrangian * L(2).lagrangian
+
+    for term in KC.terms(expression)
+        ordinary, _ = KC._gc_wick_contraction_with_stats(
+            term.args_nc, Val(5), Val(1); regularise=true, simplify=false
+        )
+        expected = [
+            entry for entry in ordinary if KC.is_irreducible(first(entry).contractions)
+        ]
+        direct_onepi, _ = KC._gc_wick_contraction_with_stats(
+            term.args_nc,
+            Val(5),
+            Val(1);
+            regularise=true,
+            simplify=false,
+            onepi_pruning=true,
+        )
+        @test _signed_pairing_weights(direct_onepi) == _signed_pairing_weights(expected)
+    end
 end
