@@ -35,7 +35,11 @@ end
 
 function c5_weak_direct_skeleton(parameter)
     G = DressedPropagator(
-        c5_weak_microscopic_interaction(), Val(2), Val(5); simplify=true, _set_reg_to_zero=false
+        c5_weak_microscopic_interaction(),
+        Val(2),
+        Val(5);
+        simplify=true,
+        _set_reg_to_zero=false,
     )
     return KC.skeleton_self_energy(fourier_transform(G[parameter]))
 end
@@ -81,7 +85,8 @@ function c5_weak_cut_terms(Γ2, target)
             )
             iszero(component) && continue
             internal = KC.Contraction{Boson}[
-                contractions[index] for index in eachindex(contractions) if index != cut_index
+                contractions[index] for
+                index in eachindex(contractions) if index != cut_index
             ]
             KC._twopi_internal_is_physical(internal) || continue
             push!(
@@ -90,7 +95,8 @@ function c5_weak_cut_terms(Γ2, target)
                     cut,
                     internal,
                     kind=c5_weak_component_kind(component),
-                    coefficient=derivative_factor * convert(C5WeakCoeff, vacuum_coefficient),
+                    coefficient=derivative_factor *
+                                convert(C5WeakCoeff, vacuum_coefficient),
                 ),
             )
         end
@@ -117,20 +123,44 @@ end
 function c5_weak_response_terms(kind::Symbol, sector::Symbol)
     one_c = one(C5WeakCoeff)
     i_c = complex(0 // 1, 1 // 1)
-    kind === :R && return (
-        (:ΩR, sector === :g2 ? -one_c : sector === :gγ ? 2 * i_c : one_c),
-    )
-    kind === :A && return (
-        (:ΩA, sector === :g2 ? -one_c : sector === :gγ ? -2 * i_c : one_c),
-    )
+    kind === :R && return ((
+        :ΩR,
+        if sector === :g2
+            -one_c
+        elseif sector === :gγ
+            2 * i_c
+        else
+            one_c
+        end,
+    ),)
+    kind === :A && return ((
+        :ΩA,
+        if sector === :g2
+            -one_c
+        elseif sector === :gγ
+            -2 * i_c
+        else
+            one_c
+        end,
+    ),)
     kind === :K && sector === :g2 && return ((:ΩK, -one_c),)
     kind === :K && sector === :gγ && return ((:ΩR, 2 * i_c), (:ΩA, 2 * i_c))
-    kind === :K && sector === :γ2 &&
+    kind === :K &&
+        sector === :γ2 &&
         return ((:ΩK, -one_c), (:ΩR, 2 * one_c), (:ΩA, -2 * one_c))
     return error("unexpected weak response sector")
 end
 
-c5_weak_Ωkind(kind::Symbol) = kind === :ΩK ? :K : kind === :ΩR ? :R : kind === :ΩA ? :A : error("unexpected polarization component")
+c5_weak_Ωkind(kind::Symbol) =
+    if kind === :ΩK
+        :K
+    elseif kind === :ΩR
+        :R
+    elseif kind === :ΩA
+        :A
+    else
+        error("unexpected polarization component")
+    end
 
 function c5_weak_reposition(field, row_from, row_to, column_from, column_to)
     position = KC.position(field)
@@ -149,8 +179,12 @@ function c5_weak_attach_bubble(outer_hs, bubble)
         push!(
             attached,
             KC.Contraction(
-                c5_weak_reposition(contraction.out, row_from, row_to, column_from, column_to),
-                c5_weak_reposition(contraction.in, row_from, row_to, column_from, column_to),
+                c5_weak_reposition(
+                    contraction.out, row_from, row_to, column_from, column_to
+                ),
+                c5_weak_reposition(
+                    contraction.in, row_from, row_to, column_from, column_to
+                ),
             ),
         )
     end
@@ -178,11 +212,14 @@ function c5_weak_wigner_graph(component, carrier_graph, carrier_kinematic)
         any(c -> isequal(c.kinematic, carrier_kinematic), contributions) || continue
         push!(matches, (graph, contributions))
     end
-    length(matches) == 1 || error("response-aware Wigner carrier changed anchored outer provenance")
+    length(matches) == 1 ||
+        error("response-aware Wigner carrier changed anchored outer provenance")
     return only(matches)[1]
 end
 
-function c5_weak_expand_component(Γ2, response_wigner, component_kind::Symbol, sector::Symbol)
+function c5_weak_expand_component(
+    Γ2, response_wigner, component_kind::Symbol, sector::Symbol
+)
     result = KC.FourierDiagrams{C5WeakCoeff,Boson,3,1}()
     outer_terms = c5_weak_cut_terms(Γ2, c5_weak_ψ)
     bubble_terms = c5_weak_cut_terms(Γ2, c5_weak_χ)
@@ -198,7 +235,8 @@ function c5_weak_expand_component(Γ2, response_wigner, component_kind::Symbol, 
         atomic = only(c for c in outer.internal if KC.field_family(c.out) == c5_weak_ψ)
         hs = only(c for c in outer.internal if KC.field_family(c.out) == c5_weak_χ)
         response_kind = c5_weak_response_kind(KC.response_component(wigner_graph))
-        response_kind === c5_weak_line_kind(hs) || error("C5 changed response Keldysh identity")
+        response_kind === c5_weak_line_kind(hs) ||
+            error("C5 changed response Keldysh identity")
 
         for (Ωsymbol, response_coefficient) in c5_weak_response_terms(response_kind, sector)
             Ωkind = c5_weak_Ωkind(Ωsymbol)
@@ -242,7 +280,8 @@ end
     response_kinetic = kinetic_expression(response_wigner)
     response_collision = off_shell_collision_expression(response_kinetic)
 
-    @test KC.response_polarization(response_kinetic) === KC.response_polarization(response_collision)
+    @test KC.response_polarization(response_kinetic) ===
+        KC.response_polarization(response_collision)
     @test KC.target_family(response_collision) === c5_weak_ψ
 
     sectors = (
@@ -263,7 +302,9 @@ end
             @test KC.canonical_frequency_expressions(expanded_collision) ==
                 KC.canonical_frequency_expressions(direct_collision)
             if sector === :γ2
-                expanded_reduction = KC.reduce_canonical_trotter_frequencies(expanded_collision)
+                expanded_reduction = KC.reduce_canonical_trotter_frequencies(
+                    expanded_collision
+                )
                 direct_reduction = KC.reduce_canonical_trotter_frequencies(direct_collision)
                 @test KC.canonical_trotter_constants(expanded_reduction) ==
                     KC.canonical_trotter_constants(direct_reduction)
