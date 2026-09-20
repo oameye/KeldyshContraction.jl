@@ -8,7 +8,9 @@ end
 kinetic_lines(term::ResponseAwareKineticTerm) = kinetic_lines(term.physical)
 kinematic_factor(term::ResponseAwareKineticTerm) = kinematic_factor(term.physical)
 momentum_basis(term::ResponseAwareKineticTerm) = momentum_basis(term.physical)
-external_wigner_momentum(term::ResponseAwareKineticTerm) = external_wigner_momentum(term.physical)
+function external_wigner_momentum(term::ResponseAwareKineticTerm)
+    return external_wigner_momentum(term.physical)
+end
 response_component(term::ResponseAwareKineticTerm) = term.response_component
 response_momentum(term::ResponseAwareKineticTerm) = term.response_momentum
 
@@ -47,7 +49,9 @@ Base.length(expression::ResponseAwareKineticExpression) = length(expression.term
 Base.isempty(expression::ResponseAwareKineticExpression) = isempty(expression.terms)
 Base.iszero(expression::ResponseAwareKineticExpression) = isempty(expression.terms)
 Base.iterate(expression::ResponseAwareKineticExpression) = iterate(expression.terms)
-Base.iterate(expression::ResponseAwareKineticExpression, state) = iterate(expression.terms, state)
+function Base.iterate(expression::ResponseAwareKineticExpression, state)
+    return iterate(expression.terms, state)
+end
 
 function Base.push!(
     expression::ResponseAwareKineticExpression{C,E1,E2,Ctx},
@@ -73,8 +77,9 @@ function Base.:+(
     a::ResponseAwareKineticExpression{C1,E1,E2,Ctx},
     b::ResponseAwareKineticExpression{C2,E1,E2,Ctx},
 ) where {C1<:Number,C2<:Number,E1,E2,Ctx<:AbstractWignerContext}
-    isequal(a.context, b.context) ||
-        throw(ArgumentError("cannot add response-aware expressions with different contexts"))
+    isequal(a.context, b.context) || throw(
+        ArgumentError("cannot add response-aware expressions with different contexts")
+    )
     D = promote_type(C1, C2)
     out = ResponseAwareKineticExpression{D,E1,E2,Ctx}(a.context)
     for (term, coefficient) in a
@@ -97,7 +102,9 @@ function Base.:*(
     end
     return out
 end
-Base.:*(expression::ResponseAwareKineticExpression, prefactor::Number) = prefactor * expression
+function Base.:*(expression::ResponseAwareKineticExpression, prefactor::Number)
+    return prefactor * expression
+end
 function Base.:-(expression::ResponseAwareKineticExpression{C}) where {C<:Number}
     return -one(C) * expression
 end
@@ -118,7 +125,9 @@ function _lower_response_aware_kinetic_term(
 
     @inbounds for source in eachindex(source_edges)
         source == response_index && continue
-        line, is_statistical = _lower_kinetic_line(source_edges[source], routed_momenta[source])
+        line, is_statistical = _lower_kinetic_line(
+            source_edges[source], routed_momenta[source]
+        )
         lines[destination] = line
         destination += 1
         keldysh_count += is_statistical
@@ -161,9 +170,7 @@ Response-aware physical ψ self-energy after spectral/statistical lowering of ph
 internal propagator lines are required to be ψ. It is retained as a nested response input and is
 never interpreted as a χ distribution or χ quasiparticle collision.
 """
-struct ResponseAwareKineticSelfEnergy{
-    C<:Number,O,E1,E2,R,P,Ctx<:AbstractWignerContext
-}
+struct ResponseAwareKineticSelfEnergy{C<:Number,O,E1,E2,R,P,Ctx<:AbstractWignerContext}
     keldysh::ResponseAwareKineticExpression{C,E1,E2,Ctx}
     retarded::ResponseAwareKineticExpression{C,E1,E2,Ctx}
     advanced::ResponseAwareKineticExpression{C,E1,E2,Ctx}
@@ -176,22 +183,34 @@ end
 statistics(::ResponseAwareKineticSelfEnergy) = Boson
 order(::ResponseAwareKineticSelfEnergy{C,O}) where {C,O} = O
 target_family(self_energy::ResponseAwareKineticSelfEnergy) = self_energy.target
-response_family(self_energy::ResponseAwareKineticSelfEnergy) = response_family(self_energy.response)
-response_polarization(self_energy::ResponseAwareKineticSelfEnergy) = self_energy.polarization
-response_coherent_parameter(self_energy::ResponseAwareKineticSelfEnergy) = response_coherent_parameter(self_energy.response)
-response_loss_parameter(self_energy::ResponseAwareKineticSelfEnergy) = response_loss_parameter(self_energy.response)
+function response_family(self_energy::ResponseAwareKineticSelfEnergy)
+    return response_family(self_energy.response)
+end
+function response_polarization(self_energy::ResponseAwareKineticSelfEnergy)
+    return self_energy.polarization
+end
+function response_coherent_parameter(self_energy::ResponseAwareKineticSelfEnergy)
+    return response_coherent_parameter(self_energy.response)
+end
+function response_loss_parameter(self_energy::ResponseAwareKineticSelfEnergy)
+    return response_loss_parameter(self_energy.response)
+end
 keldysh_component(self_energy::ResponseAwareKineticSelfEnergy) = self_energy.keldysh
 retarded_component(self_energy::ResponseAwareKineticSelfEnergy) = self_energy.retarded
 advanced_component(self_energy::ResponseAwareKineticSelfEnergy) = self_energy.advanced
 gradient_order(::ResponseAwareKineticSelfEnergy) = Val(0)
 wigner_context(self_energy::ResponseAwareKineticSelfEnergy) = self_energy.context
 
-function _assert_pure_physical_polarization(polarization::KineticSelfEnergy, target::FieldFamily)
+function _assert_pure_physical_polarization(
+    polarization::KineticSelfEnergy, target::FieldFamily
+)
     for expression in (polarization.keldysh, polarization.retarded, polarization.advanced)
         for (term, _) in expression
             for line in kinetic_lines(term)
                 isequal(line.family, target) || throw(
-                    ArgumentError("nested HS polarization contains a nonphysical kinetic line"),
+                    ArgumentError(
+                        "nested HS polarization contains a nonphysical kinetic line"
+                    ),
                 )
             end
         end
@@ -239,14 +258,24 @@ end
 statistics(::ResponseAwareOffShellCollisionExpression) = Boson
 order(::ResponseAwareOffShellCollisionExpression{C,O}) where {C,O} = O
 target_family(collision::ResponseAwareOffShellCollisionExpression) = collision.target
-response_family(collision::ResponseAwareOffShellCollisionExpression) = response_family(collision.response)
-response_polarization(collision::ResponseAwareOffShellCollisionExpression) = collision.polarization
-response_coherent_parameter(collision::ResponseAwareOffShellCollisionExpression) = response_coherent_parameter(collision.response)
-response_loss_parameter(collision::ResponseAwareOffShellCollisionExpression) = response_loss_parameter(collision.response)
+function response_family(collision::ResponseAwareOffShellCollisionExpression)
+    return response_family(collision.response)
+end
+function response_polarization(collision::ResponseAwareOffShellCollisionExpression)
+    return collision.polarization
+end
+function response_coherent_parameter(collision::ResponseAwareOffShellCollisionExpression)
+    return response_coherent_parameter(collision.response)
+end
+function response_loss_parameter(collision::ResponseAwareOffShellCollisionExpression)
+    return response_loss_parameter(collision.response)
+end
 gradient_order(::ResponseAwareOffShellCollisionExpression) = Val(0)
 wigner_context(collision::ResponseAwareOffShellCollisionExpression) = collision.context
 collision_offset(collision::ResponseAwareOffShellCollisionExpression) = collision.offset
-function collision_distribution_coefficient(collision::ResponseAwareOffShellCollisionExpression)
+function collision_distribution_coefficient(
+    collision::ResponseAwareOffShellCollisionExpression
+)
     return collision.distribution_coefficient
 end
 
@@ -255,7 +284,8 @@ function off_shell_collision_expression(
 ) where {C<:Number,O,E1,E2,R,P,Ctx<:AbstractWignerContext}
     D = promote_type(C, ComplexRationals)
     offset = convert(D, im) * self_energy.keldysh
-    distribution_coefficient = -convert(D, im) * (self_energy.retarded - self_energy.advanced)
+    distribution_coefficient =
+        -convert(D, im) * (self_energy.retarded - self_energy.advanced)
     return ResponseAwareOffShellCollisionExpression{D,O,E1,E2,R,P,Ctx}(
         offset,
         distribution_coefficient,
