@@ -77,6 +77,8 @@ end
 
 struct _GCOnePIPruningPolicy
     bulk_allowed::Array{Bool,4}
+    total_edges::Int
+    max_residual_pairs::Int
 end
 
 struct _GCAndPortPolicy{A,B}
@@ -88,8 +90,11 @@ end
     return policy.first(state) && policy.second(state)
 end
 
-function _gc_onepi_policy(lookup::Dict{NTuple{4,Int},Contraction{S}}) where {S<:Statistics}
-    isempty(lookup) && return _GCOnePIPruningPolicy(falses(0, 0, 0, 0))
+function _gc_onepi_policy(
+    lookup::Dict{NTuple{4,Int},Contraction{S}}, ::Val{E}; max_residual_pairs=2
+) where {S<:Statistics,E}
+    isempty(lookup) &&
+        return _GCOnePIPruningPolicy(falses(0, 0, 0, 0), E, max_residual_pairs)
 
     max_source_vertex = maximum(cell[1] for cell in keys(lookup))
     max_source_color = maximum(cell[2] for cell in keys(lookup))
@@ -101,7 +106,7 @@ function _gc_onepi_policy(lookup::Dict{NTuple{4,Int},Contraction{S}}) where {S<:
     for (cell, contraction) in lookup
         bulk_allowed[cell...] = is_bulk(contraction)
     end
-    return _GCOnePIPruningPolicy(bulk_allowed)
+    return _GCOnePIPruningPolicy(bulk_allowed, E, max_residual_pairs)
 end
 
 @inline function _gc_bulk_allowed(
@@ -183,6 +188,8 @@ end
 
 function (policy::_GCOnePIPruningPolicy)(state::GC.ColoredPortState)::Bool
     edges = GC.port_edges(state)
+    policy.total_edges - length(edges) > policy.max_residual_pairs && return true
+
     bulk_count = 0
     for edge in edges
         _gc_bulk_cell(policy, edge) && (bulk_count += 1)
