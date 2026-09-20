@@ -1,6 +1,5 @@
+using KeldyshContraction: _has_unhealable_bulk_bridge
 using Test
-
-include(joinpath(@__DIR__, "..", "src", "gc_self_energy_pruning.jl"))
 
 @testset "Continuation-safe 1PI bridge pruning" begin
     # A realized chain has an unavoidable bridge when no residual edge can heal either cut.
