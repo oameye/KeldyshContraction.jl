@@ -1,9 +1,13 @@
 name: Direct 1PI research benchmark
 
 on:
-  push:
+  pull_request:
     branches:
-      - research-pr420-late-onepi-bench
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
   workflow_dispatch:
 
 permissions:
