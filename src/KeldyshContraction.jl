@@ -64,6 +64,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("skeleton_self_energy.jl")
     include("propagator_algebra/wigner.jl")
     include("propagator_algebra/spectral_statistical.jl")
+    include("response_aware_kinetics.jl")
+    include("response_aware_collision.jl")
     include("off_shell_collision.jl")
     include("spectral_dispersive_collision.jl")
     include("frequency_support.jl")
