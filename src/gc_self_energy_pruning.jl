@@ -74,3 +74,76 @@ function _has_unhealable_bulk_bridge(
     end
     return false
 end
+
+struct _GCOnePIPruningPolicy
+    bulk_allowed::Array{Bool,4}
+end
+
+function _gc_onepi_policy(
+    lookup::Dict{NTuple{4,Int},Contraction{S}}
+) where {S<:Statistics}
+    isempty(lookup) && return _GCOnePIPruningPolicy(falses(0, 0, 0, 0))
+
+    max_source_vertex = maximum(cell[1] for cell in keys(lookup))
+    max_source_color = maximum(cell[2] for cell in keys(lookup))
+    max_target_vertex = maximum(cell[3] for cell in keys(lookup))
+    max_target_color = maximum(cell[4] for cell in keys(lookup))
+    bulk_allowed = falses(
+        max_source_vertex, max_source_color, max_target_vertex, max_target_color
+    )
+    for (cell, contraction) in lookup
+        bulk_allowed[cell...] = is_bulk(contraction)
+    end
+    return _GCOnePIPruningPolicy(bulk_allowed)
+end
+
+@inline function _gc_bulk_cell(
+    policy::_GCOnePIPruningPolicy, edge::GC.ColoredPortEdge
+)::Bool
+    return policy.bulk_allowed[
+        edge.source, edge.source_color, edge.target, edge.target_color
+    ]
+end
+
+function _gc_existing_bulk_edges(
+    policy::_GCOnePIPruningPolicy, state::GC.ColoredPortState
+)::Vector{Tuple{Int,Int}}
+    result = Tuple{Int,Int}[]
+    for edge in GC.port_edges(state)
+        _gc_bulk_cell(policy, edge) || continue
+        push!(result, (edge.source, edge.target))
+    end
+    return result
+end
+
+function _gc_possible_bulk_edges(
+    policy::_GCOnePIPruningPolicy, state::GC.ColoredPortState
+)::Vector{Tuple{Int,Int}}
+    sources = GC.source_port_counts(state)
+    targets = GC.target_port_counts(state)
+    possible = Tuple{Int,Int}[]
+
+    for source_vertex in axes(sources, 1)
+        for source_color in axes(sources, 2)
+            iszero(sources[source_vertex, source_color]) && continue
+            for target_vertex in axes(targets, 1)
+                for target_color in axes(targets, 2)
+                    iszero(targets[target_vertex, target_color]) && continue
+                    policy.bulk_allowed[
+                        source_vertex, source_color, target_vertex, target_color
+                    ] || continue
+                    edge = (source_vertex, target_vertex)
+                    edge in possible || push!(possible, edge)
+                end
+            end
+        end
+    end
+    return possible
+end
+
+function (policy::_GCOnePIPruningPolicy)(state::GC.ColoredPortState)::Bool
+    existing = _gc_existing_bulk_edges(policy, state)
+    isempty(existing) && return true
+    possible = _gc_possible_bulk_edges(policy, state)
+    return !_has_unhealable_bulk_bridge(existing, possible)
+end
