@@ -91,7 +91,7 @@ end
 end
 
 function _gc_onepi_policy(
-    lookup::Dict{NTuple{4,Int},Contraction{S}}, ::Val{E}; max_residual_pairs=2
+    lookup::Dict{NTuple{4,Int},Contraction{S}}, ::Val{E}; max_residual_pairs=1
 ) where {S<:Statistics,E}
     isempty(lookup) &&
         return _GCOnePIPruningPolicy(falses(0, 0, 0, 0), E, max_residual_pairs)
