@@ -1,8 +1,10 @@
 # KC-owned continuation-safe structural pruning for direct self-energy generation.
 #
-# A currently realized bulk bridge is not sufficient for pruning: a later Wick contraction may
-# connect its two sides. It is safe to reject only when the bridge remains unavoidable even after
-# adding every still-admissible residual bulk connection.
+# KC's current `is_irreducible` semantics remove one bulk contraction and then recompute graph
+# vertices from the remaining edges. Consequently a graph-theoretic bridge is not by itself a safe
+# pruning witness: if removing it leaves only one edge-containing component, any isolated endpoint
+# disappears from the oracle graph. We may reject only when a realized edge has an unavoidable cut
+# separating at least two persistent edge-containing components under every continuation.
 
 @inline function _other_bridge_vertex(edge::Tuple{Int,Int}, vertex::Int)
     if edge[1] == vertex
@@ -13,15 +15,12 @@
     return 0
 end
 
-function _bulk_path_exists_without_edge(
+function _bulk_reachable_vertices(
     existing_edges::Vector{Tuple{Int,Int}},
     possible_edges::Vector{Tuple{Int,Int}},
     skipped_edge::Int,
     source::Int,
-    target::Int,
-)::Bool
-    source == target && return true
-
+)::Set{Int}
     visited = Set{Int}((source,))
     queue = Int[source]
     while !isempty(queue)
@@ -31,7 +30,6 @@ function _bulk_path_exists_without_edge(
             i == skipped_edge && continue
             neighbor = _other_bridge_vertex(existing_edges[i], current)
             iszero(neighbor) && continue
-            neighbor == target && return true
             if neighbor ∉ visited
                 push!(visited, neighbor)
                 push!(queue, neighbor)
@@ -41,41 +39,38 @@ function _bulk_path_exists_without_edge(
         for edge in possible_edges
             neighbor = _other_bridge_vertex(edge, current)
             iszero(neighbor) && continue
-            neighbor == target && return true
             if neighbor ∉ visited
                 push!(visited, neighbor)
                 push!(queue, neighbor)
             end
         end
     end
-    return false
+    return visited
 end
 
-"""
-    _has_unhealable_bulk_bridge(existing_edges, possible_edges)
-
-Return whether a bulk edge already present in a partial Wick state must remain a bridge under
-all admissible continuations represented by `possible_edges`.
-
-`possible_edges` is an optimistic support graph: it may contain mutually incompatible future
-contractions. This can only make the test weaker. Therefore a `true` result is continuation-safe:
-if an existing edge is still a bridge after every possible residual bulk connection is added,
-no physical completion can become one-particle irreducible.
-
-The existing `SelfEnergy` oracle treats fewer than two bulk contractions as irreducible, so the
-partial-state predicate deliberately does not reject until at least two bulk edges are realized.
-"""
 function _has_unhealable_bulk_bridge(
     existing_edges::Vector{Tuple{Int,Int}}, possible_edges::Vector{Tuple{Int,Int}}
 )::Bool
-    length(existing_edges) < 2 && return false
+    # After removing one edge, KC's oracle can only observe disconnectedness if at least two
+    # already-realized bulk edges remain. Future edges are optional in the optimistic support and
+    # therefore cannot be used to establish persistence of a component.
+    length(existing_edges) < 3 && return false
 
-    @inbounds for i in eachindex(existing_edges)
-        source, target = existing_edges[i]
-        source == target && continue
-        _bulk_path_exists_without_edge(
-            existing_edges, possible_edges, i, source, target
-        ) || return true
+    @inbounds for skipped in eachindex(existing_edges)
+        first_remaining = findfirst(i -> i != skipped, eachindex(existing_edges))
+        isnothing(first_remaining) && continue
+        source = existing_edges[first_remaining][1]
+        reachable = _bulk_reachable_vertices(
+            existing_edges, possible_edges, skipped, source
+        )
+
+        for i in eachindex(existing_edges)
+            (i == skipped || i == first_remaining) && continue
+            edge = existing_edges[i]
+            if edge[1] ∉ reachable
+                return true
+            end
+        end
     end
     return false
 end
@@ -148,7 +143,7 @@ end
 
 function (policy::_GCOnePIPruningPolicy)(state::GC.ColoredPortState)::Bool
     existing = _gc_existing_bulk_edges(policy, state)
-    length(existing) < 2 && return true
+    length(existing) < 3 && return true
     possible = _gc_possible_bulk_edges(policy, state)
     return !_has_unhealable_bulk_bridge(existing, possible)
 end
