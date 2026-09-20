@@ -79,9 +79,7 @@ struct _GCOnePIPruningPolicy
     bulk_allowed::Array{Bool,4}
 end
 
-function _gc_onepi_policy(
-    lookup::Dict{NTuple{4,Int},Contraction{S}}
-) where {S<:Statistics}
+function _gc_onepi_policy(lookup::Dict{NTuple{4,Int},Contraction{S}}) where {S<:Statistics}
     isempty(lookup) && return _GCOnePIPruningPolicy(falses(0, 0, 0, 0))
 
     max_source_vertex = maximum(cell[1] for cell in keys(lookup))
