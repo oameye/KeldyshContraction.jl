@@ -158,6 +158,7 @@ end
     # Exhaust all 3x3 one-color bulk/nonbulk classifications. Every port pairing is allowed;
     # a false bulk cell therefore models a nonbulk contraction that may consume residual ports but
     # cannot heal a 1PI cut. This is stricter than treating false cells as simply forbidden.
+    # Keep this oracle eager at every layer; production depth gating is tested separately below.
     checked = Ref(0)
     source_ports = ones(Int, 3, 1)
     target_ports = ones(Int, 3, 1)
@@ -168,7 +169,7 @@ end
             bulk_allowed[source, 1, target, 1] = !iszero(mask & (1 << bit))
             bit += 1
         end
-        policy = KC._GCOnePIPruningPolicy(bulk_allowed)
+        policy = KC._GCOnePIPruningPolicy(bulk_allowed, 3, 3)
         _certify_reachable_states!(
             policy, GraphComb1PI.ColoredPortEdge[], source_ports, target_ports, checked
         )
@@ -176,7 +177,7 @@ end
     @test checked[] > 5_000
 
     # Repeated residual ports exercise parallel propagators and multiplicity-shaped states.
-    repeated_policy = KC._GCOnePIPruningPolicy(trues(2, 1, 2, 1))
+    repeated_policy = KC._GCOnePIPruningPolicy(trues(2, 1, 2, 1), 3, 3)
     repeated_checked = Ref(0)
     _certify_reachable_states!(
         repeated_policy,
