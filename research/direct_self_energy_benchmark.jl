@@ -28,12 +28,14 @@ function benchmark_self_energy(name, L, ::Val{O}, ::Val{E}; samples=2) where {O,
 
     reference = baseline()
     candidate = direct()
-    self_energy_exact(candidate, reference) || error("direct self-energy semantic mismatch: $name")
+    self_energy_exact(candidate, reference) ||
+        error("direct self-energy semantic mismatch: $name")
 
     baseline_time, baseline_bytes = best_self_energy_measurement(baseline; samples)
     direct_time, direct_bytes = best_self_energy_measurement(direct; samples)
 
-    outputs = length(candidate.keldysh) + length(candidate.retarded) + length(candidate.advanced)
+    outputs =
+        length(candidate.keldysh) + length(candidate.retarded) + length(candidate.advanced)
     println(
         join(
             (
@@ -80,7 +82,7 @@ loss =
 L_γ = InteractionLagrangian(loss, :γ)
 
 println(
-    "workload\torder\tedges\toutputs\tbaseline_s\tdirect_s\ttime_ratio\tbaseline_bytes\tdirect_bytes\talloc_ratio"
+    "workload\torder\tedges\toutputs\tbaseline_s\tdirect_s\ttime_ratio\tbaseline_bytes\tdirect_bytes\talloc_ratio",
 )
 benchmark_self_energy("boson_g2", L_g, Val(2), Val(5); samples=3)
 benchmark_self_energy("boson_g3", L_g, Val(3), Val(7); samples=2)
