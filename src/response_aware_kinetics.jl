@@ -1,10 +1,6 @@
 """Exact regular two-body-loss HS response components in KC's symmetric Keldysh basis."""
 function _two_body_loss_regular_response(
-    g::Number,
-    γ::Number,
-    ΩK::Number,
-    ΩR::Number,
-    ΩA::Number,
+    g::Number, γ::Number, ΩK::Number, ΩR::Number, ΩA::Number
 )
     λ = g - im * γ
     λbar = g + im * γ
@@ -14,49 +10,31 @@ function _two_body_loss_regular_response(
 
     retarded = -(λ * λ * ΩR) / QR
     advanced = -(λbar * λbar * ΩA) / QA
-    keldysh = (
-        -λ2 * ΩK +
-        2im * γ * (λ * ΩR + λbar * ΩA) -
-        2 * γ * λ2 * ΩR * ΩA
-    ) / (QR * QA)
+    keldysh = (-λ2 * ΩK + 2im * γ * (λ * ΩR + λbar * ΩA) - 2 * γ * λ2 * ΩR * ΩA) / (QR * QA)
 
     return (; keldysh, retarded, advanced)
 end
 
 """Linear-in-polarization expansion of the exact regular HS response."""
 function _two_body_loss_regular_response_linear(
-    g::Number,
-    γ::Number,
-    ΩK::Number,
-    ΩR::Number,
-    ΩA::Number,
+    g::Number, γ::Number, ΩK::Number, ΩR::Number, ΩA::Number
 )
     λ = g - im * γ
     λbar = g + im * γ
     λ2 = g * g + γ * γ
     return (
-        keldysh=-λ2 * ΩK + 2im * γ * (λ * ΩR + λbar * ΩA),
-        retarded=-(λ * λ) * ΩR,
-        advanced=-(λbar * λbar) * ΩA,
+        keldysh=(-λ2 * ΩK + 2im * γ * (λ * ΩR + λbar * ΩA)),
+        retarded=(-(λ * λ) * ΩR),
+        advanced=(-(λbar * λbar) * ΩA),
     )
 end
 
 """Coupling-sector coefficients of the weak regular response."""
-function _two_body_loss_regular_response_linear_sectors(
-    ΩK::Number, ΩR::Number, ΩA::Number
-)
+function _two_body_loss_regular_response_linear_sectors(ΩK::Number, ΩR::Number, ΩA::Number)
     return (
-        g2=(keldysh=-ΩK, retarded=-ΩR, advanced=-ΩA),
-        gγ=(
-            keldysh=2im * (ΩR + ΩA),
-            retarded=2im * ΩR,
-            advanced=-2im * ΩA,
-        ),
-        γ2=(
-            keldysh=-ΩK + 2 * ΩR - 2 * ΩA,
-            retarded=ΩR,
-            advanced=ΩA,
-        ),
+        g2=(keldysh=(-ΩK), retarded=(-ΩR), advanced=(-ΩA)),
+        gγ=(keldysh=2im * (ΩR + ΩA), retarded=2im * ΩR, advanced=-2im * ΩA),
+        γ2=(keldysh=(-ΩK + 2 * ΩR - 2 * ΩA), retarded=ΩR, advanced=ΩA),
     )
 end
 
@@ -76,19 +54,26 @@ end
 statistics(::ResponseAwareWignerDiagram) = Boson
 gradient_order(::ResponseAwareWignerDiagram) = Val(0)
 fourier_diagram(diagram::ResponseAwareWignerDiagram) = fourier_diagram(diagram.composite)
-coordinate_diagram(diagram::ResponseAwareWignerDiagram) = coordinate_diagram(diagram.composite)
+function coordinate_diagram(diagram::ResponseAwareWignerDiagram)
+    return coordinate_diagram(diagram.composite)
+end
 momentum_basis(diagram::ResponseAwareWignerDiagram) = momentum_basis(diagram.composite)
 edge_momenta(diagram::ResponseAwareWignerDiagram) = edge_momenta(diagram.composite)
 external_wigner_momentum(diagram::ResponseAwareWignerDiagram) = diagram.external_momentum
 wigner_context(diagram::ResponseAwareWignerDiagram) = diagram.context
 response_family(diagram::ResponseAwareWignerDiagram) = response_family(diagram.composite)
-response_component(diagram::ResponseAwareWignerDiagram) = response_component(diagram.composite)
-response_momentum(diagram::ResponseAwareWignerDiagram) = response_momentum(diagram.composite)
-physical_contractions(diagram::ResponseAwareWignerDiagram) = physical_contractions(diagram.composite)
+function response_component(diagram::ResponseAwareWignerDiagram)
+    return response_component(diagram.composite)
+end
+function response_momentum(diagram::ResponseAwareWignerDiagram)
+    return response_momentum(diagram.composite)
+end
+function physical_contractions(diagram::ResponseAwareWignerDiagram)
+    return physical_contractions(diagram.composite)
+end
 
 function Base.isequal(
-    a::ResponseAwareWignerDiagram{E1,E2,Ctx},
-    b::ResponseAwareWignerDiagram{E1,E2,Ctx},
+    a::ResponseAwareWignerDiagram{E1,E2,Ctx}, b::ResponseAwareWignerDiagram{E1,E2,Ctx}
 ) where {E1,E2,Ctx}
     return isequal(a.composite, b.composite) &&
            isequal(a.external_momentum, b.external_momentum) &&
@@ -102,9 +87,13 @@ function Base.hash(diagram::ResponseAwareWignerDiagram, h::UInt)
     )
 end
 
-function _homogeneous_response_wigner_diagram(diagram::CompositeFourierDiagram{E1,E2}) where {E1,E2}
+function _homogeneous_response_wigner_diagram(
+    diagram::CompositeFourierDiagram{E1,E2}
+) where {E1,E2}
     external_momentum_count(diagram) == 1 || throw(
-        ArgumentError("response-aware homogeneous Wigner carrier requires one external momentum"),
+        ArgumentError(
+            "response-aware homogeneous Wigner carrier requires one external momentum"
+        ),
     )
     basis = momentum_basis(diagram)
     isempty(basis.variables) && error("response-aware Wigner input has no momentum basis")
@@ -123,12 +112,14 @@ Base.length(collection::ResponseAwareWignerDiagrams) = length(collection.diagram
 Base.isempty(collection::ResponseAwareWignerDiagrams) = isempty(collection.diagrams)
 Base.iszero(collection::ResponseAwareWignerDiagrams) = isempty(collection.diagrams)
 Base.iterate(collection::ResponseAwareWignerDiagrams) = iterate(collection.diagrams)
-Base.iterate(collection::ResponseAwareWignerDiagrams, state) = iterate(collection.diagrams, state)
+function Base.iterate(collection::ResponseAwareWignerDiagrams, state)
+    return iterate(collection.diagrams, state)
+end
 wigner_context(collection::ResponseAwareWignerDiagrams) = collection.context
 gradient_order(::ResponseAwareWignerDiagrams) = Val(0)
 
 function _homogeneous_response_wigner_diagrams(
-    diagrams::CompositeFourierDiagrams{C,E1,E2},
+    diagrams::CompositeFourierDiagrams{C,E1,E2}
 ) where {C<:Number,E1,E2}
     context = HomogeneousWignerContext()
     K = ResponseAwareWignerDiagram{E1,E2,HomogeneousWignerContext}
@@ -167,10 +158,18 @@ end
 statistics(::ResponseAwareWignerSelfEnergy) = Boson
 order(::ResponseAwareWignerSelfEnergy{C,O}) where {C,O} = O
 target_family(self_energy::ResponseAwareWignerSelfEnergy) = self_energy.target
-response_family(self_energy::ResponseAwareWignerSelfEnergy) = response_family(self_energy.response)
-response_polarization(self_energy::ResponseAwareWignerSelfEnergy) = response_polarization(self_energy.response)
-response_coherent_parameter(self_energy::ResponseAwareWignerSelfEnergy) = response_coherent_parameter(self_energy.response)
-response_loss_parameter(self_energy::ResponseAwareWignerSelfEnergy) = response_loss_parameter(self_energy.response)
+function response_family(self_energy::ResponseAwareWignerSelfEnergy)
+    return response_family(self_energy.response)
+end
+function response_polarization(self_energy::ResponseAwareWignerSelfEnergy)
+    return response_polarization(self_energy.response)
+end
+function response_coherent_parameter(self_energy::ResponseAwareWignerSelfEnergy)
+    return response_coherent_parameter(self_energy.response)
+end
+function response_loss_parameter(self_energy::ResponseAwareWignerSelfEnergy)
+    return response_loss_parameter(self_energy.response)
+end
 keldysh_component(self_energy::ResponseAwareWignerSelfEnergy) = self_energy.keldysh
 retarded_component(self_energy::ResponseAwareWignerSelfEnergy) = self_energy.retarded
 advanced_component(self_energy::ResponseAwareWignerSelfEnergy) = self_energy.advanced
