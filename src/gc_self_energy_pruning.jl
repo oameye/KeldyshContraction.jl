@@ -104,53 +104,117 @@ function _gc_onepi_policy(lookup::Dict{NTuple{4,Int},Contraction{S}}) where {S<:
     return _GCOnePIPruningPolicy(bulk_allowed)
 end
 
+@inline function _gc_bulk_allowed(
+    policy::_GCOnePIPruningPolicy,
+    source_vertex::Int,
+    source_color::Int,
+    target_vertex::Int,
+    target_color::Int,
+)::Bool
+    allowed = policy.bulk_allowed
+    source_vertex in axes(allowed, 1) || return false
+    source_color in axes(allowed, 2) || return false
+    target_vertex in axes(allowed, 3) || return false
+    target_color in axes(allowed, 4) || return false
+    return allowed[source_vertex, source_color, target_vertex, target_color]
+end
+
 @inline function _gc_bulk_cell(
     policy::_GCOnePIPruningPolicy, edge::GC.ColoredPortEdge
 )::Bool
-    return policy.bulk_allowed[
-        edge.source, edge.source_color, edge.target, edge.target_color
-    ]
+    return _gc_bulk_allowed(
+        policy, edge.source, edge.source_color, edge.target, edge.target_color
+    )
 end
 
-function _gc_existing_bulk_edges(
-    policy::_GCOnePIPruningPolicy, state::GC.ColoredPortState
-)::Vector{Tuple{Int,Int}}
-    result = Tuple{Int,Int}[]
-    for edge in GC.port_edges(state)
-        _gc_bulk_cell(policy, edge) || continue
-        push!(result, (edge.source, edge.target))
+@inline function _gc_connect_onepi_vertices(
+    reachable::UInt128, source::Int, target::Int
+)::UInt128
+    source_bit = _gc_port_vertex_bit(source)
+    target_bit = _gc_port_vertex_bit(target)
+    if !iszero(reachable & (source_bit | target_bit))
+        return reachable | source_bit | target_bit
     end
-    return result
+    return reachable
 end
 
-function _gc_possible_bulk_edges(
-    policy::_GCOnePIPruningPolicy, state::GC.ColoredPortState
-)::Vector{Tuple{Int,Int}}
+function _gc_onepi_reachable(
+    policy::_GCOnePIPruningPolicy,
+    state::GC.ColoredPortState,
+    skipped_bulk_edge::Int,
+    source::Int,
+)::UInt128
+    edges = GC.port_edges(state)
     sources = GC.source_port_counts(state)
     targets = GC.target_port_counts(state)
-    possible = Tuple{Int,Int}[]
+    reachable = _gc_port_vertex_bit(source)
 
-    for source_vertex in axes(sources, 1)
-        for source_color in axes(sources, 2)
-            iszero(sources[source_vertex, source_color]) && continue
-            for target_vertex in axes(targets, 1)
-                for target_color in axes(targets, 2)
-                    iszero(targets[target_vertex, target_color]) && continue
-                    policy.bulk_allowed[
-                        source_vertex, source_color, target_vertex, target_color
-                    ] || continue
-                    edge = (source_vertex, target_vertex)
-                    edge in possible || push!(possible, edge)
+    previous = zero(UInt128)
+    while reachable != previous
+        previous = reachable
+
+        bulk_index = 0
+        for edge in edges
+            _gc_bulk_cell(policy, edge) || continue
+            bulk_index += 1
+            bulk_index == skipped_bulk_edge && continue
+            reachable = _gc_connect_onepi_vertices(reachable, edge.source, edge.target)
+        end
+
+        for source_vertex in axes(sources, 1)
+            for source_color in axes(sources, 2)
+                iszero(sources[source_vertex, source_color]) && continue
+                for target_vertex in axes(targets, 1)
+                    for target_color in axes(targets, 2)
+                        iszero(targets[target_vertex, target_color]) && continue
+                        _gc_bulk_allowed(
+                            policy,
+                            source_vertex,
+                            source_color,
+                            target_vertex,
+                            target_color,
+                        ) || continue
+                        reachable = _gc_connect_onepi_vertices(
+                            reachable, source_vertex, target_vertex
+                        )
+                    end
                 end
             end
         end
     end
-    return possible
+    return reachable
 end
 
 function (policy::_GCOnePIPruningPolicy)(state::GC.ColoredPortState)::Bool
-    existing = _gc_existing_bulk_edges(policy, state)
-    length(existing) < 3 && return true
-    possible = _gc_possible_bulk_edges(policy, state)
-    return !_has_unhealable_bulk_bridge(existing, possible)
+    edges = GC.port_edges(state)
+    bulk_count = 0
+    for edge in edges
+        _gc_bulk_cell(policy, edge) && (bulk_count += 1)
+    end
+    bulk_count < 3 && return true
+
+    for skipped in 1:bulk_count
+        bulk_index = 0
+        source = 0
+        first_remaining = 0
+        for edge in edges
+            _gc_bulk_cell(policy, edge) || continue
+            bulk_index += 1
+            bulk_index == skipped && continue
+            source = edge.source
+            first_remaining = bulk_index
+            break
+        end
+
+        iszero(source) && continue
+        reachable = _gc_onepi_reachable(policy, state, skipped, source)
+        bulk_index = 0
+        for edge in edges
+            _gc_bulk_cell(policy, edge) || continue
+            bulk_index += 1
+            (bulk_index == skipped || bulk_index == first_remaining) && continue
+            iszero(reachable & _gc_port_vertex_bit(edge.source)) && return false
+        end
+    end
+    return true
 end
