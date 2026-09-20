@@ -99,8 +99,10 @@ function _certify_reachable_states!(
     state = GraphComb1PI.ColoredPortState(edges, sources, targets)
     checked[] += 1
     if !policy(state)
-        @test !_has_irreducible_completion(policy, copy(edges), copy(sources), copy(targets))
-        return
+        @test !_has_irreducible_completion(
+            policy, copy(edges), copy(sources), copy(targets)
+        )
+        return nothing
     end
 
     source_cell = nothing
@@ -110,7 +112,7 @@ function _certify_reachable_states!(
             break
         end
     end
-    isnothing(source_cell) && return
+    isnothing(source_cell) && return nothing
 
     source_vertex, source_color = source_cell
     next_sources = copy(sources)
@@ -145,21 +147,13 @@ end
     @test !KC._has_unhealable_bulk_bridge([(1, 2), (2, 3)], Tuple{Int,Int}[])
 
     # The middle edge of a three-edge chain separates two persistent edge-containing components.
-    @test KC._has_unhealable_bulk_bridge(
-        [(1, 2), (2, 3), (3, 4)], Tuple{Int,Int}[]
-    )
+    @test KC._has_unhealable_bulk_bridge([(1, 2), (2, 3), (3, 4)], Tuple{Int,Int}[])
 
     # A possible future edge can heal that cut, so current reducibility is not monotone.
-    @test !KC._has_unhealable_bulk_bridge(
-        [(1, 2), (2, 3), (3, 4)], [(1, 4)]
-    )
+    @test !KC._has_unhealable_bulk_bridge([(1, 2), (2, 3), (3, 4)], [(1, 4)])
 
-    @test !KC._has_unhealable_bulk_bridge(
-        [(1, 2), (2, 3), (3, 1)], Tuple{Int,Int}[]
-    )
-    @test !KC._has_unhealable_bulk_bridge(
-        [(1, 2), (1, 2), (2, 3)], Tuple{Int,Int}[]
-    )
+    @test !KC._has_unhealable_bulk_bridge([(1, 2), (2, 3), (3, 1)], Tuple{Int,Int}[])
+    @test !KC._has_unhealable_bulk_bridge([(1, 2), (1, 2), (2, 3)], Tuple{Int,Int}[])
 
     # Exhaust all 3x3 one-color bulk/nonbulk classifications. Every port pairing is allowed;
     # a false bulk cell therefore models a nonbulk contraction that may consume residual ports but
@@ -167,7 +161,7 @@ end
     checked = Ref(0)
     source_ports = ones(Int, 3, 1)
     target_ports = ones(Int, 3, 1)
-    for mask in 0:(2^9 - 1)
+    for mask in 0:(2 ^ 9 - 1)
         bulk_allowed = falses(3, 1, 3, 1)
         bit = 0
         for source in 1:3, target in 1:3
@@ -176,11 +170,7 @@ end
         end
         policy = KC._GCOnePIPruningPolicy(bulk_allowed)
         _certify_reachable_states!(
-            policy,
-            GraphComb1PI.ColoredPortEdge[],
-            source_ports,
-            target_ports,
-            checked,
+            policy, GraphComb1PI.ColoredPortEdge[], source_ports, target_ports, checked
         )
     end
     @test checked[] > 5_000
@@ -201,9 +191,7 @@ end
     # irreducibility oracle. This does not alter production routing; `onepi_pruning` defaults false.
     @qfields gc1pi_ϕ::Boson
     c, q = gc1pi_ϕ[Classical], gc1pi_ϕ[Quantum]
-    elastic = -(
-        0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2)
-    )
+    elastic = -(0.5 * (c^2 + q^2) * bar(c) * bar(q) + 0.5 * c * q * (bar(c)^2 + bar(q)^2))
     L = InteractionLagrangian(elastic)
     expression = c(KC.Out()) * bar(c)(KC.In()) * L(1).lagrangian * L(2).lagrangian
 
