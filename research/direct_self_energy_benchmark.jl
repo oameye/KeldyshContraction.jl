@@ -24,7 +24,7 @@ end
 
 function benchmark_self_energy(name, L, ::Val{O}, ::Val{E}; samples=2) where {O,E}
     baseline = () -> SelfEnergy(DressedPropagator(L, Val(O), Val(E)))
-    direct = () -> KC._direct_self_energy(L, Val(O), Val(E))
+    direct = () -> SelfEnergy(L, Val(O), Val(E))
 
     reference = baseline()
     candidate = direct()
