@@ -180,7 +180,9 @@ function self_energy_type(::Type{Fermion}, dict::SmallCollections.SmallDict)
     end
 end
 
-function _self_energy(G::DressedPropagator{C,Fermion,O,E1,E2}) where {C<:Number,O,E1,E2}
+function _self_energy(
+    G::DressedPropagator{C,Fermion,O,E1,E2}, keep::F
+) where {C<:Number,O,E1,E2,F}
     SE = E1 - 2
     ST = max_edges(O)
     D = Diagrams{C,Fermion,SE,ST}
@@ -189,7 +191,7 @@ function _self_energy(G::DressedPropagator{C,Fermion,O,E1,E2}) where {C<:Number,
         PropagatorType.Retarded => D(),
         PropagatorType.Keldysh => D(),
     ))
-    construct_self_energy!(self_energy, G.keldysh)
+    construct_self_energy!(self_energy, G.keldysh, keep)
 
     _simplify_prefactors!(self_energy[PropagatorType.Keldysh])
     _simplify_prefactors!(self_energy[PropagatorType.Retarded])
@@ -201,6 +203,10 @@ function _self_energy(G::DressedPropagator{C,Fermion,O,E1,E2}) where {C<:Number,
         G.parameter,
         G.target,
     )
+end
+
+function _self_energy(G::DressedPropagator{C,Fermion}) where {C<:Number}
+    return _self_energy(G, is_irreducible)
 end
 
 """Return the fermionic triangular LO self-energy matrix `[[R,K],[0,A]]`."""
