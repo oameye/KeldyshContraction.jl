@@ -53,7 +53,13 @@ G^{-1}=G_0^{-1}-\Sigma[G].
 
 The first statement selects perturbative diagrams; the second adds a nonlinear Dyson closure and therefore resums infinitely many ordinary perturbative contributions. In a conserving self-consistent approximation the retained skeletons must be chosen consistently--for example from a common `\Phi[G]` functional--rather than dressing an arbitrary subset of diagrams.
 
-KeldyshContraction.jl currently constructs the explicit fixed-order diagrammatic self-energy. It does **not** iterate the Dyson equation to self-consistency. The generated 1PI expressions can be used as the diagrammatic input to a separate self-consistent solver, but that numerical closure is outside the present package.
+`SelfEnergy(G)` retains the package's existing fixed-order 1PI semantics. For a diagrammatic Dyson/2PI organization, `KeldyshContraction.skeleton_self_energy(G)` applies the additional two-particle-irreducibility condition: after amputation, removing any pair of bulk propagator lines must leave the original bulk-vertex set connected. This removes 1PI self-energy-insertion diagrams while retaining genuine skeletons. The same selector is available before or after Fourier transformation, and it returns the ordinary self-energy representation so all downstream Wigner and kinetic transformations are unchanged.
+
+```@docs
+KeldyshContraction.skeleton_self_energy
+```
+
+The package still does **not** iterate the Dyson equation to self-consistency. Skeleton selection determines which exact diagrams are supplied to such a closure; the nonlinear self-consistent solver itself remains outside the package.
 
 ## Multiple processes
 

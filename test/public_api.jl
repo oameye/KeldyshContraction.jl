@@ -31,15 +31,20 @@ end
     # Qualified public names are semantic inspection used by the manual and canonical examples.
     for name in (
         :Regularisation,
+        :OffShellCollisionExpression,
         :field_families,
         :target_family,
         :parameters,
         :matrix,
         :order,
         :statistics,
+        :gradient_order,
+        :wigner_context,
         :keldysh_component,
         :retarded_component,
         :advanced_component,
+        :collision_offset,
+        :collision_distribution_coefficient,
         :kinematic_factor,
         :frequency_support,
         :reduced_regular_terms,
@@ -51,7 +56,8 @@ end
         VERSION >= v"1.11" && @test Base.ispublic(KC, name)
     end
 
-    # Returned representation types and compiler machinery are implementation details.
+    # Returned representation types and compiler machinery are implementation details unless
+    # explicitly promoted above as a stable physical compiler boundary.
     for name in (
         :QTerm,
         :QMul,
@@ -67,7 +73,6 @@ end
         :WignerDressedPropagator,
         :WignerSelfEnergy,
         :KineticSelfEnergy,
-        :OffShellCollisionExpression,
         :SpectralDispersiveCollision,
         :FrequencySupport,
         :ReducedFrequencyCollision,
@@ -118,6 +123,7 @@ end
     GW = wigner_transform(GF; gradient_order=Val(0))
     ΣW = wigner_transform(ΣF; gradient_order=Val(0))
     kinetic = kinetic_expression(ΣW)
+    off_shell = off_shell_collision_expression(kinetic)
 
     test_rak_accessors(G)
     test_rak_accessors(Σ)
@@ -126,4 +132,10 @@ end
     test_rak_accessors(GW)
     test_rak_accessors(ΣW)
     test_rak_accessors(kinetic)
+
+    @test @inferred(KC.gradient_order(off_shell)) == Val(0)
+    @test @inferred(KC.wigner_context(off_shell)) == KC.wigner_context(kinetic)
+    @test @inferred(KC.collision_offset(off_shell)) === off_shell.offset
+    @test @inferred(KC.collision_distribution_coefficient(off_shell)) ===
+        off_shell.distribution_coefficient
 end

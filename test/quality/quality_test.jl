@@ -68,6 +68,19 @@ using ExplicitImports
             KeldyshContraction.HomogeneousWignerContext,
         },
     )
+    all_concrete(KeldyshContraction.SpectralLineIdentity{KeldyshContraction.Boson})
+    all_concrete(KeldyshContraction.LorentzianSpectralData{Rational{Int64}})
+    all_concrete(
+        KeldyshContraction.LorentzianSpectralModel{Rational{Int64},KeldyshContraction.Boson}
+    )
+    all_concrete(KeldyshContraction.LorentzianSpectralFactor{KeldyshContraction.Boson})
+    all_concrete(KeldyshContraction.LorentzianSpectralWeight{KeldyshContraction.Boson})
+    all_concrete(KeldyshContraction.LorentzianSpectralReduction{KeldyshContraction.Boson})
+    all_concrete(
+        KeldyshContraction.LorentzianConvolutionReduction{KeldyshContraction.Boson}
+    )
+    all_concrete(KeldyshContraction.LinewidthPower{KeldyshContraction.Boson})
+    all_concrete(KeldyshContraction.WidthAwarePowerCounting{KeldyshContraction.Boson})
     all_concrete(
         KeldyshContraction.ExceptionalFrequencyClassification{KeldyshContraction.Boson,2,0}
     )
