@@ -128,6 +128,17 @@ function pwave_axis_polynomial(momentum)
     return KC.MomentumPolynomial(monomial, one(C))
 end
 
+function certify_compact_second_order_display(result)
+    terms = KC.collision_kernel_terms(result.kernel)
+    expanded = KC._physical_collision_string(terms, true)
+    compact = KC._compact_physical_collision_string(terms, true)
+
+    @test ncodeunits(compact) < ncodeunits(expanded)
+    @test length(collect(eachmatch(r"_\{x\}\^2", compact))) >= 2
+    @test !occursin(r"q_\{\d+\}_\{", compact)
+    return compact
+end
+
 function certify_gp2_elastic(result)
     terms = KC.occupation_reduced_terms(result.occupation)
     @test length(terms) == 9
@@ -197,6 +208,9 @@ function certify_gp2_elastic(result)
             isempty(KC.frequency_support(sector).principal_values),
         keys(KC.collision_kernel_terms(result.kernel)),
     )
+
+    compact = certify_compact_second_order_display(result)
+    @test occursin("\\left(1-n_{", compact)
     return nothing
 end
 
@@ -269,6 +283,9 @@ function certify_gamma2_loss(result)
             isempty(KC.frequency_support(sector).principal_values),
         keys(KC.collision_kernel_terms(result.kernel)),
     )
+
+    compact = certify_compact_second_order_display(result)
+    @test occursin("\\left(1-n_{", compact)
 
     # The singular branch remains upstream. Every generated blocker is a genuine pinch,
     # and all 84 contributions carry the same exact canonical affine singular geometry.

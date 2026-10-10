@@ -10,7 +10,19 @@ makedocs(;
     sitename="KeldyshContraction.jl",
     authors="Orjan Ameye",
     modules=KeldyshContraction,
-    format=Documenter.HTML(; canonical="https://oameye.github.io/KeldyshContraction.jl"),
+    format=Documenter.HTML(;
+        canonical="https://oameye.github.io/KeldyshContraction.jl",
+        mathengine=Documenter.MathJax3(
+            Dict(
+                :tex => Dict(
+                    "inlineMath" => [["\$", "\$"], ["\\(", "\\)"]],
+                    "tags" => "ams",
+                    "packages" => ["base", "ams", "autoload", "mhchem"],
+                    "maxBuffer" => 100 * 1024,
+                ),
+            ),
+        ),
+    ),
     pages=pages,
     pagesonly=true,
     clean=true,
