@@ -69,7 +69,7 @@ function benchmark_loop_quotient_fixture(nloops::Int=2)
     )
 
     n(momentum) =
-        OccupationPolynomial(OccupationAtom(benchmark_collision_ϕ, momentum), one(C))
+        KC.OccupationPolynomial(KC.OccupationAtom(benchmark_collision_ϕ, momentum), one(C))
     nk, np, nq, nr = n(k), n(p), n(q), n(r)
     raw = -4 * nk * np * nq - 2 * nk * np + 2 * nk * nq * nr + 2 * nq * nr + nr - nq
     for loop in Iterators.drop(loops, 2)
