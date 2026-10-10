@@ -10,6 +10,7 @@ pages = [
         "Fields and algebra" => "manual/fields.md",
         "Actions and interactions" => "manual/actions.md",
         "Propagators and self-energy" => "manual/propagators.md",
+        "2PI effective action" => "manual/twopi.md",
         "Fourier and Wigner representations" => "manual/transforms.md",
         "Kinetic reduction" => "manual/kinetics.md",
     ],
