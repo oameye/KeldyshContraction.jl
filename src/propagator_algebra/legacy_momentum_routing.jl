@@ -40,20 +40,29 @@ function construct_momenta_from_gf(d::Diagrams{C,S,E1,E2}) where {C,S,E1,E2}
     return new_diagrams
 end
 
+function _legacy_self_energy_linear_system(d::Diagram)
+    A = construct_linear_system(d.contractions)
+    out_leg, in_leg = amputated_leg_indices(d)
+    nvertices = size(A, 1)
+    1 <= out_leg <= nvertices ||
+        throw(ArgumentError("could not infer outgoing amputated self-energy attachment"))
+    1 <= in_leg <= nvertices ||
+        throw(ArgumentError("could not infer incoming amputated self-energy attachment"))
+
+    outgoing = zeros(Int, nvertices)
+    incoming = zeros(Int, nvertices)
+    outgoing[out_leg] = -1
+    incoming[in_leg] = 1
+    return hcat(outgoing, A, incoming)
+end
+
 function construct_momenta_from_self_energy(d::Diagram{S,E1,E2}) where {S,E1,E2}
     if iszero(E2)
         momenta = FixedVector{E1,Momenta}(
             Momenta(has_in(ps) || has_out(ps) ? 0 : 1) for ps in positions.(d.contractions)
         )
     else
-        A = construct_linear_system(d.contractions)
-        A = hcat([-1; 0], A)
-        if !iseven(first(d.topology))
-            A = hcat(A, [0; 1])
-        else
-            A = hcat(A, [1; 0])
-        end
-
+        A = _legacy_self_energy_linear_system(d)
         dep_idx, free_idx, P = solve_linear_system(A)
         momenta_dynamic = construct_momenta(dep_idx, free_idx, P)
         momenta = FixedVector{E1,Momenta}(momenta_dynamic)
