@@ -56,6 +56,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("fermionic_propagator_dispatch.jl")
 
     include("propagator_algebra/fourier_transform.jl")
+    include("skeleton_self_energy.jl")
     include("propagator_algebra/wigner.jl")
     include("propagator_algebra/spectral_statistical.jl")
     include("off_shell_collision.jl")
@@ -106,7 +107,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     reduced_regular_terms,
     reduced_blocked_terms,
     reduced_trotter_terms,
-    collision_kernel_terms
+    collision_kernel_terms,
+    skeleton_self_energy
 
     # Small workflow surface intended for ordinary unqualified use.
     export @qfields,
