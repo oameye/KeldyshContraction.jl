@@ -34,6 +34,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     include("keldysh_algebra/hashing.jl")
     include("parameters.jl")
     include("InteractionLagrangian.jl")
+    include("charged_interaction_lagrangian.jl")
 
     # Propagators
     include("propagator_algebra/propagator.jl")
@@ -49,17 +50,24 @@ const ComplexRationals = Complex{Rational{Int64}}
 
     include("wick_contractions.jl")
     include("filters.jl")
+    include("twopi_effective_action.jl")
     include("self_energy.jl")
 
     # Statistics extensions
     include("fermionic_keldysh.jl")
     include("fermionic_propagator_dispatch.jl")
+    include("twopi_self_energy.jl")
 
     include("propagator_algebra/fourier_transform.jl")
+    include("twopi_fourier_self_energy.jl")
+    include("composite_response.jl")
+    include("skeleton_self_energy.jl")
     include("propagator_algebra/wigner.jl")
     include("propagator_algebra/spectral_statistical.jl")
     include("off_shell_collision.jl")
     include("spectral_dispersive_collision.jl")
+    # Exact pair response remains off shell until a dedicated response spectral backend exists.
+    include("composite_response_kinetics.jl")
     include("frequency_support.jl")
     include("full_rank_frequency_reduction.jl")
     include("canonical_frequency_expression.jl")
@@ -93,6 +101,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     # in the manual or canonical examples. Representation and compiler IR remain private.
     @public Regularisation,
     field_families,
+    field_charge,
     target_family,
     parameters,
     matrix,
@@ -106,7 +115,13 @@ const ComplexRationals = Complex{Rational{Int64}}
     reduced_regular_terms,
     reduced_blocked_terms,
     reduced_trotter_terms,
-    collision_kernel_terms
+    collision_kernel_terms,
+    skeleton_self_energy,
+    twopi_terms,
+    twopi_self_energy,
+    twopi_self_energy_terms,
+    physical_self_energy,
+    twopi_fourier_self_energy
 
     # Small workflow surface intended for ordinary unqualified use.
     export @qfields,
@@ -125,7 +140,9 @@ const ComplexRationals = Complex{Rational{Int64}}
         Two,
         DressedPropagator,
         SelfEnergy,
+        TwoPIEffectiveAction,
         InteractionLagrangian,
+        ChargedInteractionLagrangian,
         convert_coefficients,
         rationalize_coefficients,
         @syms,
