@@ -49,6 +49,7 @@ const ComplexRationals = Complex{Rational{Int64}}
 
     include("wick_contractions.jl")
     include("filters.jl")
+    include("twopi_effective_action.jl")
     include("self_energy.jl")
 
     # Statistics extensions
@@ -108,7 +109,8 @@ const ComplexRationals = Complex{Rational{Int64}}
     reduced_blocked_terms,
     reduced_trotter_terms,
     collision_kernel_terms,
-    skeleton_self_energy
+    skeleton_self_energy,
+    twopi_terms
 
     # Small workflow surface intended for ordinary unqualified use.
     export @qfields,
@@ -127,6 +129,7 @@ const ComplexRationals = Complex{Rational{Int64}}
         Two,
         DressedPropagator,
         SelfEnergy,
+        TwoPIEffectiveAction,
         InteractionLagrangian,
         convert_coefficients,
         rationalize_coefficients,
