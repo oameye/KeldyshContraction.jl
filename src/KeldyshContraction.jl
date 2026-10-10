@@ -55,6 +55,7 @@ const ComplexRationals = Complex{Rational{Int64}}
     # Statistics extensions
     include("fermionic_keldysh.jl")
     include("fermionic_propagator_dispatch.jl")
+    include("twopi_self_energy.jl")
 
     include("propagator_algebra/fourier_transform.jl")
     include("skeleton_self_energy.jl")
@@ -110,7 +111,10 @@ const ComplexRationals = Complex{Rational{Int64}}
     reduced_trotter_terms,
     collision_kernel_terms,
     skeleton_self_energy,
-    twopi_terms
+    twopi_terms,
+    twopi_self_energy,
+    twopi_self_energy_terms,
+    physical_self_energy
 
     # Small workflow surface intended for ordinary unqualified use.
     export @qfields,
