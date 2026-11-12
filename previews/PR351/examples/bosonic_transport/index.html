@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Bosonic scattering and two-body loss · KeldyshContraction.jl</title><meta name="title" content="Bosonic scattering and two-body loss · KeldyshContraction.jl"/><meta property="og:title" content="Bosonic scattering and two-body loss · KeldyshContraction.jl"/><meta property="twitter:title" content="Bosonic scattering and two-body loss · KeldyshContraction.jl"/><meta name="description" content="Documentation for KeldyshContraction.jl."/><meta property="og:description" content="Documentation for KeldyshContraction.jl."/><meta property="twitter:description" content="Documentation for KeldyshContraction.jl."/><meta property="og:url" content="https://oameye.github.io/KeldyshContraction.jl/examples/bosonic_transport/"/><meta property="twitter:url" content="https://oameye.github.io/KeldyshContraction.jl/examples/bosonic_transport/"/><link rel="canonical" href="https://oameye.github.io/KeldyshContraction.jl/examples/bosonic_transport/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">KeldyshContraction.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Theory</span><ul><li><a class="tocitem" href="../../theory/keldysh/">Schwinger–Keldysh field theory</a></li><li><a class="tocitem" href="../../theory/perturbation/">Perturbation theory and self-consistency</a></li><li><a class="tocitem" href="../../theory/regularisation/">Equal-time regularisation</a></li><li><a class="tocitem" href="../../theory/kinetics/">Quantum kinetic theory</a></li></ul></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../../manual/fields/">Fields and algebra</a></li><li><a class="tocitem" href="../../manual/actions/">Actions and interactions</a></li><li><a class="tocitem" href="../../manual/propagators/">Propagators and self-energy</a></li><li><a class="tocitem" href="../../manual/transforms/">Fourier and Wigner representations</a></li><li><a class="tocitem" href="../../manual/kinetics/">Kinetic reduction</a></li><li><a class="tocitem" href="../../manual/collision_projection/">Moment and linear-response projection</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li class="is-active"><a class="tocitem" href>Bosonic scattering and two-body loss</a><ul class="internal"><li><a class="tocitem" href="#Microscopic-interaction"><span>Microscopic interaction</span></a></li><li><a class="tocitem" href="#The-physical-loss-kernel"><span>The physical loss kernel</span></a></li><li><a class="tocitem" href="#From-diagrams-to-the-kinetic-equation"><span>From diagrams to the kinetic equation</span></a></li><li><a class="tocitem" href="#Resolving-the-causal-structure"><span>Resolving the causal structure</span></a></li><li><a class="tocitem" href="#Coherent-two-body-scattering"><span>Coherent two-body scattering</span></a></li></ul></li><li><a class="tocitem" href="../fermionic_transport/">Fermionic p-wave scattering and loss</a></li></ul></li><li><a class="tocitem" href="../../literature/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Bosonic scattering and two-body loss</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Bosonic scattering and two-body loss</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/oameye/KeldyshContraction.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/oameye/KeldyshContraction.jl/blob/main/examples/bosonic_transport.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Bosonic-scattering-and-two-body-loss"><a class="docs-heading-anchor" href="#Bosonic-scattering-and-two-body-loss">Bosonic scattering and two-body loss</a><a id="Bosonic-scattering-and-two-body-loss-1"></a><a class="docs-heading-anchor-permalink" href="#Bosonic-scattering-and-two-body-loss" title="Permalink"></a></h1><p>Consider one complex bosonic field with coherent contact scattering and Markovian two-body loss. We first ask for the physical collision kernel directly, then follow the same calculation through the objects that carry the derivation.</p><pre><code class="language-julia hljs">using KeldyshContraction
+using KeldyshContraction: Regularisation
+
+@qfields ϕ::Boson
+c, q = ϕ[Classical], ϕ[Quantum]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(ϕᶜ, ϕᴾ)</code></pre><h2 id="Microscopic-interaction"><a class="docs-heading-anchor" href="#Microscopic-interaction">Microscopic interaction</a><a id="Microscopic-interaction-1"></a><a class="docs-heading-anchor-permalink" href="#Microscopic-interaction" title="Permalink"></a></h2><p>For the coherent contact interaction we use the standard bosonic Keldysh vertex, with the coupling kept outside the field polynomial.</p><pre><code class="language-julia hljs">elastic = -(
+    (1 // 2) * (c^2 + q^2) * bar(c) * bar(q) + (1 // 2) * c * q * (bar(c)^2 + bar(q)^2)
+)</code></pre><p class="math-container">\[- \frac{1}{2} \phi^c \phi^c \bar{\phi^P} \bar{\phi^c} - \frac{1}{2} \phi^P \phi^P \bar{\phi^P} \bar{\phi^c} - \frac{1}{2} \phi^P \phi^c \bar{\phi^c} \bar{\phi^c} - \frac{1}{2} \phi^P \phi^c \bar{\phi^P} \bar{\phi^P}\]</p><p>The dissipative vertex retains its finite Trotter ordering. The <code>+</code> and <code>-</code> labels distinguish the two sides of an equal-time contraction until the causal reduction removes the regulator structurally.</p><pre><code class="language-julia hljs">plus = Regularisation.Plus
+minus = Regularisation.Minus
+loss =
+    (1 // 2) *
+    im *
+    (
+        bar(c) * bar(q) * (c(minus)^2 + q(minus)^2) -
+        c(plus) * q(plus) * (bar(c)^2 + bar(q)^2) +
+        2 * bar(c) * bar(q) * (c(plus) * q(plus) + c(minus) * q(minus))
+    )
+
+@syms g γ
+Lg = InteractionLagrangian(elastic, g)
+Lγ = InteractionLagrangian(loss, γ)
+L = Lg + Lγ</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">KeldyshContraction.LagrangianSum{Complex{Rational{Int64}}, Boson}(InteractionLagrangian{Complex{Rational{Int64}}, Boson}[Interaction Lagrangian with fields ϕ:
+(-1//2*(ϕᶜ*ϕᶜ*̄ϕᴾ*̄ϕᶜ)+-1//2*(ϕᴾ*ϕᴾ*̄ϕᴾ*̄ϕᶜ)+-1//2*(ϕᴾ*ϕᶜ*̄ϕᶜ*̄ϕᶜ)+-1//2*(ϕᴾ*ϕᶜ*̄ϕᴾ*̄ϕᴾ)), Interaction Lagrangian with fields ϕ:
+((0//1 + 1//2*im)*(ϕᶜ⁻*ϕᶜ⁻*̄ϕᴾ*̄ϕᶜ)+(0//1 + 1//2*im)*(ϕᴾ⁻*ϕᴾ⁻*̄ϕᴾ*̄ϕᶜ)+(0//1 - 1//2*im)*(ϕᴾ⁺*ϕᶜ⁺*̄ϕᶜ*̄ϕᶜ)+(0//1 - 1//2*im)*(ϕᴾ⁺*ϕᶜ⁺*̄ϕᴾ*̄ϕᴾ)+(0//1 + 1//1*im)*(ϕᴾ⁺*ϕᶜ⁺*̄ϕᴾ*̄ϕᶜ)+(0//1 + 1//1*im)*(ϕᴾ⁻*ϕᶜ⁻*̄ϕᴾ*̄ϕᶜ))])</code></pre><p>The full action <code>L</code> keeps the perturbative sectors <code>g</code>, <code>γ</code>, <code>g^2</code>, <code>gγ</code>, ... distinct. If only one sector is needed, constructing from the corresponding process avoids generating unrelated diagrams.</p><h2 id="The-physical-loss-kernel"><a class="docs-heading-anchor" href="#The-physical-loss-kernel">The physical loss kernel</a><a id="The-physical-loss-kernel-1"></a><a class="docs-heading-anchor-permalink" href="#The-physical-loss-kernel" title="Permalink"></a></h2><p>For the first-order loss problem the ordinary user-facing calculation is just the perturbative propagator followed by <code>collision_kernel</code>.</p><pre><code class="language-julia hljs">Gγ = DressedPropagator(Lγ, Val(1), Val(3); preserve_regularisation=true)
+Cγ = collision_kernel(Gγ)
+Cγ</code></pre><p class="math-container">\[
+\begin{aligned}
+C_n(k)={}&amp;-4\,\gamma\,\int_{q}\,n_{\phi}\!\left(q\right)\,n_{\phi}\!\left(k\right)
+\end{aligned}
+\]</p><p>In the normalization used here the result is</p><p class="math-container">\[C_n^{(\gamma)}(k)=-4\gamma\int_q n_k n_q.\]</p><p>The compact call is the endpoint. To see where that kernel comes from, we now expose the same derivation without changing the calculation.</p><h2 id="From-diagrams-to-the-kinetic-equation"><a class="docs-heading-anchor" href="#From-diagrams-to-the-kinetic-equation">From diagrams to the kinetic equation</a><a id="From-diagrams-to-the-kinetic-equation-1"></a><a class="docs-heading-anchor-permalink" href="#From-diagrams-to-the-kinetic-equation" title="Permalink"></a></h2><p>Fourier transformation assigns exact momentum variables to the coordinate-space contractions. The resulting object already shows the routed propagator expression.</p><pre><code class="language-julia hljs">GF = fourier_transform(Gγ)
+GF</code></pre><p class="math-container">\[
+\begin{aligned}
+G_F^K\!\left(k\right)&amp;={}-\gamma\,\int_{q}\,G_{\phi}^{K}\!\left(k\right)\,G_{\phi,+}^{K}\!\left(q\right)\,G_{\phi,+}^{A}\!\left(k\right)\\
+&amp;{}- \gamma\,\int_{q}\,G_{\phi}^{R}\!\left(k\right)\,G_{\phi,+}^{R}\!\left(q\right)\,G_{\phi,+}^{A}\!\left(k\right)\\
+&amp;{}- \gamma\,\int_{q}\,G_{\phi}^{R}\!\left(k\right)\,G_{\phi,+}^{R}\!\left(q\right)\,G_{\phi,-}^{A}\!\left(k\right)\\
+&amp;{}- \gamma\,\int_{q}\,G_{\phi}^{R}\!\left(k\right)\,G_{\phi,+}^{R}\!\left(q\right)\,G_{\phi,-}^{K}\!\left(k\right)\\
+&amp;{}+ \gamma\,\int_{q}\,G_{\phi}^{K}\!\left(k\right)\,G_{\phi,+}^{R}\!\left(q\right)\,G_{\phi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \gamma\,\int_{q}\,G_{\phi}^{R}\!\left(k\right)\,G_{\phi,+}^{K}\!\left(q\right)\,G_{\phi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \gamma\,\int_{q}\,G_{\phi}^{R}\!\left(k\right)\,G_{\phi,-}^{K}\!\left(q\right)\,G_{\phi,-}^{A}\!\left(k\right)\\
+&amp;{}+ \gamma\,\int_{q}\,G_{\phi}^{R}\!\left(k\right)\,G_{\phi,-}^{K}\!\left(q\right)\,G_{\phi,-}^{K}\!\left(k\right)\\
+G_F^R\!\left(k\right)&amp;={}-\gamma\,\int_{q}\,G_{\phi}^{R}\!\left(k\right)\,G_{\phi,+}^{R}\!\left(q\right)\,G_{\phi,-}^{R}\!\left(k\right)\\
+&amp;{}+ \gamma\,\int_{q}\,G_{\phi}^{R}\!\left(k\right)\,G_{\phi,-}^{K}\!\left(q\right)\,G_{\phi,-}^{R}\!\left(k\right)\\
+G_F^A\!\left(k\right)&amp;={}-\gamma\,\int_{q}\,G_{\phi}^{A}\!\left(k\right)\,G_{\phi,+}^{K}\!\left(q\right)\,G_{\phi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \gamma\,\int_{q}\,G_{\phi}^{A}\!\left(k\right)\,G_{\phi,+}^{R}\!\left(q\right)\,G_{\phi,+}^{A}\!\left(k\right)
+\end{aligned}
+\]</p><p>The 1PI self-energy is then obtained by amputating the external propagators and removing reducible two-point diagrams. This is a fixed-order perturbative self-energy, not a self-consistent Dyson solution.</p><pre><code class="language-julia hljs">ΣF = SelfEnergy(GF)
+ΣF</code></pre><p class="math-container">\[
+\begin{aligned}
+\Sigma_F^K\!\left(k\right)&amp;={}-\gamma\,\int_{q}\,G_{\phi,+}^{R}\!\left(q\right)\\
+&amp;{}- \gamma\,\int_{q}\,G_{\phi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \gamma\,\int_{q}\,G_{\phi,+}^{K}\!\left(q\right)\\
+&amp;{}+ \gamma\,\int_{q}\,G_{\phi,-}^{K}\!\left(q\right)\\
+\Sigma_F^R\!\left(k\right)&amp;={}-\gamma\,\int_{q}\,G_{\phi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \gamma\,\int_{q}\,G_{\phi,-}^{K}\!\left(q\right)\\
+\Sigma_F^A\!\left(k\right)&amp;={}-\gamma\,\int_{q}\,G_{\phi,+}^{K}\!\left(q\right)\\
+&amp;{}+ \gamma\,\int_{q}\,G_{\phi,+}^{R}\!\left(q\right)
+\end{aligned}
+\]</p><p>Passing to Wigner variables separates centre and relative coordinates. For the homogeneous collision problem we keep the zeroth-gradient contribution.</p><pre><code class="language-julia hljs">ΣW = wigner_transform(ΣF; gradient_order=Val(0))
+ΣW</code></pre><p class="math-container">\[
+\begin{aligned}
+\Sigma_W^K\!\left(X,k\right)&amp;={}-\gamma\,\int_{q}\,G_{\phi,+}^{R}\!\left(q\right)\\
+&amp;{}- \gamma\,\int_{q}\,G_{\phi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \gamma\,\int_{q}\,G_{\phi,+}^{K}\!\left(q\right)\\
+&amp;{}+ \gamma\,\int_{q}\,G_{\phi,-}^{K}\!\left(q\right)\\
+\Sigma_W^R\!\left(X,k\right)&amp;={}-\gamma\,\int_{q}\,G_{\phi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \gamma\,\int_{q}\,G_{\phi,-}^{K}\!\left(q\right)\\
+\Sigma_W^A\!\left(X,k\right)&amp;={}-\gamma\,\int_{q}\,G_{\phi,+}^{K}\!\left(q\right)\\
+&amp;{}+ \gamma\,\int_{q}\,G_{\phi,+}^{R}\!\left(q\right)
+\end{aligned}
+\]</p><p>The kinetic representation replaces internal Keldysh propagators by spectral and statistical objects. At this order,</p><p class="math-container">\[G^K=-iFA.\]</p><pre><code class="language-julia hljs">KΣ = kinetic_expression(ΣW)
+KΣ</code></pre><p class="math-container">\[
+\begin{aligned}
+\Sigma_{\mathrm{kin}}^K\!\left(k\right)&amp;={}-2 i\,\gamma\,\int_{q}\,F_{\phi}\!\left(q\right)\,A_{\phi}\!\left(q\right)\\
+&amp;{}- 2\,\gamma\,\int_{q}\,G_{\phi,+}^{R}\!\left(q\right)\\
+\Sigma_{\mathrm{kin}}^R\!\left(k\right)&amp;={}-\gamma\,\int_{q}\,G_{\phi,+}^{R}\!\left(q\right)\\
+&amp;{}- i\,\gamma\,\int_{q}\,F_{\phi}\!\left(q\right)\,A_{\phi}\!\left(q\right)\\
+\Sigma_{\mathrm{kin}}^A\!\left(k\right)&amp;={}\gamma\,\int_{q}\,G_{\phi,+}^{R}\!\left(q\right)\\
+&amp;{}+ i\,\gamma\,\int_{q}\,F_{\phi}\!\left(q\right)\,A_{\phi}\!\left(q\right)
+\end{aligned}
+\]</p><p>The full Kadanoff–Baym collision combination is formed before any shell projection,</p><p class="math-container">\[I_{\rm coll}=i\Sigma^K-F_k A_\Sigma,
+\qquad
+A_\Sigma=i(\Sigma^R-\Sigma^A).\]</p><p>This ordering matters: cancellations between the self-energy components belong to the collision identity itself and must occur before frequency reduction.</p><pre><code class="language-julia hljs">I = off_shell_collision_expression(KΣ)
+I</code></pre><p class="math-container">\[
+\begin{aligned}
+I_{\mathrm{coll}}(k)={}&amp;-2 i\,\gamma\,\int_{q}\,G_{\phi,+}^{R}\!\left(q\right)\\
+&amp;{}- 2\,\gamma\,\int_{q}\,F_{\phi}\!\left(k\right)\,F_{\phi}\!\left(q\right)\,A_{\phi}\!\left(q\right)\\
+&amp;{}+ 2 i\,\gamma\,\int_{q}\,F_{\phi}\!\left(k\right)\,G_{\phi,+}^{R}\!\left(q\right)\\
+&amp;{}+ 2\,\gamma\,\int_{q}\,F_{\phi}\!\left(q\right)\,A_{\phi}\!\left(q\right)
+\end{aligned}
+\]</p><h2 id="Resolving-the-causal-structure"><a class="docs-heading-anchor" href="#Resolving-the-causal-structure">Resolving the causal structure</a><a id="Resolving-the-causal-structure-1"></a><a class="docs-heading-anchor-permalink" href="#Resolving-the-causal-structure" title="Permalink"></a></h2><p>Retarded and advanced propagators are decomposed into spectral and dispersive parts,</p><p class="math-container">\[G^R=D-\frac{i}{2}A,
+\qquad
+G^A=D+\frac{i}{2}A.\]</p><p>The displayed object below is the resulting concrete <code>A/D/F</code> integrand, not merely a label for this transformation.</p><pre><code class="language-julia hljs">SD = spectral_dispersive_collision(I)
+SD</code></pre><p class="math-container">\[
+\begin{aligned}
+I_{\mathrm{coll}}(k)={}&amp;-2 i\,\gamma\,\int_{q}\,D_{\phi,+}\!\left(q\right)\\
+&amp;{}- \gamma\,\int_{q}\,A_{\phi,+}\!\left(q\right)\\
+&amp;{}+ 2\,\gamma\,\int_{q}\,F_{\phi}\!\left(q\right)\,A_{\phi}\!\left(q\right)\\
+&amp;{}+ 2 i\,\gamma\,\int_{q}\,F_{\phi}\!\left(k\right)\,D_{\phi,+}\!\left(q\right)\\
+&amp;{}+ \gamma\,\int_{q}\,F_{\phi}\!\left(k\right)\,A_{\phi,+}\!\left(q\right)\\
+&amp;{}- 2\,\gamma\,\int_{q}\,F_{\phi}\!\left(k\right)\,F_{\phi}\!\left(q\right)\,A_{\phi}\!\left(q\right)
+\end{aligned}
+\]</p><p>Internal frequencies can now be integrated exactly. Regular terms retain their physical shell or principal-value support, while genuine pinches remain explicit blockers rather than being assigned a finite value.</p><pre><code class="language-julia hljs">R = reduce_frequency_collision(SD)
+R</code></pre><p class="math-container">\[
+\begin{aligned}
+I_{\mathrm{reg}}(k)={}&amp;\gamma\,\int_{q}\,-2\,\left(1-F_{\phi}\!\left(q\right)\right)\,\left(1-F_{\phi}\!\left(k\right)\right)\\
+&amp;N_{\mathrm{blocked}}=0,\qquad N_{\mathrm{Trotter}}=0
+\end{aligned}
+\]</p><p>Only after this causal reduction do we replace the bosonic statistical function by occupations, <code>F=1+2n</code>. The displayed polynomial is therefore already the physical Bose gain/loss structure carried by each reduced sector.</p><pre><code class="language-julia hljs">N = occupation_reduced_expression(R)
+N</code></pre><p class="math-container">\[
+\begin{aligned}
+C_n^{\mathrm{reg}}(k)={}&amp;-4\,\gamma\,\int_{q}\,n_{\phi}\!\left(q\right)\,n_{\phi}\!\left(k\right)
+\end{aligned}
+\]</p><p>Dummy loop variables related by signed permutations describe the same momentum integral. Quotienting them here gives a canonical representative without changing the physical occupation or kinematic factors.</p><pre><code class="language-julia hljs">Q = quotient_loop_momenta(N)
+Q</code></pre><p class="math-container">\[
+\begin{aligned}
+C_n^{\mathrm{quot}}(k)={}&amp;-4\,\gamma\,\int_{q}\,n_{\phi}\!\left(q\right)\,n_{\phi}\!\left(k\right)
+\end{aligned}
+\]</p><p>Lowering the canonical sectors produces the same physical kernel as the direct call with which we started.</p><pre><code class="language-julia hljs">Cγ_explicit = collision_kernel(Q)
+Cγ_explicit
+
+@assert KeldyshContraction.collision_kernel_terms(Cγ) ==
+    KeldyshContraction.collision_kernel_terms(Cγ_explicit)</code></pre><h2 id="Coherent-two-body-scattering"><a class="docs-heading-anchor" href="#Coherent-two-body-scattering">Coherent two-body scattering</a><a id="Coherent-two-body-scattering-1"></a><a class="docs-heading-anchor-permalink" href="#Coherent-two-body-scattering" title="Permalink"></a></h2><p>The same compiler applies at second order in the coherent coupling. Two quartic vertices plus the external two-point legs give five propagator edges.</p><pre><code class="language-julia hljs">Gg2 = DressedPropagator(Lg, Val(2), Val(5); preserve_regularisation=true)
+Cg2 = collision_kernel(Gg2)
+Cg2</code></pre><p class="math-container">\[
+\begin{aligned}
+C_n(k)={}&amp;g^{2}\,\int_{q_{1}}\int_{q_{2}}\,\left[2\,n_{\phi}\!\left(-k + q_{1} + q_{2}\right)\,n_{\phi}\!\left(q_{2}\right)\,n_{\phi}\!\left(q_{1}\right) - 4\,n_{\phi}\!\left(-k + q_{1} + q_{2}\right)\,n_{\phi}\!\left(q_{1}\right)\,n_{\phi}\!\left(k\right) - 2\,n_{\phi}\!\left(-k + q_{1} + q_{2}\right)\,n_{\phi}\!\left(k\right) + 2\,n_{\phi}\!\left(q_{2}\right)\,n_{\phi}\!\left(q_{1}\right) + 2\,n_{\phi}\!\left(q_{2}\right)\,n_{\phi}\!\left(q_{1}\right)\,n_{\phi}\!\left(k\right)\right]\,\delta\!\left(\varepsilon_{\phi}\!\left(-k + q_{1} + q_{2}\right) - \varepsilon_{\phi}\!\left(q_{2}\right) - \varepsilon_{\phi}\!\left(q_{1}\right) + \varepsilon_{\phi}\!\left(k\right)\right)
+\end{aligned}
+\]</p><p>The result has the expected Bose-enhanced gain/loss structure,</p><p class="math-container">\[C_n^{(g^2)}(k)\propto
+2\!\left[(1+n_k)(1+n_p)n_qn_r
+-n_kn_p(1+n_q)(1+n_r)\right]\delta(\Delta E),\]</p><p>with the exact routing and phase-space factors retained by the symbolic kernel. In a full multi-process expansion, mixed <code>g\gamma</code> sectors may also carry principal-value contributions. If a selected sector contains a genuine pinch, <code>collision_kernel(G)</code> refuses to hide it: stop at <code>R</code>, inspect <code>reduced_regular_terms(R)</code> and <code>reduced_blocked_terms(R)</code>, and make that approximation choice explicitly.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../manual/collision_projection/">« Moment and linear-response projection</a><a class="docs-footer-nextpage" href="../fermionic_transport/">Fermionic p-wave scattering and loss »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Thursday 17 September 2026 12:34">Thursday 17 September 2026</span>. Using Julia version 1.13.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

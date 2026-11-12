@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Fermionic p-wave scattering and loss · KeldyshContraction.jl</title><meta name="title" content="Fermionic p-wave scattering and loss · KeldyshContraction.jl"/><meta property="og:title" content="Fermionic p-wave scattering and loss · KeldyshContraction.jl"/><meta property="twitter:title" content="Fermionic p-wave scattering and loss · KeldyshContraction.jl"/><meta name="description" content="Documentation for KeldyshContraction.jl."/><meta property="og:description" content="Documentation for KeldyshContraction.jl."/><meta property="twitter:description" content="Documentation for KeldyshContraction.jl."/><meta property="og:url" content="https://oameye.github.io/KeldyshContraction.jl/examples/fermionic_transport/"/><meta property="twitter:url" content="https://oameye.github.io/KeldyshContraction.jl/examples/fermionic_transport/"/><link rel="canonical" href="https://oameye.github.io/KeldyshContraction.jl/examples/fermionic_transport/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">KeldyshContraction.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Theory</span><ul><li><a class="tocitem" href="../../theory/keldysh/">Schwinger–Keldysh field theory</a></li><li><a class="tocitem" href="../../theory/perturbation/">Perturbation theory and self-consistency</a></li><li><a class="tocitem" href="../../theory/regularisation/">Equal-time regularisation</a></li><li><a class="tocitem" href="../../theory/kinetics/">Quantum kinetic theory</a></li></ul></li><li><span class="tocitem">Manual</span><ul><li><a class="tocitem" href="../../manual/fields/">Fields and algebra</a></li><li><a class="tocitem" href="../../manual/actions/">Actions and interactions</a></li><li><a class="tocitem" href="../../manual/propagators/">Propagators and self-energy</a></li><li><a class="tocitem" href="../../manual/transforms/">Fourier and Wigner representations</a></li><li><a class="tocitem" href="../../manual/kinetics/">Kinetic reduction</a></li><li><a class="tocitem" href="../../manual/collision_projection/">Moment and linear-response projection</a></li></ul></li><li><span class="tocitem">Examples</span><ul><li><a class="tocitem" href="../bosonic_transport/">Bosonic scattering and two-body loss</a></li><li class="is-active"><a class="tocitem" href>Fermionic p-wave scattering and loss</a><ul class="internal"><li><a class="tocitem" href="#Microscopic-p-wave-processes"><span>Microscopic p-wave processes</span></a></li><li><a class="tocitem" href="#The-first-order-loss-kernel"><span>The first-order loss kernel</span></a></li><li><a class="tocitem" href="#From-derivative-vertices-to-the-kinetic-equation"><span>From derivative vertices to the kinetic equation</span></a></li><li><a class="tocitem" href="#From-causal-propagators-to-occupations"><span>From causal propagators to occupations</span></a></li><li><a class="tocitem" href="#Coherent-p-wave-scattering"><span>Coherent p-wave scattering</span></a></li><li><a class="tocitem" href="#Dissipative-second-order-and-mixed-sectors"><span>Dissipative second order and mixed sectors</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../../literature/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Fermionic p-wave scattering and loss</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Fermionic p-wave scattering and loss</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/oameye/KeldyshContraction.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/oameye/KeldyshContraction.jl/blob/main/examples/fermionic_transport.jl" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Fermionic-p-wave-scattering-and-two-body-loss"><a class="docs-heading-anchor" href="#Fermionic-p-wave-scattering-and-two-body-loss">Fermionic p-wave scattering and two-body loss</a><a id="Fermionic-p-wave-scattering-and-two-body-loss-1"></a><a class="docs-heading-anchor-permalink" href="#Fermionic-p-wave-scattering-and-two-body-loss" title="Permalink"></a></h1><p>For identical spinless fermions the local s-wave channel vanishes. A minimal odd-wave process therefore carries one spatial derivative. We use one Cartesian channel,</p><p class="math-container">\[P_x=\psi\,\partial_x\psi,\]</p><p>and combine coherent p-wave scattering with two-body loss.</p><pre><code class="language-julia hljs">using KeldyshContraction
+using KeldyshContraction: Regularisation
+
+@qfields ψ::Fermion
+ψ1, ψ2 = ψ[One], ψ[Two]
+bψ1, bψ2 = bar(ψ1), bar(ψ2)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">(̄ψ, ̄ψ)</code></pre><h2 id="Microscopic-p-wave-processes"><a class="docs-heading-anchor" href="#Microscopic-p-wave-processes">Microscopic p-wave processes</a><a id="Microscopic-p-wave-processes-1"></a><a class="docs-heading-anchor-permalink" href="#Microscopic-p-wave-processes" title="Permalink"></a></h2><p>Fermions use the asymmetric Larkin–Ovchinnikov inverse rotation. We keep the common <code>1/√2</code> factors outside the branch sums. Each pair contains two such factors, giving the exact coherent coefficient <code>-1/8</code>. Derivatives act on the fundamental fields before the branch sums are formed, making the linearity of <code>∂x</code> explicit in the symbolic representation.</p><pre><code class="language-julia hljs">ψplus = ψ1 + ψ2
+∂ψplus = partial(ψ1, :x) + partial(ψ2, :x)
+ψminus = ψ1 - ψ2
+∂ψminus = partial(ψ1, :x) - partial(ψ2, :x)
+
+bψplus = bψ1 + bψ2
+∂bψplus = partial(bψ1, :x) + partial(bψ2, :x)
+bψminus = bψ2 - bψ1
+∂bψminus = partial(bψ2, :x) - partial(bψ1, :x)
+
+Pplus = ψplus * ∂ψplus
+Pminus = ψminus * ∂ψminus
+Pplus_dagger = ∂bψplus * bψplus
+Pminus_dagger = ∂bψminus * bψminus
+
+elastic = -(1 // 8) * (Pplus_dagger * Pplus - Pminus_dagger * Pminus)</code></pre><p class="math-container">\[\frac{1}{8} \psi^1 \partial_{x} \psi^1 \bar{\psi^1} \partial_{x} \bar{\psi^1} + \frac{1}{8} \psi^1 \partial_{x} \psi^2 \bar{\psi^1} \partial_{x} \bar{\psi^1} - \frac{1}{8} \partial_{x} \psi^1 \psi^2 \bar{\psi^1} \partial_{x} \bar{\psi^1} + \frac{1}{8} \psi^2 \partial_{x} \psi^2 \bar{\psi^1} \partial_{x} \bar{\psi^1} - \frac{1}{8} \psi^1 \partial_{x} \psi^1 \partial_{x} \bar{\psi^1} \bar{\psi^2} - \frac{1}{8} \psi^1 \partial_{x} \psi^2 \partial_{x} \bar{\psi^1} \bar{\psi^2} + \frac{1}{8} \partial_{x} \psi^1 \psi^2 \partial_{x} \bar{\psi^1} \bar{\psi^2} - \frac{1}{8} \psi^2 \partial_{x} \psi^2 \partial_{x} \bar{\psi^1} \bar{\psi^2} + \frac{1}{8} \psi^1 \partial_{x} \psi^1 \bar{\psi^1} \partial_{x} \bar{\psi^2} + \frac{1}{8} \psi^1 \partial_{x} \psi^2 \bar{\psi^1} \partial_{x} \bar{\psi^2} - \frac{1}{8} \partial_{x} \psi^1 \psi^2 \bar{\psi^1} \partial_{x} \bar{\psi^2} + \frac{1}{8} \psi^2 \partial_{x} \psi^2 \bar{\psi^1} \partial_{x} \bar{\psi^2} + \frac{1}{8} \psi^1 \partial_{x} \psi^1 \bar{\psi^2} \partial_{x} \bar{\psi^2} + \frac{1}{8} \psi^1 \partial_{x} \psi^2 \bar{\psi^2} \partial_{x} \bar{\psi^2} - \frac{1}{8} \partial_{x} \psi^1 \psi^2 \bar{\psi^2} \partial_{x} \bar{\psi^2} + \frac{1}{8} \psi^2 \partial_{x} \psi^2 \bar{\psi^2} \partial_{x} \bar{\psi^2} - \frac{1}{8} \psi^2 \partial_{x} \psi^2 \bar{\psi^1} \partial_{x} \bar{\psi^1} - \frac{1}{8} \partial_{x} \psi^1 \psi^2 \bar{\psi^1} \partial_{x} \bar{\psi^1} + \frac{1}{8} \psi^1 \partial_{x} \psi^2 \bar{\psi^1} \partial_{x} \bar{\psi^1} - \frac{1}{8} \psi^1 \partial_{x} \psi^1 \bar{\psi^1} \partial_{x} \bar{\psi^1} - \frac{1}{8} \psi^2 \partial_{x} \psi^2 \partial_{x} \bar{\psi^1} \bar{\psi^2} - \frac{1}{8} \partial_{x} \psi^1 \psi^2 \partial_{x} \bar{\psi^1} \bar{\psi^2} + \frac{1}{8} \psi^1 \partial_{x} \psi^2 \partial_{x} \bar{\psi^1} \bar{\psi^2} - \frac{1}{8} \psi^1 \partial_{x} \psi^1 \partial_{x} \bar{\psi^1} \bar{\psi^2} + \frac{1}{8} \psi^2 \partial_{x} \psi^2 \bar{\psi^1} \partial_{x} \bar{\psi^2} + \frac{1}{8} \partial_{x} \psi^1 \psi^2 \bar{\psi^1} \partial_{x} \bar{\psi^2} - \frac{1}{8} \psi^1 \partial_{x} \psi^2 \bar{\psi^1} \partial_{x} \bar{\psi^2} + \frac{1}{8} \psi^1 \partial_{x} \psi^1 \bar{\psi^1} \partial_{x} \bar{\psi^2} - \frac{1}{8} \psi^2 \partial_{x} \psi^2 \bar{\psi^2} \partial_{x} \bar{\psi^2} - \frac{1}{8} \partial_{x} \psi^1 \psi^2 \bar{\psi^2} \partial_{x} \bar{\psi^2} + \frac{1}{8} \psi^1 \partial_{x} \psi^2 \bar{\psi^2} \partial_{x} \bar{\psi^2} - \frac{1}{8} \psi^1 \partial_{x} \psi^1 \bar{\psi^2} \partial_{x} \bar{\psi^2}\]</p><p>The loss vertex uses the finite-Trotter contour ordering required by the dissipative theory. The incoming <code>+</code> branch is evaluated one step back, the forward branch difference carries the <code>+</code> regulator, and the barred pair is unshifted.</p><pre><code class="language-julia hljs">plus = Regularisation.Plus
+minus = Regularisation.Minus
+
+ψplus_minus = ψ1(minus) + ψ2(minus)
+∂ψplus_minus = partial(ψ1(minus), :x) + partial(ψ2(minus), :x)
+ψplus_plus = ψ1(plus) + ψ2(plus)
+∂ψplus_plus = partial(ψ1(plus), :x) + partial(ψ2(plus), :x)
+ψminus_plus = ψ1(plus) - ψ2(plus)
+∂ψminus_plus = partial(ψ1(plus), :x) - partial(ψ2(plus), :x)
+
+Pplus_minus = ψplus_minus * ∂ψplus_minus
+Pplus_plus = ψplus_plus * ∂ψplus_plus
+Pminus_plus = ψminus_plus * ∂ψminus_plus
+
+loss =
+    (1 // 8) *
+    im *
+    (
+        (Pplus_dagger - Pminus_dagger) * Pplus_minus -
+        (Pplus_plus - Pminus_plus) * Pminus_dagger
+    )
+
+@syms gp γp
+Lg = InteractionLagrangian(elastic, gp)
+Lγ = InteractionLagrangian(loss, γp)
+L = Lg + Lγ</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">KeldyshContraction.LagrangianSum{Complex{Rational{Int64}}, Fermion}(InteractionLagrangian{Complex{Rational{Int64}}, Fermion}[Interaction Lagrangian with fields ψ:
+(1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+-1//8*(∂xψ*ψ*̄ψ*∂x̄ψ)+1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+-1//8*(ψ*∂xψ*∂x̄ψ*̄ψ)+-1//8*(ψ*∂xψ*∂x̄ψ*̄ψ)+1//8*(∂xψ*ψ*∂x̄ψ*̄ψ)+-1//8*(ψ*∂xψ*∂x̄ψ*̄ψ)+1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+-1//8*(∂xψ*ψ*̄ψ*∂x̄ψ)+1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+-1//8*(∂xψ*ψ*̄ψ*∂x̄ψ)+1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+-1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+-1//8*(∂xψ*ψ*̄ψ*∂x̄ψ)+1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+-1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+-1//8*(ψ*∂xψ*∂x̄ψ*̄ψ)+-1//8*(∂xψ*ψ*∂x̄ψ*̄ψ)+1//8*(ψ*∂xψ*∂x̄ψ*̄ψ)+-1//8*(ψ*∂xψ*∂x̄ψ*̄ψ)+1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+1//8*(∂xψ*ψ*̄ψ*∂x̄ψ)+-1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+-1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+-1//8*(∂xψ*ψ*̄ψ*∂x̄ψ)+1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)+-1//8*(ψ*∂xψ*̄ψ*∂x̄ψ)), Interaction Lagrangian with fields ψ:
+((0//1 - 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(∂xψ⁻*ψ⁻*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁻*∂xψ⁻*∂x̄ψ*̄ψ)+(0//1 + 1//8*im)*(ψ⁻*∂xψ⁻*∂x̄ψ*̄ψ)+(0//1 - 1//8*im)*(∂xψ⁻*ψ⁻*∂x̄ψ*̄ψ)+(0//1 + 1//8*im)*(ψ⁻*∂xψ⁻*∂x̄ψ*̄ψ)+(0//1 - 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(∂xψ⁻*ψ⁻*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(∂xψ⁻*ψ⁻*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(∂xψ⁻*ψ⁻*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁻*∂xψ⁻*∂x̄ψ*̄ψ)+(0//1 + 1//8*im)*(ψ⁻*∂xψ⁻*∂x̄ψ*̄ψ)+(0//1 - 1//8*im)*(∂xψ⁻*ψ⁻*∂x̄ψ*̄ψ)+(0//1 + 1//8*im)*(ψ⁻*∂xψ⁻*∂x̄ψ*̄ψ)+(0//1 - 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(∂xψ⁻*ψ⁻*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(∂xψ⁻*ψ⁻*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁻*∂xψ⁻*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁺*∂xψ⁺*∂x̄ψ*̄ψ)+(0//1 - 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁺*∂xψ⁺*∂x̄ψ*̄ψ)+(0//1 - 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(∂xψ⁺*ψ⁺*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(∂xψ⁺*ψ⁺*∂x̄ψ*̄ψ)+(0//1 + 1//8*im)*(∂xψ⁺*ψ⁺*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(∂xψ⁺*ψ⁺*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁺*∂xψ⁺*∂x̄ψ*̄ψ)+(0//1 - 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁺*∂xψ⁺*∂x̄ψ*̄ψ)+(0//1 + 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(∂xψ⁺*ψ⁺*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(∂xψ⁺*ψ⁺*∂x̄ψ*̄ψ)+(0//1 + 1//8*im)*(∂xψ⁺*ψ⁺*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(∂xψ⁺*ψ⁺*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁺*∂xψ⁺*∂x̄ψ*̄ψ)+(0//1 - 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 + 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁺*∂xψ⁺*∂x̄ψ*̄ψ)+(0//1 + 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ)+(0//1 - 1//8*im)*(ψ⁺*∂xψ⁺*̄ψ*∂x̄ψ))])</code></pre><p>The full interaction <code>L</code> keeps coherent, dissipative, and mixed perturbative sectors distinct. For a focused calculation we can compile one process directly and avoid generating unrelated sectors.</p><h2 id="The-first-order-loss-kernel"><a class="docs-heading-anchor" href="#The-first-order-loss-kernel">The first-order loss kernel</a><a id="The-first-order-loss-kernel-1"></a><a class="docs-heading-anchor-permalink" href="#The-first-order-loss-kernel" title="Permalink"></a></h2><p>The physical first-order result is obtained from the perturbative propagator with one high-level compiler call.</p><pre><code class="language-julia hljs">Gγp = DressedPropagator(Lγ, Val(1), Val(3); preserve_regularisation=true)
+Cγp = collision_kernel(Gγp)
+Cγp</code></pre><p class="math-container">\[
+\begin{aligned}
+C_n(k)={}&amp;γp\,\int_{q}\,\left(k - q\right)_{x}^2\,-n_{\psi}\!\left(q\right)\,n_{\psi}\!\left(k\right)
+\end{aligned}
+\]</p><p>The generated odd-wave loss kernel is</p><p class="math-container">\[C_n^{(\gamma_p)}(k)
+=-\gamma_p\int_q (k_x-q_x)^2 n_k n_q.\]</p><p>The relative-momentum factor is not inserted by hand. It comes from the derivative vertices and survives the diagrammatic, causal, statistical, and loop reductions. To see that explicitly, we now follow the same computation stage by stage.</p><h2 id="From-derivative-vertices-to-the-kinetic-equation"><a class="docs-heading-anchor" href="#From-derivative-vertices-to-the-kinetic-equation">From derivative vertices to the kinetic equation</a><a id="From-derivative-vertices-to-the-kinetic-equation-1"></a><a class="docs-heading-anchor-permalink" href="#From-derivative-vertices-to-the-kinetic-equation" title="Permalink"></a></h2><p>Fourier transformation converts the spatial derivatives into exact odd-wave momentum polynomials. Wick permutation parity has already fixed the fermionic signs, so the rendered propagator contains both the routed lines and the derivative kinematics.</p><pre><code class="language-julia hljs">GF = fourier_transform(Gγp)
+GF</code></pre><p class="math-container">\[
+\begin{aligned}
+G_F^K\!\left(k\right)&amp;={}\frac{-1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi}^{K}\!\left(k\right)\,G_{\psi,+}^{K}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi}^{K}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{K}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,-}^{K}\!\left(q\right)\,G_{\psi,-}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,-}^{K}\!\left(q\right)\,G_{\psi,-}^{K}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi}^{K}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{K}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,-}^{K}\!\left(q\right)\,G_{\psi,-}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,-}^{K}\!\left(q\right)\,G_{\psi,-}^{K}\!\left(k\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi}^{K}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{K}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,-}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,-}^{K}\!\left(k\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,-}^{K}\!\left(q\right)\,G_{\psi,-}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,-}^{K}\!\left(q\right)\,G_{\psi,-}^{K}\!\left(k\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi}^{K}\!\left(k\right)\,G_{\psi,+}^{K}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,-}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,-}^{K}\!\left(k\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi}^{K}\!\left(k\right)\,G_{\psi,+}^{K}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,-}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,-}^{K}\!\left(k\right)\\
+G_F^R\!\left(k\right)&amp;={}\frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,-}^{K}\!\left(q\right)\,G_{\psi,-}^{R}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,-}^{K}\!\left(q\right)\,G_{\psi,-}^{R}\!\left(k\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,-}^{R}\!\left(k\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,-}^{K}\!\left(q\right)\,G_{\psi,-}^{R}\!\left(k\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,-}^{R}\!\left(k\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi}^{R}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,-}^{R}\!\left(k\right)\\
+G_F^A\!\left(k\right)&amp;={}\frac{-1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi}^{A}\!\left(k\right)\,G_{\psi,+}^{K}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi}^{A}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi}^{A}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi}^{A}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi}^{A}\!\left(k\right)\,G_{\psi,+}^{K}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi}^{A}\!\left(k\right)\,G_{\psi,+}^{K}\!\left(q\right)\,G_{\psi,+}^{A}\!\left(k\right)
+\end{aligned}
+\]</p><p>The fixed-order 1PI self-energy is then extracted by amputating the external lines and rejecting reducible two-point diagrams. There is no nonlinear Dyson iteration hidden in this constructor.</p><pre><code class="language-julia hljs">ΣF = SelfEnergy(GF)
+ΣF</code></pre><p class="math-container">\[
+\begin{aligned}
+\Sigma_F^K\!\left(k\right)&amp;={}\frac{-1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,-}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,-}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,-}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+\Sigma_F^R\!\left(k\right)&amp;={}\frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,-}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,-}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,-}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+\Sigma_F^A\!\left(k\right)&amp;={}\frac{-1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{K}\!\left(q\right)
+\end{aligned}
+\]</p><p>Wigner transformation introduces centre and relative variables. We keep the homogeneous zeroth-gradient collision term used by the present kinetic compiler.</p><pre><code class="language-julia hljs">ΣW = wigner_transform(ΣF; gradient_order=Val(0))
+ΣW</code></pre><p class="math-container">\[
+\begin{aligned}
+\Sigma_W^K\!\left(X,k\right)&amp;={}\frac{-1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,-}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,-}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,-}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+\Sigma_W^R\!\left(X,k\right)&amp;={}\frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,-}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,-}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,-}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+\Sigma_W^A\!\left(X,k\right)&amp;={}\frac{-1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{K}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{K}\!\left(q\right)
+\end{aligned}
+\]</p><p>Internal Keldysh lines are next expressed through the spectral function and the fermionic statistical distribution. At this order the relation is</p><p class="math-container">\[G^K=-iFA.\]</p><pre><code class="language-julia hljs">KΣ = kinetic_expression(ΣW)
+KΣ</code></pre><p class="math-container">\[
+\begin{aligned}
+\Sigma_{\mathrm{kin}}^K\!\left(k\right)&amp;={}-i\,γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2} i\,γp\,\int_{q}\,k_{x}^2\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2} i\,γp\,\int_{q}\,q_{x}^2\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+\Sigma_{\mathrm{kin}}^R\!\left(k\right)&amp;={}\frac{-1}{2} i\,γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4} i\,γp\,\int_{q}\,k_{x}^2\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4} i\,γp\,\int_{q}\,q_{x}^2\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+\Sigma_{\mathrm{kin}}^A\!\left(k\right)&amp;={}\frac{-1}{4} i\,γp\,\int_{q}\,k_{x}^2\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4} i\,γp\,\int_{q}\,q_{x}^2\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2} i\,γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{R}\!\left(q\right)
+\end{aligned}
+\]</p><p>The collision side is assembled using the complete Kadanoff–Baym identity,</p><p class="math-container">\[I_{\rm coll}=i\Sigma^K-F_kA_\Sigma,
+\qquad A_\Sigma=i(\Sigma^R-\Sigma^A).\]</p><p>This combination is formed before any shell projection so that the correct cancellations and surviving causal sectors are determined by the field theory rather than by a later approximation.</p><pre><code class="language-julia hljs">I = off_shell_collision_expression(KΣ)
+I</code></pre><p class="math-container">\[
+\begin{aligned}
+I_{\mathrm{coll}}(k)={}&amp;-γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(k\right)\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{2} i\,γp\,\int_{q}\,k_{x}^2\,F_{\psi}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{2} i\,γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{2} i\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{2} i\,γp\,\int_{q}\,q_{x}^2\,F_{\psi}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{2}\,γp\,\int_{q}\,k_{x}^2\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{2}\,γp\,\int_{q}\,q_{x}^2\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2} i\,γp\,\int_{q}\,k_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2} i\,γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(k\right)\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2} i\,γp\,\int_{q}\,q_{x}\,k_{x}\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2} i\,γp\,\int_{q}\,q_{x}^2\,G_{\psi,+}^{R}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,k_{x}^2\,F_{\psi}\!\left(k\right)\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}^2\,F_{\psi}\!\left(k\right)\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)
+\end{aligned}
+\]</p><h2 id="From-causal-propagators-to-occupations"><a class="docs-heading-anchor" href="#From-causal-propagators-to-occupations">From causal propagators to occupations</a><a id="From-causal-propagators-to-occupations-1"></a><a class="docs-heading-anchor-permalink" href="#From-causal-propagators-to-occupations" title="Permalink"></a></h2><p>Retarded and advanced propagators are separated into spectral and dispersive pieces,</p><p class="math-container">\[G^R=D-\frac{i}{2}A,
+\qquad
+G^A=D+\frac{i}{2}A.\]</p><p>The object below therefore displays the actual routed <code>A/D/F</code> collision expression, including the odd-wave momentum factors and finite-Trotter shifts.</p><pre><code class="language-julia hljs">SD = spectral_dispersive_collision(I)
+SD</code></pre><p class="math-container">\[
+\begin{aligned}
+I_{\mathrm{coll}}(k)={}&amp;\frac{-1}{4}\,γp\,\int_{q}\,q_{x}\,k_{x}\,A_{\psi,+}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2} i\,γp\,\int_{q}\,k_{x}^2\,D_{\psi,+}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2} i\,γp\,\int_{q}\,q_{x}^2\,D_{\psi,+}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2} i\,γp\,\int_{q}\,q_{x}\,k_{x}\,D_{\psi,+}\!\left(q\right)\\
+&amp;{}+ γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{2} i\,γp\,\int_{q}\,q_{x}\,k_{x}\,D_{\psi,+}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{2}\,γp\,\int_{q}\,k_{x}^2\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}\,k_{x}\,A_{\psi,+}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,k_{x}^2\,A_{\psi,+}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}^2\,A_{\psi,+}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{2}\,γp\,\int_{q}\,q_{x}^2\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{1}{4}\,γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(k\right)\,A_{\psi,+}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{2} i\,γp\,\int_{q}\,k_{x}^2\,F_{\psi}\!\left(k\right)\,D_{\psi,+}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{2} i\,γp\,\int_{q}\,q_{x}^2\,F_{\psi}\!\left(k\right)\,D_{\psi,+}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{2} i\,γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(k\right)\,D_{\psi,+}\!\left(q\right)\\
+&amp;{}- γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(k\right)\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2} i\,γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(k\right)\,D_{\psi,+}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,k_{x}^2\,F_{\psi}\!\left(k\right)\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(k\right)\,A_{\psi,+}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,k_{x}^2\,F_{\psi}\!\left(k\right)\,A_{\psi,+}\!\left(q\right)\\
+&amp;{}+ \frac{-1}{4}\,γp\,\int_{q}\,q_{x}^2\,F_{\psi}\!\left(k\right)\,A_{\psi,+}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}^2\,F_{\psi}\!\left(k\right)\,F_{\psi}\!\left(q\right)\,A_{\psi}\!\left(q\right)
+\end{aligned}
+\]</p><p>Exact internal-frequency integration then produces the regular shell or principal-value sectors. The first-order loss channel is regular; at higher orders genuine causal pinches are retained explicitly instead of being assigned a finite value.</p><pre><code class="language-julia hljs">R = reduce_frequency_collision(SD)
+R</code></pre><p class="math-container">\[
+\begin{aligned}
+I_{\mathrm{reg}}(k)={}&amp;\frac{1}{2}\,γp\,\int_{q}\,q_{x}^2\\
+&amp;{}+ \frac{-1}{2}\,γp\,\int_{q}\,q_{x}^2\,F_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}^2\,F_{\psi}\!\left(q\right)\,F_{\psi}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{2}\,γp\,\int_{q}\,q_{x}^2\,F_{\psi}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\\
+&amp;{}+ γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(q\right)\\
+&amp;{}- γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(q\right)\,F_{\psi}\!\left(k\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(k\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,k_{x}^2\\
+&amp;{}+ \frac{-1}{2}\,γp\,\int_{q}\,k_{x}^2\,F_{\psi}\!\left(q\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,k_{x}^2\,F_{\psi}\!\left(q\right)\,F_{\psi}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{2}\,γp\,\int_{q}\,k_{x}^2\,F_{\psi}\!\left(k\right)\\
+&amp;{}+ \frac{1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\\
+&amp;{}+ \frac{-1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,F_{\psi}\!\left(k\right)\\
+&amp;N_{\mathrm{blocked}}=0,\qquad N_{\mathrm{Trotter}}=0
+\end{aligned}
+\]</p><p>Only after the causal reduction do we replace the fermionic statistical function by occupations, <code>F=1-2n</code>. This is where the statistical polynomial becomes the physical Pauli gain/loss polynomial.</p><pre><code class="language-julia hljs">N = occupation_reduced_expression(R)
+N</code></pre><p class="math-container">\[
+\begin{aligned}
+C_n^{\mathrm{reg}}(k)={}&amp;-γp\,\int_{q}\,q_{x}^2\,n_{\psi}\!\left(q\right)\,n_{\psi}\!\left(k\right)\\
+&amp;{}+ 2\,γp\,\int_{q}\,q_{x}\,k_{x}\,n_{\psi}\!\left(q\right)\,n_{\psi}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,n_{\psi}\!\left(k\right)\\
+&amp;{}- γp\,\int_{q}\,k_{x}^2\,n_{\psi}\!\left(q\right)\,n_{\psi}\!\left(k\right)\\
+&amp;{}+ \frac{-1}{2}\,γp\,\int_{q}\,q_{x}\,k_{x}\,n_{\psi}\!\left(k\right)
+\end{aligned}
+\]</p><p>Signed permutations of dummy loop variables represent the same integral. The quotient chooses a canonical loop basis while preserving the occupation polynomial and the exact p-wave kinematics.</p><pre><code class="language-julia hljs">Q = quotient_loop_momenta(N)
+Q</code></pre><p class="math-container">\[
+\begin{aligned}
+C_n^{\mathrm{quot}}(k)={}&amp;γp\,\int_{q}\,\left(k - q\right)_{x}^2\,-n_{\psi}\!\left(q\right)\,n_{\psi}\!\left(k\right)
+\end{aligned}
+\]</p><p>The canonical sectors finally lower to the same collision kernel returned by the high-level call at the start of the example.</p><pre><code class="language-julia hljs">Cγp_explicit = collision_kernel(Q)
+Cγp_explicit
+
+@assert KeldyshContraction.collision_kernel_terms(Cγp) ==
+    KeldyshContraction.collision_kernel_terms(Cγp_explicit)</code></pre><h2 id="Coherent-p-wave-scattering"><a class="docs-heading-anchor" href="#Coherent-p-wave-scattering">Coherent p-wave scattering</a><a id="Coherent-p-wave-scattering-1"></a><a class="docs-heading-anchor-permalink" href="#Coherent-p-wave-scattering" title="Permalink"></a></h2><p>The regular coherent <code>g_p^2</code> sector is compiled by the same route. Two quartic vertices and the external two-point legs give five propagator edges.</p><pre><code class="language-julia hljs">Ggp2 = DressedPropagator(Lg, Val(2), Val(5); preserve_regularisation=true)
+Cgp2 = collision_kernel(Ggp2)
+Cgp2</code></pre><p class="math-container">\[
+\begin{aligned}
+C_n(k)={}&amp;gp^{2}\,\int_{q_{1}}\int_{q_{2}}\,\left(2\,k - q_{1} - q_{2}\right)_{x}^2\,\left(q_{1} - q_{2}\right)_{x}^2\,\left[\frac{-1}{8}\,n_{\psi}\!\left(-k + q_{1} + q_{2}\right)\,\left(1-n_{\psi}\!\left(q_{2}\right)\right)\,\left(1-n_{\psi}\!\left(q_{1}\right)\right)\,n_{\psi}\!\left(k\right) + \frac{1}{8}\,\left(1-n_{\psi}\!\left(-k + q_{1} + q_{2}\right)\right)\,n_{\psi}\!\left(q_{2}\right)\,n_{\psi}\!\left(q_{1}\right)\,\left(1-n_{\psi}\!\left(k\right)\right)\right]\,\delta\!\left(\varepsilon_{\psi}\!\left(-k + q_{1} + q_{2}\right) - \varepsilon_{\psi}\!\left(q_{2}\right) - \varepsilon_{\psi}\!\left(q_{1}\right) + \varepsilon_{\psi}\!\left(k\right)\right)
+\end{aligned}
+\]</p><p>The certified shell contribution is</p><p class="math-container">\[C_n^{(g_p^2)}
+=\frac{g_p^2}{8}(k_x-p_x)^2(q_x-r_x)^2
+\Big[(1-n_k)(1-n_p)n_qn_r
+-n_kn_p(1-n_q)(1-n_r)\Big]\delta(\Delta E).\]</p><p>Canonical frequency and loop reduction produces nine physical kernel sectors and no causal blocker in this channel.</p><h2 id="Dissipative-second-order-and-mixed-sectors"><a class="docs-heading-anchor" href="#Dissipative-second-order-and-mixed-sectors">Dissipative second order and mixed sectors</a><a id="Dissipative-second-order-and-mixed-sectors-1"></a><a class="docs-heading-anchor-permalink" href="#Dissipative-second-order-and-mixed-sectors" title="Permalink"></a></h2><p>Expanding the full <code>L = Lg + Lγ</code> interaction to second order also produces <code>g_p\gamma_p</code> and <code>\gamma_p^2</code> sectors. Both contain genuine blocked causal support, so they are not appropriate for a silent one-line finite-part extraction.</p><p>The pure-loss regular shell branch is</p><p class="math-container">\[C_n^{(\gamma_p^2)}
+=\frac{\gamma_p^2}{8}(k_x-p_x)^2(q_x-r_x)^2
+\Big[(1-n_k)(1-n_p)n_qn_r
++n_kn_p(1-n_q)(1-n_r)
+-2\,n_k n_p n_q n_r\Big]\delta(\Delta E).\]</p><p>It contains nine finite shell sectors together with 84 genuine causal-frequency pinches. <code>collision_kernel</code> therefore refuses to discard the blocked branch. Stop at <code>R</code>, inspect <code>reduced_regular_terms(R)</code> and <code>reduced_blocked_terms(R)</code>, and decide explicitly whether retaining only the finite branch is the intended approximation.</p><p>The mixed coherent–dissipative regular contribution is purely dispersive,</p><p class="math-container">\[C_n^{(g_p\gamma_p)}
+=-\frac{g_p\gamma_p}{2}(k_x-p_x)^2(q_x-r_x)^2
+n_kn_p(1-n_q-n_r)\operatorname{PV}\!\left(\frac{1}{\Delta E}\right).\]</p><p>There is no mixed shell/Born term: the finite branch contains nine principal-value sectors, while 30 genuine pinches remain explicit blockers.</p><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../bosonic_transport/">« Bosonic scattering and two-body loss</a><a class="docs-footer-nextpage" href="../../literature/">References »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Thursday 17 September 2026 11:30">Thursday 17 September 2026</span>. Using Julia version 1.13.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
