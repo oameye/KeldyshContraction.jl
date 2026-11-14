@@ -229,21 +229,21 @@ is_connected(edges::Vector{Tuple{Int8,Int8}}) = _is_connected_edges(edges)
 
 function _is_connected_edges(edges)
     all_vertices = vertices(edges)
-    if isempty(all_vertices)
-        return true
-    end
+    return _is_connected_edges(all_vertices, edges)
+end
 
-    components = connected_components(all_vertices, edges)
-    return length(components) == 1
+function _is_connected_edges(all_vertices, edges)
+    isempty(all_vertices) && return true
+    return length(connected_components(all_vertices, edges)) == 1
 end
 
 function vertices(ps)
-    vertices = Set{Int}()
+    result = Set{Int}()
     for edge in ps
-        push!(vertices, edge[1])
-        push!(vertices, edge[2])
+        push!(result, edge[1])
+        push!(result, edge[2])
     end
-    return vertices
+    return result
 end
 
 function connected_components(vertices, edges)
@@ -296,4 +296,37 @@ function is_irreducible(vs::AbstractVector)
     end
 
     return true
+end
+
+"""
+    is_two_particle_irreducible(vs)
+
+Return whether the bulk graph remains connected after removal of any pair of bulk propagators.
+Connectivity is tested on the original bulk-vertex set, so vertices isolated by the cut are retained
+and correctly signal a two-particle-reducible graph.
+"""
+function is_two_particle_irreducible(vs::AbstractVector)
+    ps = Tuple{Int8,Int8}[integer_positions(edge) for edge in vs if is_bulk(edge)]
+    all_vertices = vertices(ps)
+    _is_connected_edges(all_vertices, ps) || return false
+    length(ps) < 2 && return true
+
+    kept = Vector{Tuple{Int8,Int8}}()
+    sizehint!(kept, length(ps) - 2)
+    for first_cut in 1:(length(ps) - 1)
+        for second_cut in (first_cut + 1):length(ps)
+            empty!(kept)
+            for index in eachindex(ps)
+                (index == first_cut || index == second_cut) && continue
+                push!(kept, ps[index])
+            end
+            _is_connected_edges(all_vertices, kept) || return false
+        end
+    end
+    return true
+end
+
+"""Return whether a two-point diagram is both 1PI and two-particle irreducible."""
+function is_self_energy_skeleton(vs::AbstractVector)
+    return is_irreducible(vs) && is_two_particle_irreducible(vs)
 end
