@@ -2,12 +2,24 @@
 
 `fourier_transform` converts coordinate-space diagrams to an exact momentum-space representation. Momentum conservation is solved symbolically and coordinate derivatives become momentum polynomials.
 
+For a perturbative self-energy, Fourier routing must happen before amputation:
+
 ```julia
-ΣF = fourier_transform(Σ)
+GF = fourier_transform(G)
+ΣF = SelfEnergy(GF)
+```
+
+A coordinate-space `SelfEnergy` has already removed its external propagators and therefore cannot prove that derivative momentum factors at those endpoints were retained. Direct `fourier_transform(::SelfEnergy)` is rejected for that reason.
+
+The 2PI route uses the same ordering. `twopi_fourier_self_energy` cuts the target full-propagator line while its interaction endpoints still exist, attaches the physical external propagator segments, routes and derivative-lowers the complete two-point graph, and only then amputates those segments.
+
+```julia
+ΣF = KeldyshContraction.twopi_fourier_self_energy(Γ2, ψ)
 ```
 
 ```@docs
 fourier_transform
+KeldyshContraction.twopi_fourier_self_energy
 ```
 
 `wigner_transform` then separates centre and relative coordinates. The gradient order is explicit; the current kinetic compiler uses `Val(0)`.
