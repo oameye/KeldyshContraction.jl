@@ -1,5 +1,17 @@
 using KeldyshContraction, Test
-using KeldyshContraction: canonicalize, Bulk, In, Out, sort_by_position_and_type, positions
+const GraphComb = KeldyshContraction.GC
+using KeldyshContraction:
+    canonicalize,
+    Bulk,
+    In,
+    Out,
+    sort_by_position_and_type,
+    positions,
+    PhysicalCanonicalizationWorkspace,
+    canonicalization_positions,
+    _gc_direct_position_graph!,
+    _gc_physical_witness!,
+    uniform_coloring
 
 @qfields ϕ::Boson
 c, q = ϕ[Classical], ϕ[Quantum]
@@ -147,6 +159,37 @@ c, q = ϕ[Classical], ϕ[Quantum]
             (c(Bulk(2)), bar(q)(In())),
         ]
         @test canonicalize(spin_up) != canonicalize(spin_down)
+
+        # The untyped position graph is a symmetric directed 2-cycle, while the two
+        # physical propagators have different colors. The released-GC selector must
+        # therefore reject the direct witness and execute the colored subdivision fallback.
+        forced1 = [
+            KeldyshContraction.Contraction(c(Bulk(1)), bar(q)(Bulk(2))),
+            KeldyshContraction.Contraction(χc(Bulk(2)), bar(χq)(Bulk(1))),
+        ]
+        forced2 = [
+            KeldyshContraction.Contraction(c(Bulk(2)), bar(q)(Bulk(1))),
+            KeldyshContraction.Contraction(χc(Bulk(1)), bar(χq)(Bulk(2))),
+        ]
+        scratch = PhysicalCanonicalizationWorkspace(4)
+        graph_positions = canonicalization_positions(forced1)
+        direct_graph, vertex_colors, simple = _gc_direct_position_graph!(
+            scratch, forced1, graph_positions
+        )
+        GraphComb.canonicalize_directed!(
+            scratch.result, scratch.search, direct_graph, vertex_colors
+        )
+        @test GraphComb.canonical_automorphism_order(scratch.result) == 2
+        @test simple
+        @test !uniform_coloring(forced1)
+        @test _gc_physical_witness!(scratch, forced1, graph_positions)
+        @test scratch.active_size == 4
+
+        canonical_forced1 = canonicalize(forced1, scratch)
+        canonical_forced2 = canonicalize(forced2, scratch)
+        sort!(canonical_forced1; by=sort_by_position_and_type)
+        sort!(canonical_forced2; by=sort_by_position_and_type)
+        @test canonical_forced1 == canonical_forced2
     end
 
     @testset "third order two body scattering" begin

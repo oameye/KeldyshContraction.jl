@@ -1,0 +1,158 @@
+name: Production GC one-word acceptance
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - production-gc-oneword-matrixfree-loop-quotient
+    paths:
+      - src/KeldyshContraction.jl
+      - src/collision_momentum_graphcombinations.jl
+      - src/collision_momentum_workspace.jl
+      - research/graphcombinations_loop_corpus_certification.jl
+      - research/graphcombinations_production_workspace_acceptance.jl
+      - docs/src/manual/kinetics.md
+      - .github/workflows/ProductionGCOneWordAcceptance.yml
+
+permissions:
+  contents: read
+
+# Release-shaped acceptance: production KC source only, pinned to the exact GC #204 candidate.
+jobs:
+  loop-corpus:
+    name: ${{ matrix.loops }}-loop corpus
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        loops: [2, 3]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.10.12'
+      - uses: julia-actions/cache@v3
+      - name: Pin exact production GraphCombinations candidate
+        run: |
+          julia --project=. --color=yes -e '
+            using Pkg
+            Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="131d7353eb968cce8ef008004282284a32918a3e")
+            Pkg.add("BenchmarkTools")
+          '
+      - name: Extract loop corpus definitions
+        shell: bash
+        run: |
+          sed 's/const CORPUS_LOOP_COUNTS = 1:5/const CORPUS_LOOP_COUNTS = ${{ matrix.loops }}:${{ matrix.loops }}/' \
+            research/graphcombinations_loop_corpus_certification.jl | \
+            awk '/^cases = corpus_cases\(\)/ { exit } { print }' \
+            > /tmp/production-gc-${{ matrix.loops }}-loop-corpus-defs.jl
+      - name: Certify prepared production quotient against Nauty
+        shell: bash
+        env:
+          KC_CORPUS_DEFS: /tmp/production-gc-${{ matrix.loops }}-loop-corpus-defs.jl
+        run: |
+          set -o pipefail
+          julia --project=. --color=yes \
+            research/graphcombinations_production_workspace_acceptance.jl \
+            2>&1 | tee production-gc-${{ matrix.loops }}-loop-corpus.log
+      - name: Preserve diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-gc-${{ matrix.loops }}-loop-corpus
+          path: production-gc-${{ matrix.loops }}-loop-corpus.log
+
+  tests:
+    name: Tests - Julia ${{ matrix.version }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['lts', '1']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: julia-actions/setup-julia@v3
+        with:
+          show-versioninfo: true
+          version: ${{ matrix.version }}
+      - uses: julia-actions/cache@v3
+      - name: Pin exact production GraphCombinations candidate
+        run: |
+          julia --project=. --color=yes -e '
+            using Pkg
+            Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="131d7353eb968cce8ef008004282284a32918a3e")
+          '
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
+
+  jet:
+    name: JET - Julia ${{ matrix.version }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['1.12', '1.13']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: julia-actions/setup-julia@v3
+        with:
+          show-versioninfo: true
+          version: ${{ matrix.version }}
+      - uses: julia-actions/cache@v3
+      - name: Pin exact production GraphCombinations candidate
+        run: |
+          julia --project=. --color=yes -e '
+            using Pkg
+            Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="131d7353eb968cce8ef008004282284a32918a3e")
+          '
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Set up pinned test environment
+        run: |
+          julia --project=test -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="131d7353eb968cce8ef008004282284a32918a3e"))
+            Pkg.instantiate()
+          '
+      - name: Run JET analysis
+        run: julia --project=test test/quality/JET.jl
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - name: Pin exact production GraphCombinations candidate
+        run: |
+          julia --project=. --color=yes -e '
+            using Pkg
+            Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="131d7353eb968cce8ef008004282284a32918a3e")
+          '
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Set up pinned docs environment
+        run: |
+          julia --project=docs -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.add(PackageSpec(url="https://github.com/oameye/GraphCombinations.jl", rev="131d7353eb968cce8ef008004282284a32918a3e"))
+            Pkg.instantiate()
+          '
+      - name: Build documentation
+        env:
+          CI: 'false'
+          GITHUB_TOKEN: ''
+        run: julia --project=docs docs/make.jl

@@ -47,6 +47,7 @@ spectral_dispersive_collision
 reduce_frequency_collision
 occupation_reduced_expression
 quotient_loop_momenta
+LoopMomentumQuotientWorkspace
 ```
 
 The reduced frequency result separates finite shell/principal-value terms from unresolved equal-time or causal structures:

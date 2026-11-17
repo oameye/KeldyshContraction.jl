@@ -291,11 +291,12 @@ function _wick_contraction(
         destroys, creates, Val(E); regularise, _set_reg_to_zero, skip_external_pair=skip
     )
 
+    canonical_scratch = physical_canonicalization_workspace(Val(E))
     wick_pairings = WickPairing{S,E}[]
     foreach_wick_matching(candidates, Val(E)) do contractions, permutation
         passes_wick_filters(contractions) || return nothing
 
-        canonical = canonicalize(contractions)
+        canonical = canonicalize(contractions, canonical_scratch)
         push!(wick_pairings, WickPairing(canonical, pairing_sign(S, permutation), Val(E)))
         return nothing
     end
@@ -335,6 +336,7 @@ function _wick_contraction(
         return nothing
     end
 
+    canonical_scratch = physical_canonicalization_workspace(Val(E))
     canonical_weights = Dict{FixedVector{E,Contraction{S}},Int}()
     for (key, weight) in matching_weights
         iszero(weight) && continue
@@ -346,7 +348,7 @@ function _wick_contraction(
         else
             contractions, 1
         end
-        canonical = canonicalize(final_contractions)
+        canonical = canonicalize(final_contractions, canonical_scratch)
         canonical_key = sorted_wick_key(canonical, Val(E))
         final_weight = weight * Int(simplification_sign)
         canonical_weights[canonical_key] =

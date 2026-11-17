@@ -1,0 +1,73 @@
+name: GraphCombinations loop backend research
+
+on:
+  pull_request:
+    branches:
+      - fix-projective-loop-sign-character
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+    paths:
+      - '.github/workflows/GraphCombinationsProductionIntegration.yml'
+      - 'Project.toml'
+      - 'src/**'
+      - 'test/**'
+      - 'research/graphcombinations_production_integration_probe.jl'
+      - 'benchmarks/collision_reduction.jl'
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - name: Instantiate baseline environment
+        run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - name: Pin exact GraphCombinations research candidate
+        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="2885d19acda65b686314aef95f29035e1448de2f")'
+      - name: Run package tests
+        run: julia --project=. -e 'using Pkg; Pkg.test()'
+
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - uses: julia-actions/cache@v3
+      - name: Instantiate baseline environment
+        run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - name: Pin exact GraphCombinations research candidate
+        run: julia --project=. -e 'using Pkg; Pkg.add(url="https://github.com/oameye/GraphCombinations.jl", rev="2885d19acda65b686314aef95f29035e1448de2f")'
+      - name: Add benchmark harness
+        run: julia --project=. -e 'using Pkg; Pkg.add("BenchmarkTools")'
+      - name: Compare GC candidate quotient with retained Nauty oracle
+        shell: bash
+        run: |
+          set -o pipefail
+          julia --project=. research/graphcombinations_production_integration_probe.jl 2>&1 | tee graphcombinations-production-integration.log
+      - name: Preserve production integration diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: graphcombinations-production-integration
+          path: graphcombinations-production-integration.log
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1'
+      - name: Apply JuliaFormatter
+        run: julia -e 'using Pkg; Pkg.add(name="JuliaFormatter", version="2"); using JuliaFormatter; format(".")'
+      - name: Check formatting
+        run: git diff --exit-code

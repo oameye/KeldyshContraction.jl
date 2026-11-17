@@ -1,0 +1,34 @@
+name: GC weighted Wick benchmark
+
+on:
+  push:
+    branches:
+      - issue-233-gc-weighted-wick
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: gc-weighted-wick-benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Weighted Wick benchmark
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.13'
+      - uses: julia-actions/cache@v3
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Run production crossover benchmark
+        run: julia --project=. --color=yes research/gc_weighted_wick_production_benchmark.jl
+      - name: Run colored and derivative crossover benchmark
+        run: julia --project=. --color=yes research/gc_weighted_wick_colored_benchmark.jl
