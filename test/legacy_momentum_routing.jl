@@ -100,6 +100,21 @@ end
         d′ = @inferred construct_momenta_from_self_energy(diagram2)
         @test isequal(momenta(d′), FixedVector([Momenta(1), Momenta(1), Momenta(3)]))
     end
+
+    @testset "routing ignores stored topology numbering" begin
+        using KeldyshContraction: FixedVector
+        for component in (SE.keldysh, SE.retarded, SE.advanced)
+            for (diagram, _) in component
+                alternate = isodd(first(diagram.topology)) ? 2 : 3
+                relabeled = KeldyshContraction.Diagram{Boson,3,1}(
+                    diagram.contractions, FixedVector([alternate])
+                )
+                expected = @inferred construct_momenta_from_self_energy(diagram)
+                actual = @inferred construct_momenta_from_self_energy(relabeled)
+                @test isequal(momenta(actual), momenta(expected))
+            end
+        end
+    end
 end
 
 @testset "Legacy momentum compatibility" begin
