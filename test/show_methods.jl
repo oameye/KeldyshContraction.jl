@@ -140,8 +140,11 @@ end
     @test count(==('G'), two_edge_latex) == 2
 
     DP = DressedPropagator(ds, ds, ds, Val(1), parameter_monomial(g), ϕ)
-    @test repr(MIME"text/plain"(), DP) ==
-        "Dressed Propagator:\nkeldysh:  Gᴷ(y₁,y₁)\nretarded: Gᴷ(y₁,y₁)\nadvanced: Gᴷ(y₁,y₁)"
+    dp_plain = repr(MIME"text/plain"(), DP)
+    @test contains(dp_plain, "Dressed propagator")
+    @test contains(dp_plain, "G^K = g Gᴷ(y₁,y₁)")
+    @test contains(dp_plain, "G^R = g Gᴷ(y₁,y₁)")
+    @test contains(dp_plain, "G^A = g Gᴷ(y₁,y₁)")
 
     io = IOBuffer()
     @test @inferred(show(io, diagram)) === nothing

@@ -90,7 +90,10 @@ function benchmark_collision_reduction!(suite)
     raw_terms = benchmark_statistical_terms()
     occupation2 = benchmark_loop_quotient_fixture(2)
     occupation4 = benchmark_loop_quotient_fixture(4)
-    quotient = quotient_loop_momenta(occupation2)
+    quotient2 = quotient_loop_momenta(occupation2)
+    quotient4 = quotient_loop_momenta(occupation4)
+    kernel2 = collision_kernel(quotient2)
+    kernel4 = collision_kernel(quotient4)
 
     suite["Collision reduction"]["collision-level assembly"] = @benchmarkable reduce_frequency_collision(
         $collision
@@ -110,7 +113,13 @@ function benchmark_collision_reduction!(suite)
         $occupation4
     ) seconds = 10
     suite["Collision reduction"]["CollisionKernel lowering"] = @benchmarkable collision_kernel(
-        $quotient
+        $quotient2
     ) seconds = 10
+    suite["Collision reduction"]["CollisionKernel LaTeX display 2-loop"] = @benchmarkable sprint(
+        show, MIME"text/latex"(), $kernel2
+    ) seconds = 10 evals = 1
+    suite["Collision reduction"]["CollisionKernel LaTeX display 4-loop"] = @benchmarkable sprint(
+        show, MIME"text/latex"(), $kernel4
+    ) seconds = 10 evals = 1
     return suite
 end

@@ -31,6 +31,125 @@ C = collision_kernel(Q)
 
 The canonical examples execute this chain one stage at a time. Each intermediate object has compact `text/plain` and `text/latex` displays so Documenter shows the represented physics rather than the implementation fields.
 
+## Off-shell collision functional
+
+`OffShellCollisionExpression` is the stable physical boundary before the strict-quasiparticle approximation. It stores the exact homogeneous Kadanoff--Baym collision functional affinely in the external statistical distribution,
+
+```math
+I_{\mathrm{coll}} = I_0 + F_{\mathrm{target}}(k) I_1,
+\qquad I_0=i\Sigma^K,
+\qquad I_1=-A_\Sigma.
+```
+
+No shell delta function, occupation substitution, principal-value reduction, or finite-width prescription has been applied at this stage. The semantic accessors expose the two affine pieces and the retained Wigner context without exposing internal term dictionaries.
+
+```@docs
+KeldyshContraction.OffShellCollisionExpression
+KeldyshContraction.collision_offset
+KeldyshContraction.collision_distribution_coefficient
+KeldyshContraction.gradient_order
+KeldyshContraction.wigner_context
+```
+
+## Finite-width spectral data
+
+Finite-width analysis is a separate branch from the strict-quasiparticle reduction. The first analytic model is the normalized Lorentzian/Breit--Wigner line
+
+```math
+A(\omega)=\frac{Z\Gamma}{(\omega-E)^2+\Gamma^2/4}.
+```
+
+The line center, linewidth, and residue are explicit data. No global broadening convention is hidden in the compiler. For an on-shell retarded self-energy the package uses the explicit convention
+
+```math
+E_k=\varepsilon_k+\operatorname{Re}\Sigma^R_k,
+\qquad
+\Gamma_k=-2\operatorname{Im}\Sigma^R_k,
+```
+
+while the quasiparticle residue `Z` remains an independently supplied datum. Frequency-dependent self-consistency and derivative corrections to `Z` are deliberately outside this algebraic conversion.
+
+For integer multiplicity `m`, the analytic line integral is
+
+```math
+\int\frac{d\omega}{2\pi}A(\omega)^m
+=
+\binom{2m-2}{m-1}\frac{Z^m}{\Gamma^{m-1}}.
+```
+
+In particular,
+
+```math
+\int\frac{d\omega}{2\pi}A(\omega)=Z,
+\qquad
+\int\frac{d\omega}{2\pi}A(\omega)^2=\frac{2Z^2}{\Gamma}.
+```
+
+`lorentzian_spectral_reduction` applies this identity only when an all-spectral term factorizes into independent full-rank line-frequency coordinates. Repeated lines are identified by exact physical `(field family, routed momentum)` identity. The operation always returns one concrete `LorentzianSpectralReduction`: resolved terms are tagged `LorentzianResolved`, while dispersive factors, finite Trotter shifts, rank-deficient routing, and nonfactorized structures are tagged `LorentzianUnsupported`. The analytic backend does not assign unsupported structures a cutoff value.
+
+The regular `L + 1`-line / `L`-loop case is handled separately by `lorentzian_convolution_reduction`. The same exact frequency-routing matrix used by the strict quasiparticle reducer chooses a full-rank set of pivot lines and expresses the remaining line as
+
+```math
+\omega_d=\beta\,\omega_{\mathrm{ext}}+\sum_j c_j\omega_j.
+```
+
+Cauchy stability then gives an exact residual Lorentzian with
+
+```math
+\Gamma_{\mathrm{eff}}=\Gamma_d+\sum_j |c_j|\Gamma_j.
+```
+
+The stored residual `EnergyForm` is the same mismatch that becomes the strict energy shell. Consequently the zero-width limit recovers the strict `EnergyShell` with the same exact affine Jacobian and shell-normalization factor; no numerical limiting procedure is needed to certify this correspondence.
+
+The resulting linewidth powers for repeated lines are stored separately from the perturbative `ParameterMonomial`. A nominal `γ²` term containing one repeated line therefore remains `γ²` with an explicit `Γ(q)^(-1)` factor until a linewidth scaling law is supplied.
+
+```@docs
+KeldyshContraction.SpectralLineIdentity
+KeldyshContraction.LorentzianSpectralData
+KeldyshContraction.LorentzianSpectralModel
+KeldyshContraction.LorentzianSpectralFactor
+KeldyshContraction.LorentzianSpectralWeight
+KeldyshContraction.LorentzianSpectralReductionKind
+KeldyshContraction.LorentzianSpectralReduction
+KeldyshContraction.LorentzianConvolutionReductionKind
+KeldyshContraction.LorentzianConvolutionReduction
+KeldyshContraction.LinewidthPower
+KeldyshContraction.WidthAwarePowerCounting
+KeldyshContraction.spectral_line_family
+KeldyshContraction.spectral_line_momentum
+KeldyshContraction.spectral_data
+KeldyshContraction.spectral_energy
+KeldyshContraction.spectral_linewidth
+KeldyshContraction.spectral_residue
+KeldyshContraction.spectral_normalization
+KeldyshContraction.spectral_squared_weight
+KeldyshContraction.spectral_jacobian
+KeldyshContraction.spectral_factors
+KeldyshContraction.spectral_reduction_kind
+KeldyshContraction.spectral_reduction_resolved
+KeldyshContraction.convolution_reduction_kind
+KeldyshContraction.convolution_reduction_resolved
+KeldyshContraction.convolution_jacobian
+KeldyshContraction.convolution_pivot_lines
+KeldyshContraction.convolution_dependent_line
+KeldyshContraction.convolution_coefficients
+KeldyshContraction.convolution_external_coefficient
+KeldyshContraction.convolution_energy_mismatch
+KeldyshContraction.convolution_effective_linewidth
+KeldyshContraction.spectral_line
+KeldyshContraction.spectral_multiplicity
+KeldyshContraction.linewidth_exponent
+KeldyshContraction.linewidth_powers
+KeldyshContraction.width_aware_power_counting
+KeldyshContraction.lorentzian_spectral_data_from_retarded_self_energy
+KeldyshContraction.lorentzian_spectral_value
+KeldyshContraction.lorentzian_integrated_power
+KeldyshContraction.lorentzian_spectral_reduction
+KeldyshContraction.lorentzian_convolution_reduction
+KeldyshContraction.evaluate_spectral_weight
+KeldyshContraction.evaluate_spectral_convolution
+```
+
 ## Spectral/statistical lowering
 
 ```@docs
